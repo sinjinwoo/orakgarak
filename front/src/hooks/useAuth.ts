@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { authAPI } from '../services/backend';
-import { User } from '../types/user';
+import type { User } from '../types/user';
 
 export interface LoginCredentials {
   email: string;

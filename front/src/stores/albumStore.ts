@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { AlbumCreateData, AlbumTrack } from '../types/album';
+import type { AlbumCreateData, AlbumTrack } from '../types/album';
 
 interface AlbumCreationState {
   // 앨범 메타데이터

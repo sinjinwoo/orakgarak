@@ -159,27 +159,44 @@ class SpotifyAPI {
 // 싱글톤 인스턴스
 export const spotifyAPI = new SpotifyAPI();
 
-// 우리 서버를 통한 Spotify 데이터 가져오기 (프록시)
+// 더미 Spotify 서비스
 export const spotifyService = {
-  // 곡 검색
-  searchTracks: (query: string, limit = 20) =>
-    apiClient.get<SpotifyTrack[]>('/spotify/search', { 
-      params: { q: query, limit } 
-    }),
+  // 곡 검색 (더미 데이터)
+  searchTracks: async (query: string, limit = 20) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const dummyTracks: SpotifyTrack[] = [
+      {
+        id: '1',
+        name: '좋은 날',
+        artists: [{ id: '1', name: '아이유' }],
+        album: {
+          id: '1',
+          name: 'Real',
+          images: [{ url: 'https://via.placeholder.com/300', width: 300, height: 300 }]
+        },
+        duration_ms: 240000,
+        popularity: 95,
+        external_urls: { spotify: 'https://spotify.com/track/1' }
+      }
+    ];
+    return { data: dummyTracks.slice(0, limit) };
+  },
 
-  // 추천 곡
-  getRecommendations: (seedTracks: string[], limit = 20) =>
-    apiClient.get<SpotifyTrack[]>('/spotify/recommendations', { 
-      params: { seed_tracks: seedTracks.join(','), limit } 
-    }),
+  // 추천 곡 (더미 데이터)
+  getRecommendations: async (seedTracks: string[], limit = 20) => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    return { data: [] };
+  },
 
-  // 곡 상세 정보
-  getTrack: (trackId: string) =>
-    apiClient.get<SpotifyTrack>(`/spotify/tracks/${trackId}`),
+  // 곡 상세 정보 (더미 데이터)
+  getTrack: async (trackId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: null };
+  },
 
-  // 아티스트 인기 곡
-  getArtistTopTracks: (artistId: string, limit = 10) =>
-    apiClient.get<SpotifyTrack[]>(`/spotify/artists/${artistId}/top-tracks`, { 
-      params: { limit } 
-    }),
+  // 아티스트 인기 곡 (더미 데이터)
+  getArtistTopTracks: async (artistId: string, limit = 10) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: [] };
+  },
 };

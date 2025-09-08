@@ -1,89 +1,177 @@
-import apiClient from './apiClient';
-import { User, Album, Recording, Song } from '../types';
+// 더미 데이터를 위한 타입들
+import type { User } from '../types/user';
+import type { Album } from '../types/album';
+import type { Recording } from '../types/recording';
+import type { Song } from '../types/song';
 
-// Auth API
+// 더미 데이터
+const dummyUser: User = {
+  id: '1',
+  email: 'user@example.com',
+  nickname: '테스트유저',
+  profileImage: '',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+const dummySongs: Song[] = [
+  {
+    id: '1',
+    title: '좋은 날',
+    artist: '아이유',
+    album: 'Real',
+    duration: 240,
+    genre: 'K-POP',
+    key: 'C',
+    tempo: 120,
+    difficulty: 'medium',
+    popularity: 95,
+  },
+  {
+    id: '2',
+    title: '너를 사랑해',
+    artist: '김범수',
+    album: '김범수 1집',
+    duration: 280,
+    genre: 'Ballad',
+    key: 'G',
+    tempo: 80,
+    difficulty: 'easy',
+    popularity: 88,
+  },
+];
+
+// Auth API (더미 데이터)
 export const authAPI = {
-  login: (email: string, password: string) =>
-    apiClient.post('/auth/login', { email, password }),
+  login: async (email: string, password: string) => {
+    // 더미 로그인 로직
+    await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+    return {
+      data: {
+        user: dummyUser,
+        token: 'dummy-token-123'
+      }
+    };
+  },
   
-  register: (email: string, password: string, nickname: string) =>
-    apiClient.post('/auth/register', { email, password, nickname }),
+  register: async (email: string, password: string, nickname: string) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+      data: {
+        user: { ...dummyUser, email, nickname },
+        token: 'dummy-token-123'
+      }
+    };
+  },
   
-  logout: () => apiClient.post('/auth/logout'),
+  logout: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: { message: '로그아웃 성공' } };
+  },
   
-  refreshToken: () => apiClient.post('/auth/refresh'),
+  refreshToken: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: { token: 'new-dummy-token-456' } };
+  },
 };
 
-// User API
+// User API (더미 데이터)
 export const userAPI = {
-  getProfile: (userId?: string) =>
-    apiClient.get<User>(`/users/${userId || 'me'}`),
+  getProfile: async (userId?: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: dummyUser };
+  },
   
-  updateProfile: (data: Partial<User>) =>
-    apiClient.put('/users/me', data),
+  updateProfile: async (data: Partial<User>) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { ...dummyUser, ...data } };
+  },
   
-  uploadProfileImage: (file: File) => {
-    const formData = new FormData();
-    formData.append('image', file);
-    return apiClient.post('/users/me/profile-image', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  uploadProfileImage: async (file: File) => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return { data: { imageUrl: 'https://via.placeholder.com/150' } };
   },
 };
 
-// Song API
+// Song API (더미 데이터)
 export const songAPI = {
-  search: (query: string, limit = 20) =>
-    apiClient.get<Song[]>('/songs/search', { params: { q: query, limit } }),
-  
-  getRecommendations: (filters?: any) =>
-    apiClient.get<Song[]>('/songs/recommendations', { params: filters }),
-  
-  getSong: (songId: string) =>
-    apiClient.get<Song>(`/songs/${songId}`),
-};
-
-// Recording API
-export const recordingAPI = {
-  getMyRecordings: () =>
-    apiClient.get<Recording[]>('/recordings/me'),
-  
-  uploadRecording: (file: File, songId: string) => {
-    const formData = new FormData();
-    formData.append('audio', file);
-    formData.append('songId', songId);
-    return apiClient.post<Recording>('/recordings', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  search: async (query: string, limit = 20) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const filteredSongs = dummySongs.filter(song => 
+      song.title.includes(query) || song.artist.includes(query)
+    );
+    return { data: filteredSongs.slice(0, limit) };
   },
   
-  deleteRecording: (recordingId: string) =>
-    apiClient.delete(`/recordings/${recordingId}`),
+  getRecommendations: async (filters?: any) => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    return { data: dummySongs };
+  },
   
-  getRecording: (recordingId: string) =>
-    apiClient.get<Recording>(`/recordings/${recordingId}`),
+  getSong: async (songId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const song = dummySongs.find(s => s.id === songId);
+    return { data: song || dummySongs[0] };
+  },
 };
 
-// Album API
+// Recording API (더미 데이터)
+export const recordingAPI = {
+  getMyRecordings: async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: [] };
+  },
+  
+  uploadRecording: async (file: File, songId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return { data: { id: 'recording-1', songId, audioUrl: 'dummy-audio-url' } };
+  },
+  
+  deleteRecording: async (recordingId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { message: '녹음 삭제 완료' } };
+  },
+  
+  getRecording: async (recordingId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { id: recordingId, audioUrl: 'dummy-audio-url' } };
+  },
+};
+
+// Album API (더미 데이터)
 export const albumAPI = {
-  getAlbums: (filters?: any) =>
-    apiClient.get<Album[]>('/albums', { params: filters }),
+  getAlbums: async (filters?: any) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: [] };
+  },
   
-  getAlbum: (albumId: string) =>
-    apiClient.get<Album>(`/albums/${albumId}`),
+  getAlbum: async (albumId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { id: albumId, title: '더미 앨범' } };
+  },
   
-  createAlbum: (data: any) =>
-    apiClient.post<Album>('/albums', data),
+  createAlbum: async (data: any) => {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return { data: { id: 'album-1', ...data } };
+  },
   
-  updateAlbum: (albumId: string, data: any) =>
-    apiClient.put<Album>(`/albums/${albumId}`, data),
+  updateAlbum: async (albumId: string, data: any) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: { id: albumId, ...data } };
+  },
   
-  deleteAlbum: (albumId: string) =>
-    apiClient.delete(`/albums/${albumId}`),
+  deleteAlbum: async (albumId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { message: '앨범 삭제 완료' } };
+  },
   
-  likeAlbum: (albumId: string) =>
-    apiClient.post(`/albums/${albumId}/like`),
+  likeAlbum: async (albumId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: { message: '좋아요 추가' } };
+  },
   
-  unlikeAlbum: (albumId: string) =>
-    apiClient.delete(`/albums/${albumId}/like`),
+  unlikeAlbum: async (albumId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: { message: '좋아요 취소' } };
+  },
 };

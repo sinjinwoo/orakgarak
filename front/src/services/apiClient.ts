@@ -1,40 +1,28 @@
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
-
-export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
+// 더미 API 클라이언트 (실제 백엔드 연동 전까지 사용)
+export const apiClient = {
+  get: async (url: string, config?: any) => {
+    console.log(`[더미 API] GET ${url}`, config);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: null };
   },
-});
-
-// Request interceptor for adding auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('auth-token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+  
+  post: async (url: string, data?: any, config?: any) => {
+    console.log(`[더미 API] POST ${url}`, data, config);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: null };
   },
-  (error) => {
-    return Promise.reject(error);
+  
+  put: async (url: string, data?: any, config?: any) => {
+    console.log(`[더미 API] PUT ${url}`, data, config);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: null };
+  },
+  
+  delete: async (url: string, config?: any) => {
+    console.log(`[더미 API] DELETE ${url}`, config);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: null };
   }
-);
-
-// Response interceptor for handling errors
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('auth-token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+};
 
 export default apiClient;

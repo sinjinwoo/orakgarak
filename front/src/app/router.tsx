@@ -4,13 +4,13 @@ import { Box, CircularProgress } from '@mui/material';
 
 // Lazy loading으로 페이지 컴포넌트들 import
 const LandingPage = React.lazy(() => import('../pages/LandingPage'));
-const OnboardingSurveyPage = React.lazy(() => import('../pages/OnboardingSurveyPage'));
 const OnboardingRangePage = React.lazy(() => import('../pages/OnboardingRangePage'));
 const RecommendationsPage = React.lazy(() => import('../pages/RecommendationsPage'));
 const RecordPage = React.lazy(() => import('../pages/RecordPage'));
 const AlbumCreatePage = React.lazy(() => import('../pages/AlbumCreatePage'));
 const AlbumDetailPage = React.lazy(() => import('../pages/AlbumDetailPage'));
 const FeedPage = React.lazy(() => import('../pages/FeedPage'));
+const AIDemoPage = React.lazy(() => import('../pages/AIDemoPage'));
 const MyPage = React.lazy(() => import('../pages/MyPage'));
 const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage'));
 
@@ -33,7 +33,6 @@ export const AppRouter: React.FC = () => {
         <Route path="/" element={<LandingPage />} />
         
         {/* 온보딩 */}
-        <Route path="/onboarding/survey" element={<OnboardingSurveyPage />} />
         <Route path="/onboarding/range" element={<OnboardingRangePage />} />
         
         {/* 추천 */}
@@ -50,6 +49,9 @@ export const AppRouter: React.FC = () => {
         {/* 피드 */}
         <Route path="/feed" element={<FeedPage />} />
         <Route path="/users/:userId" element={<MyPage />} />
+        
+        {/* AI 데모 */}
+        <Route path="/ai-demo" element={<AIDemoPage />} />
         
         {/* 마이페이지 */}
         <Route path="/me" element={<MyPage />} />

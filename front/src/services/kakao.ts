@@ -128,27 +128,50 @@ class KakaoAPI {
 // 싱글톤 인스턴스
 export const kakaoAPI = new KakaoAPI();
 
-// 우리 서버를 통한 Kakao/Melon 데이터 가져오기 (프록시)
+// 더미 Kakao/Melon 서비스
 export const kakaoService = {
-  // 곡 검색
-  searchTracks: (query: string, limit = 20) =>
-    apiClient.get<MelonTrack[]>('/kakao/search', { 
-      params: { q: query, limit } 
-    }),
+  // 곡 검색 (더미 데이터)
+  searchTracks: async (query: string, limit = 20) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const dummyTracks: MelonTrack[] = [
+      {
+        id: '1',
+        title: '좋은 날',
+        artist: '아이유',
+        album: 'Real',
+        albumImage: 'https://via.placeholder.com/300',
+        duration: 240,
+        genre: 'K-POP',
+        releaseDate: '2010-12-09',
+        popularity: 95,
+        lyrics: '오늘 같은 날이면...',
+        melonUrl: 'https://melon.com/track/1'
+      }
+    ];
+    return { data: dummyTracks.slice(0, limit) };
+  },
 
-  // 가사 검색
-  searchLyrics: (trackId: string) =>
-    apiClient.get<{ lyrics: string }>(`/kakao/lyrics/${trackId}`),
+  // 가사 검색 (더미 데이터)
+  searchLyrics: async (trackId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { lyrics: '더미 가사입니다...' } };
+  },
 
-  // 차트 정보
-  getCharts: () =>
-    apiClient.get<MelonChartResponse>('/kakao/charts'),
+  // 차트 정보 (더미 데이터)
+  getCharts: async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: { realtime: [], daily: [], weekly: [] } };
+  },
 
-  // 아티스트 정보
-  getArtist: (artistId: string) =>
-    apiClient.get(`/kakao/artists/${artistId}`),
+  // 아티스트 정보 (더미 데이터)
+  getArtist: async (artistId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { id: artistId, name: '더미 아티스트' } };
+  },
 
-  // 앨범 정보
-  getAlbum: (albumId: string) =>
-    apiClient.get(`/kakao/albums/${albumId}`),
+  // 앨범 정보 (더미 데이터)
+  getAlbum: async (albumId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return { data: { id: albumId, title: '더미 앨범' } };
+  },
 };

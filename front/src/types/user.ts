@@ -20,3 +20,9 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 }
+
+export interface AuthStore extends AuthState {
+  login: (user: User) => void;
+  logout: () => void;
+  updateUser: (user: Partial<User>) => void;
+}

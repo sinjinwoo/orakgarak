@@ -11,10 +11,15 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  width: 100%;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Roboto', 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  overflow-x: hidden; /* 가로 스크롤 방지 */
 }
 
 #root {
   height: 100%;
+  width: 100%;
+  max-width: 100vw; /* 뷰포트 너비 제한 */
 }
 
 /* Custom scrollbar */
@@ -35,13 +40,37 @@ html, body {
   background: #a8a8a8;
 }
 
-/* Focus styles */
-*:focus {
+/* Focus styles for interactive elements only */
+button:focus,
+input:focus,
+textarea:focus,
+select:focus,
+a:focus {
   outline: 2px solid #1976d2;
   outline-offset: 2px;
 }
 
-/* Smooth transitions */
-* {
+/* Smooth transitions for specific elements */
+button,
+a,
+.MuiButton-root,
+.MuiCard-root {
   transition: all 0.2s ease-in-out;
+}
+
+/* 강제 단일 컬럼 레이아웃 */
+* {
+  max-width: 100% !important;
+}
+
+body, html, #root {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
+/* 모든 컨테이너를 단일 컬럼으로 강제 */
+.MuiContainer-root,
+.MuiBox-root {
+  max-width: 100% !important;
+  width: 100% !important;
 }

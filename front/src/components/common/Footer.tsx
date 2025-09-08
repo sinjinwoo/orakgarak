@@ -1,86 +1,95 @@
 import React from 'react';
-import { Box, Container, Typography, Link, Grid } from '@mui/material';
+import { Box, Container, Typography, Link } from '@mui/material';
+import { Favorite } from '@mui/icons-material';
 
 const Footer: React.FC = () => {
   return (
     <Box
       component="footer"
       sx={{
-        backgroundColor: 'grey.100',
-        py: 3,
+        backgroundColor: '#2c2c2c',
+        py: 4,
         mt: 'auto',
+        color: 'white',
       }}
     >
       <Container maxWidth="lg">
-        <Grid container spacing={4}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography variant="h6" gutterBottom>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {/* 브랜드 정보 */}
+          <Box>
+            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
+              오락가락
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#b0b0b0', lineHeight: 1.6 }}>
+              내 목소리에 딱 맞는 노래를 찾아보세요
+            </Typography>
+          </Box>
+          
+          {/* 서비스 링크 */}
+          <Box>
+            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
               서비스
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              AI 노래방 서비스로<br />
-              당신의 목소리로 만드는<br />
-              특별한 음악 경험을 제공합니다.
-            </Typography>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography variant="h6" gutterBottom>
-              기능
-            </Typography>
-            <Box>
-              <Link href="/recommendations" color="inherit" underline="hover">
-                <Typography variant="body2">맞춤 추천</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Link href="/recommendations" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
+                노래 추천
               </Link>
-              <Link href="/record" color="inherit" underline="hover">
-                <Typography variant="body2">녹음 & 분석</Typography>
+              <Link href="/record" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
+                녹음하기
               </Link>
-              <Link href="/albums/create" color="inherit" underline="hover">
-                <Typography variant="body2">앨범 제작</Typography>
+              <Link href="/feed" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
+                커뮤니티
               </Link>
-              <Link href="/feed" color="inherit" underline="hover">
-                <Typography variant="body2">소셜 피드</Typography>
+              <Link href="/me" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
+                마이페이지
               </Link>
             </Box>
-          </Grid>
+          </Box>
           
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography variant="h6" gutterBottom>
-              지원
+          {/* 고객지원 */}
+          <Box>
+            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
+              고객지원
             </Typography>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
+                문의하기
+              </Link>
+              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
+                자주 묻는 질문
+              </Link>
+            </Box>
+          </Box>
+          
+          {/* 약관 */}
+          <Box>
+            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
+              약관
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
                 이용약관
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
+              </Link>
+              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
                 개인정보처리방침
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                고객지원
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                FAQ
-              </Typography>
+              </Link>
             </Box>
-          </Grid>
-          
-          <Grid item xs={12} sm={6} md={3}>
-            <Typography variant="h6" gutterBottom>
-              팀 소개
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              SSAFY 13기<br />
-              P21 C103 팀<br />
-              <br />
-              문의: contact@ainoraebang.com
-            </Typography>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
         
-        <Box sx={{ borderTop: 1, borderColor: 'divider', mt: 3, pt: 3 }}>
-          <Typography variant="body2" color="text.secondary" align="center">
-            © 2024 AI 노래방 서비스. All rights reserved.
+        <Box sx={{ borderTop: '1px solid #404040', mt: 3, pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
+            © 2025 오락가락 All rights reserved.
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
+              Made with
+            </Typography>
+            <Favorite sx={{ color: '#ff6b6b', fontSize: '1rem' }} />
+            <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
+              in Korea
+            </Typography>
+          </Box>
         </Box>
       </Container>
     </Box>

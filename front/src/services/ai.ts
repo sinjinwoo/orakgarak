@@ -160,39 +160,78 @@ class AIService {
 // 싱글톤 인스턴스
 export const aiService = new AIService();
 
-// 우리 서버를 통한 AI 서비스 호출 (프록시)
+// 더미 AI 서비스
 export const aiAPI = {
-  // 음성 분석
-  analyzeVoice: (audioFile: File) => {
-    const formData = new FormData();
-    formData.append('audio', audioFile);
-    
-    return apiClient.post<VoiceAnalysis>('/ai/voice/analyze', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  // 음성 분석 (더미 데이터)
+  analyzeVoice: async (audioFile: File) => {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const dummyAnalysis: VoiceAnalysis = {
+      pitchAccuracy: 85,
+      tempoAccuracy: 90,
+      vocalRange: { min: 80, max: 400 },
+      toneAnalysis: {
+        brightness: 70,
+        warmth: 80,
+        clarity: 75
+      },
+      overallScore: 82,
+      feedback: ['음정이 정확합니다', '박자를 더 정확히 맞춰보세요']
+    };
+    return { data: dummyAnalysis };
   },
 
-  // AI 커버 생성
-  generateAICover: (request: AICoverRequest) =>
-    apiClient.post<AICoverResponse>('/ai/cover/generate', request),
+  // AI 커버 생성 (더미 데이터)
+  generateAICover: async (request: AICoverRequest) => {
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    return { 
+      data: { 
+        id: 'cover-1', 
+        status: 'completed' as const,
+        resultAudioUrl: 'dummy-cover-audio-url'
+      } 
+    };
+  },
 
-  // AI 커버 상태 확인
-  getAICoverStatus: (coverId: string) =>
-    apiClient.get<AICoverResponse>(`/ai/cover/status/${coverId}`),
+  // AI 커버 상태 확인 (더미 데이터)
+  getAICoverStatus: async (coverId: string) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { 
+      data: { 
+        id: coverId, 
+        status: 'completed' as const,
+        resultAudioUrl: 'dummy-cover-audio-url'
+      } 
+    };
+  },
 
-  // AI 앨범 커버 생성
-  generateCoverImage: (request: AICoverImageRequest) =>
-    apiClient.post<AICoverImageResponse>('/ai/image/generate', request),
+  // AI 앨범 커버 생성 (더미 데이터)
+  generateCoverImage: async (request: AICoverImageRequest) => {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return { 
+      data: { 
+        id: 'image-1', 
+        imageUrl: 'https://via.placeholder.com/400x400',
+        prompt: request.prompt,
+        createdAt: new Date().toISOString()
+      } 
+    };
+  },
 
-  // 음역대 추천
-  getVocalRangeRecommendations: (vocalRange: { min: number; max: number }) =>
-    apiClient.post<any[]>('/ai/recommendations/vocal-range', vocalRange),
+  // 음역대 추천 (더미 데이터)
+  getVocalRangeRecommendations: async (vocalRange: { min: number; max: number }) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { data: [] };
+  },
 
-  // 실시간 피치 분석
-  analyzePitch: (audioData: Float32Array) =>
-    apiClient.post<{ pitch: number; accuracy: number }>('/ai/pitch/analyze', { audioData }),
+  // 실시간 피치 분석 (더미 데이터)
+  analyzePitch: async (audioData: Float32Array) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: { pitch: 440, accuracy: 85 } };
+  },
 
-  // 박자 분석
-  analyzeTempo: (audioData: Float32Array) =>
-    apiClient.post<{ tempo: number; accuracy: number }>('/ai/tempo/analyze', { audioData }),
+  // 박자 분석 (더미 데이터)
+  analyzeTempo: async (audioData: Float32Array) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return { data: { tempo: 120, accuracy: 90 } };
+  },
 };
