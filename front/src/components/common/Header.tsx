@@ -76,14 +76,14 @@ const Header: React.FC = () => {
           </Button>
           <Button 
             color="inherit" 
-            onClick={() => navigate('/ai-demo')}
+            onClick={() => navigate('/albums/create')}
             sx={{ 
               color: 'white',
               fontWeight: 500,
               '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
             }}
           >
-            AI 데모
+            앨범 만들기
           </Button>
           <Button 
             color="inherit" 

@@ -53,12 +53,18 @@ interface AlbumStore extends AlbumCreationState {
   
   // 앨범 생성 데이터 가져오기
   getAlbumData: () => AlbumCreateData;
+  
+  // 새 앨범 생성
+  createAlbum: (albumData: AlbumCreateData) => string;
+  
+  // 앨범 상세 정보 가져오기
+  getAlbumById: (albumId: string) => any;
 }
 
 const initialData: AlbumCreationState = {
   title: '',
   description: '',
-  isPublic: true,
+  isPublic: false, // 기본값을 비공개로 변경
   tags: [],
   selectedRecordings: [],
   tracks: [],
@@ -181,5 +187,38 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
       isPublic: state.isPublic,
       tags: state.tags,
     };
+  },
+  
+  // 새 앨범 생성
+  createAlbum: (albumData: AlbumCreateData) => {
+    const newAlbum = {
+      id: Date.now().toString(),
+      title: albumData.title,
+      description: albumData.description || '',
+      coverImage: albumData.coverImage || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
+      isPublic: albumData.isPublic,
+      trackCount: albumData.recordingIds.length,
+      duration: '11분', // 실제로는 녹음들의 총 시간을 계산해야 함
+      likeCount: 0,
+      playCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+    
+    // localStorage에 저장
+    const existingAlbums = JSON.parse(localStorage.getItem('myAlbums') || '[]');
+    existingAlbums.unshift(newAlbum); // 최신 앨범이 맨 위에 오도록
+    localStorage.setItem('myAlbums', JSON.stringify(existingAlbums));
+    
+    return newAlbum.id;
+  },
+  
+  // 앨범 상세 정보 가져오기
+  getAlbumById: (albumId: string) => {
+    const savedAlbums = localStorage.getItem('myAlbums');
+    if (savedAlbums) {
+      const albums = JSON.parse(savedAlbums);
+      return albums.find((a: any) => a.id === albumId);
+    }
+    return null;
   },
 }));
