@@ -134,8 +134,13 @@ tasks.register<Test>("integrationTest") {
 
 // 프로덕션 빌드 태스크
 tasks.register("prodBuild") {
-    dependsOn("clean", "test", "bootJar")
+    group = "build"
     description = "Clean build with tests for production deployment"
+    dependsOn("clean", "test", "bootJar")
+    
+    doLast {
+        println("Production build completed successfully")
+    }
 }
 
 // QueryDSL Q클래스 생성을 위한 소스 경로 설정
