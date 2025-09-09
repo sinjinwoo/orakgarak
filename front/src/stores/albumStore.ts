@@ -55,7 +55,7 @@ interface AlbumStore extends AlbumCreationState {
   getAlbumData: () => AlbumCreateData;
   
   // 새 앨범 생성
-  createAlbum: (albumData: AlbumCreateData) => string;
+  createAlbum: (albumData: AlbumCreateData, recordings: any[]) => string;
   
   // 앨범 상세 정보 가져오기
   getAlbumById: (albumId: string) => any;
@@ -190,7 +190,28 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
   },
   
   // 새 앨범 생성
-  createAlbum: (albumData: AlbumCreateData) => {
+  createAlbum: (albumData: AlbumCreateData, recordings: any[]) => {
+    // 선택된 녹음들로 트랙 데이터 생성
+    const tracks = recordings
+      .filter(recording => albumData.recordingIds.includes(recording.id))
+      .map(recording => ({
+        id: recording.id,
+        title: recording.song.title,
+        artist: recording.song.artist,
+        score: recording.analysis?.overallScore || 0,
+        duration: `${Math.floor(recording.duration / 60)}:${(recording.duration % 60).toString().padStart(2, '0')}`,
+        audioUrl: recording.audioUrl,
+      }));
+
+    // 총 재생 시간 계산
+    const totalSeconds = tracks.reduce((total, track) => {
+      const [minutes, seconds] = track.duration.split(':').map(Number);
+      return total + minutes * 60 + seconds;
+    }, 0);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = totalSeconds % 60;
+    const duration = `${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+
     const newAlbum = {
       id: Date.now().toString(),
       title: albumData.title,
@@ -198,9 +219,10 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
       coverImage: albumData.coverImage || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
       isPublic: albumData.isPublic,
       trackCount: albumData.recordingIds.length,
-      duration: '11분', // 실제로는 녹음들의 총 시간을 계산해야 함
+      duration: duration,
       likeCount: 0,
       playCount: 0,
+      tracks: tracks, // 실제 선택된 녹음 데이터 저장
       createdAt: new Date().toISOString(),
     };
     

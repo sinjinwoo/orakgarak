@@ -16,7 +16,7 @@ const dummyRecordings: Recording[] = [
     userId: 'user1',
     songId: 'song1',
     song: { title: '좋아', artist: '윤종신' },
-    audioUrl: '/audio/sample1.mp3',
+    audioUrl: '', // 실제 오디오 파일이 없으므로 빈 문자열 사용
     duration: 225, // 3:45
     createdAt: '2025-01-15T00:00:00Z',
     analysis: {
@@ -33,7 +33,7 @@ const dummyRecordings: Recording[] = [
     userId: 'user1',
     songId: 'song2',
     song: { title: '사랑은 은하수 다방에서', artist: '10cm' },
-    audioUrl: '/audio/sample2.mp3',
+    audioUrl: '', // 실제 오디오 파일이 없으므로 빈 문자열 사용
     duration: 252, // 4:12
     createdAt: '2025-01-14T00:00:00Z',
     analysis: {
@@ -50,7 +50,7 @@ const dummyRecordings: Recording[] = [
     userId: 'user1',
     songId: 'song3',
     song: { title: '밤편지', artist: '아이유' },
-    audioUrl: '/audio/sample3.mp3',
+    audioUrl: '', // 실제 오디오 파일이 없으므로 빈 문자열 사용
     duration: 203, // 3:23
     createdAt: '2025-01-13T00:00:00Z',
     analysis: {
@@ -187,7 +187,7 @@ const AlbumCreatePage: React.FC = () => {
     try {
       // 앨범 생성
       const albumData = getAlbumData();
-      const albumId = createAlbum(albumData);
+      const albumId = createAlbum(albumData, recordings);
       
       console.log('Album created successfully:', albumId);
       

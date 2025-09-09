@@ -16,6 +16,14 @@ import {
   Paper,
   Avatar,
   Divider,
+  Menu,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -25,6 +33,8 @@ import {
   MoreVert,
   Send,
   ArrowBack,
+  Delete,
+  Edit,
 } from '@mui/icons-material';
 
 // 더미 앨범 데이터
@@ -86,6 +96,20 @@ const AlbumDetailPage: React.FC = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [foundAlbum, setFoundAlbum] = useState<any>(null);
+  
+  // 메뉴 상태
+  const [albumMenuAnchor, setAlbumMenuAnchor] = useState<null | HTMLElement>(null);
+  const [trackMenuAnchor, setTrackMenuAnchor] = useState<null | HTMLElement>(null);
+  
+  // 다이얼로그 상태
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editTracksDialogOpen, setEditTracksDialogOpen] = useState(false);
+  
+  // 수록곡 편집 상태
+  const [editingTracks, setEditingTracks] = useState<any[]>([]);
+  const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
+  const [allRecordings, setAllRecordings] = useState<any[]>([]);
 
   // 앨범 데이터 로드
   useEffect(() => {
@@ -95,37 +119,38 @@ const AlbumDetailPage: React.FC = () => {
         return;
       }
 
-      const foundAlbum = getAlbumById(albumId);
+      const albumData = getAlbumById(albumId);
       
-      if (foundAlbum) {
+      if (albumData) {
+        setFoundAlbum(albumData);
         // 앨범 데이터를 상세 페이지 형식으로 변환
-        const albumData = {
-          id: foundAlbum.id,
-          title: foundAlbum.title,
-          description: foundAlbum.description,
-          coverImage: foundAlbum.coverImage,
+        const albumDetailData = {
+          id: albumData.id,
+          title: albumData.title,
+          description: albumData.description,
+          coverImage: albumData.coverImage,
           userId: 'current-user',
           user: {
             nickname: '음악러버', // 실제로는 사용자 정보에서 가져와야 함
             profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
           },
-          tracks: [
-            // 실제로는 녹음 데이터에서 가져와야 함
+          tracks: albumData.tracks || [
+            // 기본 더미 데이터 (트랙이 없는 경우)
             { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45' },
             { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12' },
             { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23' },
           ],
-          isPublic: foundAlbum.isPublic,
+          isPublic: albumData.isPublic,
           tags: ['K-POP', '발라드', '감성', '힐링'], // 실제로는 앨범 데이터에서 가져와야 함
-          likeCount: foundAlbum.likeCount,
-          playCount: foundAlbum.playCount,
+          likeCount: albumData.likeCount,
+          playCount: albumData.playCount,
           commentCount: 0, // 실제로는 댓글 데이터에서 가져와야 함
-          createdAt: foundAlbum.createdAt,
-          updatedAt: foundAlbum.createdAt,
+          createdAt: albumData.createdAt,
+          updatedAt: albumData.createdAt,
         };
         
-        setAlbum(albumData);
-        setLikeCount(foundAlbum.likeCount);
+        setAlbum(albumDetailData);
+        setLikeCount(albumData.likeCount);
       }
       
       setLoading(false);
@@ -181,6 +206,135 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
+  // 앨범 메뉴 핸들러
+  const handleAlbumMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAlbumMenuAnchor(event.currentTarget);
+  };
+
+  const handleAlbumMenuClose = () => {
+    setAlbumMenuAnchor(null);
+  };
+
+  const handleDeleteAlbum = () => {
+    setDeleteDialogOpen(true);
+    handleAlbumMenuClose();
+  };
+
+  // 수록곡 메뉴 핸들러
+  const handleTrackMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setTrackMenuAnchor(event.currentTarget);
+  };
+
+  const handleTrackMenuClose = () => {
+    setTrackMenuAnchor(null);
+  };
+
+  const handleEditTracks = () => {
+    // 사용자의 모든 녹음 데이터 불러오기 (더미 데이터)
+    const dummyRecordings = [
+      {
+        id: '1',
+        song: { title: '좋아', artist: '윤종신' },
+        duration: 225,
+        analysis: { overallScore: 85 },
+        audioUrl: '',
+      },
+      {
+        id: '2',
+        song: { title: '사랑은 은하수 다방에서', artist: '10cm' },
+        duration: 252,
+        analysis: { overallScore: 78 },
+        audioUrl: '',
+      },
+      {
+        id: '3',
+        song: { title: '밤편지', artist: '아이유' },
+        duration: 203,
+        analysis: { overallScore: 92 },
+        audioUrl: '',
+      },
+      {
+        id: '4',
+        song: { title: 'Spring Day', artist: 'BTS' },
+        duration: 234,
+        analysis: { overallScore: 88 },
+        audioUrl: '',
+      },
+      {
+        id: '5',
+        song: { title: 'Dynamite', artist: 'BTS' },
+        duration: 199,
+        analysis: { overallScore: 90 },
+        audioUrl: '',
+      },
+    ];
+    
+    setAllRecordings(dummyRecordings);
+    setEditingTracks(album.tracks);
+    setSelectedTracks(album.tracks.map((track: any) => track.id));
+    setEditTracksDialogOpen(true);
+    handleTrackMenuClose();
+  };
+
+  // 앨범 삭제 확인
+  const handleConfirmDelete = () => {
+    // localStorage에서 앨범 삭제
+    const savedAlbums = localStorage.getItem('myAlbums');
+    if (savedAlbums) {
+      const albums = JSON.parse(savedAlbums);
+      const updatedAlbums = albums.filter((a: any) => a.id !== albumId);
+      localStorage.setItem('myAlbums', JSON.stringify(updatedAlbums));
+    }
+    
+    setDeleteDialogOpen(false);
+    navigate('/me/albums');
+  };
+
+  // 수록곡 편집 핸들러
+  const handleTrackToggle = (trackId: string) => {
+    setSelectedTracks(prev => 
+      prev.includes(trackId) 
+        ? prev.filter(id => id !== trackId)
+        : [...prev, trackId]
+    );
+  };
+
+  const handleSelectAllTracks = () => {
+    setSelectedTracks(allRecordings.map(recording => recording.id));
+  };
+
+  const handleDeselectAllTracks = () => {
+    setSelectedTracks([]);
+  };
+
+  const handleSaveTracks = () => {
+    // 선택된 녹음들을 트랙 형식으로 변환
+    const updatedTracks = allRecordings
+      .filter(recording => selectedTracks.includes(recording.id))
+      .map(recording => ({
+        id: recording.id,
+        title: recording.song.title,
+        artist: recording.song.artist,
+        score: recording.analysis.overallScore,
+        duration: `${Math.floor(recording.duration / 60)}:${(recording.duration % 60).toString().padStart(2, '0')}`,
+        audioUrl: recording.audioUrl,
+      }));
+    
+    // localStorage에서 앨범 업데이트
+    const savedAlbums = localStorage.getItem('myAlbums');
+    if (savedAlbums) {
+      const albums = JSON.parse(savedAlbums);
+      const updatedAlbums = albums.map((a: any) => 
+        a.id === albumId ? { ...a, tracks: updatedTracks, trackCount: updatedTracks.length } : a
+      );
+      localStorage.setItem('myAlbums', JSON.stringify(updatedAlbums));
+    }
+    
+    // 현재 앨범 상태 업데이트
+    setAlbum(prev => ({ ...prev, tracks: updatedTracks }));
+    setEditTracksDialogOpen(false);
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
@@ -190,7 +344,7 @@ const AlbumDetailPage: React.FC = () => {
   }
 
   if (!album || album.id !== albumId) {
-    return (
+  return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
         <Button
           startIcon={<ArrowBack />}
@@ -231,7 +385,7 @@ const AlbumDetailPage: React.FC = () => {
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
               <Avatar src={album.user.profileImage} sx={{ width: 32, height: 32 }} />
-              <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="text.secondary">
                 {album.user.nickname}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -239,7 +393,7 @@ const AlbumDetailPage: React.FC = () => {
               </Typography>
             </Box>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              ♫ {album.tracks.length}곡 • {album.tracks.reduce((total, track) => {
+              ♫ {album.tracks.length}곡 • {foundAlbum?.duration || album.tracks.reduce((total, track) => {
                 const [minutes, seconds] = track.duration.split(':').map(Number);
                 return total + minutes * 60 + seconds;
               }, 0) / 60}분
@@ -298,7 +452,10 @@ const AlbumDetailPage: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 공유
               </Typography>
-              <IconButton sx={{ color: '#666' }}>
+              <IconButton 
+                sx={{ color: '#666' }}
+                onClick={handleAlbumMenuOpen}
+              >
                 <MoreVert />
               </IconButton>
             </Box>
@@ -314,43 +471,47 @@ const AlbumDetailPage: React.FC = () => {
 
         {/* 수록곡 */}
         <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
-            ♪ 수록곡
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+              ♪ 수록곡
+            </Typography>
+            <IconButton 
+              sx={{ color: '#666' }}
+              onClick={handleTrackMenuOpen}
+            >
+              <MoreVert />
+            </IconButton>
+          </Box>
           <List>
             {album.tracks.map((track, index) => (
               <ListItem key={track.id} sx={{ py: 1 }}>
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>
-                        {index + 1}.
-                      </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        {track.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        - {track.artist}
-                      </Typography>
-                    </Box>
-                  }
-                  secondary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: getScoreColor(track.score),
-                          fontWeight: 600,
-                        }}
-                      >
-                        {track.score}점
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {track.duration}
-                      </Typography>
-                    </Box>
-                  }
-                />
+                <Box sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>
+                      {index + 1}.
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      {track.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      - {track.artist}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: getScoreColor(track.score),
+                        fontWeight: 600,
+                      }}
+                    >
+                      {track.score}점
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {track.duration}
+                    </Typography>
+                  </Box>
+                </Box>
                 <IconButton size="small">
                   <PlayArrow sx={{ color: '#666' }} />
                 </IconButton>
@@ -358,28 +519,6 @@ const AlbumDetailPage: React.FC = () => {
             ))}
           </List>
         </Paper>
-
-        {/* 통계 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Favorite sx={{ fontSize: 16, color: '#666' }} />
-            <Typography variant="body2" color="text.secondary">
-              {likeCount}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: 16, color: '#666' }}>💬</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {album.commentCount}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <PlayArrow sx={{ fontSize: 16, color: '#666' }} />
-            <Typography variant="body2" color="text.secondary">
-              {album.playCount}
-            </Typography>
-          </Box>
-        </Box>
 
         {/* 댓글 섹션 */}
         <Paper sx={{ p: 3 }}>
@@ -443,6 +582,134 @@ const AlbumDetailPage: React.FC = () => {
             ))}
           </Box>
         </Paper>
+
+        {/* 앨범 메뉴 */}
+        <Menu
+          anchorEl={albumMenuAnchor}
+          open={Boolean(albumMenuAnchor)}
+          onClose={handleAlbumMenuClose}
+        >
+          <MenuItem onClick={handleDeleteAlbum} sx={{ color: '#f44336' }}>
+            <Delete sx={{ mr: 1 }} />
+            이 앨범 삭제
+          </MenuItem>
+        </Menu>
+
+        {/* 수록곡 메뉴 */}
+        <Menu
+          anchorEl={trackMenuAnchor}
+          open={Boolean(trackMenuAnchor)}
+          onClose={handleTrackMenuClose}
+        >
+          <MenuItem onClick={handleEditTracks}>
+            <Edit sx={{ mr: 1 }} />
+            수록곡 편집
+          </MenuItem>
+        </Menu>
+
+        {/* 앨범 삭제 확인 다이얼로그 */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+        >
+          <DialogTitle>앨범 삭제</DialogTitle>
+          <DialogContent>
+            <Typography>
+              정말로 이 앨범을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>
+              취소
+            </Button>
+            <Button 
+              onClick={handleConfirmDelete} 
+              color="error"
+              variant="contained"
+            >
+              삭제
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* 수록곡 편집 다이얼로그 */}
+        <Dialog
+          open={editTracksDialogOpen}
+          onClose={() => setEditTracksDialogOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            수록곡 편집
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button size="small" onClick={handleSelectAllTracks}>
+                전체 선택
+              </Button>
+              <Button size="small" onClick={handleDeselectAllTracks}>
+                전체 해제
+              </Button>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              내 녹음 목록에서 선택하세요
+            </Typography>
+            <List>
+              {allRecordings.map((recording, index) => {
+                const duration = `${Math.floor(recording.duration / 60)}:${(recording.duration % 60).toString().padStart(2, '0')}`;
+                return (
+                  <ListItem key={recording.id} sx={{ py: 1 }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={selectedTracks.includes(recording.id)}
+                          onChange={() => handleTrackToggle(recording.id)}
+                        />
+                      }
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>
+                            {index + 1}.
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {recording.song.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            - {recording.song.artist}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: getScoreColor(recording.analysis.overallScore),
+                              fontWeight: 600,
+                            }}
+                          >
+                            {recording.analysis.overallScore}점
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {duration}
+        </Typography>
+      </Box>
+                      }
+                      sx={{ width: '100%' }}
+                    />
+                  </ListItem>
+                );
+              })}
+            </List>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditTracksDialogOpen(false)}>
+              취소
+            </Button>
+            <Button 
+              onClick={handleSaveTracks} 
+              variant="contained"
+            >
+              저장
+            </Button>
+          </DialogActions>
+        </Dialog>
     </Container>
   );
 };
