@@ -59,21 +59,17 @@ dependencies {
     // mapping
     implementation("org.mapstruct:mapstruct:1.6.3")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
-    // 운영 DB
+    // 데이터베이스 드라이버
     runtimeOnly("com.mysql:mysql-connector-j")
-    // 개발/테스트용 DB
     runtimeOnly("com.h2database:h2")
-    testRuntimeOnly("com.h2database:h2")
-    testRuntimeOnly("com.mysql:mysql-connector-j")
+    
+    // 개발 도구 (로컬에서만 사용)
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
 
     // AWS S3
     implementation("io.awspring.cloud:spring-cloud-aws-starter:3.4.0")
     implementation("software.amazon.awssdk:s3:2.32.9")
-    // Testing
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
+    
     // 썸네일 라이브러리
     implementation("net.coobird:thumbnailator:0.4.20")
 
@@ -85,17 +81,18 @@ dependencies {
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
 
     // Swagger (OpenAPI)
-    // API Documentation(Swagger)
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
-    //JSON
+    
+    // JSON
     implementation("com.google.code.gson:gson:2.13.1")
 
     // Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.session:spring-session-data-redis")
 
-
-    // 테스트용
+    // 테스트
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
@@ -108,19 +105,37 @@ tasks.withType<JavaCompile> {
     options.compilerArgs.add("-Amapstruct.unmappedTargetPolicy=IGNORE")
 }
 
-// 기본 테스트 태스크 (MySQL 테스트 제외)
+// Profile별 테스트 태스크
 tasks.named<Test>("test") {
     useJUnitPlatform()
-
     systemProperty("spring.profiles.active", "test")
-
-    // 테스트 결과 로깅
+    
     testLogging {
         events("passed", "skipped", "failed")
+        showStandardStreams = false
     }
+    
+    include("**/*Test.class", "**/*Tests.class")
+    exclude("**/*IntegrationTest.class", "**/*IT.class")
+}
 
-    // 테스트 파일 패턴 지정
-    include("**/*Test.class", "**/*Tests.class", "**/*IT.class")
+// 통합 테스트 태스크 (로컬 MySQL 사용)
+tasks.register<Test>("integrationTest") {
+    useJUnitPlatform()
+    systemProperty("spring.profiles.active", "local")
+    
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+    }
+    
+    include("**/*IntegrationTest.class", "**/*IT.class")
+}
+
+// 프로덕션 빌드 태스크
+tasks.register("prodBuild") {
+    dependsOn("clean", "test", "bootJar")
+    description = "Clean build with tests for production deployment"
 }
 
 // QueryDSL Q클래스 생성을 위한 소스 경로 설정

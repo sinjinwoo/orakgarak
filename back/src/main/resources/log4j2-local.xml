@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <Property name="LOG_PATTERN">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+        </Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console Appender (로컬 개발용) -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%clr{${LOG_PATTERN}}{faint}"/>
+        </Console>
+    </Appenders>
+
+    <Loggers>
+        <!-- Spring Boot 시작 로그 대폭 줄이기 -->
+        <Logger name="org.springframework.boot" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Spring 컨텍스트 관련 모든 로그 최소화 -->
+        <Logger name="org.springframework.context" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Bean 관련 모든 로그 숨김 -->
+        <Logger name="org.springframework.beans" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- JPA/Data 초기화 로그 숨김 -->
+        <Logger name="org.springframework.data" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- ORM 초기화 로그 숨김 -->
+        <Logger name="org.springframework.orm" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Transaction 관련 로그 최소화 -->
+        <Logger name="org.springframework.transaction" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Spring Framework 전체를 WARN으로 -->
+        <Logger name="org.springframework" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate/JPA 로그 레벨 -->
+        <Logger name="org.hibernate" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Hibernate 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.query.sqm.function.SqmFunctionRegistry" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Hibernate 엔티티/메타데이터 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.persister" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Hibernate 스키마 검증 로그 숨김 -->
+        <Logger name="org.hibernate.tool.schema" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Hibernate Validator 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.validator" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Hibernate 타입/ID 생성기 등록 로그 숨김 -->
+        <Logger name="org.hibernate.type.BasicTypeRegistry" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <Logger name="org.hibernate.orm.idgen.factory" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Hibernate 기타 초기화 로그들 -->
+        <Logger name="org.hibernate.integrator" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <Logger name="org.hibernate.cache" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <Logger name="org.hibernate.boot" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <Logger name="org.hibernate.cfg" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- HikariCP 설정 로그 숨김 -->
+        <Logger name="com.zaxxer.hikari.HikariConfig" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Hibernate HQL 함수 등록 로그 숨김 -->
+        <Logger name="org.hibernate.HQL_FUNCTIONS" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- 추가 시작 시 불필요한 로그들 차단 -->
+        <!-- Tomcat 초기화 로그 최소화 -->
+        <Logger name="org.apache.catalina" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <Logger name="org.apache.coyote" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <Logger name="org.apache.tomcat" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Jackson 초기화 로그 숨김 -->
+        <Logger name="com.fasterxml.jackson" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- JPA/Hibernate EntityManager 로그 최소화 -->
+        <Logger name="jakarta.persistence" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Liquibase/Flyway 로그 최소화 (있을 경우) -->
+        <Logger name="liquibase" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <Logger name="org.flywaydb" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Connection Pool 기타 로그들 -->
+        <Logger name="com.zaxxer.hikari" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Validation/Bean Validation 로그 최소화 -->
+        <Logger name="jakarta.validation" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- SQL 로그 출력 -->
+        <Logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- SQL 바인딩 파라미터 출력 -->
+        <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- 애플리케이션 패키지 로그 -->
+        <Logger name="com.ssafy.lab.orak" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Security 로그 -->
+        <Logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- AWS SDK 로그 -->
+        <Logger name="software.amazon.awssdk" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Redis 로그 -->
+        <Logger name="org.springframework.data.redis" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Web 요청 로그 -->
+        <Logger name="org.springframework.web" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Root Logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+</Configuration>
