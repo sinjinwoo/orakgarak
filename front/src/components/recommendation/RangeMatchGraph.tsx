@@ -1,15 +1,19 @@
+// 음역대 매칭 그래프 컴포넌트 - 사용자와 선택된 곡의 음역대를 시각적으로 비교
 import React, { useRef, useEffect } from 'react';
 import { Box, Typography, Paper, LinearProgress } from '@mui/material';
 import type { UserVocalRange, RecommendedSong } from '../../types/recommendation';
 
+// 음역대 매칭 그래프 Props 타입 정의
 interface RangeMatchGraphProps {
-  userRange: UserVocalRange;
-  selectedSong?: RecommendedSong;
+  userRange: UserVocalRange; // 사용자의 음역대 정보
+  selectedSong?: RecommendedSong; // 선택된 곡 (선택 시 매칭 비교 표시)
 }
 
 const RangeMatchGraph: React.FC<RangeMatchGraphProps> = ({ userRange, selectedSong }) => {
+  // Canvas 참조 - 음역대 그래프를 그리기 위한 캔버스
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // 음역대 그래프 그리기 효과
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -20,21 +24,23 @@ const RangeMatchGraph: React.FC<RangeMatchGraphProps> = ({ userRange, selectedSo
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
 
-    // 배경 그리기
+    // ===== 배경 그리기 =====
     ctx.fillStyle = '#f5f5f5';
     ctx.fillRect(0, 0, width, height);
 
-    // 사용자 음역대 영역
+    // ===== 사용자 음역대 계산 =====
     const userMinY = height - (userRange.min / 500) * height;
     const userMaxY = height - (userRange.max / 500) * height;
     const userComfortMinY = height - (userRange.comfortable.min / 500) * height;
     const userComfortMaxY = height - (userRange.comfortable.max / 500) * height;
 
-    // 편안한 음역대 (연한 파란색)
+    // ===== 사용자 음역대 영역 그리기 =====
+    
+    // 편안한 음역대 (연한 파란색) - 가장 중요한 영역
     ctx.fillStyle = 'rgba(33, 150, 243, 0.2)';
     ctx.fillRect(0, userComfortMaxY, width, userComfortMinY - userComfortMaxY);
 
-    // 전체 음역대 (연한 회색)
+    // 전체 음역대 (연한 회색) - 가능한 영역
     ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
     ctx.fillRect(0, userMaxY, width, userMinY - userMaxY);
 
