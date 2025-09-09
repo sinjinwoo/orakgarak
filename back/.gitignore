@@ -22,11 +22,6 @@
 # Generated files
 .idea/**/contentModel.xml
 
-application.properties
-application-test.properties
-application-prod.properties
-application-*.properties
-
 # Sensitive or high-churn files
 .idea/**/dataSources/
 .idea/**/dataSources.ids
@@ -236,11 +231,11 @@ jenkins_home/
 redis_data/
 mysql_data/
 
-*.properties
+
 .env
 *.env
 *.env.*
-*.properties.*
+
 
 *.sh
 # End of https://www.toptal.com/developers/gitignore/api/java,intellij+all,gradle,windows,macos,visualstudiocode
