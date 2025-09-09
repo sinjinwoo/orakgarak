@@ -163,23 +163,48 @@ const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
     }
   }, []);
 
-  // 마이크 중지 함수
-  const stopMicrophone = useCallback(() => {
+  // 리소스 정리 함수
+  const cleanupResources = useCallback(() => {
+    // 애니메이션 정리
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
+      animationRef.current = undefined;
     }
     
+    // 마이크 연결 해제
     if (microphoneRef.current) {
-      microphoneRef.current.disconnect();
+      try {
+        microphoneRef.current.disconnect();
+      } catch (error) {
+        console.warn('마이크 연결 해제 중 오류:', error);
+      }
+      microphoneRef.current = null;
     }
     
+    // 오디오 컨텍스트 정리
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      try {
+        if (audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close();
+        }
+      } catch (error) {
+        console.warn('오디오 컨텍스트 정리 중 오류:', error);
+      }
+      audioContextRef.current = null;
     }
+    
+    // 분석기 정리
+    analyserRef.current = null;
+    dataArrayRef.current = null;
     
     setIsActive(false);
     setVolume(0);
   }, []);
+
+  // 마이크 중지 함수
+  const stopMicrophone = useCallback(() => {
+    cleanupResources();
+  }, [cleanupResources]);
 
   // 녹음 상태에 따라 마이크 시작/중지
   useEffect(() => {
@@ -188,7 +213,12 @@ const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
     } else {
       stopMicrophone();
     }
-  }, [isRecording, startMicrophone, stopMicrophone]);
+    
+    // 컴포넌트 언마운트 시 정리
+    return () => {
+      cleanupResources();
+    };
+  }, [isRecording, startMicrophone, stopMicrophone, cleanupResources]);
 
   // 활성화 상태에 따라 애니메이션 시작/중지
   useEffect(() => {
