@@ -1,6 +1,6 @@
 # main.py
 
-from scripts.extract_mel import extract_mel
+from python.voice_analysis.scripts.extract_features import extract_mel
 import os, numpy as np
 
 print(" 내 목소리 분석 중...")
