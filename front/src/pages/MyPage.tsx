@@ -79,6 +79,41 @@ const MyPage: React.FC = () => {
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followType, setFollowType] = useState<'following' | 'followers'>('following');
   
+  // 앨범 데이터 (localStorage에서 불러오기)
+  const [myAlbums, setMyAlbums] = useState(() => {
+    const savedAlbums = localStorage.getItem('myAlbums');
+    if (savedAlbums) {
+      return JSON.parse(savedAlbums);
+    }
+    // 기본 더미 데이터
+    return [
+      {
+        id: '1',
+        title: 'My Favorite Songs',
+        description: '내가 좋아하는 노래들을 모아서 만든 첫 번째 앨범입니다.',
+        coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
+        isPublic: true,
+        trackCount: 3,
+        duration: '11분',
+        likeCount: 42,
+        playCount: 156,
+        createdAt: '2025-01-15T00:00:00Z',
+      },
+      {
+        id: '2',
+        title: '감성 발라드 모음',
+        description: '마음에 담고 싶은 감성적인 발라드들',
+        coverImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
+        isPublic: false,
+        trackCount: 5,
+        duration: '18분',
+        likeCount: 0,
+        playCount: 12,
+        createdAt: '2025-01-10T00:00:00Z',
+      },
+    ];
+  });
+  
   // 프로필 상태 관리
   const [profileData, setProfileData] = useState({
     nickname: '음악러버',
@@ -129,16 +164,24 @@ const MyPage: React.FC = () => {
     totalPlays: 0
   });
 
+  // 앨범 데이터 새로고침
+  React.useEffect(() => {
+    const savedAlbums = localStorage.getItem('myAlbums');
+    if (savedAlbums) {
+      setMyAlbums(JSON.parse(savedAlbums));
+    }
+  }, []);
+
   // 통계 데이터 로드 (실제로는 API 호출)
   React.useEffect(() => {
     // 임시로 더미 데이터 설정 (나중에 API 호출로 교체)
     setUserStats({
-      albums: albums.length,
+      albums: myAlbums.length,
       recordings: recordings.length,
-      likes: albums.reduce((sum, album) => sum + album.likes, 0),
-      totalPlays: albums.reduce((sum, album) => sum + album.plays, 0)
+      likes: myAlbums.reduce((sum, album) => sum + album.likeCount, 0),
+      totalPlays: myAlbums.reduce((sum, album) => sum + album.playCount, 0)
     });
-  }, [albums, recordings]);
+  }, [myAlbums, recordings]);
 
   const achievements = [
     { icon: <MusicNote />, text: '첫 앨범', color: '#1976d2' },
@@ -427,59 +470,44 @@ const MyPage: React.FC = () => {
           <TabPanel value={tabValue} index={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                내 앨범 ({albums.length})
+                내 앨범 ({myAlbums.length})
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={handleCreateAlbum}
-                  sx={{ textTransform: 'none' }}
-                >
-                  새 앨범 만들기
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => addAlbum({
-                    title: `테스트 앨범 ${albums.length + 1}`,
-                    status: '공개',
-                    songs: Math.floor(Math.random() * 10) + 1,
-                    likes: Math.floor(Math.random() * 100),
-                    plays: Math.floor(Math.random() * 500),
-                    date: new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }),
-                    cover: '/api/placeholder/200/200'
-                  })}
-                  sx={{ textTransform: 'none' }}
-                >
-                  테스트 앨범 추가
-                </Button>
-              </Box>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => navigate('/albums/create')}
+                sx={{ textTransform: 'none' }}
+              >
+                새 앨범 만들기
+              </Button>
             </Box>
             
             <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-              {albums.map((album, index) => (
-                <Card key={index} sx={{ width: 280, cursor: 'pointer' }}>
+              {myAlbums.map((album) => (
+                <Card 
+                  key={album.id} 
+                  sx={{ width: 280, cursor: 'pointer' }}
+                  onClick={() => navigate(`/albums/${album.id}`)}
+                >
                   <Box sx={{ position: 'relative' }}>
                     <Box
+                      component="img"
+                      src={album.coverImage}
+                      alt={album.title}
                       sx={{
                         width: '100%',
                         height: 200,
-                        backgroundColor: '#e0e0e0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                        objectFit: 'cover'
                       }}
-                    >
-                      <MusicNote sx={{ fontSize: 48, color: '#9e9e9e' }} />
-                    </Box>
+                    />
                     <Chip
-                      label={album.status}
+                      label={album.isPublic ? '공개' : '비공개'}
                       size="small"
                       sx={{
                         position: 'absolute',
                         top: 8,
                         right: 8,
-                        backgroundColor: album.status === '공개' ? '#4caf50' : '#ff9800',
+                        backgroundColor: album.isPublic ? '#4caf50' : '#ff9800',
                         color: 'white'
                       }}
                     />
@@ -488,43 +516,29 @@ const MyPage: React.FC = () => {
                     <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
                       {album.title}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {album.songs}곡
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Favorite sx={{ fontSize: 16, color: '#e91e63' }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {album.likes}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <PlayArrow sx={{ fontSize: 16, color: '#1976d2' }} />
-                        <Typography variant="body2" color="text.secondary">
-                          {album.plays}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {album.date}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      {album.description}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<PlayArrow />}
-                        sx={{ flex: 1, textTransform: 'none' }}
-                      >
-                        재생
-                      </Button>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {album.trackCount}곡 • {album.duration}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(album.createdAt).toLocaleDateString('ko-KR')}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Favorite sx={{ fontSize: 16, color: '#f44336' }} />
+                          <Typography variant="body2">{album.likeCount}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <PlayArrow sx={{ fontSize: 16, color: '#2196f3' }} />
+                          <Typography variant="body2">{album.playCount}</Typography>
+                        </Box>
+                      </Box>
                       <IconButton size="small">
-                        <Edit />
-                      </IconButton>
-                      <IconButton 
-                        size="small"
-                        onClick={() => deleteAlbum(index)}
-                        sx={{ color: 'error.main' }}
-                      >
                         <MoreVert />
                       </IconButton>
                     </Box>
