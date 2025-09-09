@@ -1,3 +1,4 @@
+
 version: '3.8'
 
 services:
@@ -7,18 +8,18 @@ services:
     container_name: orakgaraki-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD_PROD}
+      MYSQL_DATABASE: ${DB_NAME_PROD}
+      MYSQL_USER: ${DB_USERNAME_PROD}
+      MYSQL_PASSWORD: ${DB_PASSWORD_PROD}
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "${DB_PORT_PROD:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
       - orakgaraki-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD_PROD}"]
       timeout: 20s
       retries: 10
       interval: 10s
@@ -49,11 +50,11 @@ services:
       - ./logs:/var/log/orak
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - DB_HOST=orakgaraki-mysql
+      - DB_HOST=${DB_HOST_PROD:-orakgaraki-mysql}
       - DB_PORT=3306
-      - DB_NAME=${DB_NAME}
-      - DB_USERNAME=${DB_USERNAME}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME_PROD}
+      - DB_USERNAME=${DB_USERNAME_PROD}
+      - DB_PASSWORD=${DB_PASSWORD_PROD}
       - REDIS_HOST=orakgaraki-redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET}

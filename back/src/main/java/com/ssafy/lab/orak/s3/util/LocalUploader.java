@@ -1,5 +1,8 @@
 package com.ssafy.lab.orak.s3.util;
 
+import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
+import com.github.kokorin.jaffree.ffmpeg.UrlInput;
+import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
 import com.ssafy.lab.orak.s3.exception.S3UploadException;
 import com.ssafy.lab.orak.s3.exception.ThumbnailCreationException;
 import net.coobird.thumbnailator.Thumbnailator;
@@ -74,12 +77,20 @@ public class LocalUploader {
             multipartFile.transferTo(savePath);
             savePathList.add(savePath.toFile().getAbsolutePath());
 
-            // 2. 이미지인 경우 즉시 썸네일 생성
+            // 2. 파일 타입별 처리
             String contentType = Files.probeContentType(savePath);
-            if (contentType != null && contentType.startsWith("image/")) {
+            if (isImageFile(contentType)) {
                 List<String> thumbnails = createThumbnails(savePath, saveFileName);
                 savePathList.addAll(thumbnails);
                 log.info("이미지 파일 업로드 및 썸네일 생성 완료: {}", saveFileName);
+            } else if (isAudioFile(saveFileName, contentType)) {
+                String wavFilePath = convertToWav(savePath, saveFileName);
+                if (wavFilePath != null) {
+                    savePathList.add(wavFilePath);
+                    log.info("오디오 파일 업로드 및 WAV 변환 완료: {}", saveFileName);
+                } else {
+                    throw new S3UploadException("오디오 파일 WAV 변환 실패: " + saveFileName + ". 유효한 오디오 파일을 업로드해주세요.");
+                }
             } else {
                 log.info("일반 파일 업로드 완료: {}", saveFileName);
             }
@@ -138,5 +149,53 @@ public class LocalUploader {
     private String getExtension(String fileName) {
         int lastDot = fileName.lastIndexOf('.');
         return lastDot > 0 ? fileName.substring(lastDot + 1).toLowerCase() : "";
+    }
+    
+    /**
+     * 이미지 파일 여부 체크
+     */
+    private boolean isImageFile(String contentType) {
+        return contentType != null && contentType.startsWith("image/");
+    }
+    
+    /**
+     * 오디오 파일 여부 체크 (MIME Type과 확장자 기반)
+     */
+    private boolean isAudioFile(String fileName, String contentType) {
+        // MIME Type 체크
+        if (contentType != null && contentType.startsWith("audio/")) {
+            return true;
+        }
+        
+        // 확장자 기반 체크 (contentType이 null이거나 정확하지 않은 경우)
+        String extension = getExtension(fileName).toLowerCase();
+        return extension.matches("mp3|wav|flac|m4a|aac|ogg|mp4|webm|3gp|amr");
+    }
+    
+    /**
+     * 오디오 파일을 WAV 형식으로 변환
+     */
+    private String convertToWav(Path originalPath, String fileName) {
+        try {
+            String baseName = getBaseName(fileName);
+            String wavFileName = baseName + ".wav";
+            Path wavPath = Paths.get(uploadPath, wavFileName);
+            
+            FFmpeg.atPath()
+                    .addInput(UrlInput.fromPath(originalPath))
+                    .addOutput(UrlOutput.toPath(wavPath)
+                            .setFormat("wav")
+                            .addArguments("-ar", "16000") // 16kHz 샘플레이트
+                            .addArguments("-ac", "1"))    // 모노 채널
+                    .setOverwriteOutput(true)             // 기존 파일 덮어쓰기
+                    .execute();
+            
+            log.info("오디오 파일 WAV 변환 완료: {} -> {}", fileName, wavFileName);
+            return wavPath.toFile().getAbsolutePath();
+            
+        } catch (Exception e) {
+            log.error("오디오 파일 WAV 변환 실패: {}", fileName, e);
+            return null;
+        }
     }
 }
