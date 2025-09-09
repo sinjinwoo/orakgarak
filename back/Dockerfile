@@ -1,5 +1,5 @@
 # 빌드 단계
-FROM eclipse-temurin:17-jdk AS builder
+FROM eclipse-temurin:17-jdk AS build
 
 WORKDIR /app
 
