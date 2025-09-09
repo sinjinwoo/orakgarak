@@ -1,5 +1,5 @@
 # 빌드 단계
-FROM openjdk:24-jdk-slim as build
+FROM eclipse-temurin:17-jdk AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY src src/
 RUN ./gradlew bootJar --no-daemon
 
 # 런타임 단계
-FROM openjdk:24-jre-slim
+FROM eclipse-temurin:17-jdk
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ WORKDIR /app
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # 빌드 단계에서 JAR 파일 복사
-COPY --from=build /app/build/libs/*.jar app.jar
+COPY --from=builder /app/build/libs/orak-*.jar app.jar
 
 # 소유권 변경
 RUN chown -R appuser:appuser /app
