@@ -197,14 +197,31 @@ const ReservationQueue: React.FC = () => {
       const oldIndex = reservationQueue.findIndex((song) => song.id === active.id);
       const newIndex = reservationQueue.findIndex((song) => song.id === over.id);
 
-      reorderQueue(oldIndex, newIndex);  // 순서 변경
+      // 유효한 인덱스인지 확인 후 순서 변경
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        console.log(`드래그 앤 드롭: ${oldIndex} → ${newIndex}`);
+        reorderQueue(oldIndex, newIndex);
+      } else {
+        console.warn('유효하지 않은 드래그 앤 드롭 인덱스:', { oldIndex, newIndex });
+      }
     }
   };
 
-  // 다음 곡으로 재생하는 함수 (나중에 실제 재생 로직 구현 예정)
+  // 다음 곡으로 재생하는 함수
   const handlePlayNext = (song: Song) => {
-    // TODO: 다음 곡으로 재생하는 로직 구현
-    console.log('다음 곡 재생:', song);
+    console.log('다음 곡으로 재생:', song.title, '-', song.artist);
+    
+    // 선택된 곡을 큐의 맨 앞으로 이동
+    const currentIndex = reservationQueue.findIndex(s => s.id === song.id);
+    if (currentIndex > 0) {
+      reorderQueue(currentIndex, 0);
+      console.log(`${song.title}을(를) 큐의 맨 앞으로 이동했습니다.`);
+    }
+    
+    // TODO: 실제 재생 로직 구현
+    // - 현재 재생 중인 곡이 있다면 중지
+    // - 선택된 곡 재생 시작
+    // - 재생 상태 UI 업데이트
   };
 
   return (

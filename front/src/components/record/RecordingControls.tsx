@@ -151,15 +151,18 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
     }
   }, [recordingState, onRecordingChange]);
 
-  // 녹음 취소 함수 (녹음 중일 때)
-  const cancelRecording = useCallback(() => {
-    console.log('녹음 취소 시작');
-    
-    // 취소 상태로 설정
-    isCancelledRef.current = true;
-    
+  // 리소스 정리 함수
+  const cleanupResources = useCallback(() => {
+    // MediaRecorder 정리
     if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
+      try {
+        if (mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      } catch (error) {
+        console.warn('MediaRecorder 정리 중 오류:', error);
+      }
+      mediaRecorderRef.current = null;
     }
 
     // 타이머 정리
@@ -168,19 +171,32 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
       timerRef.current = null;
     }
 
+    // 오디오 청크 정리
+    audioChunksRef.current = [];
+  }, []);
+
+  // 녹음 취소 함수 (녹음 중일 때)
+  const cancelRecording = useCallback(() => {
+    console.log('녹음 취소 시작');
+    
+    // 취소 상태로 설정
+    isCancelledRef.current = true;
+    
+    // 리소스 정리
+    cleanupResources();
+
     // 상태 초기화 (모달은 열지 않음, completed 상태로 설정하여 다시 녹음 버튼 표시)
     setRecordingState('completed');
     setRecordingTime(0);
     setAudioBlob(null);
     setErrorMessage('');
     setShowModal(false);
-    audioChunksRef.current = [];
     
     // 녹음 상태 변경 알림
     onRecordingChange?.(false);
     
     console.log('녹음 취소 완료 - 상태: completed');
-  }, [onRecordingChange]);
+  }, [onRecordingChange, cleanupResources]);
 
   // 다시 녹음 함수 (모달에서 또는 취소 후)
   const retakeRecording = useCallback(() => {
@@ -189,6 +205,9 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
       audioRef.current.pause();
       setIsPlaying(false);
     }
+
+    // 리소스 정리
+    cleanupResources();
 
     // 상태 초기화
     setRecordingState('idle');
@@ -199,8 +218,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
     setCurrentTime(0);
     setDuration(0);
     isCancelledRef.current = false;
-    audioChunksRef.current = [];
-  }, []);
+  }, [cleanupResources]);
 
   // 오디오 재생/일시정지 함수
   const togglePlayPause = useCallback(() => {
@@ -276,22 +294,32 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
 
   // 녹음 삭제 함수
   const deleteRecording = useCallback(() => {
+    // 리소스 정리
+    cleanupResources();
+    
     setAudioBlob(null);
     setShowModal(false);
     setRecordingState('idle');
     setRecordingTime(0);
     isCancelledRef.current = false;
-    audioChunksRef.current = [];
-  }, []);
+  }, [cleanupResources]);
 
   // 컴포넌트 언마운트 시 정리
   React.useEffect(() => {
+    // ref를 변수로 캡처
+    const audioElement = audioRef.current;
+    
     return () => {
-      if (timerRef.current) {
-        window.clearInterval(timerRef.current);
+      // 모든 리소스 정리
+      cleanupResources();
+      
+      // 오디오 정리
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.src = '';
       }
     };
-  }, []);
+  }, [cleanupResources]);
 
   return (
     <Box>
