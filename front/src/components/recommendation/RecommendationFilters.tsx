@@ -1,3 +1,4 @@
+// 추천 필터 컴포넌트 - 장르, 난이도, 기분, 음역대 필터링 기능
 import React, { useState } from 'react';
 import { 
   Box, 
@@ -14,10 +15,11 @@ import {
 import { FilterList, Refresh } from '@mui/icons-material';
 import type { RecommendationFilter } from '../../types/recommendation';
 
+// 필터 컴포넌트 Props 타입 정의
 interface RecommendationFiltersProps {
-  filter: RecommendationFilter;
-  onFilterChange: (filter: RecommendationFilter) => void;
-  onReset: () => void;
+  filter: RecommendationFilter; // 현재 필터 상태
+  onFilterChange: (filter: RecommendationFilter) => void; // 필터 변경 콜백
+  onReset: () => void; // 필터 초기화 콜백
 }
 
 const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
@@ -25,15 +27,18 @@ const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
   onFilterChange,
   onReset
 }) => {
+  // 로컬 필터 상태 - 사용자가 변경 중인 필터 값
   const [localFilter, setLocalFilter] = useState<RecommendationFilter>(filter);
 
-  // 기분 태그 옵션
+  // ===== 필터 옵션 정의 =====
+  
+  // 기분/상황 태그 옵션 - 다양한 상황에 맞는 곡 필터링
   const moodOptions = [
     '비', '추억', '친구', '회식', '운동', '드라이브', 
     '데이트', '혼자', '파티', '잠들기', '기분좋을때', '우울할때'
   ];
 
-  // 장르 옵션
+  // 장르 옵션 - 음악 장르별 필터링
   const genreOptions = [
     { value: 'all', label: '전체' },
     { value: 'pop', label: '팝' },
@@ -45,7 +50,7 @@ const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
     { value: 'hiphop', label: '힙합' }
   ];
 
-  // 난이도 옵션
+  // 난이도 옵션 - 노래 부르기 난이도별 필터링
   const difficultyOptions = [
     { value: 'all', label: '전체' },
     { value: 'easy', label: '쉬움' },
@@ -53,21 +58,23 @@ const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
     { value: 'hard', label: '어려움' }
   ];
 
-  // 기분 태그 토글
+  // ===== 이벤트 핸들러 =====
+  
+  // 기분 태그 토글 - 선택된 기분 태그를 추가/제거
   const handleMoodToggle = (mood: string) => {
     const newMoods = localFilter.mood.includes(mood)
-      ? localFilter.mood.filter(m => m !== mood)
-      : [...localFilter.mood, mood];
+      ? localFilter.mood.filter(m => m !== mood) // 이미 선택된 경우 제거
+      : [...localFilter.mood, mood]; // 선택되지 않은 경우 추가
     
     setLocalFilter(prev => ({ ...prev, mood: newMoods }));
   };
 
-  // 필터 적용
+  // 필터 적용 - 로컬 필터를 부모 컴포넌트에 전달
   const handleApplyFilter = () => {
     onFilterChange(localFilter);
   };
 
-  // 필터 초기화
+  // 필터 초기화 - 모든 필터를 기본값으로 리셋
   const handleReset = () => {
     const resetFilter: RecommendationFilter = {
       genre: 'all',
@@ -84,6 +91,7 @@ const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
 
   return (
     <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+      {/* 필터 헤더 - 제목과 액션 버튼들 */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
           <FilterList />
@@ -108,7 +116,7 @@ const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
         </Box>
       </Box>
 
-      {/* 기분 태그 */}
+      {/* 기분/상황 태그 섹션 - 다양한 상황에 맞는 곡 필터링 */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
           기분/상황
@@ -127,7 +135,7 @@ const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
         </Box>
       </Box>
 
-      {/* 장르 및 난이도 */}
+      {/* 장르 및 난이도 선택 섹션 */}
       <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>장르</InputLabel>
@@ -160,7 +168,7 @@ const RecommendationFilters: React.FC<RecommendationFiltersProps> = ({
         </FormControl>
       </Box>
 
-      {/* 음역대 범위 */}
+      {/* 음역대 범위 슬라이더 - 사용자 음역대에 맞는 곡 필터링 */}
       <Box sx={{ mb: 2 }}>
         <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
           음역대 범위 (Hz)
