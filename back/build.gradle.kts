@@ -38,6 +38,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web") {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf") {
+        exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
+    }
 
     // Log4j2 setup
     implementation("org.springframework.boot:spring-boot-starter-log4j2")
