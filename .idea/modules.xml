@@ -3,6 +3,10 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/S13P21C103.iml" filepath="$PROJECT_DIR$/.idea/S13P21C103.iml" />
+<<<<<<< HEAD
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/orak.main.iml" filepath="$PROJECT_DIR$/.idea/modules/orak.main.iml" />
+=======
+>>>>>>> bdac8ccbdba9e62546e2681a5bd80b2eea7ea8f9
     </modules>
   </component>
 </project>
