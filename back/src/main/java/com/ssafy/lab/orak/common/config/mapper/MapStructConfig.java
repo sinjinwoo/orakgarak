@@ -1,4 +1,4 @@
-package com.ssafy.lab.orak.common.config;
+package com.ssafy.lab.orak.common.config.mapper;
 
 import org.mapstruct.MapperConfig;
 import org.mapstruct.ReportingPolicy;

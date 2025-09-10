@@ -8,6 +8,7 @@ import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
+import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
@@ -33,19 +34,19 @@ public class RecordService {
     private final FileUploadService fileUploadService;
     private final RecordMapper recordMapper;
     private final AudioConverter audioConverter;
+    private final AudioDurationCalculator audioDurationCalculator;
     private final LocalUploader localUploader;
     
     @Value("${s3.upload.path}")
     private String uploadPath;
     
-    public RecordResponseDTO createRecord(String title, Long songId, MultipartFile audioFile, Integer durationSeconds, Long userId) {
+    public RecordResponseDTO createRecord(String title, Long songId, MultipartFile audioFile, Long userId) {
         try {
             // 1. DTO 생성
             RecordRequestDTO requestDTO = RecordRequestDTO.builder()
                     .title(title)
                     .songId(songId)
                     .audioFile(audioFile)
-                    .durationSeconds(durationSeconds)
                     .build();
             
             // 2. 로컬 파일 업로드
@@ -62,16 +63,21 @@ public class RecordService {
                 log.info("오디오 파일 WAV 변환 완료: {}", audioFile.getOriginalFilename());
             }
             
-            // 4. 변환된 파일을 S3에 업로드
+            // 4. 오디오 파일의 재생시간 계산
+            Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(fileToUpload);
+            
+            // 5. 변환된 파일을 S3에 업로드
             Upload upload = fileUploadService.uploadLocalFile(fileToUpload, "recordings", userId);
             
-            // 5. Record 엔티티 생성 및 저장 (MapStruct 사용)
+            // 6. Record 엔티티 생성 및 저장 (MapStruct 사용)
             Record record = recordMapper.toEntity(requestDTO, userId, upload);
+            // 계산된 재생시간 설정
+            record = record.toBuilder().durationSeconds(calculatedDuration).build();
             Record savedRecord = recordRepository.save(record);
             
             log.info("녹음 파일 생성 성공: userId={}, recordId={}", userId, savedRecord.getId());
             
-            // 6. S3 업로드와 DB 저장이 완료된 후 서버에 있는 임시 파일들 삭제
+            // 7. S3 업로드와 DB 저장이 완료된 후 서버에 있는 임시 파일들 삭제
             try {
                 java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(originalFilePath));
                 if (!originalFilePath.equals(fileToUpload)) {
@@ -82,7 +88,7 @@ public class RecordService {
                 log.warn("서버 임시 파일 삭제 실패", e);
             }
             
-            // 7. 응답 DTO 반환 (MapStruct 사용)
+            // 8. 응답 DTO 반환 (MapStruct 사용)
             return recordMapper.toResponseDTO(savedRecord, upload);
             
         } catch (Exception e) {

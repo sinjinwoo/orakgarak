@@ -1,14 +1,11 @@
 package com.ssafy.lab.orak.upload.entity;
 
+import com.ssafy.lab.orak.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "uploads")
@@ -16,8 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class)
-public class Upload {
+public class Upload extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,8 +33,5 @@ public class Upload {
     
     @Column(nullable = false)
     private String directory;
-    
-    @CreatedDate
-    @Column(nullable = false)
-    private LocalDateTime uploadDate;
+
 }

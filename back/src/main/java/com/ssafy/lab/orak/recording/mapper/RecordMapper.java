@@ -15,15 +15,14 @@ public interface RecordMapper {
     @Mapping(target = "audioFile", ignore = true)
     @Mapping(target = "title", source = "title")
     @Mapping(target = "songId", source = "songId")
-    @Mapping(target = "durationSeconds", source = "durationSeconds")
-    RecordRequestDTO toRequestDTO(String title, Long songId, Integer durationSeconds, MultipartFile audioFile);
+    RecordRequestDTO toRequestDTO(String title, Long songId, MultipartFile audioFile);
     
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", source = "userId")
     @Mapping(target = "songId", source = "requestDTO.songId")
     @Mapping(target = "title", source = "requestDTO.title")
     @Mapping(target = "uploadId", source = "upload.id")
-    @Mapping(target = "durationSeconds", source = "requestDTO.durationSeconds")
+    @Mapping(target = "durationSeconds", ignore = true)
     @Mapping(target = "upload", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
