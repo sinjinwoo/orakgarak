@@ -49,8 +49,19 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <!-- Hibernate/JPA 로그 레벨 -->
-        <Logger name="org.hibernate" level="DEBUG" additivity="false">
+        <!-- Hibernate 시작 시 초기화 로그들만 숨김 -->
+        <!-- 트랜잭션 rollback-only 로그 숨김 -->
+        <Logger name="org.hibernate.resource.transaction" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- Named Query 관련 초기화 로그 숨김 -->
+        <Logger name="org.springframework.data.jpa.repository.query" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+        
+        <!-- HQL/SQM 파싱 관련 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.orm.query" level="WARN" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
         
@@ -160,6 +171,21 @@
 
         <!-- SQL 바인딩 파라미터 출력 -->
         <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- SQL 결과 값 출력 -->
+        <Logger name="org.hibernate.type.descriptor.sql.BasicExtractor" level="TRACE" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- JPA Repository 메소드 호출 로그 -->
+        <Logger name="org.springframework.data.jpa.repository" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate 세션/트랜잭션 로그 (런타임만) -->
+        <Logger name="org.hibernate.transaction" level="DEBUG" additivity="false">
             <AppenderRef ref="Console"/>
         </Logger>
 
