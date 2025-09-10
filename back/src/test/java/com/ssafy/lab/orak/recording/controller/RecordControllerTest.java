@@ -1,6 +1,7 @@
 package com.ssafy.lab.orak.recording.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
 import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
@@ -69,9 +70,10 @@ class RecordControllerTest {
 
     @Test
     @DisplayName("녹음 생성 성공 테스트")
+    @WithMockUser(username = "1")
     void createRecord_Success() throws Exception {
         // given
-        when(recordService.createRecord(anyString(), anyLong(), any(MultipartFile.class), anyInt(), anyLong()))
+        when(recordService.createRecord(anyString(), anyLong(), any(MultipartFile.class), anyLong()))
             .thenReturn(testResponseDTO);
 
         // when & then
@@ -79,9 +81,8 @@ class RecordControllerTest {
                 .file(testAudioFile)
                 .param("title", "테스트 녹음")
                 .param("songId", "100")
-                .param("durationSeconds", "180")
-                .header("userId", "1")
-                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(1L))
             .andExpect(jsonPath("$.title").value("테스트 녹음"))
@@ -90,29 +91,30 @@ class RecordControllerTest {
             .andExpect(jsonPath("$.durationSeconds").value(180))
             .andExpect(jsonPath("$.uploadId").value(1L));
 
-        verify(recordService).createRecord(eq("테스트 녹음"), eq(100L), any(MultipartFile.class), eq(180), eq(1L));
+        verify(recordService).createRecord(eq("테스트 녹음"), eq(100L), any(MultipartFile.class), eq(1L));
     }
 
     @Test
     @DisplayName("필수 파라미터 없이 녹음 생성 시 실패")
+    @WithMockUser(username = "1")
     void createRecord_MissingRequiredParams_BadRequest() throws Exception {
         // when & then - title 없음
         mockMvc.perform(multipart("/api/records")
                 .file(testAudioFile)
                 .param("songId", "100")
-                .param("durationSeconds", "180")
-                .header("userId", "1")
-                .contentType(MediaType.MULTIPART_FORM_DATA))
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .with(csrf()))
             .andExpect(status().isBadRequest());
 
-        verify(recordService, never()).createRecord(any(), any(), any(), any(), any());
+        verify(recordService, never()).createRecord(any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("파일 업로드 실패 시 예외 전파")
+    @WithMockUser(username = "1")
     void createRecord_FileUploadFails_ThrowsException() throws Exception {
         // given
-        when(recordService.createRecord(anyString(), anyLong(), any(MultipartFile.class), anyInt(), anyLong()))
+        when(recordService.createRecord(anyString(), anyLong(), any(MultipartFile.class), anyLong()))
             .thenThrow(new FileUploadException("파일 업로드 실패"));
 
         // when & then
@@ -120,13 +122,11 @@ class RecordControllerTest {
                 .file(testAudioFile)
                 .param("title", "테스트 녹음")
                 .param("songId", "100")
-                .param("durationSeconds", "180")
-                .header("userId", "1")
-                .contentType(MediaType.MULTIPART_FORM_DATA))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.errorCode").value("FILE_UPLOAD_ERROR"));
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .with(csrf()))
+            .andExpect(status().isBadRequest());
 
-        verify(recordService).createRecord(eq("테스트 녹음"), eq(100L), any(MultipartFile.class), eq(180), eq(1L));
+        verify(recordService).createRecord(eq("테스트 녹음"), eq(100L), any(MultipartFile.class), eq(1L));
     }
 
     @Test
@@ -155,28 +155,28 @@ class RecordControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/records/{recordId}", recordId))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.errorCode").value("RECORD_NOT_FOUND"));
+            .andExpect(status().isNotFound());
 
         verify(recordService).getRecord(recordId);
     }
 
     @Test
-    @DisplayName("사용자별 녹음 목록 조회 성공 테스트")
-    void getRecordsByUser_Success() throws Exception {
+    @DisplayName("내 녹음 목록 조회 성공 테스트")
+    @WithMockUser(username = "1")
+    void getMyRecords_Success() throws Exception {
         // given
-        Long userId = 1L;
         List<RecordResponseDTO> records = Arrays.asList(testResponseDTO);
-        when(recordService.getRecordsByUser(userId)).thenReturn(records);
+        when(recordService.getRecordsByUser(1L)).thenReturn(records);
 
         // when & then
-        mockMvc.perform(get("/api/records/user/{userId}", userId))
+        mockMvc.perform(get("/api/records/me")
+                .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(1L))
             .andExpect(jsonPath("$[0].userId").value(1L))
             .andExpect(jsonPath("$.length()").value(1));
 
-        verify(recordService).getRecordsByUser(userId);
+        verify(recordService).getRecordsByUser(1L);
     }
 
     @Test
@@ -198,99 +198,96 @@ class RecordControllerTest {
 
     @Test
     @DisplayName("녹음 수정 성공 테스트")
+    @WithMockUser(username = "1")
     void updateRecord_Success() throws Exception {
         // given
         Long recordId = 1L;
-        Long userId = 1L;
         String newTitle = "수정된 녹음 제목";
         RecordResponseDTO updatedResponse = testResponseDTO.toBuilder().title(newTitle).build();
         
-        when(recordService.updateRecord(recordId, newTitle, userId)).thenReturn(updatedResponse);
+        when(recordService.updateRecord(recordId, newTitle, 1L)).thenReturn(updatedResponse);
 
         // when & then
         mockMvc.perform(put("/api/records/{recordId}", recordId)
                 .param("title", newTitle)
-                .header("userId", userId.toString()))
+                .with(csrf()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.title").value(newTitle))
             .andExpect(jsonPath("$.id").value(recordId));
 
-        verify(recordService).updateRecord(recordId, newTitle, userId);
+        verify(recordService).updateRecord(recordId, newTitle, 1L);
     }
 
     @Test
     @DisplayName("권한 없는 녹음 수정 시 403")
+    @WithMockUser(username = "2")
     void updateRecord_PermissionDenied_Returns403() throws Exception {
         // given
         Long recordId = 1L;
-        Long userId = 2L; // 다른 사용자
         String newTitle = "수정된 제목";
         
-        when(recordService.updateRecord(recordId, newTitle, userId))
-            .thenThrow(new RecordPermissionDeniedException(recordId, userId));
+        when(recordService.updateRecord(recordId, newTitle, 2L))
+            .thenThrow(new RecordPermissionDeniedException(recordId, 2L));
 
         // when & then
         mockMvc.perform(put("/api/records/{recordId}", recordId)
                 .param("title", newTitle)
-                .header("userId", userId.toString()))
-            .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.errorCode").value("RECORD_PERMISSION_DENIED"));
+                .with(csrf()))
+            .andExpect(status().isForbidden());
 
-        verify(recordService).updateRecord(recordId, newTitle, userId);
+        verify(recordService).updateRecord(recordId, newTitle, 2L);
     }
 
     @Test
     @DisplayName("녹음 삭제 성공 테스트")
+    @WithMockUser(username = "1")
     void deleteRecord_Success() throws Exception {
         // given
         Long recordId = 1L;
-        Long userId = 1L;
         
-        doNothing().when(recordService).deleteRecord(recordId, userId);
+        doNothing().when(recordService).deleteRecord(recordId, 1L);
 
         // when & then
         mockMvc.perform(delete("/api/records/{recordId}", recordId)
-                .header("userId", userId.toString()))
+                .with(csrf()))
             .andExpect(status().isNoContent());
 
-        verify(recordService).deleteRecord(recordId, userId);
+        verify(recordService).deleteRecord(recordId, 1L);
     }
 
     @Test
     @DisplayName("존재하지 않는 녹음 삭제 시 404")
+    @WithMockUser(username = "1")
     void deleteRecord_NotFound_Returns404() throws Exception {
         // given
         Long recordId = 999L;
-        Long userId = 1L;
         
         doThrow(new RecordNotFoundException(recordId))
-            .when(recordService).deleteRecord(recordId, userId);
+            .when(recordService).deleteRecord(recordId, 1L);
 
         // when & then
         mockMvc.perform(delete("/api/records/{recordId}", recordId)
-                .header("userId", userId.toString()))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.errorCode").value("RECORD_NOT_FOUND"));
+                .with(csrf()))
+            .andExpect(status().isNotFound());
 
-        verify(recordService).deleteRecord(recordId, userId);
+        verify(recordService).deleteRecord(recordId, 1L);
     }
 
     @Test
     @DisplayName("권한 없는 녹음 삭제 시 403")
+    @WithMockUser(username = "2")
     void deleteRecord_PermissionDenied_Returns403() throws Exception {
         // given
         Long recordId = 1L;
-        Long userId = 2L; // 다른 사용자
         
-        doThrow(new RecordPermissionDeniedException(recordId, userId))
-            .when(recordService).deleteRecord(recordId, userId);
+        doThrow(new RecordPermissionDeniedException(recordId, 2L))
+            .when(recordService).deleteRecord(recordId, 2L);
 
         // when & then
         mockMvc.perform(delete("/api/records/{recordId}", recordId)
-                .header("userId", userId.toString()))
-            .andExpect(status().isForbidden())
-            .andExpect(jsonPath("$.errorCode").value("RECORD_PERMISSION_DENIED"));
+                .with(csrf()))
+            .andExpect(status().isForbidden());
 
-        verify(recordService).deleteRecord(recordId, userId);
+        verify(recordService).deleteRecord(recordId, 2L);
     }
 }

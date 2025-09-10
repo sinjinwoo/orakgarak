@@ -24,8 +24,6 @@ public interface RecordMapper {
     @Mapping(target = "uploadId", source = "upload.id")
     @Mapping(target = "durationSeconds", ignore = true)
     @Mapping(target = "upload", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
     Record toEntity(RecordRequestDTO requestDTO, Long userId, Upload upload);
     
     @Mapping(target = "uploadId", source = "uploadId")
@@ -33,5 +31,7 @@ public interface RecordMapper {
     
     @Mapping(target = "id", source = "record.id")
     @Mapping(target = "uploadId", source = "upload.id")
+    @Mapping(target = "createdAt", source = "record.createdAt")
+    @Mapping(target = "updatedAt", source = "record.updatedAt")
     RecordResponseDTO toResponseDTO(Record record, Upload upload);
 }

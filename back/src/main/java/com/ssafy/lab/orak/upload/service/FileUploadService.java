@@ -49,18 +49,27 @@ public class FileUploadService {
                 throw new IllegalArgumentException("빈 파일입니다");
             }
             
+            // 파일명에서 확장자 추출
+            String originalFilename = file.getOriginalFilename();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+            }
+            
+            // UUID 생성
+            String uuid = UUID.randomUUID().toString();
+            
             // S3 업로드
             List<String> localFilePaths = localUploader.uploadLocal(file);
             String localFilePath = localFilePaths.get(0);
             String s3Url = s3Uploader.upload(localFilePath, directory);
             
-            // S3 URL에서 저장된 파일명 추출
-            String storedFilename = s3Helper.extractFullFileNameFromUrl(s3Url);
-            
-            // Upload 엔티티 생성 및 저장 (fileUrl, createdBy 제거)
+            // Upload 엔티티 생성 및 저장
             Upload upload = Upload.builder()
-                    .originalFilename(file.getOriginalFilename())
-                    .storedFilename(storedFilename)
+                    .originalFilename(originalFilename)
+                    .uuid(uuid)
+                    .extension(extension)
+                    .uploaderId(userId)
                     .fileSize(file.getSize())
                     .contentType(file.getContentType())
                     .directory(directory)
@@ -122,11 +131,18 @@ public class FileUploadService {
                 throw new IllegalArgumentException("로컬 파일이 존재하지 않습니다: " + localFilePath);
             }
             
+            // 파일명에서 확장자 추출
+            String originalFilename = file.getName();
+            String extension = "";
+            if (originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+            }
+            
+            // UUID 생성
+            String uuid = UUID.randomUUID().toString();
+            
             // S3 업로드
             String s3Url = s3Uploader.upload(localFilePath, directory);
-            
-            // S3 URL에서 저장된 파일명 추출
-            String storedFilename = s3Helper.extractFullFileNameFromUrl(s3Url);
             
             // 파일 타입 추출
             String contentType;
@@ -141,8 +157,10 @@ public class FileUploadService {
             
             // Upload 엔티티 생성 및 저장
             Upload upload = Upload.builder()
-                    .originalFilename(file.getName())
-                    .storedFilename(storedFilename)
+                    .originalFilename(originalFilename)
+                    .uuid(uuid)
+                    .extension(extension)
+                    .uploaderId(userId)
                     .fileSize(file.length())
                     .contentType(contentType)
                     .directory(directory)
@@ -167,7 +185,7 @@ public class FileUploadService {
     
     // URL 동적 생성 메서드
     public String getFileUrl(Upload upload) {
-        String s3Key = upload.getDirectory() + "/" + upload.getStoredFilename();
+        String s3Key = upload.getFullPath();
         return s3Helper.getS3Url(s3Key);
     }
     

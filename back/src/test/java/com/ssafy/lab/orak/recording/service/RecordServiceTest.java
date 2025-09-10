@@ -8,6 +8,7 @@ import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
+import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
@@ -49,6 +50,9 @@ class RecordServiceTest {
 
     @Mock
     private LocalUploader localUploader;
+    
+    @Mock
+    private AudioDurationCalculator audioDurationCalculator;
 
     @InjectMocks
     private RecordService recordService;
@@ -74,7 +78,6 @@ class RecordServiceTest {
             .fileSize(2048L)
             .contentType("audio/mpeg")
             .directory("recordings")
-            .uploadDate(LocalDateTime.now())
             .build();
 
         testRecord = Record.builder()
@@ -84,8 +87,6 @@ class RecordServiceTest {
             .title("테스트 녹음")
             .uploadId(1L)
             .durationSeconds(180)
-            .createdAt(LocalDateTime.now())
-            .updatedAt(LocalDateTime.now())
             .build();
 
         testResponseDTO = RecordResponseDTO.builder()
@@ -106,22 +107,23 @@ class RecordServiceTest {
         // given
         String title = "테스트 녹음";
         Long songId = 100L;
-        Integer durationSeconds = 180;
         Long userId = 1L;
 
         when(localUploader.uploadLocal(testAudioFile, null, userId))
             .thenReturn(Arrays.asList("/test/path/test-recording.mp3"));
         when(audioConverter.isAudioFile(anyString(), any()))
             .thenReturn(false); // Test non-audio file path
+        when(audioDurationCalculator.calculateDurationInSeconds("/test/path/test-recording.mp3"))
+            .thenReturn(180);
         when(fileUploadService.uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId))
             .thenReturn(testUpload);
         when(recordMapper.toEntity(any(RecordRequestDTO.class), eq(userId), eq(testUpload)))
             .thenReturn(testRecord);
-        when(recordRepository.save(testRecord)).thenReturn(testRecord);
+        when(recordRepository.save(any(Record.class))).thenReturn(testRecord);
         when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
 
         // when
-        RecordResponseDTO result = recordService.createRecord(title, songId, testAudioFile, durationSeconds, userId);
+        RecordResponseDTO result = recordService.createRecord(title, songId, testAudioFile, userId);
 
         // then
         assertNotNull(result);
@@ -132,9 +134,10 @@ class RecordServiceTest {
         verify(localUploader).uploadLocal(testAudioFile, null, userId);
         verify(audioConverter).isAudioFile(anyString(), any());
         verify(audioConverter, never()).convertToWav(anyString(), anyString()); // No conversion for non-audio
+        verify(audioDurationCalculator).calculateDurationInSeconds("/test/path/test-recording.mp3");
         verify(fileUploadService).uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId);
         verify(recordMapper).toEntity(any(RecordRequestDTO.class), eq(userId), eq(testUpload));
-        verify(recordRepository).save(testRecord);
+        verify(recordRepository).save(any(Record.class));
         verify(recordMapper).toResponseDTO(testRecord, testUpload);
     }
 
@@ -144,7 +147,6 @@ class RecordServiceTest {
         // given
         String title = "테스트 녹음";
         Long songId = 100L;
-        Integer durationSeconds = 180;
         Long userId = 1L;
 
         when(localUploader.uploadLocal(testAudioFile, null, userId))
@@ -152,7 +154,7 @@ class RecordServiceTest {
 
         // when & then
         assertThrows(FileUploadException.class, () -> 
-            recordService.createRecord(title, songId, testAudioFile, durationSeconds, userId)
+            recordService.createRecord(title, songId, testAudioFile, userId)
         );
 
         verify(localUploader).uploadLocal(testAudioFile, null, userId);
@@ -201,7 +203,6 @@ class RecordServiceTest {
         // given
         Long userId = 1L;
         List<Record> records = Arrays.asList(testRecord);
-        List<RecordResponseDTO> responseDTOs = Arrays.asList(testResponseDTO);
 
         when(recordRepository.findByUserIdWithUpload(userId)).thenReturn(records);
         when(recordMapper.toResponseDTO(testRecord)).thenReturn(testResponseDTO);
