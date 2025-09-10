@@ -41,8 +41,8 @@ export function useRecorder(options: UseRecorderOptions = {}): [RecordingState, 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout>();
-  const animationFrameRef = useRef<number>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // 볼륨 레벨 분석
   const analyzeVolume = useCallback(() => {
@@ -192,7 +192,7 @@ export function useRecorder(options: UseRecorderOptions = {}): [RecordingState, 
       options.onRecordingStart?.();
 
     } catch (error) {
-      console.error('녹음 시작 실패:', error);
+      console.error(' 실패:', error);
     }
   }, [options, startAnalysis]);
 

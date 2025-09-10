@@ -16,28 +16,18 @@ const dummyUser: User = {
 
 const dummySongs: Song[] = [
   {
-    id: '1',
+    id: 1,
     title: '좋은 날',
     artist: '아이유',
-    album: 'Real',
-    duration: 240,
+    duration: '4:00',
     genre: 'K-POP',
-    key: 'C',
-    tempo: 120,
-    difficulty: 'medium',
-    popularity: 95,
   },
   {
-    id: '2',
+    id: 2,
     title: '너를 사랑해',
     artist: '김범수',
-    album: '김범수 1집',
-    duration: 280,
+    duration: '4:40',
     genre: 'Ballad',
-    key: 'G',
-    tempo: 80,
-    difficulty: 'easy',
-    popularity: 88,
   },
 ];
 

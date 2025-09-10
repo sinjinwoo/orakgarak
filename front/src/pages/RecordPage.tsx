@@ -80,7 +80,7 @@ const RecordPage: React.FC = () => {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {/* 피치 정확도 그래프 */}
                 <Paper elevation={1} sx={{ p: 2, borderRadius: 2, minHeight: 200 }}>
-                  <PitchGraph />
+                  <PitchGraph isRecording={isRecording} />
                 </Paper>
                 
                 {/* 실시간 볼륨 시각화 */}
