@@ -15,38 +15,40 @@ def extract_features(mel_spectrogram, song_id=None, sr=16000, n_mfcc=13):
     try:
         # MFCC 추출
         mfcc = librosa.feature.mfcc(S=mel_spectrogram, sr=sr, n_mfcc=n_mfcc)
-        mfcc_mean = np.mean(mfcc, axis=1)   
+        mfcc_mean = np.mean(mfcc, axis=1)
 
-        # 각 bin의 평균 에너지
-        energy_per_bin = mel_spectrogram.mean(axis=1)
+        # mel -> Hz 변환
+        n_mels = mel_spectrogram.shape[0]
+        mel_freqs = librosa.mel_frequencies(n_mels=n_mels, fmin=80, fmax=1200)
 
-        # mel bin -> Hz 변환
-        mel_freqs = librosa.mel_frequencies(
-            n_mels=mel_spectrogram.shape[0],
-            fmin=0,
-            fmax=sr/2
-        )
+        # 프레임별 dominant 주파수 추출
+        max_bin_indices = np.argmax(mel_spectrogram, axis=0)
+        max_freqs = mel_freqs[max_bin_indices]
 
-        # 누적합으로 에너지 분포 계산
-        energy_cumsum = np.cumsum(energy_per_bin)
-        energy_cumsum /= energy_cumsum[-1]  # 0~1 정규화
+        # 사람 목소리 범위 기준으로 필터링 (80 ~ 1200Hz)
+        valid_freqs = max_freqs[(max_freqs >= 80) & (max_freqs <= 1200)]
 
-        # q10, q90 위치 찾기
-        low_idx = np.searchsorted(energy_cumsum, 0.1)
-        high_idx = np.searchsorted(energy_cumsum, 0.9)
-
-        low_freq = mel_freqs[low_idx]
-        high_freq = mel_freqs[high_idx]
+        if len(valid_freqs) == 0:
+            low_freq = high_freq = avg_freq = 0.0
+        else:
+            low_freq = np.min(valid_freqs)
+            high_freq = np.max(valid_freqs)
+            avg_freq = np.mean(valid_freqs)
 
         features = {
             'mfcc': mfcc_mean,
             'pitch_low': float(low_freq),
-            'pitch_high': float(high_freq)
+            'pitch_high': float(high_freq),
+            'pitch_avg': float(avg_freq)
         }
+
     except Exception as e:
-        logging.warning(f"MFCC 추출 실패: {e} -> song_id: {song_id}")
+        logging.warning(f"[MFCC 추출 실패] song_id={song_id} / 오류: {e}")
         features = {
-            'mfcc': np.zeros(n_mfcc)
+            'mfcc': np.zeros(n_mfcc),
+            'pitch_low': 0.0,
+            'pitch_high': 0.0,
+            'pitch_avg': 0.0
         }
 
     return features
