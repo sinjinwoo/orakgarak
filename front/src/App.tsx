@@ -8,6 +8,7 @@ import Footer from './components/common/Footer';
 import Toast from './components/common/Toast';
 import { useAuth } from './hooks/useAuth';
 import './app/index.css';
+import './styles/immersive-playback.css';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();

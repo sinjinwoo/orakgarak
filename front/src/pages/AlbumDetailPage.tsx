@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAlbumStore } from '../stores/albumStore';
+import ImmersivePlaybackModal from '../components/album/ImmersivePlaybackModal';
 import {
   Box,
   Container,
@@ -9,7 +10,6 @@ import {
   CardMedia,
   List,
   ListItem,
-  ListItemText,
   Chip,
   IconButton,
   TextField,
@@ -49,9 +49,9 @@ const dummyAlbum = {
     profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
   },
   tracks: [
-    { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45' },
-    { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12' },
-    { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23' },
+    { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45', audioUrl: 'https://example.com/audio1.mp3' },
+    { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12', audioUrl: 'https://example.com/audio2.mp3' },
+    { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23', audioUrl: 'https://example.com/audio3.mp3' },
   ],
   isPublic: true,
   tags: ['K-POP', '발라드', '감성', '힐링'],
@@ -96,7 +96,6 @@ const AlbumDetailPage: React.FC = () => {
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [foundAlbum, setFoundAlbum] = useState<any>(null);
   
   // 메뉴 상태
   const [albumMenuAnchor, setAlbumMenuAnchor] = useState<null | HTMLElement>(null);
@@ -105,11 +104,11 @@ const AlbumDetailPage: React.FC = () => {
   // 다이얼로그 상태
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editTracksDialogOpen, setEditTracksDialogOpen] = useState(false);
+  const [immersivePlaybackOpen, setImmersivePlaybackOpen] = useState(false);
   
   // 수록곡 편집 상태
-  const [editingTracks, setEditingTracks] = useState<any[]>([]);
   const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
-  const [allRecordings, setAllRecordings] = useState<any[]>([]);
+  const [allRecordings, setAllRecordings] = useState<typeof dummyAlbum.tracks>([]);
 
   // 앨범 데이터 로드
   useEffect(() => {
@@ -122,7 +121,6 @@ const AlbumDetailPage: React.FC = () => {
       const albumData = getAlbumById(albumId);
       
       if (albumData) {
-        setFoundAlbum(albumData);
         // 앨범 데이터를 상세 페이지 형식으로 변환
         const albumDetailData = {
           id: albumData.id,
@@ -234,44 +232,48 @@ const AlbumDetailPage: React.FC = () => {
     const dummyRecordings = [
       {
         id: '1',
-        song: { title: '좋아', artist: '윤종신' },
-        duration: 225,
-        analysis: { overallScore: 85 },
-        audioUrl: '',
+        title: '좋아',
+        artist: '윤종신',
+        score: 85,
+        duration: '3:45',
+        audioUrl: 'https://example.com/recording1.mp3',
       },
       {
         id: '2',
-        song: { title: '사랑은 은하수 다방에서', artist: '10cm' },
-        duration: 252,
-        analysis: { overallScore: 78 },
-        audioUrl: '',
+        title: '사랑은 은하수 다방에서',
+        artist: '10cm',
+        score: 78,
+        duration: '4:12',
+        audioUrl: 'https://example.com/recording2.mp3',
       },
       {
         id: '3',
-        song: { title: '밤편지', artist: '아이유' },
-        duration: 203,
-        analysis: { overallScore: 92 },
-        audioUrl: '',
+        title: '밤편지',
+        artist: '아이유',
+        score: 92,
+        duration: '3:23',
+        audioUrl: 'https://example.com/recording3.mp3',
       },
       {
         id: '4',
-        song: { title: 'Spring Day', artist: 'BTS' },
-        duration: 234,
-        analysis: { overallScore: 88 },
-        audioUrl: '',
+        title: 'Spring Day',
+        artist: 'BTS',
+        score: 88,
+        duration: '3:54',
+        audioUrl: 'https://example.com/recording4.mp3',
       },
       {
         id: '5',
-        song: { title: 'Dynamite', artist: 'BTS' },
-        duration: 199,
-        analysis: { overallScore: 90 },
-        audioUrl: '',
+        title: 'Dynamite',
+        artist: 'BTS',
+        score: 90,
+        duration: '3:19',
+        audioUrl: 'https://example.com/recording5.mp3',
       },
     ];
     
     setAllRecordings(dummyRecordings);
-    setEditingTracks(album.tracks);
-    setSelectedTracks(album.tracks.map((track: any) => track.id));
+    setSelectedTracks(album.tracks.map((track: typeof dummyAlbum.tracks[0]) => track.id));
     setEditTracksDialogOpen(true);
     handleTrackMenuClose();
   };
@@ -282,7 +284,7 @@ const AlbumDetailPage: React.FC = () => {
     const savedAlbums = localStorage.getItem('myAlbums');
     if (savedAlbums) {
       const albums = JSON.parse(savedAlbums);
-      const updatedAlbums = albums.filter((a: any) => a.id !== albumId);
+      const updatedAlbums = albums.filter((a: typeof dummyAlbum) => a.id !== albumId);
       localStorage.setItem('myAlbums', JSON.stringify(updatedAlbums));
     }
     
@@ -313,10 +315,10 @@ const AlbumDetailPage: React.FC = () => {
       .filter(recording => selectedTracks.includes(recording.id))
       .map(recording => ({
         id: recording.id,
-        title: recording.song.title,
-        artist: recording.song.artist,
-        score: recording.analysis.overallScore,
-        duration: `${Math.floor(recording.duration / 60)}:${(recording.duration % 60).toString().padStart(2, '0')}`,
+        title: recording.title,
+        artist: recording.artist,
+        score: recording.score,
+        duration: recording.duration,
         audioUrl: recording.audioUrl,
       }));
     
@@ -324,7 +326,7 @@ const AlbumDetailPage: React.FC = () => {
     const savedAlbums = localStorage.getItem('myAlbums');
     if (savedAlbums) {
       const albums = JSON.parse(savedAlbums);
-      const updatedAlbums = albums.map((a: any) => 
+      const updatedAlbums = albums.map((a: typeof dummyAlbum) => 
         a.id === albumId ? { ...a, tracks: updatedTracks, trackCount: updatedTracks.length } : a
       );
       localStorage.setItem('myAlbums', JSON.stringify(updatedAlbums));
@@ -393,7 +395,7 @@ const AlbumDetailPage: React.FC = () => {
               </Typography>
             </Box>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              ♫ {album.tracks.length}곡 • {foundAlbum?.duration || album.tracks.reduce((total, track) => {
+              ♫ {album.tracks.length}곡 • {album.tracks.reduce((total, track) => {
                 const [minutes, seconds] = track.duration.split(':').map(Number);
                 return total + minutes * 60 + seconds;
               }, 0) / 60}분
@@ -429,6 +431,7 @@ const AlbumDetailPage: React.FC = () => {
               <Button
                 variant="outlined"
                 startIcon={<ExpandMore />}
+                onClick={() => setImmersivePlaybackOpen(true)}
                 sx={{
                   borderColor: '#2c2c2c',
                   color: '#2c2c2c',
@@ -656,7 +659,7 @@ const AlbumDetailPage: React.FC = () => {
             </Typography>
             <List>
               {allRecordings.map((recording, index) => {
-                const duration = `${Math.floor(recording.duration / 60)}:${(recording.duration % 60).toString().padStart(2, '0')}`;
+                const duration = recording.duration;
                 return (
                   <ListItem key={recording.id} sx={{ py: 1 }}>
                     <FormControlLabel
@@ -672,19 +675,19 @@ const AlbumDetailPage: React.FC = () => {
                             {index + 1}.
                           </Typography>
                           <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                            {recording.song.title}
+                            {recording.title}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            - {recording.song.artist}
+                            - {recording.artist}
                           </Typography>
                           <Typography
                             variant="body2"
                             sx={{
-                              color: getScoreColor(recording.analysis.overallScore),
+                              color: getScoreColor(recording.score),
                               fontWeight: 600,
                             }}
                           >
-                            {recording.analysis.overallScore}점
+                            {recording.score}점
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {duration}
@@ -710,6 +713,24 @@ const AlbumDetailPage: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* 몰입 재생 모달 */}
+        <ImmersivePlaybackModal
+          open={immersivePlaybackOpen}
+          onClose={() => setImmersivePlaybackOpen(false)}
+          albumData={{
+            id: album.id,
+            title: album.title,
+            tracks: album.tracks.map((track: typeof dummyAlbum.tracks[0]) => ({
+              id: track.id,
+              title: track.title,
+              audioUrl: track.audioUrl,
+              duration: track.duration,
+            })),
+            coverImage: album.coverImage,
+            description: album.description,
+          }}
+        />
     </Container>
   );
 };
