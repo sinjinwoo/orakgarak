@@ -3,7 +3,6 @@ import numpy as np
 import os
 import tqdm
 import json
-import pandas as pd
 import logging
 from multiprocessing import Pool, cpu_count
 from extract_features import extract_features
@@ -13,7 +12,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("process_dataset.log", encoding="utf-8")
+        logging.FileHandler("process_dataset_parallel.log", encoding="utf-8")
     ]
 )
 
@@ -33,15 +32,25 @@ def convert_numpy_to_list(d):
             converted[k] = v
     return converted
 
-# 단일 곡 feature 추출
+# 단일 곡 feature 추출 및 저장
 def process_one_song(args):
-    song_id, dataset_path, popularity_map = args
+    song_id, dataset_path, output_path, popularity_map = args
 
     subdir = str(song_id // 1000)
     mel_path = os.path.join(dataset_path, subdir, f"{song_id}.npy")
+    
+    output_subdir = os.path.join(output_path, subdir)
+    if not os.path.exists(output_subdir):
+        os.makedirs(output_subdir, exist_ok=True)
+        
+    output_filepath = os.path.join(output_subdir, f"{song_id}.json")
+
+    if os.path.exists(output_filepath):
+        # logging.info(f"이미 처리된 파일: {output_filepath}, 건너뜀")
+        return
 
     if not os.path.exists(mel_path):
-        return None
+        return
 
     try:
         mel_spectrogram = np.load(mel_path)
@@ -57,50 +66,48 @@ def process_one_song(args):
             features["popularity"] = 0
 
         features = convert_numpy_to_list(features)
-        return features
+        
+        # 피처 저장
+        with open(output_filepath, "w", encoding="utf-8") as f:
+            json.dump(features, f, ensure_ascii=False)
 
     except Exception:
         logging.exception(f"[Error] {mel_path} 처리 중 오류 발생")
-        return None
 
 # 병렬 처리 실행
-def process_dataset_parallel_to_csv(dataset_path, output_csv_path, song_ids, popularity_map):
+def process_dataset_parallel(dataset_path, output_path, song_ids, popularity_map):
     logging.info("병렬 피처 추출 시작")
 
-    tasks = [(song_id, dataset_path, popularity_map) for song_id in song_ids]
-    results = []
+    # 디렉토리 생성
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+        logging.info(f"'{output_path}' 디렉토리 생성 완료")
+
+    tasks = [(song_id, dataset_path, output_path, popularity_map) for song_id in song_ids]
 
     with Pool(cpu_count()) as pool:
-        for result in tqdm.tqdm(pool.imap_unordered(process_one_song, tasks), total=len(tasks)):
-            if result is not None:
-                results.append(result)
+        list(tqdm.tqdm(pool.imap_unordered(process_one_song, tasks), total=len(tasks), desc="피처 추출 중"))
 
     logging.info("피처 추출 완료")
 
-    # pandas DataFrame으로 저장
-    df = pd.DataFrame(results)
-    df.to_csv(output_csv_path, index=False, encoding='utf-8-sig')
-
-    logging.info(f"[*] 총 {len(df)}개 곡 피처 추출 완료 -> {output_csv_path}")
-
 # 메인 함수
 if __name__ == '__main__':
-    MELON_DATASET_PATH = "E:/melondataset/data"  # 멜 스펙트로그램 경로
-    OUTPUT_FEATURES_CSV = "E:/melondataset/all_features.csv"  # 저장 파일
+    MELON_DATASET_PATH = "E:/melondataset/data"
+    OUTPUT_FEATURES_PATH = "E:/melondataset/features"  # 피처 저장 경로
     POPULARITY_JSON_PATH = "E:/melondataset/song_popularity.json"
-    TOTAL_SONGS = 707989  # 707989
+    TOTAL_SONGS = 707989
 
     logging.info("=" * 50)
     logging.info("음악 데이터셋 피처 추출 시작")
     logging.info(f"데이터셋 경로: {MELON_DATASET_PATH}")
-    logging.info(f"저장 파일: {OUTPUT_FEATURES_CSV}")
+    logging.info(f"저장 경로: {OUTPUT_FEATURES_PATH}")
     logging.info("=" * 50)
 
     popularity_map = load_popularity_map(POPULARITY_JSON_PATH)
     song_id_range = range(TOTAL_SONGS)
 
-    process_dataset_parallel_to_csv(MELON_DATASET_PATH, OUTPUT_FEATURES_CSV, song_id_range, popularity_map)
+    process_dataset_parallel(MELON_DATASET_PATH, OUTPUT_FEATURES_PATH, song_id_range, popularity_map)
 
     logging.info("=" * 50)
-    logging.info("작업 완")
+    logging.info("작업 완료")
     logging.info("=" * 50)

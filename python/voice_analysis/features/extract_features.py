@@ -17,19 +17,26 @@ def extract_features(mel_spectrogram, song_id=None, sr=16000, n_mfcc=13):
         mfcc = librosa.feature.mfcc(S=mel_spectrogram, sr=sr, n_mfcc=n_mfcc)
         mfcc_mean = np.mean(mfcc, axis=1)   
 
-        # 주파수 기반 음역대 추정
-        energy_per_bin = mel_spectrogram.mean(axis=1) 
+        # 각 bin의 평균 에너지
+        energy_per_bin = mel_spectrogram.mean(axis=1)
+
+        # mel bin -> Hz 변환
         mel_freqs = librosa.mel_frequencies(
             n_mels=mel_spectrogram.shape[0],
             fmin=0,
             fmax=sr/2
         )
 
-        # 주요 음역대 10% ~ 90%
-        q10_idx = int(np.quantile(np.arange(len(energy_per_bin)), 0.1))
-        q90_idx = int(np.quantile(np.arange(len(energy_per_bin)), 0.9))
-        low_freq = mel_freqs[q10_idx] # 주요 음역대의 하한
-        high_freq = mel_freqs[q90_idx] # 주요 음역대 상한
+        # 누적합으로 에너지 분포 계산
+        energy_cumsum = np.cumsum(energy_per_bin)
+        energy_cumsum /= energy_cumsum[-1]  # 0~1 정규화
+
+        # q10, q90 위치 찾기
+        low_idx = np.searchsorted(energy_cumsum, 0.1)
+        high_idx = np.searchsorted(energy_cumsum, 0.9)
+
+        low_freq = mel_freqs[low_idx]
+        high_freq = mel_freqs[high_idx]
 
         features = {
             'mfcc': mfcc_mean,
