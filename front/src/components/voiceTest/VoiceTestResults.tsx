@@ -7,7 +7,6 @@ import {
   CardContent,
   LinearProgress,
   Chip,
-  Grid,
   Divider,
   Button
 } from '@mui/material';
@@ -153,8 +152,8 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
           </Box>
 
           {/* 음역대 정보 */}
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Box sx={{ width: { xs: '100%', sm: '33.33%' }, p: 1 }}>
               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#f8f9fa', borderRadius: 2 }}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   전체 음역대
@@ -166,8 +165,8 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
                   {Math.round(rangeViz.totalRange)}Hz 범위
                 </Typography>
               </Box>
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Box>
+            <Box sx={{ width: { xs: '100%', sm: '33.33%' }, p: 1 }}>
               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#e8f5e8', borderRadius: 2 }}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   편안한 음역대
@@ -179,8 +178,8 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
                   {Math.round(rangeViz.comfortableRange)}Hz 범위
                 </Typography>
               </Box>
-            </Grid>
-            <Grid item xs={12} sm={4}>
+            </Box>
+            <Box sx={{ width: { xs: '100%', sm: '33.33%' }, p: 1 }}>
               <Box sx={{ textAlign: 'center', p: 2, backgroundColor: '#fff3e0', borderRadius: 2 }}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   음역대 폭
@@ -192,8 +191,8 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
                   {rangeViz.totalRange >= 200 ? '넓음' : rangeViz.totalRange >= 150 ? '보통' : '좁음'}
                 </Typography>
               </Box>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
 
@@ -207,8 +206,8 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
             </Typography>
           </Box>
           
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+            <Box sx={{ width: { xs: '100%', sm: '50%' }, p: 1 }}>
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <VolumeUp fontSize="small" />
@@ -244,9 +243,9 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
                    ' 안정적인 음높이를 유지합니다'}
                 </Typography>
               </Box>
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} sm={6}>
+            <Box sx={{ width: { xs: '100%', sm: '50%' }, p: 1 }}>
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Vibration fontSize="small" />
@@ -282,9 +281,9 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
                    ' 깔끔한 음색을 보입니다'}
                 </Typography>
               </Box>
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} sm={6}>
+            <Box sx={{ width: { xs: '100%', sm: '50%' }, p: 1 }}>
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Psychology fontSize="small" />
@@ -320,9 +319,9 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
                    ' 깔끔한 발성을 보입니다'}
                 </Typography>
               </Box>
-            </Grid>
+            </Box>
 
-            <Grid item xs={12} sm={6}>
+            <Box sx={{ width: { xs: '100%', sm: '50%' }, p: 1 }}>
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Brightness4 fontSize="small" />
@@ -358,8 +357,8 @@ const VoiceTestResults: React.FC<VoiceTestResultsProps> = ({ analysis, onClose }
                    ' 따뜻하고 부드러운 음색입니다'}
                 </Typography>
               </Box>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
 

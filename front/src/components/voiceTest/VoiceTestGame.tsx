@@ -1,491 +1,521 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  LinearProgress,
-  CircularProgress,
-  Alert,
-  IconButton,
-  Card,
-  CardContent
-} from '@mui/material';
-import {
-  Mic,
-  MicOff,
-  PlayArrow,
-  Pause,
-  VolumeUp,
-  MusicNote,
-  CheckCircle,
-  Cancel
-} from '@mui/icons-material';
-import type { VoiceTestStep, VoiceTestResult, VoiceTestSession } from '../../types/voiceAnalysis';
+import { Play, Pause, Download, RotateCcw, Mic, MicOff } from 'lucide-react';
 
-interface VoiceTestGameProps {
-  onTestComplete: (results: VoiceTestResult[]) => void;
-  onTestCancel: () => void;
+interface PipeData {
+  id: number;
+  x: number;
+  topHeight: number;
+  bottomHeight: number;
+  passed: boolean;
 }
 
-// 테스트 단계 정의
-const testSteps: VoiceTestStep[] = [
-  {
-    id: 'warmup',
-    title: '🎤 워밍업',
-    description: '마이크를 켜고 간단한 소리를 내보세요',
-    instruction: '마이크 버튼을 누르고 "아" 소리를 3초간 내보세요',
-    duration: 3,
-    type: 'range'
-  },
-  {
-    id: 'low_note',
-    title: '🎵 낮은 음',
-    description: '가장 낮은 음을 내보세요',
-    instruction: '마이크 버튼을 누르고 가능한 한 낮은 음으로 "아" 소리를 4초간 내보세요',
-    duration: 4,
-    type: 'range'
-  },
-  {
-    id: 'high_note',
-    title: '🎶 높은 음',
-    description: '가장 높은 음을 내보세요',
-    instruction: '마이크 버튼을 누르고 가능한 한 높은 음으로 "아" 소리를 4초간 내보세요',
-    duration: 4,
-    type: 'range'
-  },
-  {
-    id: 'sustain',
-    title: '🎼 음 유지',
-    description: '안정적으로 음을 유지해보세요',
-    instruction: '마이크 버튼을 누르고 편안한 음으로 "아" 소리를 5초간 일정하게 유지해보세요',
-    duration: 5,
-    type: 'sustain'
-  },
-  {
-    id: 'melody',
-    title: '🎹 멜로디',
-    description: '간단한 멜로디를 따라해보세요',
-    instruction: '마이크 버튼을 누르고 "도레미파솔"을 따라 불러보세요',
-    duration: 6,
-    type: 'melody'
-  }
-];
+interface PitchData {
+  frequency: number;
+  timestamp: number;
+  note: string;
+  octave: number;
+}
 
-const VoiceTestGame: React.FC<VoiceTestGameProps> = ({ onTestComplete, onTestCancel }) => {
-  const [session, setSession] = useState<VoiceTestSession>({
-    id: `session_${Date.now()}`,
-    startTime: Date.now(),
-    currentStep: 0,
-    results: [],
-    isCompleted: false,
-    overallScore: 0
+const FlappyNoteGame: React.FC = () => {
+  // 게임 상수
+  const GAME_WIDTH = 800;
+  const GAME_HEIGHT = 600;
+  const CHARACTER_SIZE = 40;
+  const PIPE_WIDTH = 80;
+  const PIPE_GAP = 200;
+  const PIPE_SPEED = 3;
+  const GRAVITY = 0.3;
+  const JUMP_STRENGTH = 8;
+
+  // 게임 상태
+  const [gameState, setGameState] = useState<'menu' | 'playing' | 'gameOver'>('menu');
+  const [characterY, setCharacterY] = useState(GAME_HEIGHT / 2);
+  const [characterVelocity, setCharacterVelocity] = useState(0);
+  const [pipes, setPipes] = useState<PipeData[]>([]);
+  const [score, setScore] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [currentPitch, setCurrentPitch] = useState<PitchData | null>(null);
+  
+  // 디버그 정보
+  const [debugInfo, setDebugInfo] = useState({
+    micLevel: 0,
+    frequency: 0,
+    note: '',
+    isDetecting: false
   });
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  // refs
+  const gameLoopRef = useRef<number | null>(null);
+  const pipeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const timerRef = useRef<number | null>(null);
-  const animationRef = useRef<number | undefined>(undefined);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const dataArrayRef = useRef<Float32Array | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
 
-  const currentStep = testSteps[session.currentStep];
-  
-  // currentStep이 undefined인 경우를 방지
-  if (!currentStep) {
-    return (
-      <Box sx={{ maxWidth: 600, mx: 'auto', p: 3, textAlign: 'center' }}>
-        <Typography variant="h5" color="error">
-          테스트 단계를 찾을 수 없습니다.
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={handleCancel}
-          sx={{ mt: 2 }}
-        >
-          테스트 취소
-        </Button>
-      </Box>
-    );
-  }
+  // 음계 정보
+  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-  // 오디오 분석 시작
-  const startAudioAnalysis = useCallback(async () => {
+  // 주파수를 음계로 변환
+  const frequencyToNote = useCallback((frequency: number): { note: string; octave: number } => {
+    if (frequency <= 0) return { note: '', octave: 0 };
+    
+    const A4 = 440;
+    const semitone = 12 * Math.log2(frequency / A4);
+    const noteNumber = Math.round(semitone) + 69;
+    const octave = Math.floor(noteNumber / 12) - 1;
+    const noteIndex = noteNumber % 12;
+    const note = noteNames[noteIndex < 0 ? noteIndex + 12 : noteIndex];
+    
+    return { note, octave };
+  }, []);
+
+  // 피치 감지 함수
+  const detectFundamentalFrequency = useCallback((buffer: Float32Array, sampleRate: number): number => {
+    let energy = 0;
+    for (let i = 0; i < buffer.length; i++) {
+      energy += Math.abs(buffer[i]);
+    }
+    energy = energy / buffer.length;
+    
+    if (energy < 0.01) return 0;
+    
+    let maxMagnitude = -Infinity;
+    let maxIndex = 0;
+    
+    for (let i = 0; i < buffer.length; i++) {
+      if (buffer[i] > maxMagnitude) {
+        maxMagnitude = buffer[i];
+        maxIndex = i;
+      }
+    }
+    
+    const frequency = (maxIndex / buffer.length) * (sampleRate / 2);
+    
+    if (frequency < 80 || frequency > 800) return 0;
+    if (maxMagnitude < -50) return 0;
+    
+    return frequency;
+  }, []);
+
+  // 피치 분석 및 캐릭터 제어
+  const analyzePitch = useCallback(() => {
+    if (!analyserRef.current || !dataArrayRef.current) return;
+
+    analyserRef.current.getFloatFrequencyData(dataArrayRef.current);
+    
+    let sum = 0;
+    for (let i = 0; i < dataArrayRef.current.length; i++) {
+      sum += Math.abs(dataArrayRef.current[i]);
+    }
+    const micLevel = (sum / dataArrayRef.current.length) * 100;
+    
+    const frequency = detectFundamentalFrequency(dataArrayRef.current, audioContextRef.current?.sampleRate || 44100);
+    
+    if (frequency > 0) {
+      const noteInfo = frequencyToNote(frequency);
+      const pitchData: PitchData = {
+        frequency,
+        timestamp: Date.now(),
+        note: noteInfo.note,
+        octave: noteInfo.octave,
+      };
+      
+      setCurrentPitch(pitchData);
+      
+      // 주파수를 캐릭터 Y 위치로 매핑 (150Hz-400Hz를 게임 높이로 매핑)
+      const minFreq = 150;
+      const maxFreq = 400;
+      const normalizedFreq = Math.max(0, Math.min(1, (frequency - minFreq) / (maxFreq - minFreq)));
+      const targetY = GAME_HEIGHT - (normalizedFreq * (GAME_HEIGHT - 100)) - 100;
+      
+      if (gameState === 'playing') {
+        setCharacterY(prev => {
+          const diff = targetY - prev;
+          return prev + diff * 0.2; // 부드러운 이동
+        });
+      }
+    }
+    
+    setDebugInfo({
+      micLevel: Math.round(micLevel),
+      frequency: Math.round(frequency),
+      note: currentPitch ? `${currentPitch.note}${currentPitch.octave}` : '',
+      isDetecting: frequency > 0
+    });
+  }, [gameState, currentPitch, frequencyToNote, detectFundamentalFrequency]);
+
+  // 마이크 초기화
+  const initMicrophone = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 44100 }
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        } 
       });
       
-      streamRef.current = stream;
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
       audioContextRef.current = audioContext;
       
       const microphone = audioContext.createMediaStreamSource(stream);
       microphoneRef.current = microphone;
       
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
+      analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.8;
       analyserRef.current = analyser;
       
-      microphone.connect(analyser);
+      const bufferLength = analyser.frequencyBinCount;
+      dataArrayRef.current = new Float32Array(bufferLength);
       
-      // 볼륨 분석
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const analyzeVolume = () => {
-        if (analyser && isRecording) {
-          analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          const average = sum / dataArray.length;
-          setVolume(Math.min(100, (average / 255) * 100));
-          animationRef.current = requestAnimationFrame(analyzeVolume);
+      microphone.connect(analyser);
+
+      // MediaRecorder 설정
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
         }
       };
       
-      analyzeVolume();
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'audio/wav' });
+        setRecordedBlob(blob);
+        recordedChunksRef.current = [];
+        setIsRecording(false);
+      };
+      
     } catch (err) {
-      setError('마이크 접근에 실패했습니다. 마이크 권한을 확인해주세요.');
+      console.error('마이크 접근 실패:', err);
     }
-  }, [isRecording]);
-
-  // 오디오 분석 중지
-  const stopAudioAnalysis = useCallback(() => {
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = undefined;
-    }
-    if (microphoneRef.current) {
-      try {
-        microphoneRef.current.disconnect();
-      } catch (error) {
-        console.warn('마이크 연결 해제 중 오류:', error);
-      }
-      microphoneRef.current = null;
-    }
-    if (audioContextRef.current) {
-      try {
-        if (audioContextRef.current.state !== 'closed') {
-          audioContextRef.current.close();
-        }
-      } catch (error) {
-        console.warn('오디오 컨텍스트 정리 중 오류:', error);
-      }
-      audioContextRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    setVolume(0);
   }, []);
 
-  // 다음 단계로
-  const nextStep = useCallback(() => {
-    // 타이머 정리
-    if (timerRef.current) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+  // 게임 시작
+  const startGame = useCallback(() => {
+    setGameState('playing');
+    setCharacterY(GAME_HEIGHT / 2);
+    setCharacterVelocity(0);
+    setPipes([]);
+    setScore(0);
+    setRecordedBlob(null);
     
-    if (session.currentStep < testSteps.length - 1) {
-      setSession(prev => ({
-        ...prev,
-        currentStep: prev.currentStep + 1
-      }));
-      setCurrentTime(0);
-    } else {
-      // 테스트 완료
-      const overallScore = Math.floor(
-        session.results.reduce((sum, result) => sum + result.score, 0) / session.results.length
-      );
-      
-      setSession(prev => ({
-        ...prev,
-        isCompleted: true,
-        overallScore,
-        endTime: Date.now()
-      }));
-      
-      onTestComplete(session.results);
-    }
-  }, [session.currentStep, session.results, onTestComplete]);
-
-  // 녹음 분석
-  const analyzeRecording = useCallback(() => {
-    setIsAnalyzing(true);
-    
-    // 시뮬레이션된 분석 (실제로는 오디오 데이터를 분석)
-    setTimeout(() => {
-      const result: VoiceTestResult = {
-        stepId: currentStep.id,
-        score: Math.floor(Math.random() * 40) + 60, // 60-100점
-        data: {
-          frequency: currentStep.type === 'range' ? Math.random() * 200 + 100 : undefined,
-          stability: currentStep.type === 'sustain' ? Math.random() * 30 + 70 : undefined,
-          accuracy: currentStep.type === 'melody' ? Math.random() * 25 + 75 : undefined,
-          characteristics: {
-            pitchVariation: Math.random() * 100,
-            vibrato: Math.random() * 100,
-            breathiness: Math.random() * 100,
-            brightness: Math.random() * 100
-          }
-        },
-        timestamp: Date.now()
-      };
-      
-      setSession(prev => ({
-        ...prev,
-        results: [...prev.results, result]
-      }));
-      
-      setIsAnalyzing(false);
-      nextStep();
-    }, 2000);
-  }, [currentStep, nextStep]);
-
-  // 녹음 중지
-  const stopRecording = useCallback(() => {
-    setIsRecording(false);
-    stopAudioAnalysis();
-    
-    if (timerRef.current) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    
-    // 분석 시작
-    analyzeRecording();
-  }, [stopAudioAnalysis, analyzeRecording]);
-
-  // 녹음 시작
-  const startRecording = useCallback(async () => {
-    try {
-      setError(null);
+    // 녹음 시작
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
+      recordedChunksRef.current = [];
+      mediaRecorderRef.current.start();
       setIsRecording(true);
-      setCurrentTime(0);
-      
-      await startAudioAnalysis();
-      
-      // 타이머 시작
-      timerRef.current = window.setInterval(() => {
-        setCurrentTime(prev => {
-          const newTime = prev + 0.1;
-          if (newTime >= currentStep.duration) {
-            stopRecording();
-            return currentStep.duration;
-          }
-          return newTime;
-        });
-      }, 100);
-      
-    } catch (err) {
-      setError('녹음을 시작할 수 없습니다.');
-      setIsRecording(false);
     }
-  }, [currentStep.duration, startAudioAnalysis, stopRecording]);
+  }, []);
 
-  // 테스트 취소
-  const handleCancel = useCallback(() => {
-    stopAudioAnalysis();
-    if (timerRef.current) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
+  // 게임 오버
+  const gameOver = useCallback(() => {
+    setGameState('gameOver');
+    
+    // 녹음 중지
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
     }
-    onTestCancel();
-  }, [stopAudioAnalysis, onTestCancel]);
+    
+    // 게임 루프 중지
+    if (gameLoopRef.current) {
+      cancelAnimationFrame(gameLoopRef.current);
+    }
+    
+    // 파이프 생성 중지
+    if (pipeIntervalRef.current) {
+      clearInterval(pipeIntervalRef.current);
+    }
+  }, []);
 
-  // 컴포넌트 언마운트 시 정리
+  // 충돌 감지
+  const checkCollisions = useCallback((charY: number, pipeList: PipeData[]): boolean => {
+    // 바닥과 천장 충돌
+    if (charY < 0 || charY > GAME_HEIGHT - CHARACTER_SIZE) {
+      return true;
+    }
+    
+    // 파이프 충돌
+    for (const pipe of pipeList) {
+      const charLeft = 100;
+      const charRight = charLeft + CHARACTER_SIZE;
+      const charTop = charY;
+      const charBottom = charY + CHARACTER_SIZE;
+      
+      const pipeLeft = pipe.x;
+      const pipeRight = pipe.x + PIPE_WIDTH;
+      
+      // X축 겹침 확인
+      if (charRight > pipeLeft && charLeft < pipeRight) {
+        // 상단 파이프 또는 하단 파이프와 충돌
+        if (charTop < pipe.topHeight || charBottom > GAME_HEIGHT - pipe.bottomHeight) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }, []);
+
+  // 파이프 생성
+  const createPipe = useCallback((): PipeData => {
+    const minTopHeight = 50;
+    const maxTopHeight = GAME_HEIGHT - PIPE_GAP - 50;
+    const topHeight = Math.random() * (maxTopHeight - minTopHeight) + minTopHeight;
+    const bottomHeight = GAME_HEIGHT - topHeight - PIPE_GAP;
+    
+    return {
+      id: Date.now() + Math.random(),
+      x: GAME_WIDTH,
+      topHeight,
+      bottomHeight,
+      passed: false
+    };
+  }, []);
+
+  // 게임 루프
+  const gameLoop = useCallback(() => {
+    if (gameState !== 'playing') return;
+    
+    setPipes(prevPipes => {
+      const newPipes = prevPipes.map(pipe => ({
+        ...pipe,
+        x: pipe.x - PIPE_SPEED
+      })).filter(pipe => pipe.x > -PIPE_WIDTH);
+      
+      // 점수 업데이트
+      newPipes.forEach(pipe => {
+        if (!pipe.passed && pipe.x < 100 - CHARACTER_SIZE) {
+          pipe.passed = true;
+          setScore(prev => prev + 1);
+        }
+      });
+      
+      return newPipes;
+    });
+    
+    // 충돌 감지
+    setPipes(currentPipes => {
+      if (checkCollisions(characterY, currentPipes)) {
+        gameOver();
+        return currentPipes;
+      }
+      return currentPipes;
+    });
+    
+    gameLoopRef.current = requestAnimationFrame(gameLoop);
+  }, [gameState, characterY, checkCollisions, gameOver]);
+
+  // 게임 초기화
   useEffect(() => {
+    initMicrophone();
+    
     return () => {
-      stopAudioAnalysis();
-      if (timerRef.current) {
-        window.clearInterval(timerRef.current);
-        timerRef.current = null;
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+      }
+      if (pipeIntervalRef.current) {
+        clearInterval(pipeIntervalRef.current);
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
       }
     };
-  }, [stopAudioAnalysis]);
+  }, [initMicrophone]);
 
-  const progress = (session.currentStep / testSteps.length) * 100;
-  const timeProgress = (currentTime / currentStep.duration) * 100;
+  // 게임 루프 시작/중지
+  useEffect(() => {
+    if (gameState === 'playing') {
+      gameLoopRef.current = requestAnimationFrame(gameLoop);
+      
+      // 파이프 생성 간격
+      pipeIntervalRef.current = setInterval(() => {
+        setPipes(prev => [...prev, createPipe()]);
+      }, 2000);
+    }
+    
+    return () => {
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+      }
+      if (pipeIntervalRef.current) {
+        clearInterval(pipeIntervalRef.current);
+      }
+    };
+  }, [gameState, gameLoop, createPipe]);
+
+  // 피치 분석 주기적 실행
+  useEffect(() => {
+    const interval = setInterval(analyzePitch, 100);
+    return () => clearInterval(interval);
+  }, [analyzePitch]);
+
+  // 녹음된 오디오 다운로드
+  const downloadRecording = () => {
+    if (!recordedBlob) return;
+    
+    const url = URL.createObjectURL(recordedBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `flappy-note-${Date.now()}.wav`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
-      {/* 헤더 */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 2 }}>
-          🎤 목소리 테스트
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          당신의 음역대와 음색을 분석하여 맞춤 추천을 제공합니다
-        </Typography>
-      </Box>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-200 to-blue-400 p-4">
+      <div className="text-center mb-4">
+        <h1 className="text-4xl font-bold text-white mb-2">🎵 Flappy Note</h1>
+        <p className="text-white/80">음성 피치로 캐릭터를 조종하세요!</p>
+      </div>
 
-      {/* 전체 진행률 */}
-      <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            진행률
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {session.currentStep + 1} / {testSteps.length}
-          </Typography>
-        </Box>
-        <LinearProgress 
-          variant="determinate" 
-          value={progress} 
-          sx={{ height: 8, borderRadius: 4 }}
-        />
-      </Paper>
+      {/* 디버그 정보 */}
+      <div className="bg-white/20 backdrop-blur rounded-lg p-3 mb-4 text-white text-sm">
+        <div className="grid grid-cols-2 gap-4">
+          <div>마이크: {debugInfo.micLevel}%</div>
+          <div>주파수: {debugInfo.frequency}Hz</div>
+          <div>음표: {debugInfo.note}</div>
+          <div className="flex items-center gap-2">
+            {isRecording ? <Mic className="w-4 h-4 text-red-400" /> : <MicOff className="w-4 h-4" />}
+            {isRecording ? '녹음 중' : '대기 중'}
+          </div>
+        </div>
+      </div>
 
-      {/* 현재 단계 */}
-      <Card elevation={3} sx={{ mb: 3 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, textAlign: 'center' }}>
-            {currentStep.title}
-          </Typography>
-          <Typography variant="body1" sx={{ mb: 3, textAlign: 'center' }}>
-            {currentStep.description}
-          </Typography>
-          
-          <Paper elevation={1} sx={{ p: 3, mb: 3, backgroundColor: 'grey.50' }}>
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-              📋 지시사항:
-            </Typography>
-            <Typography variant="body2">
-              {currentStep.instruction}
-            </Typography>
-          </Paper>
+      {/* 게임 화면 */}
+      <div 
+        className="relative bg-gradient-to-b from-cyan-200 to-green-300 border-4 border-white rounded-lg overflow-hidden shadow-2xl"
+        style={{ width: GAME_WIDTH, height: GAME_HEIGHT }}
+      >
+        {/* 캐릭터 */}
+        {gameState !== 'menu' && (
+          <div
+            className="absolute w-10 h-10 bg-yellow-400 rounded-full border-2 border-yellow-600 transition-all duration-100"
+            style={{
+              left: '100px',
+              top: `${characterY}px`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="absolute inset-1 bg-yellow-300 rounded-full">
+              <div className="absolute top-1 left-2 w-1 h-1 bg-black rounded-full"></div>
+              <div className="absolute top-1 right-2 w-1 h-1 bg-black rounded-full"></div>
+              <div className="absolute bottom-2 left-1/2 w-2 h-1 bg-orange-500 rounded-full transform -translate-x-1/2"></div>
+            </div>
+          </div>
+        )}
 
-          {/* 녹음 컨트롤 */}
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            {!isRecording && !isAnalyzing && (
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<Mic />}
-                onClick={startRecording}
-                sx={{ minWidth: 200, height: 60, fontSize: '1.1rem' }}
+        {/* 파이프 */}
+        {pipes.map(pipe => (
+          <div key={pipe.id}>
+            {/* 상단 파이프 */}
+            <div
+              className="absolute bg-green-600 border-r-4 border-green-800"
+              style={{
+                left: pipe.x,
+                top: 0,
+                width: PIPE_WIDTH,
+                height: pipe.topHeight,
+              }}
+            />
+            {/* 하단 파이프 */}
+            <div
+              className="absolute bg-green-600 border-r-4 border-green-800"
+              style={{
+                left: pipe.x,
+                bottom: 0,
+                width: PIPE_WIDTH,
+                height: pipe.bottomHeight,
+              }}
+            />
+          </div>
+        ))}
+
+        {/* 점수 */}
+        {gameState === 'playing' && (
+          <div className="absolute top-4 left-4 text-2xl font-bold text-white bg-black/30 px-3 py-1 rounded">
+            점수: {score}
+          </div>
+        )}
+
+        {/* 현재 피치 표시 */}
+        {currentPitch && gameState === 'playing' && (
+          <div className="absolute top-4 right-4 text-white bg-black/30 px-3 py-1 rounded">
+            {currentPitch.note}{currentPitch.octave} ({Math.round(currentPitch.frequency)}Hz)
+          </div>
+        )}
+
+        {/* 메뉴 화면 */}
+        {gameState === 'menu' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+            <div className="text-center text-white">
+              <h2 className="text-3xl font-bold mb-4">게임 방법</h2>
+              <p className="mb-2">높은 음을 내면 위로 올라갑니다</p>
+              <p className="mb-2">낮은 음을 내면 아래로 내려갑니다</p>
+              <p className="mb-6">파이프를 피해보세요!</p>
+              <button
+                onClick={startGame}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold text-xl transition-colors"
               >
-                녹음 시작
-              </Button>
-            )}
-            
-            {isRecording && (
-              <Button
-                variant="contained"
-                color="error"
-                size="large"
-                startIcon={<MicOff />}
-                onClick={stopRecording}
-                sx={{ minWidth: 200, height: 60, fontSize: '1.1rem' }}
+                <Play className="w-6 h-6 inline mr-2" />
+                게임 시작
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 게임 오버 화면 */}
+        {gameState === 'gameOver' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <div className="bg-white p-6 rounded-lg text-center">
+              <h2 className="text-2xl font-bold mb-4 text-gray-800">게임 오버!</h2>
+              <p className="text-lg mb-4">최종 점수: {score}</p>
+              
+              {/* 녹음된 오디오 재생 */}
+              {recordedBlob && (
+                <div className="mb-4">
+                  <p className="mb-2 text-sm text-gray-600">게임 중 녹음된 음성:</p>
+                  <audio 
+                    controls 
+                    src={URL.createObjectURL(recordedBlob)}
+                    className="mb-2"
+                  />
+                  <br />
+                  <button
+                    onClick={downloadRecording}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm transition-colors inline-flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    다운로드
+                  </button>
+                </div>
+              )}
+              
+              <button
+                onClick={() => setGameState('menu')}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition-colors inline-flex items-center gap-2"
               >
-                녹음 중지
-              </Button>
-            )}
-            
-            {isAnalyzing && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                <CircularProgress size={60} />
-                <Typography variant="body1">
-                  음성 분석 중...
-                </Typography>
-              </Box>
-            )}
-          </Box>
+                <RotateCcw className="w-5 h-5" />
+                다시 하기
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
-          {/* 시간 진행률 */}
-          {isRecording && (
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  녹음 시간
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {currentTime.toFixed(1)}s / {currentStep.duration}s
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={timeProgress} 
-                sx={{ height: 6, borderRadius: 3 }}
-              />
-            </Box>
-          )}
-
-          {/* 볼륨 표시 */}
-          {isRecording && (
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  음량
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {Math.round(volume)}%
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={volume} 
-                color={volume > 50 ? 'success' : volume > 20 ? 'warning' : 'error'}
-                sx={{ height: 6, borderRadius: 3 }}
-              />
-            </Box>
-          )}
-
-          {/* 에러 메시지 */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 결과 표시 */}
-      {session.results.length > 0 && (
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-            📊 테스트 결과
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {session.results.map((result, index) => (
-              <Box key={`${result.stepId}-${index}-${result.timestamp}`} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <CheckCircle color="success" />
-                <Typography variant="body2" sx={{ flex: 1 }}>
-                  {testSteps[index]?.title || result.stepId}
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                  {result.score}점
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Paper>
-      )}
-
-      {/* 취소 버튼 */}
-      <Box sx={{ textAlign: 'center' }}>
-        <Button
-          variant="outlined"
-          color="error"
-          onClick={handleCancel}
-          startIcon={<Cancel />}
-        >
-          테스트 취소
-        </Button>
-      </Box>
-    </Box>
+      {/* 게임 설명 */}
+      <div className="mt-4 text-center text-white/80 max-w-md text-sm">
+        <p>마이크 권한을 허용하고 음성으로 캐릭터를 조종하세요.</p>
+        <p>높은 음(200-400Hz)일수록 캐릭터가 위로 올라갑니다.</p>
+      </div>
+    </div>
   );
 };
 
-export default VoiceTestGame;
+export default FlappyNoteGame;

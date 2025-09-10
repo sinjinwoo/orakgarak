@@ -5,7 +5,6 @@ import {
   Button,
   TextField,
   Chip,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -205,9 +204,9 @@ const CoverSelectionStep: React.FC<CoverSelectionStepProps> = ({
             <Typography variant="h6" sx={{ mb: 2 }}>
               생성된 커버
             </Typography>
-            <Grid container spacing={2}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
               {dummyCovers.map((cover) => (
-                <Grid item xs={6} sm={3} key={cover.id}>
+                <Box sx={{ width: { xs: '50%', sm: '25%' }, p: 1 }} key={cover.id}>
                   <Card
                     sx={{
                       position: 'relative',
@@ -240,9 +239,9 @@ const CoverSelectionStep: React.FC<CoverSelectionStepProps> = ({
                       </Box>
                     )}
                   </Card>
-                </Grid>
+                </Box>
               ))}
-            </Grid>
+            </Box>
           </>
         ) : (
           /* 파일 업로드 */

@@ -164,7 +164,7 @@ export function useVolumeAnalyzer(audioElement?: HTMLAudioElement) {
   const [volumeLevel, setVolumeLevel] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!audioElement || !isAnalyzing) return;
@@ -232,7 +232,7 @@ export function useAudioRecorder() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const startRecording = useCallback(async () => {
     try {
