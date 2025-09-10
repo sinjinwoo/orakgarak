@@ -3,16 +3,15 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from scripts.extract_mel import extract_mel
+from features.extract_mel import extract_mel
 
-# 분석할 오디오 파일 경로 (.wav 권장)
+# 분석할 오디오 파일 경로
 script_dir = os.path.dirname(os.path.abspath(__file__))
 audio_path = os.path.join(script_dir, "..", "data", "sample_data.wav")
 
-# 출력 이미지 저장 경로
+# 이미지 저장 경로
 output_image = os.path.join(script_dir, "mel_output.png")
 
 # 멜 스펙트로그램 추출

@@ -10,7 +10,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
-# 추출된 Log-Mel Spectrogram으로부터 피처 추출 (MFCC 계수: 13개 지정)
+# 멜스펙트로그램으로부터 피처 추출 (MFCC 계수: 13개 지정)
 def extract_features(mel_spectrogram, song_id=None, sr=16000, n_mfcc=13):
     try:
         # MFCC 추출
@@ -25,7 +25,7 @@ def extract_features(mel_spectrogram, song_id=None, sr=16000, n_mfcc=13):
             fmax=sr/2
         )
 
-        # 주요 음역대 (10% ~ 90%)
+        # 주요 음역대 10% ~ 90%
         q10_idx = int(np.quantile(np.arange(len(energy_per_bin)), 0.1))
         q90_idx = int(np.quantile(np.arange(len(energy_per_bin)), 0.9))
         low_freq = mel_freqs[q10_idx] # 주요 음역대의 하한
@@ -37,7 +37,7 @@ def extract_features(mel_spectrogram, song_id=None, sr=16000, n_mfcc=13):
             'pitch_high': float(high_freq)
         }
     except Exception as e:
-        logging.warning(f"MFCC 추출 실패: {e} | song_id: {song_id}")
+        logging.warning(f"MFCC 추출 실패: {e} -> song_id: {song_id}")
         features = {
             'mfcc': np.zeros(n_mfcc)
         }

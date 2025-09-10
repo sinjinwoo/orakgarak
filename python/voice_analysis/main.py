@@ -1,9 +1,9 @@
 # main.py
 
-from scripts.extract_mel import extract_mel
+from features.extract_mel import extract_mel
 import os, numpy as np
 
-print(" 내 목소리 분석 중...")
+print("내 목소리 분석 중...")
 my_mel = extract_mel("my_voice.wav").mean(axis=1)
 
 song_vectors = {f: np.load(os.path.join("melon_data", f)) for f in os.listdir("melon_data") if f.endswith(".npy")}

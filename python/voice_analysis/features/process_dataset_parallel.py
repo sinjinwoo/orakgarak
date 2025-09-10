@@ -8,7 +8,6 @@ import logging
 from multiprocessing import Pool, cpu_count
 from extract_features import extract_features
 
-# 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -24,7 +23,7 @@ def load_popularity_map(popularity_json_path):
         data = json.load(f)
     return {int(item["song_id"]): item for item in data}
 
-# numpy.ndarray 값을 list로 변환
+# numpy.ndarray -> list
 def convert_numpy_to_list(d):
     converted = {}
     for k, v in d.items():
@@ -34,7 +33,7 @@ def convert_numpy_to_list(d):
             converted[k] = v
     return converted
 
-# 병렬 처리할 단일 곡 feature 추출 함수
+# 단일 곡 feature 추출
 def process_one_song(args):
     song_id, dataset_path, popularity_map = args
 
@@ -42,7 +41,7 @@ def process_one_song(args):
     mel_path = os.path.join(dataset_path, subdir, f"{song_id}.npy")
 
     if not os.path.exists(mel_path):
-        return None  # 해당 곡이 존재하지 않음
+        return None
 
     try:
         mel_spectrogram = np.load(mel_path)
@@ -64,7 +63,7 @@ def process_one_song(args):
         logging.exception(f"[Error] {mel_path} 처리 중 오류 발생")
         return None
 
-# 병렬 처리 실행 및 CSV 저장
+# 병렬 처리 실행
 def process_dataset_parallel_to_csv(dataset_path, output_csv_path, song_ids, popularity_map):
     logging.info("병렬 피처 추출 시작")
 
@@ -82,7 +81,7 @@ def process_dataset_parallel_to_csv(dataset_path, output_csv_path, song_ids, pop
     df = pd.DataFrame(results)
     df.to_csv(output_csv_path, index=False, encoding='utf-8-sig')
 
-    logging.info(f"[*] 총 {len(df)}개 곡 피처 추출 완료 → {output_csv_path}")
+    logging.info(f"[*] 총 {len(df)}개 곡 피처 추출 완료 -> {output_csv_path}")
 
 # 메인 함수
 if __name__ == '__main__':
@@ -94,7 +93,7 @@ if __name__ == '__main__':
     logging.info("=" * 50)
     logging.info("음악 데이터셋 피처 추출 시작")
     logging.info(f"데이터셋 경로: {MELON_DATASET_PATH}")
-    logging.info(f"출력 파일: {OUTPUT_FEATURES_CSV}")
+    logging.info(f"저장 파일: {OUTPUT_FEATURES_CSV}")
     logging.info("=" * 50)
 
     popularity_map = load_popularity_map(POPULARITY_JSON_PATH)
@@ -103,5 +102,5 @@ if __name__ == '__main__':
     process_dataset_parallel_to_csv(MELON_DATASET_PATH, OUTPUT_FEATURES_CSV, song_id_range, popularity_map)
 
     logging.info("=" * 50)
-    logging.info("전체 작업 완료")
+    logging.info("작업 완")
     logging.info("=" * 50)

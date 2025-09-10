@@ -1,3 +1,4 @@
+# 파일 하나씩 처리해서 저장
 import numpy as np
 import os
 import tqdm
@@ -9,17 +10,16 @@ import logging
 from multiprocessing import Pool, cpu_count
 from extract_features import extract_features
 
-# 로깅 기본 설정
 logging.basicConfig(
-    level=logging.INFO,  # DEBUG, INFO, WARNING, ERROR, CRITICAL 조정 가능
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.StreamHandler(),  # 콘솔 출력
-        logging.FileHandler("process_dataset.log", encoding="utf-8")  # 파일 저장
+        logging.StreamHandler(), 
+        logging.FileHandler("process_dataset.log", encoding="utf-8")
     ]
 )
 
-# song_popularity.json 파일을 로드해서 딕셔너리로 반환
+# song_popularity.json 파일 -> 딕셔너리로 반환
 def load_popularity_map(popularity_json_path):
     with open(popularity_json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -35,10 +35,7 @@ def convert_numpy_to_list(d):
             converted[k] = v
     return converted
 
-# 전체 데이터셋 순회하여 각 멜 스펙트로그램 파일에서 feature 추출 후 저장
-# dataset_path: 원본 멜 스펙트로그램 데이터셋 경로
-# output_path: 추출된 피처 저장 경로
-# song_ids: 처리할 song_id 목록(iterable)
+# 각 멜 스펙트로그램에서 feature 추출 후 저장
 def process_dataset(dataset_path, output_path, song_ids, popularity_map=None):
 
     # 디렉토리 생성
@@ -47,7 +44,7 @@ def process_dataset(dataset_path, output_path, song_ids, popularity_map=None):
         logging.info(f"'{output_path}' 디렉토리 생성 완료")
 
     # 진행 상황 표시 -> tqdm
-    for song_id in tqdm.tqdm(song_ids, desc="피처 추출 진행 중"):
+    for song_id in tqdm.tqdm(song_ids, desc="피처 추출 중"):
         # 파일 경로 구성
         subdir = str(song_id // 1000)
         mel_path = os.path.join(dataset_path, subdir, f"{song_id}.npy")
@@ -76,7 +73,7 @@ def process_dataset(dataset_path, output_path, song_ids, popularity_map=None):
                     pop_info = popularity_map[song_id]
                     features["popularity"] = pop_info.get("popularity", 0)
                 
-                # numpy → list 변환
+                # numpy -> list 변환
                 features = convert_numpy_to_list(features)
 
                 # 피처 저장
@@ -90,8 +87,8 @@ def process_dataset(dataset_path, output_path, song_ids, popularity_map=None):
 
 
 if __name__ == '__main__':
-    MELON_DATASET_PATH = "E:/melondataset/data"  # 원본 멜 스펙트로그램 데이터셋 경로
-    OUTPUT_FEATURES_PATH = "E:/melondataset/features"   # 추출된 피처를 저장할 경로
+    MELON_DATASET_PATH = "E:/melondataset/data"          # 원본 멜 스펙트로그램 데이터셋 경로
+    OUTPUT_FEATURES_PATH = "E:/melondataset/features"    # 피처 저장 경로
     POPULARITY_JSON_PATH = "E:/melondataset/song_popularity.json"
     TOTAL_SONGS = 707989   # 처리할 총 곡 수 707989 
     
@@ -104,24 +101,10 @@ if __name__ == '__main__':
     # popularity 데이터 로드
     popularity_map = load_popularity_map(POPULARITY_JSON_PATH)
 
-    # 전체 데이터셋에 대해 처리
+    # 전체 데이터셋 처리
     song_id_range = range(TOTAL_SONGS)
     process_dataset(MELON_DATASET_PATH, OUTPUT_FEATURES_PATH, song_id_range, popularity_map)
 
     logging.info("="*50)
     logging.info("피처 추출 완료.")
     logging.info("="*50)
-
-    # 처리된 첫 번째 파일 샘플 확인
-    sample_id = 0
-    sample_output_dir = os.path.join(OUTPUT_FEATURES_PATH, str(sample_id // 1000))
-    sample_file_path = os.path.join(sample_output_dir, f"{sample_id}.json")
-
-    if os.path.exists(sample_file_path):
-        logging.info("[저장된 피처 샘플 확인]")
-        with open(sample_file_path, "r", encoding="utf-8") as f:
-            loaded_features = json.load(f)
-            for k, v in loaded_features.items():
-                print(f"- {k}: {type(v)} {'' if isinstance(v, (int,float,str)) else '(vector)'}")
-    else:
-        logging.warning(f"샘플 파일을 찾을 수 없습니다: {sample_file_path}")
