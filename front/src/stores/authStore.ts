@@ -22,6 +22,19 @@ export const useAuthStore = create<AuthStore>()(
       updateUser: (userData: Partial<User>) => set((state) => ({
         user: state.user ? { ...state.user, ...userData } : null
       })),
+
+      // 임시 로그인 기능 (개발용)
+      tempLogin: () => set({
+        user: {
+          id: 'temp-user-123',
+          email: 'temp@example.com',
+          nickname: '개발자',
+          profileImage: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        isAuthenticated: true
+      }),
     }),
     {
       name: 'auth-storage',

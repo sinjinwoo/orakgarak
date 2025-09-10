@@ -73,6 +73,28 @@ export const authAPI = {
     await new Promise(resolve => setTimeout(resolve, 500));
     return { data: { token: 'new-dummy-token-456' } };
   },
+
+  // 구글 소셜 로그인
+  loginWithGoogle: async (googleToken: string) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+      data: {
+        user: { ...dummyUser, email: 'google-user@example.com', nickname: '구글유저' },
+        token: 'google-dummy-token-123'
+      }
+    };
+  },
+
+  // 카카오 소셜 로그인
+  loginWithKakao: async (kakaoToken: string) => {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return {
+      data: {
+        user: { ...dummyUser, email: 'kakao-user@example.com', nickname: '카카오유저' },
+        token: 'kakao-dummy-token-123'
+      }
+    };
+  },
 };
 
 // User API (더미 데이터)

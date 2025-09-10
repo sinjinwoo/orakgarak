@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
+import AuthGuard from '../components/auth/AuthGuard';
 
 // Lazy loading으로 페이지 컴포넌트들 import
 const LandingPage = React.lazy(() => import('../pages/LandingPage'));
@@ -29,38 +30,95 @@ export const AppRouter: React.FC = () => {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Routes>
-        {/* 랜딩 페이지 */}
+        {/* 랜딩 페이지 - 인증 불필요 */}
         <Route path="/" element={<LandingPage />} />
         
-        {/* 온보딩 */}
-        <Route path="/onboarding/range" element={<OnboardingRangePage />} />
+        {/* 인증이 필요한 모든 페이지들 */}
+        <Route path="/onboarding/range" element={
+          <AuthGuard>
+            <OnboardingRangePage />
+          </AuthGuard>
+        } />
         
-        {/* 추천 */}
-        <Route path="/recommendations" element={<RecommendationsPage />} />
+        <Route path="/recommendations" element={
+          <AuthGuard>
+            <RecommendationsPage />
+          </AuthGuard>
+        } />
         
-        {/* 녹음 */}
-        <Route path="/record" element={<RecordPage />} />
+        <Route path="/record" element={
+          <AuthGuard>
+            <RecordPage />
+          </AuthGuard>
+        } />
         
-        {/* 앨범 */}
-        <Route path="/albums/create" element={<AlbumCreatePage />} />
-        <Route path="/albums/:albumId" element={<AlbumDetailPage />} />
-        <Route path="/albums/:albumId/edit" element={<AlbumCreatePage />} />
+        <Route path="/albums/create" element={
+          <AuthGuard>
+            <AlbumCreatePage />
+          </AuthGuard>
+        } />
         
-        {/* 피드 */}
-        <Route path="/feed" element={<FeedPage />} />
-        <Route path="/users/:userId" element={<MyPage />} />
+        <Route path="/albums/:albumId" element={
+          <AuthGuard>
+            <AlbumDetailPage />
+          </AuthGuard>
+        } />
         
-        {/* AI 데모 */}
-        <Route path="/ai-demo" element={<AIDemoPage />} />
+        <Route path="/albums/:albumId/edit" element={
+          <AuthGuard>
+            <AlbumCreatePage />
+          </AuthGuard>
+        } />
         
-        {/* 마이페이지 */}
-        <Route path="/me" element={<MyPage />} />
-        <Route path="/me/recordings" element={<MyPage />} />
-        <Route path="/me/albums" element={<MyPage />} />
-        <Route path="/me/ai-covers" element={<MyPage />} />
-        <Route path="/me/edit" element={<MyPage />} />
+        <Route path="/feed" element={
+          <AuthGuard>
+            <FeedPage />
+          </AuthGuard>
+        } />
         
-        {/* 404 */}
+        <Route path="/users/:userId" element={
+          <AuthGuard>
+            <MyPage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/ai-demo" element={
+          <AuthGuard>
+            <AIDemoPage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/me" element={
+          <AuthGuard>
+            <MyPage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/me/recordings" element={
+          <AuthGuard>
+            <MyPage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/me/albums" element={
+          <AuthGuard>
+            <MyPage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/me/ai-covers" element={
+          <AuthGuard>
+            <MyPage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/me/edit" element={
+          <AuthGuard>
+            <MyPage />
+          </AuthGuard>
+        } />
+        
+        {/* 404 - 인증 불필요 */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>

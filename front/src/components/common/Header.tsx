@@ -2,15 +2,25 @@ import React from 'react';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { MusicNote, AccountCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth, useSocialAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { loginWithGoogle, isLoading } = useSocialAuth();
 
   const handleLogout = async () => {
     await logout();
     navigate('/');
+  };
+
+  const handleGoogleLogin = async () => {
+    const success = await loginWithGoogle();
+    if (success) {
+      // 로그인 성공 시 메인 페이지로 이동
+      navigate('/recommendations');
+    }
+    // 로그인 실패 시에는 현재 페이지에 그대로 머물러 있음
   };
 
   return (
@@ -109,7 +119,16 @@ const Header: React.FC = () => {
               <Button 
                 color="inherit" 
                 onClick={handleLogout}
-                sx={{ color: 'white' }}
+                sx={{ 
+                  color: 'white',
+                  px: 2,
+                  py: 1,
+                  borderRadius: 1,
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.2)'
+                  }
+                }}
               >
                 로그아웃
               </Button>
@@ -117,10 +136,11 @@ const Header: React.FC = () => {
           ) : (
             <Button 
               color="inherit" 
-              onClick={() => navigate('/login')}
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
               sx={{ color: 'white' }}
             >
-              로그인
+              {isLoading ? '로그인 중...' : '구글로 로그인'}
             </Button>
           )}
         </Box>

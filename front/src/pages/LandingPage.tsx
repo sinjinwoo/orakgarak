@@ -11,12 +11,18 @@ import {
   AutoAwesome,
   RecordVoiceOver
 } from '@mui/icons-material';
+import { useSocialAuth } from '../hooks/useAuth';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { loginWithGoogle, isLoading } = useSocialAuth();
 
-  const handleGetStarted = () => {
-    navigate('/onboarding/range');
+  const handleGetStarted = async () => {
+    const success = await loginWithGoogle();
+    if (success) {
+      navigate('/onboarding/range');
+    }
+    // 로그인 실패 시에는 랜딩 페이지에 그대로 머물러 있음
   };
 
   const features = [
@@ -92,6 +98,7 @@ const LandingPage: React.FC = () => {
             variant="contained"
             size="large"
             onClick={handleGetStarted}
+            disabled={isLoading}
             sx={{ 
               backgroundColor: 'white',
               color: '#667eea',
@@ -107,7 +114,7 @@ const LandingPage: React.FC = () => {
               transition: 'all 0.3s ease'
             }}
           >
-            시작하기
+            {isLoading ? '로그인 중...' : '구글로 시작하기'}
           </Button>
         </Container>
       </Box>
@@ -262,6 +269,7 @@ const LandingPage: React.FC = () => {
             variant="contained"
             size="large"
             onClick={handleGetStarted}
+            disabled={isLoading}
             sx={{ 
               px: 6,
               py: 2,
@@ -274,7 +282,7 @@ const LandingPage: React.FC = () => {
               transition: 'all 0.3s ease'
             }}
           >
-            무료로 시작하기
+            {isLoading ? '로그인 중...' : '구글로 무료 시작하기'}
           </Button>
         </Container>
       </Box>
