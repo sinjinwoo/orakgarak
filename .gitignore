@@ -335,3 +335,7 @@ replay_pid*
 
 # End of https://www.toptal.com/developers/gitignore/api/java
 # End of https://www.toptal.com/developers/gitignore/api/intellij,visualstudiocode,python
+
+# Claude Code
+.claude/
+CLAUDE.md
