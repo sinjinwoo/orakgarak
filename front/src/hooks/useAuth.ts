@@ -201,9 +201,16 @@ export function useSocialAuth() {
     setError(null);
     
     try {
-      // Google OAuth 로그인 로직
-      // 실제 구현에서는 Google OAuth 라이브러리를 사용
-      const response = await authAPI.login('google', 'social');
+      // 구글 로그인 팝업 열기
+      const { GoogleAuthService } = await import('../services/googleAuth');
+      const googleUser = await GoogleAuthService.signInWithPopup();
+      
+      if (!googleUser) {
+        throw new Error('구글 로그인이 취소되었습니다.');
+      }
+
+      // 백엔드에 구글 사용자 정보 전송
+      const response = await authAPI.loginWithGoogle(googleUser.id);
       const { user, token } = response.data;
       
       localStorage.setItem('auth-token', token);
@@ -211,7 +218,7 @@ export function useSocialAuth() {
       
       return true;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Google 로그인에 실패했습니다.');
+      setError(err.message || 'Google 로그인에 실패했습니다.');
       return false;
     } finally {
       setIsLoading(false);
@@ -223,8 +230,8 @@ export function useSocialAuth() {
     setError(null);
     
     try {
-      // Kakao OAuth 로그인 로직
-      const response = await authAPI.login('kakao', 'social');
+      // 카카오 로그인 로직 (구현 예정)
+      const response = await authAPI.loginWithKakao('kakao-token');
       const { user, token } = response.data;
       
       localStorage.setItem('auth-token', token);

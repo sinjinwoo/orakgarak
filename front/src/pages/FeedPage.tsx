@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUIStore } from '../stores/uiStore';
 import { 
   Container, 
   Typography, 
@@ -39,8 +40,37 @@ import {
   MoreVert
 } from '@mui/icons-material';
 
+// 타입 정의
+interface FeedAlbum {
+  id: string;
+  albumId: string;
+  user: {
+    nickname: string;
+    avatar: string;
+  };
+  createdAt: string;
+  coverImage: string;
+  title: string;
+  description: string;
+  trackCount: number;
+  playCount: number;
+  tags: string[];
+  likeCount: number;
+  commentCount: number;
+}
+
+interface MyAlbum {
+  id: string;
+  title: string;
+  description: string;
+  coverImage: string;
+  trackCount: number;
+  duration?: string;
+  tags: string[];
+}
+
 // 더미 피드 데이터
-const dummyFeedAlbums = [
+const dummyFeedAlbums: FeedAlbum[] = [
   {
     id: '1',
     albumId: 'dummy1', // 더미 앨범 ID
@@ -112,7 +142,7 @@ const dummyFeedAlbums = [
 ];
 
 // 내 앨범 데이터를 localStorage에서 가져오는 함수
-const getMyAlbums = () => {
+const getMyAlbums = (): MyAlbum[] => {
   const savedAlbums = localStorage.getItem('myAlbums');
   if (savedAlbums) {
     return JSON.parse(savedAlbums);
@@ -121,7 +151,7 @@ const getMyAlbums = () => {
 };
 
 // 피드 데이터를 localStorage에서 가져오는 함수
-const getFeedAlbums = () => {
+const getFeedAlbums = (): FeedAlbum[] => {
   const savedFeedAlbums = localStorage.getItem('feedAlbums');
   if (savedFeedAlbums) {
     return JSON.parse(savedFeedAlbums);
@@ -131,6 +161,7 @@ const getFeedAlbums = () => {
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useUIStore();
   const [tabValue, setTabValue] = useState(0);
   const [sortBy, setSortBy] = useState('latest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -178,7 +209,7 @@ const FeedPage: React.FC = () => {
     console.log('Play album:', albumId);
   };
 
-  const handleAlbumClick = (feed: any) => {
+  const handleAlbumClick = (feed: FeedAlbum) => {
     // 피드에 albumId가 있으면 그것을 사용, 없으면 피드 ID 사용
     const albumId = feed.albumId || feed.id;
     // 앨범 상세 페이지로 이동
@@ -187,7 +218,15 @@ const FeedPage: React.FC = () => {
 
   const handleCreateFeed = () => {
     // 최신 앨범 데이터 가져오기
-    setMyAlbums(getMyAlbums());
+    const latestMyAlbums = getMyAlbums();
+    setMyAlbums(latestMyAlbums);
+    
+    // 앨범이 없으면 안내 메시지
+    if (latestMyAlbums.length === 0) {
+      showToast('먼저 앨범을 생성해주세요.', 'info');
+      return;
+    }
+    
     // 피드 생성 모달 열기
     setCreateFeedModalOpen(true);
   };
@@ -204,14 +243,14 @@ const FeedPage: React.FC = () => {
 
   const handleFeedSubmit = () => {
     if (!selectedAlbumId || !feedDescription.trim()) {
-      alert('앨범을 선택하고 설명을 입력해주세요.');
+      showToast('앨범을 선택하고 설명을 입력해주세요.', 'warning');
       return;
     }
     
     // 선택된 앨범 정보 가져오기
-    const selectedAlbum = myAlbums.find((album: any) => album.id === selectedAlbumId);
+    const selectedAlbum = myAlbums.find((album: MyAlbum) => album.id === selectedAlbumId);
     if (!selectedAlbum) {
-      alert('선택된 앨범을 찾을 수 없습니다.');
+      showToast('선택된 앨범을 찾을 수 없습니다.', 'error');
       return;
     }
     
@@ -238,16 +277,22 @@ const FeedPage: React.FC = () => {
       commentCount: 0,
     };
     
-    // 피드 목록에 추가 (맨 위에)
-    setFeedAlbums(prev => [newFeed, ...prev]);
-    
-    // localStorage에 피드 데이터 저장
-    const updatedFeedAlbums = [newFeed, ...feedAlbums];
-    localStorage.setItem('feedAlbums', JSON.stringify(updatedFeedAlbums));
+    // 상태 업데이트와 localStorage 저장을 동시에 처리
+    setFeedAlbums((prev: FeedAlbum[]) => {
+      const updatedFeedAlbums = [newFeed, ...prev];
+      // localStorage에 최신 상태 저장
+      localStorage.setItem('feedAlbums', JSON.stringify(updatedFeedAlbums));
+      return updatedFeedAlbums;
+    });
     
     // 모달 닫기
     handleCloseCreateFeedModal();
-    alert('피드가 성공적으로 생성되었습니다!');
+    showToast('피드가 성공적으로 생성되었습니다!', 'success');
+    
+    // 피드 목록 자동 새로고침 (추가 안전장치)
+    setTimeout(() => {
+      setFeedAlbums(getFeedAlbums());
+    }, 100);
   };
 
   return (
@@ -504,7 +549,7 @@ const FeedPage: React.FC = () => {
 
               {/* 앨범 카드 목록 */}
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {feedAlbums.map((album: any) => (
+                {feedAlbums.map((album: FeedAlbum) => (
                   <Card 
                     key={album.id} 
                     sx={{ 
@@ -611,7 +656,7 @@ const FeedPage: React.FC = () => {
                           
                           {/* 태그 */}
                           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                             {(album.tags || []).map((tag: any) => (
+                             {(album.tags || []).map((tag: string) => (
                               <Chip
                                 key={tag}
                                 label={`#${tag}`}
@@ -760,10 +805,17 @@ const FeedPage: React.FC = () => {
            <Box sx={{ mb: 4 }}>
              <Typography variant="h6" sx={{ 
                fontWeight: 600, 
-               mb: 2, 
+               mb: 1, 
                color: '#333' 
              }}>
                공유할 앨범 선택
+             </Typography>
+             <Typography variant="body2" sx={{ 
+               color: '#666', 
+               mb: 2,
+               fontSize: '0.9rem'
+             }}>
+               공유하고 싶은 앨범을 하나 선택해주세요
              </Typography>
              
              <FormControl component="fieldset">
@@ -773,8 +825,12 @@ const FeedPage: React.FC = () => {
                    py: 4,
                    color: 'text.secondary'
                  }}>
-                   <Typography variant="body1" sx={{ mb: 2 }}>
-                     생성된 앨범이 없습니다.
+                   <MusicNote sx={{ fontSize: 48, color: '#ddd', mb: 2 }} />
+                   <Typography variant="h6" sx={{ mb: 1, color: '#333' }}>
+                     생성된 앨범이 없습니다
+                   </Typography>
+                   <Typography variant="body2" sx={{ mb: 3, color: '#666' }}>
+                     먼저 앨범을 생성한 후 피드로 공유해보세요
                    </Typography>
                    <Button
                      variant="contained"
@@ -785,6 +841,11 @@ const FeedPage: React.FC = () => {
                      sx={{
                        backgroundColor: '#333',
                        color: 'white',
+                       px: 3,
+                       py: 1.5,
+                       borderRadius: 2,
+                       textTransform: 'none',
+                       fontWeight: 600,
                        '&:hover': {
                          backgroundColor: '#1a1a1a',
                        },
@@ -798,7 +859,7 @@ const FeedPage: React.FC = () => {
                    value={selectedAlbumId}
                    onChange={(e) => handleAlbumSelect(e.target.value)}
                  >
-                   {myAlbums.map((album: any) => (
+                   {myAlbums.map((album: MyAlbum) => (
                    <FormControlLabel
                      key={album.id}
                      value={album.id}
@@ -808,12 +869,15 @@ const FeedPage: React.FC = () => {
                          display: 'flex', 
                          alignItems: 'center', 
                          p: 2, 
-                         border: '1px solid #e0e0e0',
+                         border: selectedAlbumId === album.id ? '2px solid #333' : '1px solid #e0e0e0',
                          borderRadius: 2,
                          ml: 1,
                          width: '100%',
+                         backgroundColor: selectedAlbumId === album.id ? '#f8f9fa' : 'transparent',
+                         transition: 'all 0.2s ease-in-out',
                          '&:hover': {
-                           backgroundColor: '#f8f9fa'
+                           backgroundColor: '#f8f9fa',
+                           borderColor: '#333'
                          }
                        }}>
                          <CardMedia
@@ -823,7 +887,8 @@ const FeedPage: React.FC = () => {
                              height: 80, 
                              borderRadius: 1,
                              objectFit: 'cover',
-                             mr: 2
+                             mr: 2,
+                             border: '1px solid #f0f0f0'
                            }}
                            image={album.coverImage}
                            alt={album.title}
@@ -845,7 +910,7 @@ const FeedPage: React.FC = () => {
                              </Typography>
                            </Box>
                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                             {(album.tags || []).map((tag: any) => (
+                             {(album.tags || []).map((tag: string) => (
                                <Chip
                                  key={tag}
                                  label={tag}
@@ -874,10 +939,17 @@ const FeedPage: React.FC = () => {
            <Box>
              <Typography variant="h6" sx={{ 
                fontWeight: 600, 
-               mb: 2, 
+               mb: 1, 
                color: '#333' 
              }}>
                피드 설명 작성
+             </Typography>
+             <Typography variant="body2" sx={{ 
+               color: '#666', 
+               mb: 2,
+               fontSize: '0.9rem'
+             }}>
+               이 앨범에 대한 이야기나 감상을 자유롭게 작성해주세요. 이 내용이 피드에 표시됩니다.
              </Typography>
              <TextField
                fullWidth
@@ -915,8 +987,9 @@ const FeedPage: React.FC = () => {
            <Button
              onClick={handleFeedSubmit}
              variant="contained"
+             disabled={!selectedAlbumId || !feedDescription.trim()}
              sx={{
-               backgroundColor: '#333',
+               backgroundColor: selectedAlbumId && feedDescription.trim() ? '#333' : '#ccc',
                color: 'white',
                borderRadius: 2,
                px: 3,
@@ -924,8 +997,12 @@ const FeedPage: React.FC = () => {
                textTransform: 'none',
                fontWeight: 600,
                '&:hover': {
-                 backgroundColor: '#1a1a1a',
+                 backgroundColor: selectedAlbumId && feedDescription.trim() ? '#1a1a1a' : '#ccc',
                },
+               '&:disabled': {
+                 backgroundColor: '#ccc',
+                 color: '#999',
+               }
              }}
            >
              피드 공유하기

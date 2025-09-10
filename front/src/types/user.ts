@@ -25,4 +25,5 @@ export interface AuthStore extends AuthState {
   login: (user: User) => void;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
+  tempLogin: () => void; // 임시 로그인 기능 (개발용)
 }
