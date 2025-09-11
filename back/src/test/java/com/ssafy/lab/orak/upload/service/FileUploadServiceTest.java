@@ -1,5 +1,6 @@
 package com.ssafy.lab.orak.upload.service;
 
+import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.s3.helper.S3Helper;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.s3.util.S3Uploader;
@@ -321,5 +322,41 @@ class FileUploadServiceTest {
         assertEquals(expectedUrl, result);
         verify(uploadRepository).findById(uploadId);
         verify(s3Helper).generatePresignedUrl(s3Key);
+    }
+
+    @Test
+    @DisplayName("URL 생성 실패 시 S3UrlGenerationException 발생 테스트")
+    void getFileUrl_S3GenerationFails_ThrowsException() {
+        // given
+        String s3Key = testUpload.getFullPath();
+        
+        when(s3Helper.generatePresignedUrl(s3Key))
+                .thenThrow(new S3UrlGenerationException(s3Key, "AWS 자격 증명 오류"));
+
+        // when & then
+        S3UrlGenerationException exception = assertThrows(S3UrlGenerationException.class, () -> 
+                fileUploadService.getFileUrl(testUpload)
+        );
+        
+        assertEquals(s3Key, exception.getS3Key());
+        assertTrue(exception.getMessage().contains("AWS 자격 증명 오류"));
+        verify(s3Helper).generatePresignedUrl(s3Key);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 업로드 ID로 URL 생성 시 UploadNotFoundException 발생")
+    void getFileUrlById_UploadNotFound_ThrowsException() {
+        // given
+        Long nonExistentUploadId = 999L;
+        
+        when(uploadRepository.findById(nonExistentUploadId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThrows(UploadNotFoundException.class, () -> 
+                fileUploadService.getFileUrl(nonExistentUploadId)
+        );
+        
+        verify(uploadRepository).findById(nonExistentUploadId);
+        verify(s3Helper, never()).generatePresignedUrl(any());
     }
 }

@@ -9,6 +9,7 @@ import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
 import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
+import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
@@ -385,5 +386,81 @@ class RecordServiceTest {
 
         verify(recordRepository).findById(recordId);
         verify(recordRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("URL 생성 실패 시 urlStatus가 FAILED로 설정되는 테스트")
+    void getRecord_UrlGenerationFails_ReturnsFailedStatus() {
+        // given
+        Long recordId = 1L;
+        when(recordRepository.findByIdWithUpload(recordId)).thenReturn(testRecord);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload))
+                .thenThrow(new S3UrlGenerationException("test-key", "S3 연결 실패"));
+
+        // when
+        RecordResponseDTO result = recordService.getRecord(recordId);
+
+        // then
+        assertNotNull(result);
+        assertNull(result.getUrl());
+        assertEquals("FAILED", result.getUrlStatus());
+
+        verify(recordRepository).findByIdWithUpload(recordId);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
+    }
+
+    @Test
+    @DisplayName("예상치 못한 URL 생성 오류 시 urlStatus가 ERROR로 설정되는 테스트")
+    void getRecord_UnexpectedUrlError_ReturnsErrorStatus() {
+        // given
+        Long recordId = 1L;
+        when(recordRepository.findByIdWithUpload(recordId)).thenReturn(testRecord);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload))
+                .thenThrow(new RuntimeException("네트워크 연결 오류"));
+
+        // when
+        RecordResponseDTO result = recordService.getRecord(recordId);
+
+        // then
+        assertNotNull(result);
+        assertNull(result.getUrl());
+        assertEquals("ERROR", result.getUrlStatus());
+
+        verify(recordRepository).findByIdWithUpload(recordId);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
+    }
+
+    @Test
+    @DisplayName("URL 생성 성공 시 urlStatus가 SUCCESS로 설정되는 테스트")
+    void getRecord_UrlGenerationSuccess_ReturnsSuccessStatus() {
+        // given
+        Long recordId = 1L;
+        String expectedUrl = "https://presigned-url.example.com";
+        
+        when(recordRepository.findByIdWithUpload(recordId)).thenReturn(testRecord);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload)).thenReturn(expectedUrl);
+
+        // when
+        RecordResponseDTO result = recordService.getRecord(recordId);
+
+        // then
+        assertNotNull(result);
+        assertEquals(expectedUrl, result.getUrl());
+        assertEquals("SUCCESS", result.getUrlStatus());
+
+        verify(recordRepository).findByIdWithUpload(recordId);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
     }
 }
