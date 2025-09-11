@@ -21,6 +21,8 @@ services:
       retries: 10
       interval: 10s
       start_period: 40s
+    networks:
+      - orakgaraki-network
 
   # Redis
   redis:
@@ -32,6 +34,8 @@ services:
       - "6380:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - orakgaraki-network
 
   app:
     build:
