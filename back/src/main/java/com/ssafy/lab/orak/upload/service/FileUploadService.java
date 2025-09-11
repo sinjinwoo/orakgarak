@@ -49,18 +49,29 @@ public class FileUploadService {
                 throw new IllegalArgumentException("빈 파일입니다");
             }
             
+            // 파일명에서 확장자 추출
+            String fullFilename = file.getOriginalFilename();
+            String originalFilename = fullFilename;
+            String extension = "";
+            if (fullFilename != null && fullFilename.contains(".")) {
+                extension = fullFilename.substring(fullFilename.lastIndexOf(".") + 1);
+                // 확장자를 제거한 파일명만 저장
+                originalFilename = fullFilename.substring(0, fullFilename.lastIndexOf("."));
+            }
+            
+            // UUID 생성
+            String uuid = UUID.randomUUID().toString();
+            
             // S3 업로드
-            List<String> localFilePaths = localUploader.uploadLocal(file);
-            String localFilePath = localFilePaths.get(0);
+            String localFilePath = localUploader.uploadLocal(file);
             String s3Url = s3Uploader.upload(localFilePath, directory);
             
-            // S3 URL에서 저장된 파일명 추출
-            String storedFilename = s3Helper.extractFullFileNameFromUrl(s3Url);
-            
-            // Upload 엔티티 생성 및 저장 (fileUrl, createdBy 제거)
+            // Upload 엔티티 생성 및 저장
             Upload upload = Upload.builder()
-                    .originalFilename(file.getOriginalFilename())
-                    .storedFilename(storedFilename)
+                    .originalFilename(originalFilename)
+                    .uuid(uuid)
+                    .extension(extension)
+                    .uploaderId(userId)
                     .fileSize(file.getSize())
                     .contentType(file.getContentType())
                     .directory(directory)
@@ -94,7 +105,7 @@ public class FileUploadService {
         
         try {
             // S3에서 파일 삭제
-            s3Uploader.removeS3File(upload.getStoredFilename());
+            s3Uploader.removeS3File(upload.getFullPath());
             
             // DB에서 업로드 기록 삭제
             uploadRepository.delete(upload);
@@ -113,7 +124,7 @@ public class FileUploadService {
         log.info("다중 파일 삭제 성공: {}", uploadIds.size());
     }
     
-    public Upload uploadLocalFile(String localFilePath, String directory, Long userId) {
+    public Upload uploadLocalFile(String localFilePath, String directory, Long userId, String originalFilename) {
         try {
             java.nio.file.Path filePath = java.nio.file.Paths.get(localFilePath);
             java.io.File file = filePath.toFile();
@@ -122,11 +133,32 @@ public class FileUploadService {
                 throw new IllegalArgumentException("로컬 파일이 존재하지 않습니다: " + localFilePath);
             }
             
-            // S3 업로드
-            String s3Url = s3Uploader.upload(localFilePath, directory);
+            // 확장자 추출 및 파일명에서 확장자 제거
+            String extension = "";
+            String filenameWithoutExtension = originalFilename;
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+                // 확장자를 제거한 파일명만 저장
+                filenameWithoutExtension = originalFilename.substring(0, originalFilename.lastIndexOf("."));
+            }
             
-            // S3 URL에서 저장된 파일명 추출
-            String storedFilename = s3Helper.extractFullFileNameFromUrl(s3Url);
+            // UUID 생성
+            String uuid = UUID.randomUUID().toString();
+            
+            // UUID를 사용한 새 파일명으로 임시 파일 생성
+            String uuidFilename = uuid + "_" + originalFilename;
+            java.nio.file.Path tempPath = filePath.getParent().resolve(uuidFilename);
+            java.nio.file.Files.copy(filePath, tempPath);
+            
+            // S3 업로드 (UUID 파일명 사용)
+            String s3Url = s3Uploader.upload(tempPath.toString(), directory);
+            
+            // 임시 파일 삭제
+            try {
+                java.nio.file.Files.deleteIfExists(tempPath);
+            } catch (Exception e) {
+                log.warn("임시 파일 삭제 실패: {}", tempPath, e);
+            }
             
             // 파일 타입 추출
             String contentType;
@@ -141,8 +173,10 @@ public class FileUploadService {
             
             // Upload 엔티티 생성 및 저장
             Upload upload = Upload.builder()
-                    .originalFilename(file.getName())
-                    .storedFilename(storedFilename)
+                    .originalFilename(filenameWithoutExtension)
+                    .uuid(uuid)
+                    .extension(extension)
+                    .uploaderId(userId)
                     .fileSize(file.length())
                     .contentType(contentType)
                     .directory(directory)
@@ -167,7 +201,7 @@ public class FileUploadService {
     
     // URL 동적 생성 메서드
     public String getFileUrl(Upload upload) {
-        String s3Key = upload.getDirectory() + "/" + upload.getStoredFilename();
+        String s3Key = upload.getFullPath();
         return s3Helper.getS3Url(s3Key);
     }
     

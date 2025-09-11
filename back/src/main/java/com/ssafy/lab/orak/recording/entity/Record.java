@@ -1,16 +1,12 @@
 package com.ssafy.lab.orak.recording.entity;
 
+import com.ssafy.lab.orak.common.entity.BaseEntity;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "records")
@@ -18,8 +14,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
-@EntityListeners(AuditingEntityListener.class)
-public class Record {
+public class Record extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,11 +36,4 @@ public class Record {
     private Upload upload;
 
     private Integer durationSeconds;
-
-    @CreatedDate
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
 }

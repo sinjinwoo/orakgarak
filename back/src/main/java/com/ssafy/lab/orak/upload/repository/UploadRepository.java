@@ -15,7 +15,7 @@ public interface UploadRepository extends JpaRepository<Upload, Long> {
     
     
     
-    @Query("SELECT u FROM Upload u WHERE u.uploadDate BETWEEN :startDate AND :endDate")
+    @Query("SELECT u FROM Upload u WHERE u.createdAt BETWEEN :startDate AND :endDate")
     List<Upload> findByUploadDateBetween(@Param("startDate") LocalDateTime startDate, 
                                         @Param("endDate") LocalDateTime endDate);
     

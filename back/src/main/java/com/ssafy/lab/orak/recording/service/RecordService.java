@@ -4,10 +4,12 @@ import com.ssafy.lab.orak.recording.dto.RecordRequestDTO;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.entity.Record;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
+import com.ssafy.lab.orak.recording.exception.RecordOperationException;
 import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
+import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
@@ -33,24 +35,23 @@ public class RecordService {
     private final FileUploadService fileUploadService;
     private final RecordMapper recordMapper;
     private final AudioConverter audioConverter;
+    private final AudioDurationCalculator audioDurationCalculator;
     private final LocalUploader localUploader;
     
     @Value("${s3.upload.path}")
     private String uploadPath;
     
-    public RecordResponseDTO createRecord(String title, Long songId, MultipartFile audioFile, Integer durationSeconds, Long userId) {
+    public RecordResponseDTO createRecord(String title, Long songId, MultipartFile audioFile, Long userId) {
         try {
             // 1. DTO 생성
             RecordRequestDTO requestDTO = RecordRequestDTO.builder()
                     .title(title)
                     .songId(songId)
                     .audioFile(audioFile)
-                    .durationSeconds(durationSeconds)
                     .build();
             
             // 2. 로컬 파일 업로드
-            List<String> uploadedPaths = localUploader.uploadLocal(audioFile, null, userId);
-            String originalFilePath = uploadedPaths.get(0);
+            String originalFilePath = localUploader.uploadLocal(audioFile);
             
             // 3. 오디오 파일인지 확인하고 WAV 변환
             String contentType = Files.probeContentType(java.nio.file.Paths.get(originalFilePath));
@@ -62,16 +63,21 @@ public class RecordService {
                 log.info("오디오 파일 WAV 변환 완료: {}", audioFile.getOriginalFilename());
             }
             
-            // 4. 변환된 파일을 S3에 업로드
-            Upload upload = fileUploadService.uploadLocalFile(fileToUpload, "recordings", userId);
+            // 4. 오디오 파일의 재생시간 계산
+            Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(fileToUpload);
             
-            // 5. Record 엔티티 생성 및 저장 (MapStruct 사용)
+            // 5. 변환된 파일을 S3에 업로드
+            Upload upload = fileUploadService.uploadLocalFile(fileToUpload, "recordings", userId, audioFile.getOriginalFilename());
+            
+            // 6. Record 엔티티 생성 및 저장 (MapStruct 사용)
             Record record = recordMapper.toEntity(requestDTO, userId, upload);
+            // 계산된 재생시간 설정
+            record = record.toBuilder().durationSeconds(calculatedDuration).build();
             Record savedRecord = recordRepository.save(record);
             
             log.info("녹음 파일 생성 성공: userId={}, recordId={}", userId, savedRecord.getId());
             
-            // 6. S3 업로드와 DB 저장이 완료된 후 서버에 있는 임시 파일들 삭제
+            // 7. S3 업로드와 DB 저장이 완료된 후 서버에 있는 임시 파일들 삭제
             try {
                 java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(originalFilePath));
                 if (!originalFilePath.equals(fileToUpload)) {
@@ -82,7 +88,7 @@ public class RecordService {
                 log.warn("서버 임시 파일 삭제 실패", e);
             }
             
-            // 7. 응답 DTO 반환 (MapStruct 사용)
+            // 8. 응답 DTO 반환 (MapStruct 사용)
             return recordMapper.toResponseDTO(savedRecord, upload);
             
         } catch (Exception e) {
@@ -126,11 +132,11 @@ public class RecordService {
                 throw new RecordPermissionDeniedException(recordId, userId);
             }
             
-            // 1. 파일 삭제 (S3 + DB)
-            fileUploadService.deleteFile(record.getUploadId());
-            
-            // 2. Record 삭제
+            // 1. Record 삭제 (외래키 제약조건 때문에 먼저 삭제)
             recordRepository.delete(record);
+            
+            // 2. 파일 삭제 (S3 + DB)
+            fileUploadService.deleteFile(record.getUploadId());
             
             log.info("녹음 파일 삭제 성공: recordId={}, userId={}", recordId, userId);
             
@@ -139,11 +145,11 @@ public class RecordService {
             throw e;
         } catch (Exception e) {
             log.error("녹음 파일 삭제 실패: recordId={}, userId={}", recordId, userId, e);
-            throw new RuntimeException("녹음 파일 삭제에 실패했습니다: " + e.getMessage(), e);
+            throw new RecordOperationException("녹음 파일 삭제에 실패했습니다: " + e.getMessage(), e);
         }
     }
     
-    public RecordResponseDTO updateRecord(Long recordId, String title, Long userId) {
+    public RecordResponseDTO updateRecord(Long recordId, String title, MultipartFile audioFile, Long userId) {
         try {
             Record record = recordRepository.findById(recordId)
                     .orElseThrow(() -> new RecordNotFoundException(recordId));
@@ -153,14 +159,65 @@ public class RecordService {
                 throw new RecordPermissionDeniedException(recordId, userId);
             }
             
-            // 제목만 수정 (toBuilder 활용)
-            Record updatedRecord = record.toBuilder()
-                    .title(title)
-                    .build();
+            // 변경사항 확인
+            boolean titleChanged = !record.getTitle().equals(title);
+            boolean audioFileProvided = audioFile != null && !audioFile.isEmpty();
             
+            // 아무 변경사항이 없으면 기존 데이터 반환
+            if (!titleChanged && !audioFileProvided) {
+                log.info("녹음 파일 수정 요청이지만 변경사항 없음: recordId={}, userId={}", recordId, userId);
+                return recordMapper.toResponseDTO(record);
+            }
+            
+            Record.RecordBuilder recordBuilder = record.toBuilder();
+            
+            // 제목이 변경된 경우에만 업데이트
+            if (titleChanged) {
+                recordBuilder.title(title);
+            }
+            
+            // 새로운 오디오 파일이 제공된 경우 파일 교체
+            if (audioFileProvided) {
+                // 1. 기존 파일 삭제
+                fileUploadService.deleteFile(record.getUploadId());
+                
+                // 2. 새 파일 업로드 처리 (createRecord와 동일한 로직)
+                String originalFilePath = localUploader.uploadLocal(audioFile);
+                String contentType = Files.probeContentType(java.nio.file.Paths.get(originalFilePath));
+                String fileToUpload = originalFilePath;
+                
+                if (audioConverter.isAudioFile(audioFile.getOriginalFilename(), contentType)) {
+                    String wavFilePath = audioConverter.convertToWav(originalFilePath, uploadPath);
+                    fileToUpload = wavFilePath;
+                    log.info("오디오 파일 WAV 변환 완료: {}", audioFile.getOriginalFilename());
+                }
+                
+                // 3. 새 파일의 재생시간 계산
+                Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(fileToUpload);
+                
+                // 4. 새 파일을 S3에 업로드
+                Upload newUpload = fileUploadService.uploadLocalFile(fileToUpload, "recordings", userId, audioFile.getOriginalFilename());
+                
+                // 5. Record의 uploadId와 duration 업데이트
+                recordBuilder.uploadId(newUpload.getId()).durationSeconds(calculatedDuration);
+                
+                // 6. 서버 임시 파일 삭제
+                try {
+                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(originalFilePath));
+                    if (!originalFilePath.equals(fileToUpload)) {
+                        java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(fileToUpload));
+                    }
+                    log.info("서버 임시 파일 삭제 완료");
+                } catch (Exception e) {
+                    log.warn("서버 임시 파일 삭제 실패", e);
+                }
+            }
+            
+            Record updatedRecord = recordBuilder.build();
             Record savedRecord = recordRepository.save(updatedRecord);
             
-            log.info("녹음 파일 수정 성공: recordId={}, userId={}", recordId, userId);
+            log.info("녹음 파일 수정 성공: recordId={}, userId={}, titleChanged={}, fileUpdated={}", 
+                    recordId, userId, titleChanged, audioFileProvided);
             
             return recordMapper.toResponseDTO(savedRecord);
             
@@ -169,7 +226,7 @@ public class RecordService {
             throw e;
         } catch (Exception e) {
             log.error("녹음 파일 수정 실패: recordId={}, userId={}", recordId, userId, e);
-            throw new RuntimeException("녹음 파일 수정에 실패했습니다: " + e.getMessage(), e);
+            throw new RecordOperationException("녹음 파일 수정에 실패했습니다: " + e.getMessage(), e);
         }
     }
 }
