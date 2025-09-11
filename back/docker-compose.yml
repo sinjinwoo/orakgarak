@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # MySQL 데이터베이스
   mysql:
     image: mysql:8.0
     container_name: orakgaraki-mysql
@@ -14,8 +15,6 @@ services:
       - "${DB_PORT_PROD:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - orakgaraki-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD_PROD}"]
       timeout: 20s
@@ -30,56 +29,10 @@ services:
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
-      - "6380:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - orakgaraki-network
-
-  # Spring Boot 애플리케이션
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: orakgaraki-app
-    restart: unless-stopped
-    ports:
-      - "${SERVER_PORT:-8080}:8080"
-    volumes:
-      - ./logs:/var/log/orak
-    environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - DB_HOST=${DB_HOST_PROD:-orakgaraki-mysql}
-      - DB_PORT=3306
-      - DB_NAME=${DB_NAME_PROD}
-      - DB_USERNAME=${DB_USERNAME_PROD}
-      - DB_PASSWORD=${DB_PASSWORD_PROD}
-      - REDIS_HOST=orakgaraki-redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION=${JWT_EXPIRATION}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
-      - AWS_REGION=${AWS_REGION}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - SWAGGER_ENABLED=${SWAGGER_ENABLED}
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - orakgaraki-network
 
 volumes:
   mysql_data:
   redis_data:
-
-networks:
-  orakgaraki-network:
-    driver: bridge
