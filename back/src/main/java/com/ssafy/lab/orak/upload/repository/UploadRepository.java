@@ -12,14 +12,4 @@ import java.util.Optional;
 
 @Repository
 public interface UploadRepository extends JpaRepository<Upload, Long> {
-    
-    
-    
-    @Query("SELECT u FROM Upload u WHERE u.createdAt BETWEEN :startDate AND :endDate")
-    List<Upload> findByUploadDateBetween(@Param("startDate") LocalDateTime startDate, 
-                                        @Param("endDate") LocalDateTime endDate);
-    
-    
-    @Query("SELECT COUNT(u) FROM Upload u WHERE u.directory = :directory")
-    Long countByDirectory(@Param("directory") String directory);
 }

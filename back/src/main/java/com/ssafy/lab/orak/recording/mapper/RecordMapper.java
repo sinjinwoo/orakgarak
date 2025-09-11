@@ -27,10 +27,22 @@ public interface RecordMapper {
     Record toEntity(RecordRequestDTO requestDTO, Long userId, Upload upload);
     
     @Mapping(target = "uploadId", source = "uploadId")
+    @Mapping(target = "extension", ignore = true)
+    @Mapping(target = "content_type", ignore = true)
+    @Mapping(target = "file_size", ignore = true)
+    @Mapping(target = "url", ignore = true)
     RecordResponseDTO toResponseDTO(Record record);
     
     @Mapping(target = "id", source = "record.id")
+    @Mapping(target = "userId", source = "record.userId")
+    @Mapping(target = "songId", source = "record.songId")
+    @Mapping(target = "title", source = "record.title")
+    @Mapping(target = "durationSeconds", source = "record.durationSeconds")
     @Mapping(target = "uploadId", source = "upload.id")
+    @Mapping(target = "extension", source = "upload.extension")
+    @Mapping(target = "content_type", source = "upload.contentType")
+    @Mapping(target = "file_size", source = "upload.fileSize")
+    @Mapping(target = "url", ignore = true)
     @Mapping(target = "createdAt", source = "record.createdAt")
     @Mapping(target = "updatedAt", source = "record.updatedAt")
     RecordResponseDTO toResponseDTO(Record record, Upload upload);

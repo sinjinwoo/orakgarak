@@ -88,8 +88,8 @@ public class RecordService {
                 log.warn("서버 임시 파일 삭제 실패", e);
             }
             
-            // 8. 응답 DTO 반환 (MapStruct 사용)
-            return recordMapper.toResponseDTO(savedRecord, upload);
+            // 8. 응답 DTO 반환
+            return convertToResponseDTOWithUrl(savedRecord);
             
         } catch (Exception e) {
             log.error("녹음 파일 생성 실패: userId={}", userId, e);
@@ -103,22 +103,49 @@ public class RecordService {
         if (record == null) {
             throw new RecordNotFoundException(recordId);
         }
-        return recordMapper.toResponseDTO(record);
+        
+        return convertToResponseDTOWithUrl(record);
     }
     
     @Transactional(readOnly = true)
     public List<RecordResponseDTO> getRecordsByUser(Long userId) {
         List<Record> records = recordRepository.findByUserIdWithUpload(userId);
-        return records.stream()
-                .map(recordMapper::toResponseDTO)
-                .collect(Collectors.toList());
+        return convertToResponseDTOsWithUrl(records);
     }
     
     @Transactional(readOnly = true)
     public List<RecordResponseDTO> getRecordsBySong(Long songId) {
         List<Record> records = recordRepository.findBySongId(songId);
+        return convertToResponseDTOsWithUrl(records);
+    }
+    
+    /**
+     * Record 엔티티를 URL이 포함된 RecordResponseDTO로 변환
+     */
+    private RecordResponseDTO convertToResponseDTOWithUrl(Record record) {
+        Upload upload = fileUploadService.getUpload(record.getUploadId());
+        RecordResponseDTO responseDTO = recordMapper.toResponseDTO(record, upload);
+        
+        String fileUrl;
+        try {
+            fileUrl = fileUploadService.getFileUrl(upload);
+            if (fileUrl == null) {
+                fileUrl = "S3 Pre-signed URL 생성 실패";
+            }
+        } catch (Exception e) {
+            log.warn("파일 URL 생성 실패: uploadId={}", upload.getId(), e);
+            fileUrl = "S3 Pre-signed URL 생성 실패: " + e.getMessage();
+        }
+        
+        return responseDTO.toBuilder().url(fileUrl).build();
+    }
+    
+    /**
+     * Record 엔티티 리스트를 URL이 포함된 RecordResponseDTO 리스트로 변환
+     */
+    private List<RecordResponseDTO> convertToResponseDTOsWithUrl(List<Record> records) {
         return records.stream()
-                .map(recordMapper::toResponseDTO)
+                .map(this::convertToResponseDTOWithUrl)
                 .collect(Collectors.toList());
     }
     
@@ -166,7 +193,7 @@ public class RecordService {
             // 아무 변경사항이 없으면 기존 데이터 반환
             if (!titleChanged && !audioFileProvided) {
                 log.info("녹음 파일 수정 요청이지만 변경사항 없음: recordId={}, userId={}", recordId, userId);
-                return recordMapper.toResponseDTO(record);
+                return convertToResponseDTOWithUrl(record);
             }
             
             Record.RecordBuilder recordBuilder = record.toBuilder();
@@ -219,7 +246,7 @@ public class RecordService {
             log.info("녹음 파일 수정 성공: recordId={}, userId={}, titleChanged={}, fileUpdated={}", 
                     recordId, userId, titleChanged, audioFileProvided);
             
-            return recordMapper.toResponseDTO(savedRecord);
+            return convertToResponseDTOWithUrl(savedRecord);
             
         } catch (RecordNotFoundException | RecordPermissionDeniedException e) {
             // 커스텀 예외는 그대로 전파하여 GlobalExceptionHandler가 처리하도록 함
