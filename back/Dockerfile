@@ -26,7 +26,7 @@ WORKDIR /app
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # 빌드 단계에서 JAR 파일 복사
-COPY --from=builder /app/build/libs/orak-*.jar app.jar
+COPY --from=build /app/build/libs/orak-*.jar app.jar
 
 # 소유권 변경
 RUN chown -R appuser:appuser /app
