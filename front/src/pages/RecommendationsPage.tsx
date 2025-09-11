@@ -1,20 +1,16 @@
 // 추천 페이지 메인 컴포넌트 - 음성 테스트 기반 맞춤 추천 시스템
 import React, { useState, useCallback, useMemo } from 'react';
-import { Container, Typography, Box, Alert, Snackbar, Paper, Button } from '@mui/material';
+import { Container, Typography, Box, Alert, Snackbar, Button } from '@mui/material';
 
 // 추천 관련 컴포넌트들
-import RecommendationFilters from '../components/recommendation/RecommendationFilters'; // 장르/난이도/기분 필터
-import RecommendationList from '../components/recommendation/RecommendationList'; // 추천 곡 목록
-import RangeMatchGraph from '../components/recommendation/RangeMatchGraph'; // 음역대 매칭 시각화
+import CoverFlow from '../components/recommendation/CoverFlow'; // 3D 커버플로우
 
 // 음성 테스트 관련 컴포넌트들
 import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
-import VoiceTestResults from '../components/voiceTest/VoiceTestResults'; // 테스트 결과 분석 화면
 
 // 데이터 및 유틸리티
 import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스
 import { 
-  convertTestResultsToAnalysis, // 테스트 결과를 음성 분석으로 변환
   calculateRecommendationScore, // 추천 점수 계산
   generateRecommendationReason, // 추천 이유 생성
   convertToRecommendedSong // 음악 데이터를 추천 곡으로 변환
@@ -22,13 +18,13 @@ import {
 
 // 타입 정의
 import type { RecommendedSong, RecommendationFilter } from '../types/recommendation';
-import type { VoiceTestResult, VoiceAnalysis } from '../types/voiceAnalysis';
+import type { VoiceAnalysis } from '../types/voiceAnalysis';
 
 const RecommendationsPage: React.FC = () => {
   // ===== 상태 관리 =====
   
   // 추천 필터 상태 (장르, 난이도, 기분, 음역대)
-  const [filter, setFilter] = useState<RecommendationFilter>({
+  const [filter] = useState<RecommendationFilter>({
     genre: 'all',
     difficulty: 'all',
     mood: [],
@@ -38,10 +34,8 @@ const RecommendationsPage: React.FC = () => {
     }
   });
   
-  // 곡 선택 및 북마크 상태
+  // 곡 선택 상태
   const [selectedSong, setSelectedSong] = useState<RecommendedSong | undefined>();
-  const [bookmarkedSongs, setBookmarkedSongs] = useState<string[]>([]);
-  const [isLoading] = useState(false);
   
   // 사용자 알림 상태
   const [snackbar, setSnackbar] = useState({ 
@@ -51,18 +45,44 @@ const RecommendationsPage: React.FC = () => {
   });
   
   // 음성 테스트 관련 상태
-  const [hasCompletedVoiceTest, setHasCompletedVoiceTest] = useState(false); // 테스트 완료 여부
-  const [userVoiceAnalysis, setUserVoiceAnalysis] = useState<VoiceAnalysis | null>(null); // 사용자 음성 분석 결과
+  const [, setHasCompletedVoiceTest] = useState(true); // 테스트 완료 여부 (기본값 true로 변경)
+  const [userVoiceAnalysis, setUserVoiceAnalysis] = useState<VoiceAnalysis | null>({
+    vocalRange: {
+      min: 100,
+      max: 350,
+      comfortable: {
+        min: 120,
+        max: 330
+      }
+    },
+    confidence: 85,
+    vocalCharacteristics: {
+      pitchVariation: 0.7,
+      vibrato: 0.5,
+      breathiness: 0.3,
+      brightness: 0.8
+    }
+  }); // 기본 음성 분석 결과 설정
   const [showVoiceTest, setShowVoiceTest] = useState(false); // 테스트 화면 표시 여부
-  const [showVoiceResults, setShowVoiceResults] = useState(false); // 결과 화면 표시 여부
+  
+  // 이전 추천 곡들 상태
+  const [previousRecommendations, setPreviousRecommendations] = useState<RecommendedSong[]>([]);
+  const [showPreviousRecommendations, setShowPreviousRecommendations] = useState(false);
 
   // ===== 추천 로직 =====
   
   // 추천 곡 생성 - 음성 분석 결과와 음악 DB를 비교하여 매칭 점수 계산
   const recommendedSongs = useMemo(() => {
-    // 음성 테스트가 완료되지 않았으면 빈 배열 반환
-    if (!hasCompletedVoiceTest || !userVoiceAnalysis) {
-      return [];
+    // 기본 추천 곡들 생성 (음성 테스트 없이도 표시)
+    if (!userVoiceAnalysis) {
+      return musicDatabase
+        .slice(0, 10) // 처음 10개 곡만 선택
+        .map(musicData => {
+          const score = Math.floor(Math.random() * 40) + 60; // 60-100점 사이 랜덤 점수
+          const reason = "인기 있는 곡으로 추천합니다";
+          return convertToRecommendedSong(musicData, score, reason);
+        })
+        .sort((a, b) => b.matchScore - a.matchScore);
     }
     
     return musicDatabase
@@ -82,7 +102,7 @@ const RecommendationsPage: React.FC = () => {
       })
       .filter(song => song.matchScore >= 30) // 최소 30점 이상만 표시
       .sort((a, b) => b.matchScore - a.matchScore); // 매칭 점수 순으로 정렬
-  }, [hasCompletedVoiceTest, userVoiceAnalysis, filter]);
+  }, [userVoiceAnalysis, filter]);
 
   // 필터링된 곡 목록 - 사용자 설정한 음역대 범위에 맞는 곡만 필터링
   const filteredSongs = useMemo(() => {
@@ -103,46 +123,7 @@ const RecommendationsPage: React.FC = () => {
     setSelectedSong(song);
   }, []);
 
-  // 북마크 토글 핸들러 - 곡을 저장 목록에 추가/제거
-  const handleSongBookmark = useCallback((song: RecommendedSong) => {
-    setBookmarkedSongs(prev => {
-      const isBookmarked = prev.includes(song.id);
-      if (isBookmarked) {
-        setSnackbar({ open: true, message: `${song.title}을(를) 저장 목록에서 제거했습니다.`, severity: 'info' });
-        return prev.filter(id => id !== song.id);
-      } else {
-        setSnackbar({ open: true, message: `${song.title}을(를) 저장 목록에 추가했습니다.`, severity: 'success' });
-        return [...prev, song.id];
-      }
-    });
-  }, []);
 
-  // 예약 핸들러 - 곡을 녹음 예약 목록에 추가
-  const handleSongReserve = useCallback((song: RecommendedSong) => {
-    setSnackbar({ open: true, message: `${song.title}을(를) 예약 목록에 추가했습니다.`, severity: 'success' });
-    // TODO: 실제 예약 로직 구현 (RecordPage의 ReservationQueue와 연동)
-  }, []);
-
-  // 필터 변경 핸들러 - 추천 필터 업데이트
-  const handleFilterChange = useCallback((newFilter: RecommendationFilter) => {
-    setFilter(newFilter);
-    setSelectedSong(undefined); // 필터 변경 시 선택된 곡 초기화
-  }, []);
-
-  // 필터 초기화 핸들러 - 모든 필터를 기본값으로 리셋
-  const handleFilterReset = useCallback(() => {
-    const resetFilter: RecommendationFilter = {
-      genre: 'all',
-      difficulty: 'all',
-      mood: [],
-      vocalRange: {
-        min: 80,
-        max: 500
-      }
-    };
-    setFilter(resetFilter);
-    setSelectedSong(undefined);
-  }, []);
 
   // 스낵바 닫기 핸들러 - 사용자 알림 메시지 닫기
   const handleSnackbarClose = useCallback(() => {
@@ -152,18 +133,41 @@ const RecommendationsPage: React.FC = () => {
   // ===== 음성 테스트 관련 핸들러 =====
   
   // 음성 테스트 완료 핸들러 - 테스트 결과를 분석하여 추천에 사용
-  const handleVoiceTestComplete = useCallback((results: VoiceTestResult[]) => {
-    const analysis = convertTestResultsToAnalysis(results); // 테스트 결과를 음성 분석으로 변환
+  const handleVoiceTestComplete = useCallback((results: { pitchRange: { minPitch: number; maxPitch: number; minNote: string; maxNote: string }; score: number; timestamp: number }[]) => {
+    // 간단한 음성 분석 결과 생성
+    const analysis: VoiceAnalysis = {
+      vocalRange: {
+        min: results[0]?.pitchRange?.minPitch || 80,
+        max: results[0]?.pitchRange?.maxPitch || 400,
+        comfortable: {
+          min: (results[0]?.pitchRange?.minPitch || 80) + 20,
+          max: (results[0]?.pitchRange?.maxPitch || 400) - 20
+        }
+      },
+      confidence: 85,
+      vocalCharacteristics: {
+        pitchVariation: 0.7,
+        vibrato: 0.5,
+        breathiness: 0.3,
+        brightness: 0.8
+      }
+    };
+    
     setUserVoiceAnalysis(analysis); // 분석 결과 저장
     setHasCompletedVoiceTest(true); // 테스트 완료 상태로 변경
     setShowVoiceTest(false); // 테스트 화면 숨김
-    setShowVoiceResults(true); // 결과 화면 표시
+    
+    // 이전 추천 곡들을 현재 추천으로 저장
+    if (recommendedSongs.length > 0) {
+      setPreviousRecommendations(recommendedSongs);
+    }
+    
     setSnackbar({ 
       open: true, 
       message: '음성 테스트가 완료되었습니다! 분석 결과를 확인해보세요.', 
       severity: 'success' 
     });
-  }, []);
+  }, [recommendedSongs]);
 
   // 음성 테스트 취소 핸들러 - 테스트 중단
   const handleVoiceTestCancel = useCallback(() => {
@@ -175,17 +179,17 @@ const RecommendationsPage: React.FC = () => {
     setShowVoiceTest(true);
   }, []);
 
-  // 음성 테스트 결과 닫기 핸들러 - 결과 화면에서 추천 화면으로 이동
-  const handleCloseVoiceResults = useCallback(() => {
-    setShowVoiceResults(false);
-  }, []);
 
   // ===== 조건부 렌더링 =====
   
   // 음성 테스트 화면 표시 - 게임형 테스트 진행
   if (showVoiceTest) {
     return (
-      <Box sx={{ flex: 1, backgroundColor: '#fafafa', minHeight: '100vh' }}>
+      <Box sx={{ 
+        flex: 1, 
+        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+        minHeight: '100vh' 
+      }}>
         <VoiceTestGame
           onTestComplete={handleVoiceTestComplete}
           onTestCancel={handleVoiceTestCancel}
@@ -194,137 +198,277 @@ const RecommendationsPage: React.FC = () => {
     );
   }
 
-  // 음성 테스트 결과 화면 표시 - 분석 결과 상세 보기
-  if (showVoiceResults && userVoiceAnalysis) {
-    return (
-      <Box sx={{ flex: 1, backgroundColor: '#fafafa', minHeight: '100vh' }}>
-        <VoiceTestResults
-          analysis={userVoiceAnalysis}
-          onClose={handleCloseVoiceResults}
-        />
-      </Box>
-    );
-  }
 
   // ===== 메인 추천 화면 =====
   
   return (
-    <Box sx={{ flex: 1, backgroundColor: '#fafafa', minHeight: '100vh' }}>
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+    <Box sx={{ 
+      flex: 1, 
+      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+      minHeight: '100vh',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* 배경 효과 */}
+      <Box sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 40% 40%, rgba(34, 197, 94, 0.05) 0%, transparent 50%)
+        `,
+        zIndex: 0
+      }} />
+      
+      <Container maxWidth="xl" sx={{ py: 3, position: 'relative', zIndex: 1 }}>
         {/* 페이지 헤더 */}
-        <Box sx={{ mb: 4 }}>
+        <Box sx={{ mb: 4, textAlign: 'center' }}>
           <Typography 
-            variant="h4" 
+            variant="h3" 
             component="h1" 
             sx={{ 
               fontWeight: 'bold',
-              color: '#2c2c2c',
-              mb: 1
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #22c55e 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 2,
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              textShadow: '0 0 30px rgba(139, 92, 246, 0.3)'
             }}
           >
-            🎵 추천 곡
+            🎵 NEON RECOMMENDATIONS
           </Typography>
           <Typography 
-            variant="body1" 
-            color="text.secondary"
-            sx={{ fontSize: '1.1rem' }}
+            variant="h6" 
+            sx={{ 
+              color: '#94a3b8',
+              fontSize: '1.2rem',
+              fontWeight: 300,
+              letterSpacing: '0.5px',
+              mb: 3
+            }}
           >
-            당신의 음역대와 취향에 맞는 곡을 추천해드립니다
+            당신의 음역대와 취향에 맞는 미래적 사운드를 추천해드립니다
           </Typography>
+          
+          {/* 테스트 버튼 - 항상 표시 */}
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleStartVoiceTest}
+            sx={{ 
+              minWidth: 250, 
+              height: 60, 
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+              borderRadius: '15px',
+              textTransform: 'none',
+              boxShadow: '0 8px 25px rgba(139, 92, 246, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 35px rgba(139, 92, 246, 0.4)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            🎮 VOICE TEST
+          </Button>
         </Box>
 
-        {/* 음성 테스트 안내 - 테스트 미완료 시에만 표시 */}
-        {!hasCompletedVoiceTest && (
-          <Paper elevation={3} sx={{ p: 4, mb: 4, textAlign: 'center', backgroundColor: '#e3f2fd' }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2 }}>
-              🎤 음성 테스트가 필요합니다
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-              맞춤 추천을 받으려면 먼저 음성 테스트를 완료해주세요.<br />
-              간단한 게임 형태로 당신의 음역대와 음색을 분석합니다.
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleStartVoiceTest}
-              sx={{ minWidth: 200, height: 50, fontSize: '1.1rem' }}
-            >
-              🎮 음성 테스트 시작하기
-            </Button>
-          </Paper>
-        )}
 
-        {/* 필터 섹션 - 음성 테스트 완료 후에만 표시 */}
-        {hasCompletedVoiceTest && (
-          <RecommendationFilters
-            filter={filter}
-            onFilterChange={handleFilterChange}
-            onReset={handleFilterReset}
-          />
-        )}
 
-        {/* 메인 콘텐츠 - 음성 테스트 완료 후에만 표시 */}
-        {hasCompletedVoiceTest && userVoiceAnalysis && (
-          <Box sx={{ display: 'flex', gap: 3, flexDirection: { xs: 'column', lg: 'row' } }}>
-            {/* 왼쪽: 추천 곡 목록 - 매칭 점수 순으로 정렬된 곡들 */}
-            <Box sx={{ flex: '2 1 600px', minWidth: '300px' }}>
-              <RecommendationList
-                songs={filteredSongs}
-                selectedSong={selectedSong}
-                bookmarkedSongs={bookmarkedSongs}
-                isLoading={isLoading}
-                onSongSelect={handleSongSelect}
-                onSongBookmark={handleSongBookmark}
-                onSongReserve={handleSongReserve}
-              />
-            </Box>
-
-            {/* 오른쪽: 음역대 매칭 그래프 - 사용자와 선택된 곡의 음역대 비교 */}
-            <Box sx={{ flex: '1 1 300px', minWidth: '300px' }}>
-              <RangeMatchGraph
-                userRange={userVoiceAnalysis.vocalRange}
-                selectedSong={selectedSong}
-              />
-            </Box>
-          </Box>
-        )}
-
-        {/* 통계 정보 - 음성 테스트 완료 후에만 표시 */}
-        {hasCompletedVoiceTest && filteredSongs.length > 0 && (
-          <Box sx={{ mt: 4, p: 2, backgroundColor: 'white', borderRadius: 2, boxShadow: 1 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-              📊 추천 분석 결과
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              <Box>
-                <Typography variant="body2" color="text.secondary">총 추천 곡</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {filteredSongs.length}곡
+        {/* 이전 추천 곡들 섹션 - 항상 표시 */}
+        {previousRecommendations.length > 0 && (
+          <Box sx={{
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%)',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: '20px',
+            p: 4,
+            mb: 4,
+            backdropFilter: 'blur(10px)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* 배경 패턴 */}
+            <Box sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: `
+                radial-gradient(circle at 20% 20%, rgba(34, 197, 94, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 50%)
+              `,
+              zIndex: 0
+            }} />
+            
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 'bold',
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  🎵 PREVIOUS RECOMMENDATIONS
                 </Typography>
+                <Button
+                  variant="outlined"
+                  size="medium"
+                  onClick={() => setShowPreviousRecommendations(!showPreviousRecommendations)}
+                  sx={{
+                    border: '2px solid rgba(34, 197, 94, 0.4)',
+                    color: '#22c55e',
+                    borderRadius: '12px',
+                    fontWeight: 'bold',
+                    textTransform: 'none',
+                    px: 3,
+                    '&:hover': {
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '2px solid rgba(34, 197, 94, 0.6)',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {showPreviousRecommendations ? '숨기기' : '보기'} ({previousRecommendations.length})
+                </Button>
               </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">평균 매칭 점수</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {Math.round(filteredSongs.reduce((sum, song) => sum + song.matchScore, 0) / filteredSongs.length)}%
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">저장된 곡</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {bookmarkedSongs.length}곡
-                </Typography>
-              </Box>
-              {userVoiceAnalysis && (
-                <Box>
-                  <Typography variant="body2" color="text.secondary">분석 신뢰도</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {Math.round(userVoiceAnalysis.confidence)}%
-                  </Typography>
+              
+              {showPreviousRecommendations && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: 2 }}>
+                  {previousRecommendations.slice(0, 6).map((song) => (
+                    <Box
+                      key={song.id}
+                      sx={{
+                        background: 'rgba(15, 23, 42, 0.6)',
+                        border: '1px solid rgba(34, 197, 94, 0.2)',
+                        borderRadius: '15px',
+                        p: 2,
+                        backdropFilter: 'blur(10px)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 8px 25px rgba(34, 197, 94, 0.2)',
+                          border: '1px solid rgba(34, 197, 94, 0.4)'
+                        }
+                      }}
+                    >
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          color: '#fff',
+                          fontWeight: 'bold',
+                          mb: 1,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {song.title}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: '#86efac',
+                          mb: 2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {song.artist}
+                      </Typography>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#22c55e',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {song.matchScore}%
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#94a3b8',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          {song.genre}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
                 </Box>
               )}
             </Box>
           </Box>
         )}
+
+        {/* 메인 콘텐츠 - 항상 표시 */}
+        {(
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center',
+            position: 'relative',
+            minHeight: '80vh'
+          }}>
+            {/* 중앙: 커버플로우 - 추천 곡들을 3D 형태로 표시 */}
+            <Box sx={{ 
+              width: '100%',
+              maxWidth: '1200px',
+              background: 'rgba(15, 23, 42, 0.2)',
+              borderRadius: '30px',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              backdropFilter: 'blur(20px)',
+              p: 4,
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 20px 60px rgba(139, 92, 246, 0.2)'
+            }}>
+              {/* 배경 패턴 */}
+              <Box sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `
+                  radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 50% 50%, rgba(34, 197, 94, 0.05) 0%, transparent 70%)
+                `,
+                zIndex: 0
+              }} />
+              
+              <Box sx={{ position: 'relative', zIndex: 1 }}>
+                <CoverFlow
+                  songs={filteredSongs}
+                  selectedSong={selectedSong}
+                  onSongSelect={handleSongSelect}
+                />
+              </Box>
+            </Box>
+
+          </Box>
+        )}
+
+
 
         {/* 스낵바 - 사용자 액션 피드백 */}
         <Snackbar
@@ -336,7 +480,19 @@ const RecommendationsPage: React.FC = () => {
           <Alert 
             onClose={handleSnackbarClose} 
             severity={snackbar.severity}
-            sx={{ width: '100%' }}
+            sx={{ 
+              width: '100%',
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              borderRadius: '15px',
+              backdropFilter: 'blur(10px)',
+              color: '#fff',
+              '& .MuiAlert-icon': {
+                color: snackbar.severity === 'success' ? '#22c55e' : 
+                       snackbar.severity === 'error' ? '#ef4444' : 
+                       snackbar.severity === 'warning' ? '#f59e0b' : '#3b82f6'
+              }
+            }}
           >
             {snackbar.message}
           </Alert>
