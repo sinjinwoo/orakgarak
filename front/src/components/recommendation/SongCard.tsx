@@ -9,7 +9,9 @@ import {
 import { 
   PlayArrow, 
   Bookmark, 
-  BookmarkBorder
+  BookmarkBorder,
+  ThumbUp,
+  ThumbDown
 } from '@mui/icons-material';
 import type { RecommendedSong } from '../../types/recommendation';
 
@@ -20,6 +22,8 @@ interface SongCardProps {
   onSelect?: (song: RecommendedSong) => void;
   onBookmark?: (song: RecommendedSong) => void;
   onReserve?: (song: RecommendedSong) => void;
+  userFeedback?: 'like' | 'dislike' | null;
+  onFeedback?: (songId: string, feedback: 'like' | 'dislike') => void;
 }
 
 const SongCard: React.FC<SongCardProps> = ({
@@ -27,7 +31,9 @@ const SongCard: React.FC<SongCardProps> = ({
   isSelected = false,
   isBookmarked = false,
   onSelect,
-  onBookmark
+  onBookmark,
+  userFeedback = null,
+  onFeedback
 }) => {
   return (
      <Card 
@@ -239,6 +245,54 @@ const SongCard: React.FC<SongCardProps> = ({
                >
                  SELECTED
                </Typography>
+             </Box>
+           )}
+
+           {/* 피드백 버튼들 */}
+           {onFeedback && (
+             <Box sx={{ 
+               display: 'flex', 
+               gap: 1, 
+               mt: 2,
+               justifyContent: 'center'
+             }}>
+               <IconButton
+                 size="small"
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   onFeedback(song.id, 'like');
+                 }}
+                 sx={{
+                   color: userFeedback === 'like' ? '#22c55e' : '#6b7280',
+                   backgroundColor: userFeedback === 'like' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                   '&:hover': {
+                     backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                     color: '#22c55e'
+                   },
+                   transition: 'all 0.2s ease'
+                 }}
+               >
+                 <ThumbUp fontSize="small" />
+               </IconButton>
+               
+               <IconButton
+                 size="small"
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   onFeedback(song.id, 'dislike');
+                 }}
+                 sx={{
+                   color: userFeedback === 'dislike' ? '#ef4444' : '#6b7280',
+                   backgroundColor: userFeedback === 'dislike' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                   '&:hover': {
+                     backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                     color: '#ef4444'
+                   },
+                   transition: 'all 0.2s ease'
+                 }}
+               >
+                 <ThumbDown fontSize="small" />
+               </IconButton>
              </Box>
            )}
          </Box>
