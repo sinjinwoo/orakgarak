@@ -31,7 +31,7 @@ def minmax_norm(series):
 # 곡 별 popularity 점수 계산
 # playlist_count: 곡이 등장한 플리 개수
 # like_avg: 곡이 속한 플리 좋아요 수 평균
-def build_song_popularity(playlists, alpha=0.7, beta=0.3):
+def build_song_popularity(playlists, alpha=0.9, beta=0.1):
     song_count = defaultdict(int)
     song_like_sum = defaultdict(int)
 
@@ -47,22 +47,24 @@ def build_song_popularity(playlists, alpha=0.7, beta=0.3):
     for song in song_count.keys():
         count = song_count[song]
         avg_like = song_like_sum[song] / count if count > 0 else 0
-        log_avg_like = np.log1p(avg_like)
-
+        
         songs_data.append({
             "song_id": song,
             "playlist_count": count,
             "avg_like": avg_like,
-            "log_avg_like": log_avg_like
         })
 
     df = pd.DataFrame(songs_data)
 
     df["count_norm"] = minmax_norm(df["playlist_count"])
-    df["log_like_norm"] = minmax_norm(df["log_avg_like"])
+    df["like_norm"] = minmax_norm(df["avg_like"])
+
+    # 조건부 조정
+    mask = df["playlist_count"] < 5
+    df.loc[mask, "popularity"] = df.loc[mask, "like_norm"]
 
     # 최종 점수 계산
-    df["popularity"] = alpha * df["count_norm"] + beta * df["log_like_norm"]
+    df["popularity"] = alpha * df["count_norm"] + beta * df["like_norm"]
 
     # 정렬
     df_sorted = df.sort_values(by="popularity", ascending=False)

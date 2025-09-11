@@ -32,10 +32,19 @@ def convert_numpy_to_list(d):
             converted[k] = v
     return converted
 
-# 단일 곡 feature 추출 및 저장
+# 노래 제목 추출
+def load_song_meta_map(song_meta_json_path):
+    with open(song_meta_json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return {int(item["id"]): item["song_name"] for item in data}
+
+# 곡 하나씩 feature 추출 및 저장
 def process_one_song(args):
     song_id, dataset_path, output_path, popularity_map = args
 
+    # song_name
+    # song_name = song_meta_map.get(song_id, "")
+    
     subdir = str(song_id // 1000)
     mel_path = os.path.join(dataset_path, subdir, f"{song_id}.npy")
     
@@ -46,7 +55,7 @@ def process_one_song(args):
     output_filepath = os.path.join(output_subdir, f"{song_id}.json")
 
     if os.path.exists(output_filepath):
-        # logging.info(f"이미 처리된 파일: {output_filepath}, 건너뜀")
+        logging.info(f"이미 처리된 파일: {output_filepath}, 건너뜀")
         return
 
     if not os.path.exists(mel_path):
@@ -56,8 +65,12 @@ def process_one_song(args):
         mel_spectrogram = np.load(mel_path)
         features = {
             "song_id": song_id,
+            #"song_name": song_name,
             **extract_features(mel_spectrogram, song_id)
         }
+
+        # song_name 추가
+        # song_name = song_meta_map.get(song_id, "")
 
         # popularity 추가
         if popularity_map and song_id in popularity_map:
@@ -85,8 +98,10 @@ def process_dataset_parallel(dataset_path, output_path, song_ids, popularity_map
 
     tasks = [(song_id, dataset_path, output_path, popularity_map) for song_id in song_ids]
 
+
     with Pool(cpu_count()) as pool:
-        list(tqdm.tqdm(pool.imap_unordered(process_one_song, tasks), total=len(tasks), desc="피처 추출 중"))
+        chunksize = 100 # 작업 분배용 
+        list(tqdm.tqdm(pool.imap_unordered(process_one_song, tasks, chunksize=chunksize), total=len(tasks), desc="피처 추출 중"))
 
     logging.info("피처 추출 완료")
 
@@ -95,6 +110,7 @@ if __name__ == '__main__':
     MELON_DATASET_PATH = "E:/melondataset/data"
     OUTPUT_FEATURES_PATH = "E:/melondataset/features"  # 피처 저장 경로
     POPULARITY_JSON_PATH = "E:/melondataset/song_popularity.json"
+   # SONG_META_JSON_PATH = "E:/melondataset/song_meta.json"
     TOTAL_SONGS = 707989
 
     logging.info("=" * 50)
@@ -103,6 +119,7 @@ if __name__ == '__main__':
     logging.info(f"저장 경로: {OUTPUT_FEATURES_PATH}")
     logging.info("=" * 50)
 
+    # song_meta_map = load_song_meta_map(SONG_META_JSON_PATH)
     popularity_map = load_popularity_map(POPULARITY_JSON_PATH)
     song_id_range = range(TOTAL_SONGS)
 

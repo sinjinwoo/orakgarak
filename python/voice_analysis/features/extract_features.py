@@ -17,33 +17,36 @@ def extract_features(mel_spectrogram, song_id=None, sr=16000, n_mfcc=13):
         mfcc = librosa.feature.mfcc(S=mel_spectrogram, sr=sr, n_mfcc=n_mfcc)
         mfcc_mean = np.mean(mfcc, axis=1)
 
-        # mel -> Hz 변환
+        # 주파수 추출
         n_mels = mel_spectrogram.shape[0]
         mel_freqs = librosa.mel_frequencies(n_mels=n_mels, fmin=80, fmax=1200)
 
-        # 프레임별 dominant 주파수 추출
-        max_bin_indices = np.argmax(mel_spectrogram, axis=0)
-        max_freqs = mel_freqs[max_bin_indices]
+        # log -> power로 변환
+        power = librosa.db_to_power(mel_spectrogram)
 
-        # 사람 목소리 범위 기준으로 필터링 (80 ~ 1200Hz)
-        valid_freqs = max_freqs[(max_freqs >= 80) & (max_freqs <= 1200)]
+        # 프레임별 주파수 가중 평균 계산
+        weighted_freqs = np.sum(power.T * mel_freqs, axis=1) / np.sum(power, axis=0)
+
+        # 유효 주파수 필터링
+        valid_freqs = weighted_freqs[(weighted_freqs >= 80) & (weighted_freqs <= 1200)]
 
         if len(valid_freqs) == 0:
             low_freq = high_freq = avg_freq = 0.0
         else:
-            low_freq = np.min(valid_freqs)
-            high_freq = np.max(valid_freqs)
-            avg_freq = np.mean(valid_freqs)
+            low_freq = float(np.percentile(valid_freqs, 5))   # 하위 5% (저음)
+            high_freq = float(np.percentile(valid_freqs, 95)) # 상위 5% (고음)
+            avg_freq = float(np.mean(weighted_freqs))
 
         features = {
             'mfcc': mfcc_mean,
-            'pitch_low': float(low_freq),
-            'pitch_high': float(high_freq),
-            'pitch_avg': float(avg_freq)
+            'pitch_low': low_freq,
+            'pitch_high': high_freq,
+            'pitch_avg': avg_freq
         }
 
+
     except Exception as e:
-        logging.warning(f"[MFCC 추출 실패] song_id={song_id} / 오류: {e}")
+        logging.warning(f"[Feature 추출 실패] song_id={song_id} / 오류: {e}")
         features = {
             'mfcc': np.zeros(n_mfcc),
             'pitch_low': 0.0,
