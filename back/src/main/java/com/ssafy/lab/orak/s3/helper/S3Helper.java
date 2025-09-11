@@ -1,5 +1,6 @@
 package com.ssafy.lab.orak.s3.helper;
 
+import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +18,7 @@ import java.time.Duration;
 public class S3Helper {
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
 
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucket;
@@ -41,10 +43,7 @@ public class S3Helper {
 
     // Pre-signed URL 생성 (스트리밍/재생용)
     public String generatePresignedUrl(String s3Key, Duration expiration) {
-        try (S3Presigner presigner = S3Presigner.builder()
-                .region(software.amazon.awssdk.regions.Region.of(region))
-                .build()) {
-            
+        try {
             GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                     .bucket(bucket)
                     .key(s3Key)
@@ -55,10 +54,10 @@ public class S3Helper {
                     .getObjectRequest(getObjectRequest)
                     .build();
 
-            return presigner.presignGetObject(presignRequest).url().toString();
+            return s3Presigner.presignGetObject(presignRequest).url().toString();
         } catch (Exception e) {
             log.error("Pre-signed URL 생성 실패: {} - {}", s3Key, e.getMessage(), e);
-            return null;
+            throw new S3UrlGenerationException(s3Key, "Pre-signed URL 생성에 실패했습니다: " + e.getMessage(), e);
         }
     }
 

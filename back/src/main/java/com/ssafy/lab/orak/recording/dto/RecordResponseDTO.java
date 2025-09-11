@@ -25,6 +25,7 @@ public class RecordResponseDTO {
     private String content_type;
     private String file_size;
     private String url;
+    private String urlStatus; // "SUCCESS", "FAILED" 등의 상태
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

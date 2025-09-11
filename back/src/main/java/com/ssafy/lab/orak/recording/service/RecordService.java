@@ -10,6 +10,7 @@ import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
 import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
+import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
@@ -127,17 +128,26 @@ public class RecordService {
         RecordResponseDTO responseDTO = recordMapper.toResponseDTO(record, upload);
         
         String fileUrl;
+        String urlStatus;
+        
         try {
             fileUrl = fileUploadService.getFileUrl(upload);
-            if (fileUrl == null) {
-                fileUrl = "S3 Pre-signed URL 생성 실패";
-            }
+            urlStatus = "SUCCESS";
+            log.debug("파일 URL 생성 성공: uploadId={}", upload.getId());
+        } catch (S3UrlGenerationException e) {
+            log.warn("S3 Pre-signed URL 생성 실패: uploadId={}, s3Key={}", upload.getId(), e.getS3Key(), e);
+            fileUrl = null;
+            urlStatus = "FAILED";
         } catch (Exception e) {
-            log.warn("파일 URL 생성 실패: uploadId={}", upload.getId(), e);
-            fileUrl = "S3 Pre-signed URL 생성 실패: " + e.getMessage();
+            log.warn("파일 URL 생성 중 예상치 못한 오류: uploadId={}", upload.getId(), e);
+            fileUrl = null;
+            urlStatus = "ERROR";
         }
         
-        return responseDTO.toBuilder().url(fileUrl).build();
+        return responseDTO.toBuilder()
+                .url(fileUrl)
+                .urlStatus(urlStatus)
+                .build();
     }
     
     /**
