@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
+import { motion } from 'framer-motion';
+import { GlassmorphismCard } from '../components/GlassmorphismCard';
 import { 
   Container, 
   Typography, 

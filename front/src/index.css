@@ -1,68 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 사이버펑크 폰트 */
+@font-face {
+  font-family: neon;
+  src: url(https://db.onlinewebfonts.com/t/790bec5e75015631c8b9e0df43a93061.ttf);
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
+  background-color: white;
+  color: #1f2937;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Tailwind가 모든 기본 스타일을 관리하도록 함 */
+* {
+  box-sizing: border-box;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* 사이버펑크 애니메이션 */
+@keyframes cyber {
+  0%, 100% {
+    text-shadow: 0 0 .5vw #FA0AC1, 0 0 2vw #FA0AC1, 0 0 6vw #FA0AC1, 0 0 6vw #FA0AC1, 0 0 .2vw #FE0BB8, .5vw .5vw .1vw #800964;
+    color: #FE0BB8;
+  }
+  50% {
+    text-shadow: 0 0 .5vw #800C5B, 0 0 1vw #800C5B, 0 0 4vw #800C5B, 0 0 4vw #800C5B, 0 0 .2vw #800C5B, .5vw .5vw .1vw #40043A;
+    color: #800964;
+  }
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@keyframes zone {
+  0%, 100% {
+    text-shadow: 0 0 .5vw #10E19F, 0 0 2vw #10E19F, 0 0 6vw #10E19F, 0 0 6vw #10E19F, 0 0 .2vw #8BFEFD, .5vw .5vw .1vw #148270;
+    color: #28E7DE;
   }
-  a:hover {
-    color: #747bff;
+  50% {
+    text-shadow: 0 0 .5vw #088140, 0 0 1vw #088140, 0 0 4vw #088140, 0 0 4vw #088140, 0 0 .2vw #088140, .5vw .5vw .1vw #0A4930;
+    color: #148C6B;
   }
-  button {
-    background-color: #f9f9f9;
-  }
+}
+
+/* 사이버펑크 글로우 효과 */
+.cyber-glow {
+  animation: cyber 2.2s ease-in infinite;
+}
+
+.zone-glow {
+  animation: zone 3.2s ease-out infinite;
 }
