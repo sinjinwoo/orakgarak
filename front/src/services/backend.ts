@@ -16,28 +16,18 @@ const dummyUser: User = {
 
 const dummySongs: Song[] = [
   {
-    id: '1',
+    id: 1,
     title: '좋은 날',
     artist: '아이유',
-    album: 'Real',
-    duration: 240,
+    duration: '4:00',
     genre: 'K-POP',
-    key: 'C',
-    tempo: 120,
-    difficulty: 'medium',
-    popularity: 95,
   },
   {
-    id: '2',
+    id: 2,
     title: '너를 사랑해',
     artist: '김범수',
-    album: '김범수 1집',
-    duration: 280,
+    duration: '4:40',
     genre: 'Ballad',
-    key: 'G',
-    tempo: 80,
-    difficulty: 'easy',
-    popularity: 88,
   },
 ];
 
@@ -141,21 +131,136 @@ export const songAPI = {
 export const recordingAPI = {
   getMyRecordings: async () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    return { data: [] };
+    
+    // localStorage에서 실제 녹음본 데이터 가져오기
+    const savedRecordings = localStorage.getItem('myRecordings');
+    if (savedRecordings) {
+      return { data: JSON.parse(savedRecordings) };
+    }
+    
+    // 기본 더미 데이터
+    const defaultRecordings = [
+      {
+        id: 'rec_1',
+        userId: 'user_1',
+        songId: 'song_1',
+        song: { title: 'Perfect', artist: 'Ed Sheeran' },
+        audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+        duration: 180,
+        createdAt: '2024-01-15T10:30:00Z',
+        analysis: {
+          pitchAccuracy: 85,
+          tempoAccuracy: 90,
+          vocalRange: { min: 80, max: 400 },
+          toneAnalysis: { brightness: 70, warmth: 80, clarity: 75 },
+          overallScore: 82,
+          feedback: ['음정이 정확합니다', '감정 표현이 좋습니다']
+        }
+      },
+      {
+        id: 'rec_2',
+        userId: 'user_1',
+        songId: 'song_2',
+        song: { title: 'All of Me', artist: 'John Legend' },
+        audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+        duration: 240,
+        createdAt: '2024-01-10T14:20:00Z',
+        analysis: {
+          pitchAccuracy: 88,
+          tempoAccuracy: 85,
+          vocalRange: { min: 90, max: 380 },
+          toneAnalysis: { brightness: 75, warmth: 85, clarity: 80 },
+          overallScore: 85,
+          feedback: ['음색이 아름답습니다', '리듬감이 좋습니다']
+        }
+      },
+      {
+        id: 'rec_3',
+        userId: 'user_1',
+        songId: 'song_3',
+        song: { title: 'Someone You Loved', artist: 'Lewis Capaldi' },
+        audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
+        duration: 200,
+        createdAt: '2024-01-05T16:45:00Z',
+        analysis: {
+          pitchAccuracy: 82,
+          tempoAccuracy: 88,
+          vocalRange: { min: 85, max: 350 },
+          toneAnalysis: { brightness: 65, warmth: 90, clarity: 70 },
+          overallScore: 80,
+          feedback: ['감정이 잘 전달됩니다', '고음 처리가 좋습니다']
+        }
+      }
+    ];
+    
+    // localStorage에 저장
+    localStorage.setItem('myRecordings', JSON.stringify(defaultRecordings));
+    return { data: defaultRecordings };
   },
   
-  uploadRecording: async (file: File, songId: string) => {
+  uploadRecording: async (file: File, songId: string, song: { title: string; artist: string }) => {
     await new Promise(resolve => setTimeout(resolve, 2000));
-    return { data: { id: 'recording-1', songId, audioUrl: 'dummy-audio-url' } };
+    
+    const newRecording = {
+      id: `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: 'user_1',
+      songId,
+      song,
+      audioUrl: URL.createObjectURL(file),
+      duration: Math.floor(Math.random() * 300) + 120, // 2-7분 랜덤
+      createdAt: new Date().toISOString(),
+      analysis: {
+        pitchAccuracy: Math.floor(Math.random() * 20) + 70, // 70-90
+        tempoAccuracy: Math.floor(Math.random() * 20) + 70, // 70-90
+        vocalRange: { 
+          min: Math.floor(Math.random() * 50) + 80, // 80-130
+          max: Math.floor(Math.random() * 100) + 300 // 300-400
+        },
+        toneAnalysis: { 
+          brightness: Math.floor(Math.random() * 40) + 60, // 60-100
+          warmth: Math.floor(Math.random() * 40) + 60, // 60-100
+          clarity: Math.floor(Math.random() * 40) + 60 // 60-100
+        },
+        overallScore: Math.floor(Math.random() * 20) + 70, // 70-90
+        feedback: ['새로운 녹음입니다', '음성 품질이 좋습니다']
+      }
+    };
+    
+    // 기존 녹음본 목록에 추가
+    const existingRecordings = localStorage.getItem('myRecordings');
+    const recordings = existingRecordings ? JSON.parse(existingRecordings) : [];
+    const updatedRecordings = [newRecording, ...recordings];
+    localStorage.setItem('myRecordings', JSON.stringify(updatedRecordings));
+    
+    return { data: newRecording };
   },
   
   deleteRecording: async (recordingId: string) => {
     await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // localStorage에서 녹음본 삭제
+    const existingRecordings = localStorage.getItem('myRecordings');
+    if (existingRecordings) {
+      const recordings = JSON.parse(existingRecordings);
+      const updatedRecordings = recordings.filter((rec: any) => rec.id !== recordingId);
+      localStorage.setItem('myRecordings', JSON.stringify(updatedRecordings));
+    }
+    
     return { data: { message: '녹음 삭제 완료' } };
   },
   
   getRecording: async (recordingId: string) => {
     await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const existingRecordings = localStorage.getItem('myRecordings');
+    if (existingRecordings) {
+      const recordings = JSON.parse(existingRecordings);
+      const recording = recordings.find((rec: any) => rec.id === recordingId);
+      if (recording) {
+        return { data: recording };
+      }
+    }
+    
     return { data: { id: recordingId, audioUrl: 'dummy-audio-url' } };
   },
 };

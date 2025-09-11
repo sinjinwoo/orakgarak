@@ -35,7 +35,7 @@ export function usePitch(options: UsePitchOptions = {}) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | null>(null);
   const bufferRef = useRef<Float32Array | null>(null);
 
   // 피치 감지 시작

@@ -3,17 +3,17 @@ import { Routes, Route } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import AuthGuard from '../components/auth/AuthGuard';
 
-// Lazy loading으로 페이지 컴포넌트들 import
-const LandingPage = React.lazy(() => import('../pages/LandingPage'));
-const OnboardingRangePage = React.lazy(() => import('../pages/OnboardingRangePage'));
-const RecommendationsPage = React.lazy(() => import('../pages/RecommendationsPage'));
-const RecordPage = React.lazy(() => import('../pages/RecordPage'));
-const AlbumCreatePage = React.lazy(() => import('../pages/AlbumCreatePage'));
-const AlbumDetailPage = React.lazy(() => import('../pages/AlbumDetailPage'));
-const FeedPage = React.lazy(() => import('../pages/FeedPage'));
-const AIDemoPage = React.lazy(() => import('../pages/AIDemoPage'));
-const MyPage = React.lazy(() => import('../pages/MyPage'));
-const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage'));
+// Lazy loading으로 페이지 컴포넌트들 import (에러 처리 추가)
+const LandingPage = React.lazy(() => import('../pages/LandingPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const OnboardingRangePage = React.lazy(() => import('../pages/OnboardingRangePage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const RecommendationsPage = React.lazy(() => import('../pages/RecommendationsPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const RecordPage = React.lazy(() => import('../pages/RecordPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const AlbumCreatePage = React.lazy(() => import('../pages/AlbumCreatePage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const AlbumDetailPage = React.lazy(() => import('../pages/AlbumDetailPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const FeedPage = React.lazy(() => import('../pages/FeedPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const AIDemoPage = React.lazy(() => import('../pages/AIDemoPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const MyPage = React.lazy(() => import('../pages/MyPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 
 const LoadingSpinner = () => (
   <Box 
