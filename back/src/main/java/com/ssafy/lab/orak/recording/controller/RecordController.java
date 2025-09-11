@@ -59,13 +59,14 @@ public class RecordController {
     }
 
     //녹음 파일 수정 ( 토큰에서 userID 추출)
-    @PutMapping("/{recordId}")
+    @PutMapping(value = "/{recordId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RecordResponseDTO> updateRecord(
             @PathVariable Long recordId,
             @RequestParam("title") String title,
+            @RequestParam(value = "audioFile", required = false) MultipartFile audioFile,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
         
-        RecordResponseDTO response = recordService.updateRecord(recordId, title, principal.getUserId());
+        RecordResponseDTO response = recordService.updateRecord(recordId, title, audioFile, principal.getUserId());
         return ResponseEntity.ok(response);
     }
 

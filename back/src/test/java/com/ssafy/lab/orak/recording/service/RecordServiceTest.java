@@ -74,7 +74,9 @@ class RecordServiceTest {
         testUpload = Upload.builder()
             .id(1L)
             .originalFilename("test-recording.mp3")
-            .storedFilename("uuid_test-recording.mp3")
+            .uuid("uuid_test-recording")
+            .extension("mp3")
+            .uploaderId(1L)
             .fileSize(2048L)
             .contentType("audio/mpeg")
             .directory("recordings")
@@ -109,8 +111,8 @@ class RecordServiceTest {
         Long songId = 100L;
         Long userId = 1L;
 
-        when(localUploader.uploadLocal(testAudioFile, null, userId))
-            .thenReturn(Arrays.asList("/test/path/test-recording.mp3"));
+        when(localUploader.uploadLocal(testAudioFile))
+            .thenReturn("/test/path/test-recording.mp3");
         when(audioConverter.isAudioFile(anyString(), any()))
             .thenReturn(false); // Test non-audio file path
         when(audioDurationCalculator.calculateDurationInSeconds("/test/path/test-recording.mp3"))
@@ -131,7 +133,7 @@ class RecordServiceTest {
         assertEquals(testResponseDTO.getTitle(), result.getTitle());
         assertEquals(testResponseDTO.getUserId(), result.getUserId());
 
-        verify(localUploader).uploadLocal(testAudioFile, null, userId);
+        verify(localUploader).uploadLocal(testAudioFile);
         verify(audioConverter).isAudioFile(anyString(), any());
         verify(audioConverter, never()).convertToWav(anyString(), anyString()); // No conversion for non-audio
         verify(audioDurationCalculator).calculateDurationInSeconds("/test/path/test-recording.mp3");
@@ -149,7 +151,7 @@ class RecordServiceTest {
         Long songId = 100L;
         Long userId = 1L;
 
-        when(localUploader.uploadLocal(testAudioFile, null, userId))
+        when(localUploader.uploadLocal(testAudioFile))
             .thenThrow(new RuntimeException("파일 업로드 실패"));
 
         // when & then
@@ -157,7 +159,7 @@ class RecordServiceTest {
             recordService.createRecord(title, songId, testAudioFile, userId)
         );
 
-        verify(localUploader).uploadLocal(testAudioFile, null, userId);
+        verify(localUploader).uploadLocal(testAudioFile);
         verify(recordRepository, never()).save(any());
     }
 

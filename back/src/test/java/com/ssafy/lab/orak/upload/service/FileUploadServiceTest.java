@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("FileUploadService 단위 테스트")
@@ -59,7 +60,9 @@ class FileUploadServiceTest {
         testUpload = Upload.builder()
             .id(1L)
             .originalFilename("test.mp3")
-            .storedFilename("uuid_test.mp3")
+            .uuid("uuid_test")
+            .extension("mp3")
+            .uploaderId(1L)
             .fileSize(1024L)
             .contentType("audio/mpeg")
             .directory("recordings")
@@ -72,13 +75,11 @@ class FileUploadServiceTest {
         // given
         Long userId = 1L;
         String directory = "recordings";
-        List<String> localPaths = Arrays.asList("/tmp/test.mp3");
+        String localPath = "/tmp/test.mp3";
         String s3Url = "https://bucket.s3.amazonaws.com/recordings/uuid_test.mp3";
-        String storedFilename = "uuid_test.mp3";
 
-        when(localUploader.uploadLocal(testFile)).thenReturn(localPaths);
-        when(s3Uploader.upload(localPaths.get(0), directory)).thenReturn(s3Url);
-        when(s3Helper.extractFullFileNameFromUrl(s3Url)).thenReturn(storedFilename);
+        when(localUploader.uploadLocal(testFile)).thenReturn(localPath);
+        when(s3Uploader.upload(localPath, directory)).thenReturn(s3Url);
         when(uploadRepository.save(any(Upload.class))).thenReturn(testUpload);
 
         // when
@@ -90,9 +91,47 @@ class FileUploadServiceTest {
         assertEquals(testUpload.getOriginalFilename(), result.getOriginalFilename());
         
         verify(localUploader).uploadLocal(testFile);
-        verify(s3Uploader).upload(localPaths.get(0), directory);
-        verify(s3Helper).extractFullFileNameFromUrl(s3Url);
+        verify(s3Uploader).upload(localPath, directory);
         verify(uploadRepository).save(any(Upload.class));
+    }
+
+    @Test
+    @DisplayName("파일 사이즈가 올바르게 저장되는지 테스트")
+    void uploadSingleFile_FileSizeIsSaved() throws Exception {
+        // given
+        Long userId = 1L;
+        String directory = "recordings";
+        String localPath = "/tmp/test.mp3";
+        String s3Url = "https://bucket.s3.amazonaws.com/recordings/uuid_test.mp3";
+        
+        // Create a file with specific size
+        MockMultipartFile testFileWithSize = new MockMultipartFile(
+            "audioFile",
+            "test.mp3",
+            "audio/mpeg",
+            "test audio content with specific size".getBytes() // 34 bytes
+        );
+
+        when(localUploader.uploadLocal(testFileWithSize)).thenReturn(localPath);
+        when(s3Uploader.upload(localPath, directory)).thenReturn(s3Url);
+        when(uploadRepository.save(any(Upload.class))).thenReturn(testUpload);
+
+        // Use ArgumentCaptor to capture the Upload entity being saved
+        ArgumentCaptor<Upload> uploadCaptor = ArgumentCaptor.forClass(Upload.class);
+
+        // when
+        fileUploadService.uploadSingleFile(testFileWithSize, directory, userId);
+
+        // then
+        verify(uploadRepository).save(uploadCaptor.capture());
+        Upload capturedUpload = uploadCaptor.getValue();
+        
+        // Verify that fileSize matches the MultipartFile size
+        assertEquals(testFileWithSize.getSize(), capturedUpload.getFileSize());
+        assertEquals("test.mp3", capturedUpload.getOriginalFilename());
+        assertEquals("audio/mpeg", capturedUpload.getContentType());
+        assertEquals(userId, capturedUpload.getUploaderId());
+        assertEquals(directory, capturedUpload.getDirectory());
     }
 
     @Test
@@ -119,10 +158,10 @@ class FileUploadServiceTest {
         // given
         Long userId = 1L;
         String directory = "recordings";
-        List<String> localPaths = Arrays.asList("/tmp/test.mp3");
+        String localPath = "/tmp/test.mp3";
 
-        when(localUploader.uploadLocal(testFile)).thenReturn(localPaths);
-        when(s3Uploader.upload(localPaths.get(0), directory)).thenThrow(new RuntimeException("S3 upload failed"));
+        when(localUploader.uploadLocal(testFile)).thenReturn(localPath);
+        when(s3Uploader.upload(localPath, directory)).thenThrow(new RuntimeException("S3 upload failed"));
 
         // when & then
         assertThrows(FileUploadException.class, () -> 
@@ -130,7 +169,7 @@ class FileUploadServiceTest {
         );
 
         verify(localUploader).uploadLocal(testFile);
-        verify(s3Uploader).upload(localPaths.get(0), directory);
+        verify(s3Uploader).upload(localPath, directory);
         verify(uploadRepository, never()).save(any());
     }
 
@@ -143,12 +182,11 @@ class FileUploadServiceTest {
         MultipartFile file2 = new MockMultipartFile("file2", "test2.mp3", "audio/mpeg", "test audio 2".getBytes());
         List<MultipartFile> files = Arrays.asList(testFile, file2);
         
-        List<String> localPaths = Arrays.asList("/tmp/test.mp3");
+        String localPath = "/tmp/test.mp3";
         String s3Url = "https://bucket.s3.amazonaws.com/recordings/uuid_test.mp3";
 
-        when(localUploader.uploadLocal(any())).thenReturn(localPaths);
+        when(localUploader.uploadLocal(any())).thenReturn(localPath);
         when(s3Uploader.upload(any(), eq(directory))).thenReturn(s3Url);
-        when(s3Helper.extractFullFileNameFromUrl(any())).thenReturn("uuid_test.mp3");
         when(uploadRepository.save(any(Upload.class))).thenReturn(testUpload);
 
         // when
@@ -169,14 +207,14 @@ class FileUploadServiceTest {
         // given
         Long uploadId = 1L;
         when(uploadRepository.findById(uploadId)).thenReturn(Optional.of(testUpload));
-        doNothing().when(s3Uploader).removeS3File(testUpload.getStoredFilename());
+        doNothing().when(s3Uploader).removeS3File(testUpload.getFullPath());
         doNothing().when(uploadRepository).delete(testUpload);
 
         // when & then
         assertDoesNotThrow(() -> fileUploadService.deleteFile(uploadId));
 
         verify(uploadRepository).findById(uploadId);
-        verify(s3Uploader).removeS3File(testUpload.getStoredFilename());
+        verify(s3Uploader).removeS3File(testUpload.getFullPath());
         verify(uploadRepository).delete(testUpload);
     }
 
@@ -203,7 +241,7 @@ class FileUploadServiceTest {
         // given
         Long uploadId = 1L;
         when(uploadRepository.findById(uploadId)).thenReturn(Optional.of(testUpload));
-        doThrow(new RuntimeException("S3 delete failed")).when(s3Uploader).removeS3File(testUpload.getStoredFilename());
+        doThrow(new RuntimeException("S3 delete failed")).when(s3Uploader).removeS3File(testUpload.getFullPath());
 
         // when & then
         assertThrows(FileUploadException.class, () -> 
@@ -211,7 +249,7 @@ class FileUploadServiceTest {
         );
 
         verify(uploadRepository).findById(uploadId);
-        verify(s3Uploader).removeS3File(testUpload.getStoredFilename());
+        verify(s3Uploader).removeS3File(testUpload.getFullPath());
         verify(uploadRepository, never()).delete(any());
     }
 

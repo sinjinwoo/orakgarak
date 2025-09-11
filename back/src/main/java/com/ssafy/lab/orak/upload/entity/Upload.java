@@ -31,7 +31,7 @@ public class Upload extends BaseEntity {
     @Column(nullable = false)
     private Long uploaderId;
 
-    @Column(nullable = false)
+    @Column(name = "file_size", nullable = false)
     private Long fileSize;
     
     @Column(nullable = false)
@@ -42,7 +42,7 @@ public class Upload extends BaseEntity {
     
     // 편의 메서드: 저장된 파일명 생성
     public String getStoredFilename() {
-        return uuid + "." + extension;
+        return uuid + "_" + originalFilename + "." + extension;
     }
     
     // 편의 메서드: 전체 파일 경로 생성

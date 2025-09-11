@@ -1,6 +1,7 @@
 package com.ssafy.lab.orak.auth.controller;
 
 import com.ssafy.lab.orak.auth.entity.User;
+import com.ssafy.lab.orak.auth.exception.MissingRefreshTokenException;
 import com.ssafy.lab.orak.auth.jwt.dto.AccessTokenResponseDto;
 import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import com.ssafy.lab.orak.auth.service.UserService;
@@ -68,7 +69,7 @@ public class UserController {
         }
         
         if (refreshToken == null) {
-            throw new RuntimeException("리프레시 토큰이 없습니다");
+            throw new MissingRefreshTokenException("리프레시 토큰이 없습니다");
         }
         
         AccessTokenResponseDto tokenResponse = userService.refreshAccessToken(refreshToken);
