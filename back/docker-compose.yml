@@ -49,11 +49,11 @@ services:
       - ./logs:/var/log/orak
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - DB_HOST=${DB_HOST_PROD:-orakgaraki-mysql}
-      - DB_PORT=3306
-      - DB_NAME=${DB_NAME_PROD}
-      - DB_USERNAME=${DB_USERNAME_PROD}
-      - DB_PASSWORD=${DB_PASSWORD_PROD}
+      - DB_HOST_PROD=${DB_HOST_PROD:-orakgaraki-mysql}
+      - DB_PORT_PROD=3306
+      - DB_NAME_PROD=${DB_NAME_PROD}
+      - DB_USERNAME_PROD=${DB_USERNAME_PROD}
+      - DB_PASSWORD_PROD=${DB_PASSWORD_PROD}
       - REDIS_HOST=orakgaraki-redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET}
