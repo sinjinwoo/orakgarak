@@ -117,7 +117,7 @@ class RecordServiceTest {
             .thenReturn(false); // Test non-audio file path
         when(audioDurationCalculator.calculateDurationInSeconds("/test/path/test-recording.mp3"))
             .thenReturn(180);
-        when(fileUploadService.uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId))
+        when(fileUploadService.uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId, "test-recording.mp3"))
             .thenReturn(testUpload);
         when(recordMapper.toEntity(any(RecordRequestDTO.class), eq(userId), eq(testUpload)))
             .thenReturn(testRecord);
@@ -137,7 +137,7 @@ class RecordServiceTest {
         verify(audioConverter).isAudioFile(anyString(), any());
         verify(audioConverter, never()).convertToWav(anyString(), anyString()); // No conversion for non-audio
         verify(audioDurationCalculator).calculateDurationInSeconds("/test/path/test-recording.mp3");
-        verify(fileUploadService).uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId);
+        verify(fileUploadService).uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId, "test-recording.mp3");
         verify(recordMapper).toEntity(any(RecordRequestDTO.class), eq(userId), eq(testUpload));
         verify(recordRepository).save(any(Record.class));
         verify(recordMapper).toResponseDTO(testRecord, testUpload);
@@ -317,7 +317,7 @@ class RecordServiceTest {
         );
 
         // when
-        RecordResponseDTO result = recordService.updateRecord(recordId, newTitle, userId);
+        RecordResponseDTO result = recordService.updateRecord(recordId, newTitle, null, userId);
 
         // then
         assertNotNull(result);
@@ -340,7 +340,7 @@ class RecordServiceTest {
 
         // when & then
         assertThrows(RuntimeException.class, () -> 
-            recordService.updateRecord(recordId, newTitle, userId)
+            recordService.updateRecord(recordId, newTitle, null, userId)
         );
 
         verify(recordRepository).findById(recordId);
@@ -360,7 +360,7 @@ class RecordServiceTest {
 
         // when & then
         assertThrows(RuntimeException.class, () -> 
-            recordService.updateRecord(recordId, newTitle, userId)
+            recordService.updateRecord(recordId, newTitle, null, userId)
         );
 
         verify(recordRepository).findById(recordId);

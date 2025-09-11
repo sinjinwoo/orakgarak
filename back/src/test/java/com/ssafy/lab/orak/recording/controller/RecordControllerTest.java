@@ -267,16 +267,17 @@ class RecordControllerTest {
         String newTitle = "수정된 녹음 제목";
         RecordResponseDTO updatedResponse = testResponseDTO.toBuilder().title(newTitle).build();
         
-        when(recordService.updateRecord(recordId, newTitle, 1L)).thenReturn(updatedResponse);
+        when(recordService.updateRecord(recordId, newTitle, null, 1L)).thenReturn(updatedResponse);
 
         // when & then
         mockMvc.perform(put("/api/records/{recordId}", recordId)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
                 .param("title", newTitle))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.title").value(newTitle))
             .andExpect(jsonPath("$.id").value(recordId));
 
-        verify(recordService).updateRecord(recordId, newTitle, 1L);
+        verify(recordService).updateRecord(recordId, newTitle, null, 1L);
     }
 
     @Test
@@ -294,15 +295,16 @@ class RecordControllerTest {
                 .setCustomArgumentResolvers(new TestAuthenticationPrincipalArgumentResolver(principal2))
                 .build();
         
-        when(recordService.updateRecord(recordId, newTitle, 2L))
+        when(recordService.updateRecord(recordId, newTitle, null, 2L))
             .thenThrow(new RecordPermissionDeniedException(recordId, 2L));
 
         // when & then
         mockMvcWithUser2.perform(put("/api/records/{recordId}", recordId)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
                 .param("title", newTitle))
             .andExpect(status().isForbidden());
 
-        verify(recordService).updateRecord(recordId, newTitle, 2L);
+        verify(recordService).updateRecord(recordId, newTitle, null, 2L);
     }
 
     @Test

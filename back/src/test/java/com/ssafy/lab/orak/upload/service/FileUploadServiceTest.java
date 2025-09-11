@@ -128,7 +128,7 @@ class FileUploadServiceTest {
         
         // Verify that fileSize matches the MultipartFile size
         assertEquals(testFileWithSize.getSize(), capturedUpload.getFileSize());
-        assertEquals("test.mp3", capturedUpload.getOriginalFilename());
+        assertEquals("test", capturedUpload.getOriginalFilename());
         assertEquals("audio/mpeg", capturedUpload.getContentType());
         assertEquals(userId, capturedUpload.getUploaderId());
         assertEquals(directory, capturedUpload.getDirectory());
