@@ -290,17 +290,17 @@ class FileUploadServiceTest {
     @DisplayName("파일 URL 생성 테스트")
     void getFileUrl_Success() {
         // given
-        String expectedUrl = "https://bucket.s3.amazonaws.com/recordings/uuid_test.mp3";
-        String s3Key = testUpload.getDirectory() + "/" + testUpload.getStoredFilename();
+        String expectedUrl = "https://bucket.s3.amazonaws.com/recordings/uuid_test_test.mp3?presigned=true";
+        String s3Key = testUpload.getFullPath();
         
-        when(s3Helper.getS3Url(s3Key)).thenReturn(expectedUrl);
+        when(s3Helper.generatePresignedUrl(s3Key)).thenReturn(expectedUrl);
 
         // when
         String result = fileUploadService.getFileUrl(testUpload);
 
         // then
         assertEquals(expectedUrl, result);
-        verify(s3Helper).getS3Url(s3Key);
+        verify(s3Helper).generatePresignedUrl(s3Key);
     }
 
     @Test
@@ -308,11 +308,11 @@ class FileUploadServiceTest {
     void getFileUrlById_Success() {
         // given
         Long uploadId = 1L;
-        String expectedUrl = "https://bucket.s3.amazonaws.com/recordings/uuid_test.mp3";
-        String s3Key = testUpload.getDirectory() + "/" + testUpload.getStoredFilename();
+        String expectedUrl = "https://bucket.s3.amazonaws.com/recordings/uuid_test_test.mp3?presigned=true";
+        String s3Key = testUpload.getFullPath();
         
         when(uploadRepository.findById(uploadId)).thenReturn(Optional.of(testUpload));
-        when(s3Helper.getS3Url(s3Key)).thenReturn(expectedUrl);
+        when(s3Helper.generatePresignedUrl(s3Key)).thenReturn(expectedUrl);
 
         // when
         String result = fileUploadService.getFileUrl(uploadId);
@@ -320,6 +320,6 @@ class FileUploadServiceTest {
         // then
         assertEquals(expectedUrl, result);
         verify(uploadRepository).findById(uploadId);
-        verify(s3Helper).getS3Url(s3Key);
+        verify(s3Helper).generatePresignedUrl(s3Key);
     }
 }

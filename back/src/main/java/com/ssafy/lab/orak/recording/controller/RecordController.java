@@ -3,6 +3,7 @@ package com.ssafy.lab.orak.recording.controller;
 import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.service.RecordService;
+import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.MediaType;
@@ -24,6 +25,7 @@ import java.util.List;
 public class RecordController {
     
     private final RecordService recordService;
+    private final FileUploadService fileUploadService;
 
     //녹음파일 생성 -> 토큰에서 userID 추출
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -79,4 +81,5 @@ public class RecordController {
         recordService.deleteRecord(recordId, principal.getUserId());
         return ResponseEntity.noContent().build();
     }
+
 }

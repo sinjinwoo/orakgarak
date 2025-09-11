@@ -199,10 +199,10 @@ public class FileUploadService {
     }
     
     
-    // URL 동적 생성 메서드
+    // URL 동적 생성 메서드 (Pre-signed URL 사용)
     public String getFileUrl(Upload upload) {
         String s3Key = upload.getFullPath();
-        return s3Helper.getS3Url(s3Key);
+        return s3Helper.generatePresignedUrl(s3Key);
     }
     
     public String getFileUrl(Long uploadId) {
