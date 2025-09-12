@@ -8,6 +8,8 @@ import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
+import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
+import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
@@ -49,6 +51,9 @@ class RecordServiceTest {
 
     @Mock
     private LocalUploader localUploader;
+    
+    @Mock
+    private AudioDurationCalculator audioDurationCalculator;
 
     @InjectMocks
     private RecordService recordService;
@@ -70,11 +75,12 @@ class RecordServiceTest {
         testUpload = Upload.builder()
             .id(1L)
             .originalFilename("test-recording.mp3")
-            .storedFilename("uuid_test-recording.mp3")
+            .uuid("uuid_test-recording")
+            .extension("mp3")
+            .uploaderId(1L)
             .fileSize(2048L)
             .contentType("audio/mpeg")
             .directory("recordings")
-            .uploadDate(LocalDateTime.now())
             .build();
 
         testRecord = Record.builder()
@@ -84,8 +90,6 @@ class RecordServiceTest {
             .title("테스트 녹음")
             .uploadId(1L)
             .durationSeconds(180)
-            .createdAt(LocalDateTime.now())
-            .updatedAt(LocalDateTime.now())
             .build();
 
         testResponseDTO = RecordResponseDTO.builder()
@@ -106,22 +110,25 @@ class RecordServiceTest {
         // given
         String title = "테스트 녹음";
         Long songId = 100L;
-        Integer durationSeconds = 180;
         Long userId = 1L;
 
-        when(localUploader.uploadLocal(testAudioFile, null, userId))
-            .thenReturn(Arrays.asList("/test/path/test-recording.mp3"));
+        when(localUploader.uploadLocal(testAudioFile))
+            .thenReturn("/test/path/test-recording.mp3");
         when(audioConverter.isAudioFile(anyString(), any()))
             .thenReturn(false); // Test non-audio file path
-        when(fileUploadService.uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId))
+        when(audioDurationCalculator.calculateDurationInSeconds("/test/path/test-recording.mp3"))
+            .thenReturn(180);
+        when(fileUploadService.uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId, "test-recording.mp3"))
             .thenReturn(testUpload);
         when(recordMapper.toEntity(any(RecordRequestDTO.class), eq(userId), eq(testUpload)))
             .thenReturn(testRecord);
-        when(recordRepository.save(testRecord)).thenReturn(testRecord);
+        when(recordRepository.save(any(Record.class))).thenReturn(testRecord);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
         when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload)).thenReturn("https://presigned-url.example.com");
 
         // when
-        RecordResponseDTO result = recordService.createRecord(title, songId, testAudioFile, durationSeconds, userId);
+        RecordResponseDTO result = recordService.createRecord(title, songId, testAudioFile, userId);
 
         // then
         assertNotNull(result);
@@ -129,13 +136,16 @@ class RecordServiceTest {
         assertEquals(testResponseDTO.getTitle(), result.getTitle());
         assertEquals(testResponseDTO.getUserId(), result.getUserId());
 
-        verify(localUploader).uploadLocal(testAudioFile, null, userId);
+        verify(localUploader).uploadLocal(testAudioFile);
         verify(audioConverter).isAudioFile(anyString(), any());
         verify(audioConverter, never()).convertToWav(anyString(), anyString()); // No conversion for non-audio
-        verify(fileUploadService).uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId);
+        verify(audioDurationCalculator).calculateDurationInSeconds("/test/path/test-recording.mp3");
+        verify(fileUploadService).uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId, "test-recording.mp3");
         verify(recordMapper).toEntity(any(RecordRequestDTO.class), eq(userId), eq(testUpload));
-        verify(recordRepository).save(testRecord);
+        verify(recordRepository).save(any(Record.class));
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
         verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
     }
 
     @Test
@@ -144,18 +154,17 @@ class RecordServiceTest {
         // given
         String title = "테스트 녹음";
         Long songId = 100L;
-        Integer durationSeconds = 180;
         Long userId = 1L;
 
-        when(localUploader.uploadLocal(testAudioFile, null, userId))
+        when(localUploader.uploadLocal(testAudioFile))
             .thenThrow(new RuntimeException("파일 업로드 실패"));
 
         // when & then
         assertThrows(FileUploadException.class, () -> 
-            recordService.createRecord(title, songId, testAudioFile, durationSeconds, userId)
+            recordService.createRecord(title, songId, testAudioFile, userId)
         );
 
-        verify(localUploader).uploadLocal(testAudioFile, null, userId);
+        verify(localUploader).uploadLocal(testAudioFile);
         verify(recordRepository, never()).save(any());
     }
 
@@ -165,7 +174,9 @@ class RecordServiceTest {
         // given
         Long recordId = 1L;
         when(recordRepository.findByIdWithUpload(recordId)).thenReturn(testRecord);
-        when(recordMapper.toResponseDTO(testRecord)).thenReturn(testResponseDTO);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload)).thenReturn("https://presigned-url.example.com");
 
         // when
         RecordResponseDTO result = recordService.getRecord(recordId);
@@ -176,7 +187,9 @@ class RecordServiceTest {
         assertEquals(testResponseDTO.getTitle(), result.getTitle());
 
         verify(recordRepository).findByIdWithUpload(recordId);
-        verify(recordMapper).toResponseDTO(testRecord);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
     }
 
     @Test
@@ -201,10 +214,11 @@ class RecordServiceTest {
         // given
         Long userId = 1L;
         List<Record> records = Arrays.asList(testRecord);
-        List<RecordResponseDTO> responseDTOs = Arrays.asList(testResponseDTO);
 
         when(recordRepository.findByUserIdWithUpload(userId)).thenReturn(records);
-        when(recordMapper.toResponseDTO(testRecord)).thenReturn(testResponseDTO);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload)).thenReturn("https://presigned-url.example.com");
 
         // when
         List<RecordResponseDTO> results = recordService.getRecordsByUser(userId);
@@ -215,7 +229,9 @@ class RecordServiceTest {
         assertEquals(testResponseDTO.getId(), results.get(0).getId());
 
         verify(recordRepository).findByUserIdWithUpload(userId);
-        verify(recordMapper).toResponseDTO(testRecord);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
     }
 
     @Test
@@ -226,7 +242,9 @@ class RecordServiceTest {
         List<Record> records = Arrays.asList(testRecord);
 
         when(recordRepository.findBySongId(songId)).thenReturn(records);
-        when(recordMapper.toResponseDTO(testRecord)).thenReturn(testResponseDTO);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload)).thenReturn("https://presigned-url.example.com");
 
         // when
         List<RecordResponseDTO> results = recordService.getRecordsBySong(songId);
@@ -237,7 +255,9 @@ class RecordServiceTest {
         assertEquals(testResponseDTO.getSongId(), results.get(0).getSongId());
 
         verify(recordRepository).findBySongId(songId);
-        verify(recordMapper).toResponseDTO(testRecord);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
     }
 
     @Test
@@ -309,12 +329,14 @@ class RecordServiceTest {
 
         when(recordRepository.findById(recordId)).thenReturn(Optional.of(testRecord));
         when(recordRepository.save(any(Record.class))).thenReturn(updatedRecord);
-        when(recordMapper.toResponseDTO(updatedRecord)).thenReturn(
+        when(fileUploadService.getUpload(updatedRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(updatedRecord, testUpload)).thenReturn(
             testResponseDTO.toBuilder().title(newTitle).build()
         );
+        when(fileUploadService.getFileUrl(testUpload)).thenReturn("https://presigned-url.example.com");
 
         // when
-        RecordResponseDTO result = recordService.updateRecord(recordId, newTitle, userId);
+        RecordResponseDTO result = recordService.updateRecord(recordId, newTitle, null, userId);
 
         // then
         assertNotNull(result);
@@ -322,7 +344,9 @@ class RecordServiceTest {
 
         verify(recordRepository).findById(recordId);
         verify(recordRepository).save(any(Record.class));
-        verify(recordMapper).toResponseDTO(updatedRecord);
+        verify(fileUploadService).getUpload(updatedRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(updatedRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
     }
 
     @Test
@@ -337,7 +361,7 @@ class RecordServiceTest {
 
         // when & then
         assertThrows(RuntimeException.class, () -> 
-            recordService.updateRecord(recordId, newTitle, userId)
+            recordService.updateRecord(recordId, newTitle, null, userId)
         );
 
         verify(recordRepository).findById(recordId);
@@ -357,10 +381,86 @@ class RecordServiceTest {
 
         // when & then
         assertThrows(RuntimeException.class, () -> 
-            recordService.updateRecord(recordId, newTitle, userId)
+            recordService.updateRecord(recordId, newTitle, null, userId)
         );
 
         verify(recordRepository).findById(recordId);
         verify(recordRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("URL 생성 실패 시 urlStatus가 FAILED로 설정되는 테스트")
+    void getRecord_UrlGenerationFails_ReturnsFailedStatus() {
+        // given
+        Long recordId = 1L;
+        when(recordRepository.findByIdWithUpload(recordId)).thenReturn(testRecord);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload))
+                .thenThrow(new S3UrlGenerationException("test-key", "S3 연결 실패"));
+
+        // when
+        RecordResponseDTO result = recordService.getRecord(recordId);
+
+        // then
+        assertNotNull(result);
+        assertNull(result.getUrl());
+        assertEquals("FAILED", result.getUrlStatus());
+
+        verify(recordRepository).findByIdWithUpload(recordId);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
+    }
+
+    @Test
+    @DisplayName("예상치 못한 URL 생성 오류 시 urlStatus가 ERROR로 설정되는 테스트")
+    void getRecord_UnexpectedUrlError_ReturnsErrorStatus() {
+        // given
+        Long recordId = 1L;
+        when(recordRepository.findByIdWithUpload(recordId)).thenReturn(testRecord);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload))
+                .thenThrow(new RuntimeException("네트워크 연결 오류"));
+
+        // when
+        RecordResponseDTO result = recordService.getRecord(recordId);
+
+        // then
+        assertNotNull(result);
+        assertNull(result.getUrl());
+        assertEquals("ERROR", result.getUrlStatus());
+
+        verify(recordRepository).findByIdWithUpload(recordId);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
+    }
+
+    @Test
+    @DisplayName("URL 생성 성공 시 urlStatus가 SUCCESS로 설정되는 테스트")
+    void getRecord_UrlGenerationSuccess_ReturnsSuccessStatus() {
+        // given
+        Long recordId = 1L;
+        String expectedUrl = "https://presigned-url.example.com";
+        
+        when(recordRepository.findByIdWithUpload(recordId)).thenReturn(testRecord);
+        when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
+        when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
+        when(fileUploadService.getFileUrl(testUpload)).thenReturn(expectedUrl);
+
+        // when
+        RecordResponseDTO result = recordService.getRecord(recordId);
+
+        // then
+        assertNotNull(result);
+        assertEquals(expectedUrl, result.getUrl());
+        assertEquals("SUCCESS", result.getUrlStatus());
+
+        verify(recordRepository).findByIdWithUpload(recordId);
+        verify(fileUploadService).getUpload(testRecord.getUploadId());
+        verify(recordMapper).toResponseDTO(testRecord, testUpload);
+        verify(fileUploadService).getFileUrl(testUpload);
     }
 }

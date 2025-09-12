@@ -9,7 +9,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Min;
 
 @Getter
 @Setter
@@ -25,7 +24,4 @@ public class RecordRequestDTO {
     
     @NotNull(message = "오디오 파일은 필수입니다")
     private MultipartFile audioFile;
-    
-    @Min(value = 1, message = "재생 시간은 1초 이상이어야 합니다")
-    private Integer durationSeconds;
 }

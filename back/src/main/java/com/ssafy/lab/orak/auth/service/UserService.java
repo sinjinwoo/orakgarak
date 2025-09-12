@@ -1,6 +1,8 @@
 package com.ssafy.lab.orak.auth.service;
 
 import com.ssafy.lab.orak.auth.entity.User;
+import com.ssafy.lab.orak.auth.exception.InvalidRefreshTokenException;
+import com.ssafy.lab.orak.auth.exception.UserNotFoundException;
 import com.ssafy.lab.orak.auth.jwt.dto.AccessTokenResponseDto;
 import com.ssafy.lab.orak.auth.jwt.service.TokenService;
 import com.ssafy.lab.orak.auth.jwt.util.JwtUtil;
@@ -20,12 +22,12 @@ public class UserService {
     
     public User findById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userId));
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다: " + userId));
     }
     
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + email));
+                .orElseThrow(() -> new UserNotFoundException("사용자를 찾을 수 없습니다: " + email));
     }
     
     public AccessTokenResponseDto refreshAccessToken(String refreshToken) {
@@ -34,7 +36,7 @@ public class UserService {
         // 1. 토큰 유효성 검증
         if (!jwtUtil.validateToken(refreshToken)) {
             log.error("JWT 토큰 유효성 검증 실패");
-            throw new RuntimeException("유효하지 않은 리프레시 토큰입니다");
+            throw new InvalidRefreshTokenException("유효하지 않은 리프레시 토큰입니다");
         }
         log.info("JWT 토큰 유효성 검증 성공");
         
@@ -48,7 +50,7 @@ public class UserService {
         if (storedToken == null || !storedToken.equals(refreshToken)) {
             log.error("Redis 토큰 비교 실패 - stored token null: {}, equals: {}", 
                 storedToken == null, storedToken != null && storedToken.equals(refreshToken));
-            throw new RuntimeException("유효하지 않은 리프레시 토큰입니다");
+            throw new InvalidRefreshTokenException("유효하지 않은 리프레시 토큰입니다");
         }
         
         // 4. 새 토큰들 생성

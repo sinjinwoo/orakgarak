@@ -1,14 +1,11 @@
 package com.ssafy.lab.orak.upload.entity;
 
+import com.ssafy.lab.orak.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "uploads")
@@ -16,8 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class)
-public class Upload {
+public class Upload extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,9 +23,15 @@ public class Upload {
     private String originalFilename;
     
     @Column(nullable = false)
-    private String storedFilename;
-
+    private String uuid;
+    
     @Column(nullable = false)
+    private String extension;
+    
+    @Column(nullable = false)
+    private Long uploaderId;
+
+    @Column(name = "file_size", nullable = false)
     private Long fileSize;
     
     @Column(nullable = false)
@@ -38,7 +40,14 @@ public class Upload {
     @Column(nullable = false)
     private String directory;
     
-    @CreatedDate
-    @Column(nullable = false)
-    private LocalDateTime uploadDate;
+    // 편의 메서드: 저장된 파일명 생성
+    public String getStoredFilename() {
+        return uuid + "_" + originalFilename + "." + extension;
+    }
+    
+    // 편의 메서드: 전체 파일 경로 생성
+    public String getFullPath() {
+        return directory + "/" + getStoredFilename();
+    }
+
 }

@@ -3,18 +3,15 @@ import {
   Card, 
   CardContent, 
   Typography, 
-  Button, 
   Box, 
-  Avatar,
-  Chip,
-  LinearProgress,
   IconButton
 } from '@mui/material';
 import { 
   PlayArrow, 
   Bookmark, 
   BookmarkBorder,
-  Schedule 
+  ThumbUp,
+  ThumbDown
 } from '@mui/icons-material';
 import type { RecommendedSong } from '../../types/recommendation';
 
@@ -25,6 +22,8 @@ interface SongCardProps {
   onSelect?: (song: RecommendedSong) => void;
   onBookmark?: (song: RecommendedSong) => void;
   onReserve?: (song: RecommendedSong) => void;
+  userFeedback?: 'like' | 'dislike' | null;
+  onFeedback?: (songId: string, feedback: 'like' | 'dislike') => void;
 }
 
 const SongCard: React.FC<SongCardProps> = ({
@@ -33,188 +32,270 @@ const SongCard: React.FC<SongCardProps> = ({
   isBookmarked = false,
   onSelect,
   onBookmark,
-  onReserve
+  userFeedback = null,
+  onFeedback
 }) => {
-  // 난이도 색상
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'success';
-      case 'medium': return 'warning';
-      case 'hard': return 'error';
-      default: return 'default';
-    }
-  };
-
-  // 매칭 점수 색상
-  const getMatchColor = (score: number) => {
-    if (score >= 80) return 'success';
-    if (score >= 60) return 'warning';
-    return 'error';
-  };
-
   return (
-    <Card 
-      sx={{ 
-        mb: 2, 
+     <Card 
+       sx={{ 
+         width: 240,
+         height: 320,
         cursor: 'pointer',
-        border: isSelected ? '2px solid #1976d2' : '1px solid #e0e0e0',
+        background: isSelected 
+          ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)'
+          : 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%)',
+        border: isSelected 
+          ? '3px solid rgba(139, 92, 246, 0.8)' 
+          : '2px solid rgba(139, 92, 246, 0.3)',
+        borderRadius: '20px',
+        backdropFilter: 'blur(10px)',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: isSelected ? 'scale(1.05) translateY(-10px)' : 'scale(1)',
+        boxShadow: isSelected 
+          ? '0 20px 40px rgba(139, 92, 246, 0.4)' 
+          : '0 8px 25px rgba(0, 0, 0, 0.3)',
         '&:hover': {
-          boxShadow: 4,
-          transform: 'translateY(-2px)',
-          transition: 'all 0.2s ease-in-out'
+          transform: 'scale(1.08) translateY(-15px)',
+          boxShadow: '0 25px 50px rgba(139, 92, 246, 0.5)',
+          border: '3px solid rgba(139, 92, 246, 0.6)',
         }
       }}
       onClick={() => onSelect?.(song)}
     >
-      <CardContent sx={{ p: 3 }}>
-        {/* 상단: 앨범 커버와 기본 정보 */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <Avatar
-            src={song.coverImage}
-            sx={{ 
-              width: 60, 
-              height: 60,
-              borderRadius: 1
-            }}
-          />
-          <Box sx={{ flex: 1, minWidth: 0 }}>
+      {/* 배경 패턴 */}
+      <Box sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)
+        `,
+        zIndex: 0
+      }} />
+      
+      <CardContent sx={{ 
+        p: 0, 
+        height: '100%', 
+        position: 'relative', 
+        zIndex: 1,
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+         {/* 앨범 커버 */}
+         <Box sx={{ 
+           position: 'relative',
+           height: 160,
+          backgroundImage: `url(${song.coverImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          borderRadius: '20px 20px 0 0',
+          overflow: 'hidden'
+        }}>
+          {/* 그라데이션 오버레이 */}
+          <Box sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)',
+            zIndex: 1
+          }} />
+          
+           {/* 재생 버튼 */}
+           <IconButton 
+             sx={{ 
+               position: 'absolute',
+               top: '50%',
+               left: '50%',
+               transform: 'translate(-50%, -50%)',
+               background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+               color: 'white',
+               width: 50,
+               height: 50,
+               borderRadius: '50%',
+               boxShadow: '0 8px 25px rgba(139, 92, 246, 0.4)',
+               zIndex: 2,
+               opacity: 0.9,
+               '&:hover': {
+                 background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                 transform: 'translate(-50%, -50%) scale(1.1)',
+                 boxShadow: '0 12px 30px rgba(139, 92, 246, 0.6)',
+                 opacity: 1
+               },
+               transition: 'all 0.3s ease'
+             }}
+           >
+             <PlayArrow sx={{ fontSize: '1.5rem' }} />
+           </IconButton>
+
+          {/* 매칭 점수 */}
+          <Box sx={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            background: 'rgba(0, 0, 0, 0.7)',
+            borderRadius: '20px',
+            px: 2,
+            py: 1,
+            zIndex: 2
+          }}>
             <Typography 
               variant="h6" 
               sx={{ 
+                color: '#fff',
                 fontWeight: 'bold',
-                mb: 0.5,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {song.title}
-            </Typography>
-            <Typography 
-              variant="body2" 
-              color="text.secondary" 
-              sx={{ 
-                mb: 1,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {song.artist}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Chip 
-                label={song.genre} 
-                size="small" 
-                color="primary" 
-                variant="outlined"
-              />
-              <Chip 
-                label={song.difficulty === 'easy' ? '쉬움' : song.difficulty === 'medium' ? '보통' : '어려움'} 
-                size="small" 
-                color={getDifficultyColor(song.difficulty) as any}
-              />
-              <Chip 
-                label={`${song.key}키`} 
-                size="small" 
-                variant="outlined"
-              />
-            </Box>
-          </Box>
-          
-          {/* 재생 버튼 */}
-          <IconButton 
-            sx={{ 
-              alignSelf: 'flex-start',
-              backgroundColor: 'primary.main',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: 'primary.dark'
-              }
-            }}
-          >
-            <PlayArrow />
-          </IconButton>
-        </Box>
-
-        {/* 매칭 점수 */}
-        <Box sx={{ mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              매칭 점수
-            </Typography>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: 'bold',
-                color: `${getMatchColor(song.matchScore)}.main`
+                fontSize: '1rem'
               }}
             >
               {song.matchScore}%
             </Typography>
           </Box>
-          <LinearProgress 
-            variant="determinate" 
-            value={song.matchScore} 
-            color={getMatchColor(song.matchScore) as any}
-            sx={{ height: 8, borderRadius: 4 }}
-          />
+
+          {/* 북마크 버튼 */}
+          <IconButton 
+            sx={{ 
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              background: 'rgba(0, 0, 0, 0.5)',
+              color: isBookmarked ? '#ffd700' : '#fff',
+              width: 40,
+              height: 40,
+              borderRadius: '50%',
+              zIndex: 2,
+              '&:hover': {
+                background: 'rgba(0, 0, 0, 0.7)',
+                transform: 'scale(1.1)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onBookmark?.(song);
+            }}
+          >
+            {isBookmarked ? <Bookmark sx={{ fontSize: '1.2rem' }} /> : <BookmarkBorder sx={{ fontSize: '1.2rem' }} />}
+          </IconButton>
         </Box>
 
-        {/* 곡 정보 */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            <strong>추천 이유:</strong> {song.reason}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Typography variant="body2" color="text.secondary">
-              ⏱️ {song.duration}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              🎵 {song.tempo} BPM
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              🎼 {song.vocalRange.min}Hz - {song.vocalRange.max}Hz
-            </Typography>
-          </Box>
-        </Box>
+         {/* 곡 정보 */}
+         <Box sx={{ 
+           flex: 1, 
+           p: 2, 
+           display: 'flex', 
+           flexDirection: 'column',
+           justifyContent: 'center',
+           alignItems: 'center',
+           textAlign: 'center'
+         }}>
+           {/* 제목과 아티스트 */}
+           <Typography 
+             variant="h6" 
+             sx={{ 
+               fontWeight: 'bold',
+               mb: 1,
+               overflow: 'hidden',
+               textOverflow: 'ellipsis',
+               whiteSpace: 'nowrap',
+               color: '#fff',
+               fontSize: '1rem',
+               lineHeight: 1.2,
+               width: '100%'
+             }}
+           >
+             {song.title}
+           </Typography>
+           <Typography 
+             variant="body2" 
+             sx={{ 
+               overflow: 'hidden',
+               textOverflow: 'ellipsis',
+               whiteSpace: 'nowrap',
+               color: '#a78bfa',
+               fontWeight: 400,
+               fontSize: '0.85rem',
+               width: '100%'
+             }}
+           >
+             {song.artist}
+           </Typography>
 
-        {/* 액션 버튼들 */}
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button 
-              variant="contained" 
-              size="small"
-              startIcon={<Schedule />}
-              onClick={(e) => {
-                e.stopPropagation();
-                onReserve?.(song);
-              }}
-            >
-              예약
-            </Button>
-            <Button 
-              variant="outlined" 
-              size="small"
-              startIcon={isBookmarked ? <Bookmark /> : <BookmarkBorder />}
-              onClick={(e) => {
-                e.stopPropagation();
-                onBookmark?.(song);
-              }}
-            >
-              {isBookmarked ? '저장됨' : '저장'}
-            </Button>
-          </Box>
-          
-          {isSelected && (
-            <Chip 
-              label="선택됨" 
-              color="primary" 
-              size="small"
-              sx={{ alignSelf: 'center' }}
-            />
-          )}
-        </Box>
+           {/* 선택 표시 */}
+           {isSelected && (
+             <Box sx={{
+               background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+               borderRadius: '8px',
+               p: 0.5,
+               mt: 1,
+               minWidth: 60
+             }}>
+               <Typography 
+                 variant="body2" 
+                 sx={{ 
+                   color: 'white',
+                   fontWeight: 'bold',
+                   fontSize: '0.7rem'
+                 }}
+               >
+                 SELECTED
+               </Typography>
+             </Box>
+           )}
+
+           {/* 피드백 버튼들 */}
+           {onFeedback && (
+             <Box sx={{ 
+               display: 'flex', 
+               gap: 1, 
+               mt: 2,
+               justifyContent: 'center'
+             }}>
+               <IconButton
+                 size="small"
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   onFeedback(song.id, 'like');
+                 }}
+                 sx={{
+                   color: userFeedback === 'like' ? '#22c55e' : '#6b7280',
+                   backgroundColor: userFeedback === 'like' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
+                   '&:hover': {
+                     backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                     color: '#22c55e'
+                   },
+                   transition: 'all 0.2s ease'
+                 }}
+               >
+                 <ThumbUp fontSize="small" />
+               </IconButton>
+               
+               <IconButton
+                 size="small"
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   onFeedback(song.id, 'dislike');
+                 }}
+                 sx={{
+                   color: userFeedback === 'dislike' ? '#ef4444' : '#6b7280',
+                   backgroundColor: userFeedback === 'dislike' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                   '&:hover': {
+                     backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                     color: '#ef4444'
+                   },
+                   transition: 'all 0.2s ease'
+                 }}
+               >
+                 <ThumbDown fontSize="small" />
+               </IconButton>
+             </Box>
+           )}
+         </Box>
       </CardContent>
     </Card>
   );
