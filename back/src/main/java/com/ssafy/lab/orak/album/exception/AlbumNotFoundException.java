@@ -1,9 +1,9 @@
 package com.ssafy.lab.orak.album.exception;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseBody(HttpStatus.NOT_FOUND)
+@ResponseStatus(HttpStatus.NOT_FOUND)
 public class AlbumNotFoundException extends RuntimeException {
     
     public AlbumNotFoundException(String message) {

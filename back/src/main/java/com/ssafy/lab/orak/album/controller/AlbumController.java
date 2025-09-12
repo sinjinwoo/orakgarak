@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/albums")
 @RequiredArgsConstructor
-@CrossOrigin(orgins = "*")
+@CrossOrigin(origins = "*")
 @Tag(name = "Album", description = "앨범 관리 API")
 public class AlbumController {
     
@@ -65,7 +65,7 @@ public class AlbumController {
     }
 
 //    앨범 수정
-    @PutMapping
+    @PutMapping("/{albumId}")
     @Operation(summary = "앨범 수정", description = "기존 앨범 정보를 수정합니다.")
     public ResponseEntity<AlbumResponseDto> updateAlbum(
             @PathVariable @Parameter(description = "앨범 ID") Long albumId,
@@ -89,23 +89,4 @@ public class AlbumController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<AlbumListResponseDto>> getUserAlbums(@PathVariable Long userId) {
-        List<AlbumListResponseDto> albums = albumService.getUserAlbums(userId);
-        return ResponseEntity.ok(albums);
-    }
-    
-    @GetMapping("/{albumId}")
-    public ResponseEntity<AlbumResponseDto> getAlbumDetail(
-            @PathVariable Long albumId,
-            @RequestParam(required = false) Long currentUserId) {
-        AlbumResponseDto album = albumService.getAlbumDetail(albumId, currentUserId);
-        return ResponseEntity.ok(album);
-    }
-    
-    @GetMapping("/public")
-    public ResponseEntity<List<AlbumListResponseDto>> getPublicAlbums() {
-        List<AlbumListResponseDto> albums = albumService.getPublicAlbums();
-        return ResponseEntity.ok(albums);
-    }
 }

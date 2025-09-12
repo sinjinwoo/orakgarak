@@ -56,7 +56,7 @@ public class Album {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-    public boolean canBeAccesseBy(Long currentUserId) {
+    public boolean canBeAccessedBy(Long currentUserId) {
         return this.isPublic ||
                 (currentUserId != null && this.userId.equals(currentUserId));
     }
