@@ -12,6 +12,7 @@
 .idea/**/dictionaries
 .idea/**/shelf
 
+
 # AWS User-specific
 .idea/**/aws.xml
 
@@ -55,7 +56,8 @@ cmake-build-*/
 
 # IntelliJ
 out/
-
+.idea/
+.idea/**
 # mpeltonen/sbt-idea plugin
 .idea_modules/
 
@@ -142,6 +144,10 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Custom
+python/voice_analysis/data/
+python/voice_analysis/test/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -335,3 +341,4 @@ replay_pid*
 
 # End of https://www.toptal.com/developers/gitignore/api/java
 # End of https://www.toptal.com/developers/gitignore/api/intellij,visualstudiocode,python
+
