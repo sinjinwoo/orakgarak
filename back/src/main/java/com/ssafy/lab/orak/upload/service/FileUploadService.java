@@ -5,6 +5,7 @@ import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.s3.util.S3Uploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
+import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.exception.UploadNotFoundException;
 import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,8 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +49,7 @@ public class FileUploadService {
     public Upload uploadSingleFile(MultipartFile file, String directory, Long userId) {
         try {
             if (file.isEmpty()) {
-                throw new IllegalArgumentException("빈 파일입니다");
+                throw new InvalidFileException("빈 파일입니다");
             }
             
             // 파일명에서 확장자 추출
@@ -62,8 +65,8 @@ public class FileUploadService {
             // UUID 생성
             String uuid = UUID.randomUUID().toString();
             
-            // S3 업로드
-            String localFilePath = localUploader.uploadLocal(file);
+            // S3 업로드 (UUID와 함께)
+            String localFilePath = localUploader.uploadLocal(file, uuid);
             String s3Url = s3Uploader.upload(localFilePath, directory);
             
             // Upload 엔티티 생성 및 저장
@@ -87,18 +90,6 @@ public class FileUploadService {
             throw new FileUploadException("파일 업로드 실패: " + e.getMessage(), e);
         }
     }
-    
-    public String generatePresignedUrl(String directory, String fileName, int durationHours) {
-        String uuid = UUID.randomUUID().toString();
-        Duration duration = Duration.ofHours(durationHours);
-        return s3Uploader.generatePresignedUrl(directory, uuid, fileName, duration);
-    }
-    
-    public List<String> generatePresignedUrls(String directory, List<String> fileNames, int durationHours) {
-        Duration duration = Duration.ofHours(durationHours);
-        return s3Uploader.generatePresignedUrls(directory, fileNames, duration);
-    }
-    
     public void deleteFile(Long uploadId) {
         Upload upload = uploadRepository.findById(uploadId)
                 .orElseThrow(() -> new UploadNotFoundException(uploadId));
@@ -116,21 +107,14 @@ public class FileUploadService {
             throw new FileUploadException("파일 삭제 실패: " + e.getMessage(), e);
         }
     }
-    
-    public void deleteFiles(List<Long> uploadIds) {
-        for (Long uploadId : uploadIds) {
-            deleteFile(uploadId);
-        }
-        log.info("다중 파일 삭제 성공: {}", uploadIds.size());
-    }
-    
+    // 최적화된 로컬 파일 업로드 (UUID 중복 방지 - RecordService용)
     public Upload uploadLocalFile(String localFilePath, String directory, Long userId, String originalFilename) {
         try {
             java.nio.file.Path filePath = java.nio.file.Paths.get(localFilePath);
             java.io.File file = filePath.toFile();
             
             if (!file.exists()) {
-                throw new IllegalArgumentException("로컬 파일이 존재하지 않습니다: " + localFilePath);
+                throw new InvalidFileException("로컬 파일이 존재하지 않습니다: " + localFilePath);
             }
             
             // 확장자 추출 및 파일명에서 확장자 제거
@@ -142,28 +126,14 @@ public class FileUploadService {
                 filenameWithoutExtension = originalFilename.substring(0, originalFilename.lastIndexOf("."));
             }
             
-            // UUID 생성
-            String uuid = UUID.randomUUID().toString();
-            
-            // UUID를 사용한 새 파일명으로 임시 파일 생성
-            String uuidFilename = uuid + "_" + originalFilename;
-            java.nio.file.Path tempPath = filePath.getParent().resolve(uuidFilename);
-            java.nio.file.Files.copy(filePath, tempPath);
-            
-            // S3 업로드 (UUID 파일명 사용)
-            String s3Url = s3Uploader.upload(tempPath.toString(), directory);
-            
-            // 임시 파일 삭제
-            try {
-                java.nio.file.Files.deleteIfExists(tempPath);
-            } catch (Exception e) {
-                log.warn("임시 파일 삭제 실패: {}", tempPath, e);
-            }
+            // 로컬 파일은 이미 UUID 파일명이므로 추가 파일 조작 불필요
+            // 바로 S3에 업로드
+            String s3Url = s3Uploader.upload(localFilePath, directory);
             
             // 파일 타입 추출
             String contentType;
             try {
-                contentType = java.nio.file.Files.probeContentType(filePath);
+                contentType = Files.probeContentType(filePath);
                 if (contentType == null) {
                     contentType = "application/octet-stream";
                 }
@@ -171,10 +141,15 @@ public class FileUploadService {
                 contentType = "application/octet-stream";
             }
             
+            // UUID를 파일명에서 추출 (이미 UUID_원본파일명 형태)
+            String fileName = file.getName();
+            String extractedUuid = fileName.contains("_") ? 
+                fileName.substring(0, fileName.indexOf("_")) : UUID.randomUUID().toString();
+            
             // Upload 엔티티 생성 및 저장
             Upload upload = Upload.builder()
                     .originalFilename(filenameWithoutExtension)
-                    .uuid(uuid)
+                    .uuid(extractedUuid)
                     .extension(extension)
                     .uploaderId(userId)
                     .fileSize(file.length())

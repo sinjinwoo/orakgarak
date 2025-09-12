@@ -13,6 +13,7 @@ import com.ssafy.lab.orak.s3.exception.S3DeleteException;
 import com.ssafy.lab.orak.s3.exception.S3UploadException;
 import com.ssafy.lab.orak.s3.exception.ThumbnailCreationException;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
+import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.exception.UploadNotFoundException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -55,6 +56,12 @@ public class CustomRestAdvice {
     public ResponseEntity<Map<String, Object>> handleFileUploadException(FileUploadException e) {
         log.error("File upload error: {}", e.getMessage(), e);
         return createErrorResponse(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_ERROR", e.getMessage());
+    }
+    
+    @ExceptionHandler(InvalidFileException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidFileException(InvalidFileException e) {
+        log.warn("Invalid file error: {}", e.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_FILE_ERROR", e.getMessage());
     }
     
     @ExceptionHandler(AudioConversionException.class)

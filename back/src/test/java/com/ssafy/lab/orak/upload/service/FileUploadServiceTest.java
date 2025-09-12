@@ -79,7 +79,7 @@ class FileUploadServiceTest {
         String localPath = "/tmp/test.mp3";
         String s3Url = "https://bucket.s3.amazonaws.com/recordings/uuid_test.mp3";
 
-        when(localUploader.uploadLocal(testFile)).thenReturn(localPath);
+        when(localUploader.uploadLocal(eq(testFile), anyString())).thenReturn(localPath);
         when(s3Uploader.upload(localPath, directory)).thenReturn(s3Url);
         when(uploadRepository.save(any(Upload.class))).thenReturn(testUpload);
 
@@ -91,7 +91,7 @@ class FileUploadServiceTest {
         assertEquals(testUpload.getId(), result.getId());
         assertEquals(testUpload.getOriginalFilename(), result.getOriginalFilename());
         
-        verify(localUploader).uploadLocal(testFile);
+        verify(localUploader).uploadLocal(eq(testFile), anyString());
         verify(s3Uploader).upload(localPath, directory);
         verify(uploadRepository).save(any(Upload.class));
     }
@@ -113,7 +113,7 @@ class FileUploadServiceTest {
             "test audio content with specific size".getBytes() // 34 bytes
         );
 
-        when(localUploader.uploadLocal(testFileWithSize)).thenReturn(localPath);
+        when(localUploader.uploadLocal(eq(testFileWithSize), anyString())).thenReturn(localPath);
         when(s3Uploader.upload(localPath, directory)).thenReturn(s3Url);
         when(uploadRepository.save(any(Upload.class))).thenReturn(testUpload);
 
@@ -148,7 +148,7 @@ class FileUploadServiceTest {
             fileUploadService.uploadSingleFile(emptyFile, directory, userId)
         );
 
-        verify(localUploader, never()).uploadLocal(any());
+        verify(localUploader, never()).uploadLocal(any(), anyString());
         verify(s3Uploader, never()).upload(any(), any());
         verify(uploadRepository, never()).save(any());
     }
@@ -161,7 +161,7 @@ class FileUploadServiceTest {
         String directory = "recordings";
         String localPath = "/tmp/test.mp3";
 
-        when(localUploader.uploadLocal(testFile)).thenReturn(localPath);
+        when(localUploader.uploadLocal(eq(testFile), anyString())).thenReturn(localPath);
         when(s3Uploader.upload(localPath, directory)).thenThrow(new RuntimeException("S3 upload failed"));
 
         // when & then
@@ -169,7 +169,7 @@ class FileUploadServiceTest {
             fileUploadService.uploadSingleFile(testFile, directory, userId)
         );
 
-        verify(localUploader).uploadLocal(testFile);
+        verify(localUploader).uploadLocal(eq(testFile), anyString());
         verify(s3Uploader).upload(localPath, directory);
         verify(uploadRepository, never()).save(any());
     }
@@ -186,7 +186,7 @@ class FileUploadServiceTest {
         String localPath = "/tmp/test.mp3";
         String s3Url = "https://bucket.s3.amazonaws.com/recordings/uuid_test.mp3";
 
-        when(localUploader.uploadLocal(any())).thenReturn(localPath);
+        when(localUploader.uploadLocal(any(), anyString())).thenReturn(localPath);
         when(s3Uploader.upload(any(), eq(directory))).thenReturn(s3Url);
         when(uploadRepository.save(any(Upload.class))).thenReturn(testUpload);
 
@@ -197,7 +197,7 @@ class FileUploadServiceTest {
         assertNotNull(results);
         assertEquals(2, results.size());
         
-        verify(localUploader, times(2)).uploadLocal(any());
+        verify(localUploader, times(2)).uploadLocal(any(), anyString());
         verify(s3Uploader, times(2)).upload(any(), eq(directory));
         verify(uploadRepository, times(2)).save(any(Upload.class));
     }

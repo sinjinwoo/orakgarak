@@ -10,7 +10,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -88,38 +87,6 @@ public class S3Uploader {
         }
     }
 
-    /**
-     * 여러 파일에 대한 Presigned URL 생성
-     */
-    public List<String> generatePresignedUrls(String s3Directory, List<String> fileNames, Duration duration) {
-        List<String> presignedUrls = new ArrayList<>();
-
-        for (String fileName : fileNames) {
-            try {
-                String uuid = java.util.UUID.randomUUID().toString();
-                String presignedUrl = generatePresignedUrl(s3Directory, uuid, fileName, duration);
-                presignedUrls.add(presignedUrl);
-            } catch (Exception e) {
-                throw new PresignedUrlException("다중 Presigned URL 생성 실패: " + fileName, e);
-            }
-        }
-
-        return presignedUrls;
-    }
-
-    /**
-     * 여러 파일 삭제
-     */
-    public void removeS3Files(List<String> fileNames) {
-        for (String fileName : fileNames) {
-            try {
-                removeS3File(fileName);
-            } catch (Exception e) {
-                throw new S3DeleteException("다중 파일 삭제 실패: " + fileName, e);
-            }
-        }
-    }
-
     //S3로 업로드 후 원본 파일 삭제
     private void removeOriginalFile(File targetFile){
         if(targetFile.exists() && targetFile.delete()){
@@ -157,6 +124,7 @@ public class S3Uploader {
                 .build();
         s3Client.deleteObject(deleteObjectRequest);
     }
+
 
     // Presigned URL 생성 헬퍼 메서드
     private String createPresignedUrl(String s3Key, Duration duration) {
