@@ -55,7 +55,8 @@ cmake-build-*/
 
 # IntelliJ
 out/
-
+.idea/
+.idea/**
 # mpeltonen/sbt-idea plugin
 .idea_modules/
 
@@ -142,6 +143,10 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Custom
+python/voice_analysis/data/
+python/voice_analysis/test/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -339,3 +344,4 @@ replay_pid*
 # Claude Code
 .claude/
 CLAUDE.md
+

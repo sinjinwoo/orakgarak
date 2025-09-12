@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -57,8 +57,8 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
   const radius = 400;
   const totalCards = albumData.tracks.length; // 앨범 트랙 수에 따라 동적 설정
 
-  // 앨범 트랙 카드 데이터 생성
-  const generateAlbumTrackCards = useCallback((): AlbumTrackCard[] => {
+  // 앨범 트랙 카드 데이터 생성 (메모이제이션으로 최적화)
+  const cards = useMemo((): AlbumTrackCard[] => {
     return albumData.tracks.map((track, index) => ({
       id: track.id,
       title: track.title,
@@ -73,8 +73,6 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
       trackNumber: index + 1,
     }));
   }, [albumData.tracks, albumData.coverImage]);
-
-  const [cards] = useState<AlbumTrackCard[]>(generateAlbumTrackCards());
 
   // 오디오 훅 사용
   const [audioState, audioControls] = useAudio({
@@ -138,6 +136,13 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
   // 드래그 시작
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // 터치 이벤트인 경우 스크롤 방지
+    if ('touches' in e) {
+      document.body.style.overflow = 'hidden';
+    }
+    
     setIsDragging(true);
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     setStartX(clientX);
@@ -147,10 +152,13 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
   const handleDrag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!isDragging) return;
     e.preventDefault();
+    e.stopPropagation();
     
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const diffX = clientX - startX;
-    const sensitivity = 0.5;
+    
+    // 모바일에서 더 민감하게 반응하도록 조정
+    const sensitivity = 'touches' in e ? 0.8 : 0.5;
     const newTheta = theta + diffX * sensitivity;
     
     if (carouselRef.current) {
@@ -163,19 +171,36 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
     if (!isDragging) return;
     setIsDragging(false);
     
+    // 터치 이벤트인 경우 스크롤 복원
+    if ('changedTouches' in e) {
+      document.body.style.overflow = '';
+    }
+    
     const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
     const diffX = clientX - startX;
     
-    if (Math.abs(diffX) > 20) {
+    // 드래그 거리가 충분한 경우 카드 이동 (모바일에서는 더 작은 거리로 조정)
+    const threshold = 'changedTouches' in e ? 30 : 50;
+    if (Math.abs(diffX) > threshold) {
       if (diffX > 0) {
         prevCard();
       } else {
         nextCard();
       }
     } else {
+      // 드래그 거리가 부족한 경우 가장 가까운 카드로 스냅
       const anglePerCard = 360 / totalCards;
-      const snapAngle = Math.round(theta / anglePerCard) * anglePerCard;
+      const currentAngle = theta % 360;
+      const normalizedAngle = currentAngle < 0 ? currentAngle + 360 : currentAngle;
+      const closestCardIndex = Math.round(normalizedAngle / anglePerCard);
+      const snapAngle = closestCardIndex * anglePerCard;
+      
+      // 부드러운 애니메이션으로 스냅
       setTheta(snapAngle);
+      
+      // 현재 인덱스 업데이트
+      const newIndex = closestCardIndex % totalCards;
+      setCurrentIndex(newIndex >= 0 ? newIndex : newIndex + totalCards);
     }
   }, [isDragging, startX, theta, totalCards, prevCard, nextCard]);
 
@@ -228,6 +253,7 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
     
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = ''; // 스크롤 복원
     };
   }, [open, arrangeCards, rotateCarousel, handleKeyDown]);
 

@@ -25,6 +25,19 @@ public class AudioConverter {
             String wavFileName = baseName + ".wav";
             Path wavPath = Paths.get(outputDirectory, wavFileName);
             
+            // 이미 WAV 파일인지 확인
+            String extension = getExtension(fileName);
+            if ("wav".equalsIgnoreCase(extension)) {
+                log.info("파일이 이미 WAV 형식입니다. 변환을 건너뜁니다: {}", fileName);
+                return originalFilePath; // 이미 WAV 파일이므로 원본 파일 경로 반환
+            }
+            
+            // FFmpeg 사용 가능 여부 확인
+            if (!isFFmpegAvailable()) {
+                log.warn("FFmpeg을 사용할 수 없습니다. 원본 파일을 그대로 사용합니다: {}", fileName);
+                return originalFilePath; // 변환하지 않고 원본 파일 경로 반환
+            }
+            
             FFmpeg.atPath()
                     .addInput(UrlInput.fromPath(originalPath))
                     .addOutput(UrlOutput.toPath(wavPath)
@@ -39,7 +52,23 @@ public class AudioConverter {
             
         } catch (Exception e) {
             log.error("오디오 파일 WAV 변환 실패: {}", originalFilePath, e);
-            throw new AudioConversionException("오디오 파일 WAV 변환 실패: " + originalFilePath, e);
+            // FFmpeg 변환 실패 시 원본 파일을 그대로 사용
+            log.warn("FFmpeg 변환 실패로 인해 원본 파일을 사용합니다: {}", originalFilePath);
+            return originalFilePath;
+        }
+    }
+    
+    /**
+     * FFmpeg 사용 가능 여부 확인
+     */
+    private boolean isFFmpegAvailable() {
+        try {
+            // FFmpeg 버전 확인을 통해 사용 가능 여부 테스트
+            FFmpeg.atPath().addArgument("-version").execute();
+            return true;
+        } catch (Exception e) {
+            log.debug("FFmpeg을 사용할 수 없습니다: {}", e.getMessage());
+            return false;
         }
     }
 
