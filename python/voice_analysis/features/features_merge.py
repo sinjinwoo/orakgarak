@@ -11,10 +11,9 @@ output_csv_path = "E:/melondataset/all_features.csv"
 # 모든 파일 탐색 
 json_files = glob(os.path.join(features_base_dir, "**", "*.json"), recursive=True)
 
-# 통합 데이터 리스트
 all_records = []
 
-# 진행 상황 출력
+# 통합
 for file_path in tqdm(json_files, desc="JSON -> CSV 통합 중"):
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -33,7 +32,7 @@ for file_path in tqdm(json_files, desc="JSON -> CSV 통합 중"):
     except Exception as e:
         print(f"[Error] {file_path}: {e}")
 
-# pandas DataFrame으로 변환
+# pandas로 변환
 df = pd.DataFrame(all_records)
 
 # 저장
