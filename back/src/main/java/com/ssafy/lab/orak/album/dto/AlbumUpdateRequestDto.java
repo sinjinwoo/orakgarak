@@ -20,5 +20,5 @@ public class AlbumUpdateRequestDto {
 
     private Long uploadId;
 
-    private Boolean isPublic = false;
+    private Boolean isPublic;
 }
