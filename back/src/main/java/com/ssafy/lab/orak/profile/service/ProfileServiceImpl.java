@@ -7,6 +7,7 @@ import com.ssafy.lab.orak.profile.dto.ProfileResponseDTO;
 import com.ssafy.lab.orak.profile.entity.Profile;
 import com.ssafy.lab.orak.profile.exception.ProfileNotFoundException;
 import com.ssafy.lab.orak.profile.repository.ProfileRepository;
+import com.ssafy.lab.orak.upload.entity.Upload;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
