@@ -13,4 +13,6 @@ public interface ProfileService {
     ProfileResponseDTO upsertMyProfile(Long userId, ProfileRequestDTO request);
 
     ProfileResponseDTO updateProfileWithImage(Long userId, MultipartFile imageFile, String nickname, String gender, String description);
+
+    boolean isNicknameAvailable(String nickname);
 }

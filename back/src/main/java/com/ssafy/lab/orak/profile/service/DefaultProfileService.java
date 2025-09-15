@@ -4,6 +4,7 @@ import com.ssafy.lab.orak.auth.entity.User;
 import com.ssafy.lab.orak.profile.entity.Profile;
 import com.ssafy.lab.orak.profile.repository.ProfileRepository;
 import com.ssafy.lab.orak.profile.util.NicknameGenerator;
+import com.ssafy.lab.orak.upload.entity.Upload;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
@@ -21,18 +22,17 @@ public class DefaultProfileService {
     @Transactional
     public Profile createDefaultProfile(User user) {
         String defaultNickname = nicknameGenerator.generateUniqueNickname();
-        String defaultImagePath = profileImageService.getRandomDefaultImagePath();
-        
+
         Profile profile = Profile.builder()
                 .user(user)
                 .nickname(defaultNickname)
-                .profileImageS3Key(defaultImagePath)
+                .profileImageUpload(null) // 기본 이미지는 null로 유지
                 .build();
-        
+
         Profile savedProfile = profileRepository.save(profile);
-        log.info("기본 프로필 생성 완료 - userId: {}, nickname: {}, image: {}", 
-                user.getId(), defaultNickname, defaultImagePath);
-        
+        log.info("기본 프로필 생성 완료 - userId: {}, nickname: {} (기본 이미지 사용)",
+                user.getId(), defaultNickname);
+
         return savedProfile;
     }
 }

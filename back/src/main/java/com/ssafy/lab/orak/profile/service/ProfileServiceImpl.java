@@ -70,26 +70,49 @@ public class ProfileServiceImpl implements ProfileService {
                             .build();
                 });
 
-        // 기존 이미지가 있으면 삭제
-        if (profile.getProfileImageS3Key() != null) {
-            profileImageService.deleteProfileImage(profile.getProfileImageS3Key());
+        // 기존 이미지 Upload 백업
+        Upload oldImageUpload = profile.getProfileImageUpload();
+
+        try {
+            // 1. 새 이미지 먼저 업로드
+            Upload newImageUpload = profileImageService.uploadProfileImage(imageFile, userId);
+
+            // 2. 프로필 업데이트 (DB 트랜잭션 내에서)
+            profile.update(newImageUpload, nickname, gender, description);
+            Profile saved = profileRepository.save(profile);
+
+            // 3. 성공 시에만 기존 이미지 삭제 (트랜잭션 커밋 후)
+            if (oldImageUpload != null && !oldImageUpload.getId().equals(newImageUpload.getId())) {
+                try {
+                    profileImageService.deleteProfileImage(oldImageUpload);
+                } catch (Exception e) {
+                    // 기존 이미지 삭제 실패는 로그만 남기고 진행 (새 이미지는 이미 성공적으로 업로드됨)
+                    log.warn("기존 프로필 이미지 삭제 실패 (데이터 일관성은 유지됨) - userId: {}, oldUploadId: {}", userId, oldImageUpload.getId(), e);
+                }
+            }
+
+            log.info("프로필 이미지 업로드 및 업데이트 완료 - userId: {} profileId: {}", userId, saved.getId());
+            return toResponseDTO(saved);
+
+        } catch (Exception e) {
+            // 새 이미지 업로드나 DB 업데이트 실패 시 기존 상태 유지
+            log.error("프로필 이미지 업데이트 실패 - userId: {}", userId, e);
+            throw new RuntimeException("프로필 이미지 업데이트 실패: " + e.getMessage(), e);
         }
-
-        // 새 이미지 업로드
-        String s3Key = profileImageService.uploadProfileImage(imageFile, userId);
-        
-        // 프로필 업데이트
-        profile.update(s3Key, nickname, gender, description);
-
-        Profile saved = profileRepository.save(profile);
-        log.info("프로필 이미지 업로드 및 업데이트 완료 - userId: {} profileId: {}", userId, saved.getId());
-        return toResponseDTO(saved);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isNicknameAvailable(String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            return false;
+        }
+        return !profileRepository.existsByNickname(nickname);
+    }
 
     private ProfileResponseDTO toResponseDTO(Profile profile) {
-        String profileImageUrl = profileImageService.getProfileImageUrl(profile.getProfileImageS3Key());
-        
+        String profileImageUrl = profileImageService.getProfileImageUrl(profile.getProfileImageUpload());
+
         return ProfileResponseDTO.builder()
                 .id(profile.getId())
                 .userId(profile.getUser().getId())

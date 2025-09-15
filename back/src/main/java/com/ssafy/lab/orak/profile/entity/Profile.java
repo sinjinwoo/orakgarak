@@ -2,6 +2,7 @@ package com.ssafy.lab.orak.profile.entity;
 
 import com.ssafy.lab.orak.auth.entity.User;
 import com.ssafy.lab.orak.common.entity.BaseEntity;
+import com.ssafy.lab.orak.upload.entity.Upload;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -36,12 +37,13 @@ public class Profile extends BaseEntity {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
-    // S3 key path to the profile image stored in S3
-    @Column(name = "profile_image_s3_key")
-    private String profileImageS3Key;
+    // Profile image upload reference
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_image_upload_id")
+    private Upload profileImageUpload;
 
     // User nickname
-    @Column(name = "nickname", length = 50)
+    @Column(name = "nickname", length = 50, unique = true)
     private String nickname;
 
     // Gender of the user (free-form to keep it simple; can be converted to ENUM later)
@@ -53,9 +55,9 @@ public class Profile extends BaseEntity {
     private String description;
 
     // Domain update method: apply changes only when provided (null or blank = keep existing)
-    public void update(String profileImageS3Key, String nickname, String gender, String description) {
-        if (profileImageS3Key != null && !profileImageS3Key.isBlank()) {
-            this.profileImageS3Key = profileImageS3Key;
+    public void update(Upload profileImageUpload, String nickname, String gender, String description) {
+        if (profileImageUpload != null) {
+            this.profileImageUpload = profileImageUpload;
         }
         if (nickname != null && !nickname.isBlank()) {
             this.nickname = nickname;

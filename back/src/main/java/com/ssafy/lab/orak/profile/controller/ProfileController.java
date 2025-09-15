@@ -65,4 +65,11 @@ public class ProfileController {
         return ResponseEntity.ok(response);
     }
 
+    // 닉네임 중복 체크
+    @GetMapping("/nickname/check")
+    public ResponseEntity<Boolean> checkNicknameAvailability(@RequestParam String nickname) {
+        boolean available = profileService.isNicknameAvailable(nickname);
+        return ResponseEntity.ok(available);
+    }
+
 }
