@@ -4,6 +4,7 @@ import com.ssafy.lab.orak.album.dto.AlbumCreateRequestDto;
 import com.ssafy.lab.orak.album.dto.AlbumResponseDto;
 import com.ssafy.lab.orak.album.dto.AlbumUpdateRequestDto;
 import com.ssafy.lab.orak.album.service.AlbumService;
+import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -87,6 +90,31 @@ public class AlbumController {
         log.info("DELETE /api/albums/{} - Deleting album by user: {}", albumId, userId);
         albumService.deleteAlbum(albumId, userId);
         return ResponseEntity.noContent().build();
+    }
+
+//    앨범 커버 이미지 업로드
+    @PostMapping("/{albumId}/cover")
+    @Operation(summary = "앨범 커버 이미지 업로드", description = "앨범의 커버 이미지를 업로드합니다.")
+    public ResponseEntity<AlbumResponseDto> uploadCoverImage(
+            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
+            @RequestParam("image") @Parameter(description = "커버 이미지 파일") MultipartFile imageFile,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        log.info("POST /api/albums/{}/cover - Uploading cover image by user: {}", albumId, principal.getUserId());
+        AlbumResponseDto response = albumService.uploadCoverImage(albumId, imageFile, principal.getUserId());
+        return ResponseEntity.ok(response);
+    }
+
+//    앨범 커버 이미지 삭제
+    @DeleteMapping("/{albumId}/cover")
+    @Operation(summary = "앨범 커버 이미지 삭제", description = "앨범의 커버 이미지를 삭제합니다.")
+    public ResponseEntity<AlbumResponseDto> removeCoverImage(
+            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        log.info("DELETE /api/albums/{}/cover - Removing cover image by user: {}", albumId, principal.getUserId());
+        AlbumResponseDto response = albumService.removeCoverImage(albumId, principal.getUserId());
+        return ResponseEntity.ok(response);
     }
 
 }
