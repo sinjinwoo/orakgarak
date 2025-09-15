@@ -40,6 +40,7 @@ dependencies {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
     implementation("org.springframework.boot:spring-boot-starter-log4j2")
+    implementation("org.apache.logging.log4j:log4j-core:2.24.3")
 
     // Spring Security & OAuth2
     implementation("org.springframework.boot:spring-boot-starter-security") {
