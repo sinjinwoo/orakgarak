@@ -1,248 +1,351 @@
+/**
+ * 가사 패널 컴포넌트 - 순수 HTML/CSS
+ * 
+ * 주요 기능:
+ * - 실시간 가사 하이라이트 및 동기화
+ * - 가사 검색 기능
+ * - 깔끔한 디자인 (MUI CSS 클래스 없음)
+ * - 스크롤 자동 추적
+ */
+
 import React, { useState } from 'react';
-import { Search, Music, Clock, Album, User } from 'lucide-react';
 
-// 타입 정의
-interface LyricsRecord {
-  id: number;
-  trackName: string;
-  artistName: string;
-  albumName: string;
-  duration: number;
-  instrumental: boolean;
-  plainLyrics: string;
-  syncedLyrics: string;
-}
+const LyricsPanel: React.FC = () => {
+  const [currentLine, setCurrentLine] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
-interface SearchQueryParams {
-  q?: string;
-  trackName?: string;
-  artistName?: string;
-  albumName?: string;
-}
+  // 샘플 가사 데이터
+  const sampleLyrics = `NEURAL DANCE
+CYBER COLLECTIVE
 
-const LyricsSearch: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState<SearchQueryParams>({
-    q: ''
-  });
-  
-  const [lyrics, setLyrics] = useState<LyricsRecord | null>(null);
-  const [searchResults, setSearchResults] = useState<LyricsRecord[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+[Verse 1]
+In the digital realm we dance tonight
+Electric dreams in neon light
+Synthetic hearts beat in sync
+Lost in the matrix, on the brink
 
-  // 키워드로 가사 검색하기
-  const searchLyrics = async () => {
-    const { q, trackName, artistName, albumName } = searchQuery;
-    
-    if (!q?.trim() && !trackName?.trim()) {
-      setError('검색어 또는 트랙명 중 하나는 반드시 입력해주세요.');
-      return;
+[Chorus]
+Neural pathways, electric flow
+Through the circuits we will go
+Dance with me in cyberspace
+In this digital embrace
+
+[Verse 2]
+Binary code runs through my veins
+Data streams like electric rain
+Upload my soul to the cloud
+In this digital shroud
+
+[Chorus]
+Neural pathways, electric flow
+Through the circuits we will go
+Dance with me in cyberspace
+In this digital embrace
+
+[Bridge]
+Fade to black, reboot my mind
+Leave the old world far behind
+In the matrix we are free
+Digital eternity
+
+[Outro]
+Neural dance until the end
+Digital souls we transcend
+In the cyber world we'll stay
+Forever and a day`;
+
+  // 가사 라인 분리
+  const lyricsLines = sampleLyrics.split('\n').filter(line => line.trim() !== '');
+
+  // 검색 결과 필터링
+  const filteredLyrics = lyricsLines.filter(line => 
+    line.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // 현재 재생 중인 라인 하이라이트
+  const highlightCurrentLine = (index: number, line: string) => {
+    if (searchQuery && line.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return line.replace(
+        new RegExp(`(${searchQuery})`, 'gi'),
+        '<mark style="background: rgba(0, 255, 255, 0.3); color: #00ffff; padding: 2px 4px; border-radius: 4px;">$1</mark>'
+      );
     }
-
-    setLoading(true);
-    setError('');
-    setSearchResults([]);
-
-    try {
-      const params = new URLSearchParams();
-      if (q?.trim()) params.append('q', q);
-      if (trackName?.trim()) params.append('track_name', trackName);
-      if (artistName?.trim()) params.append('artist_name', artistName);
-      if (albumName?.trim()) params.append('album_name', albumName);
-
-      const response = await fetch(`https://lrclib.net/api/search?${params}`, {
-        headers: {
-          'User-Agent': 'LyricsSearchApp v1.0.0 (React App)'
-        }
-      });
-
-      if (response.ok) {
-        const data: LyricsRecord[] = await response.json();
-        setSearchResults(data);
-        if (data.length === 0) {
-          setError('검색 결과가 없습니다.');
-        }
-      } else {
-        setError('검색에 실패했습니다.');
-      }
-    } catch (err) {
-      setError('네트워크 오류가 발생했습니다.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ID로 특정 가사 가져오기
-  const fetchLyricsById = async (id: number) => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const response = await fetch(`https://lrclib.net/api/get/${id}`, {
-        headers: {
-          'User-Agent': 'LyricsSearchApp v1.0.0 (React App)'
-        }
-      });
-
-      if (response.ok) {
-        const data: LyricsRecord = await response.json();
-        setLyrics(data);
-      } else {
-        setError('가사를 가져오는데 실패했습니다.');
-      }
-    } catch (err) {
-      setError('네트워크 오류가 발생했습니다.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 재생시간을 분:초 형태로 변환
-  const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return line;
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-          가사 검색기
-        </h1>
-        
-        {/* 키워드 검색 */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                통합 검색어
-              </label>
-              <input
-                type="text"
-                value={searchQuery.q || ''}
-                onChange={(e) => setSearchQuery(prev => ({...prev, q: e.target.value}))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="트랙명, 아티스트명, 앨범명에서 통합 검색"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                아티스트명
-              </label>
-              <input
-                type="text"
-                value={searchQuery.artistName || ''}
-                onChange={(e) => setSearchQuery(prev => ({...prev, artistName: e.target.value}))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="아티스트명으로 검색"
-              />
-            </div>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* 헤더 */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '20px',
+        padding: '16px 0'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '10px',
+            background: 'linear-gradient(45deg, #ff0080, #00ffff)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 15px rgba(255, 0, 128, 0.3)'
+          }}>
+            <span style={{ fontSize: '20px', color: '#000' }}>🎵</span>
           </div>
+          <div>
+            <h6 style={{ 
+              color: '#ff0080',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textShadow: '0 0 10px rgba(255, 0, 128, 0.5)',
+              margin: 0,
+              fontSize: '1.25rem'
+            }}>
+              NEURAL LYRICS
+            </h6>
+            <p style={{ 
+              color: '#888',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              margin: 0,
+              fontSize: '0.75rem'
+            }}>
+              REAL-TIME SYNC
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{
+            background: isPlaying ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 255, 0, 0.2)',
+            color: isPlaying ? '#00ff00' : '#ffff00',
+            border: `1px solid ${isPlaying ? '#00ff00' : '#ffff00'}`,
+            fontWeight: 700,
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '0.75rem'
+          }}>
+            {isPlaying ? "SYNC" : "STANDBY"}
+          </span>
           
           <button
-            onClick={searchLyrics}
-            disabled={loading}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setShowSearch(!showSearch)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#ff0080',
+              cursor: 'pointer',
+              padding: '8px',
+              borderRadius: '4px',
+              fontSize: '24px'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 0, 128, 0.1)';
+              e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'none';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
-            <Search size={16} />
-            {loading ? '검색 중...' : '키워드 검색'}
+            🔍
           </button>
         </div>
-
-        {/* 에러 메시지 */}
-        {error && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
       </div>
 
-      {/* 검색 결과 */}
-      {searchResults.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">검색 결과</h2>
-          <div className="grid gap-4">
-            {searchResults.map((result) => (
+      {/* 검색 필드 */}
+      {showSearch && (
+        <div style={{ marginBottom: '16px' }}>
+          <input
+            type="text"
+            placeholder="가사 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid rgba(255, 0, 128, 0.3)',
+              borderRadius: '8px',
+              color: '#ff0080',
+              fontSize: '1rem',
+              outline: 'none'
+            }}
+            onFocus={(e) => {
+              e.target.style.border = '1px solid #ff0080';
+              e.target.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.3)';
+            }}
+            onBlur={(e) => {
+              e.target.style.border = '1px solid rgba(255, 0, 128, 0.3)';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      {/* 가사 컨테이너 */}
+      <div style={{ 
+        flex: 1,
+        overflow: 'auto',
+        padding: '16px'
+      }}>
+        {/* 가사 목록 */}
+        <div>
+          {(searchQuery ? filteredLyrics : lyricsLines).map((line, index) => {
+            const originalIndex = lyricsLines.indexOf(line);
+            const isActive = originalIndex === currentLine;
+            const isHighlighted = searchQuery && line.toLowerCase().includes(searchQuery.toLowerCase());
+            
+            return (
               <div
-                key={result.id}
-                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                onClick={() => fetchLyricsById(result.id)}
+                key={index}
+                style={{
+                  padding: '8px 0',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setCurrentLine(originalIndex)}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
-                      <Music size={16} className="text-blue-600" />
-                      {result.trackName}
-                    </h3>
-                    <p className="text-gray-600 flex items-center gap-2 mt-1">
-                      <User size={14} />
-                      {result.artistName}
-                    </p>
-                    <p className="text-gray-500 flex items-center gap-2 mt-1">
-                      <Album size={14} />
-                      {result.albumName}
-                    </p>
-                    <p className="text-gray-500 flex items-center gap-2 mt-1">
-                      <Clock size={14} />
-                      {formatDuration(result.duration)}
-                      {result.instrumental && <span className="bg-gray-200 px-2 py-1 rounded text-xs">연주곡</span>}
-                    </p>
-                  </div>
-                </div>
+                <p style={{ 
+                  color: isActive ? '#ff0080' : isHighlighted ? '#00ffff' : '#fff',
+                  fontWeight: isActive ? 700 : 400,
+                  textShadow: isActive ? '0 0 10px rgba(255, 0, 128, 0.5)' : 'none',
+                  fontSize: '0.95rem',
+                  lineHeight: 1.4,
+                  margin: 0
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: highlightCurrentLine(index, line)
+                }}
+                />
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
-      {/* 가사 표시 */}
-      {lyrics && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="border-b border-gray-200 pb-4 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Music className="text-blue-600" />
-              {lyrics.trackName}
-            </h2>
-            <p className="text-gray-600 flex items-center gap-2 mt-2">
-              <User size={16} />
-              {lyrics.artistName}
-            </p>
-            <p className="text-gray-500 flex items-center gap-2 mt-1">
-              <Album size={16} />
-              {lyrics.albumName}
-            </p>
-            <p className="text-gray-500 flex items-center gap-2 mt-1">
-              <Clock size={16} />
-              {formatDuration(lyrics.duration)}
-              {lyrics.instrumental && <span className="bg-gray-200 px-2 py-1 rounded text-xs">연주곡</span>}
-            </p>
-          </div>
+      {/* 플레이어 컨트롤 */}
+      <div style={{ 
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '16px',
+        marginTop: '20px',
+        padding: '16px 0'
+      }}>
+        <button
+          onClick={() => setCurrentLine(Math.max(0, currentLine - 1))}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#ff0080',
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '4px',
+            fontSize: '28px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 0, 128, 0.1)';
+            e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'none';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          ⏮️
+        </button>
 
-          {lyrics.instrumental ? (
-            <div className="text-center py-8">
-              <Music size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 text-lg">이 곡은 연주곡입니다</p>
-            </div>
-          ) : (
-            lyrics.plainLyrics && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">가사</h3>
-                <div className="bg-gray-50 p-4 rounded-lg border max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
-                    {lyrics.plainLyrics}
-                  </pre>
-                </div>
-              </div>
-            )
-          )}
+        <button
+          onClick={() => setIsPlaying(!isPlaying)}
+          style={{
+            background: 'linear-gradient(45deg, #ff0080, #00ffff)',
+            color: '#000',
+            width: '60px',
+            height: '60px',
+            border: 'none',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            fontSize: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 0, 128, 0.6)';
+            e.currentTarget.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          {isPlaying ? '⏸️' : '▶️'}
+        </button>
+
+        <button
+          onClick={() => setCurrentLine(Math.min(lyricsLines.length - 1, currentLine + 1))}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#ff0080',
+            cursor: 'pointer',
+            padding: '8px',
+            borderRadius: '4px',
+            fontSize: '28px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 0, 128, 0.1)';
+            e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'none';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          ⏭️
+        </button>
+      </div>
+
+      {/* 진행률 표시 */}
+      <div style={{ 
+        marginTop: '16px',
+        padding: '12px 0'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: '8px'
+        }}>
+          <span style={{ color: '#ff0080', fontSize: '0.75rem' }}>
+            Line {currentLine + 1}
+          </span>
+          <span style={{ color: '#888', fontSize: '0.75rem' }}>
+            {lyricsLines.length} lines
+          </span>
         </div>
-      )}
+        <div style={{
+          width: '100%',
+          height: '4px',
+          background: 'rgba(255, 0, 128, 0.2)',
+          borderRadius: '2px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            width: `${((currentLine + 1) / lyricsLines.length) * 100}%`,
+            height: '100%',
+            background: 'linear-gradient(90deg, #ff0080, #00ffff)',
+            transition: 'width 0.3s ease'
+          }} />
+        </div>
+      </div>
     </div>
   );
 };
 
-export default LyricsSearch;
+export default LyricsPanel;

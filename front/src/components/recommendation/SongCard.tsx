@@ -37,31 +37,32 @@ const SongCard: React.FC<SongCardProps> = ({
 }) => {
   return (
      <Card 
-       sx={{ 
-         width: 240,
-         height: 320,
-        cursor: 'pointer',
-        background: isSelected 
-          ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)'
-          : 'linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%)',
-        border: isSelected 
-          ? '3px solid rgba(139, 92, 246, 0.8)' 
-          : '2px solid rgba(139, 92, 246, 0.3)',
-        borderRadius: '20px',
-        backdropFilter: 'blur(10px)',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: isSelected ? 'scale(1.05) translateY(-10px)' : 'scale(1)',
-        boxShadow: isSelected 
-          ? '0 20px 40px rgba(139, 92, 246, 0.4)' 
-          : '0 8px 25px rgba(0, 0, 0, 0.3)',
-        '&:hover': {
-          transform: 'scale(1.08) translateY(-15px)',
-          boxShadow: '0 25px 50px rgba(139, 92, 246, 0.5)',
-          border: '3px solid rgba(139, 92, 246, 0.6)',
-        }
-      }}
+      sx={{ 
+        width: 240,
+        height: 320,
+       cursor: 'pointer',
+       background: isSelected 
+         ? 'linear-gradient(135deg, rgba(251, 66, 212, 0.2) 0%, rgba(66, 253, 235, 0.2) 100%)'
+         : 'linear-gradient(135deg, rgba(30, 10, 20, 0.8) 0%, rgba(10, 5, 15, 0.8) 100%)',
+       border: isSelected 
+         ? '3px solid rgba(251, 66, 212, 0.8)' 
+         : '2px solid rgba(66, 253, 235, 0.3)',
+       borderRadius: '20px',
+       backdropFilter: 'blur(10px)',
+       position: 'relative',
+       overflow: 'hidden',
+       transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+       transform: isSelected ? 'scale(1.05) translateY(-10px)' : 'scale(1)',
+       boxShadow: isSelected 
+         ? '0 20px 40px rgba(251, 66, 212, 0.4)' 
+         : '0 8px 25px rgba(0, 0, 0, 0.3)',
+       fontFamily: 'neon, monospace',
+       '&:hover': {
+         transform: 'scale(1.08) translateY(-15px)',
+         boxShadow: '0 25px 50px rgba(251, 66, 212, 0.5)',
+         border: '3px solid rgba(66, 253, 235, 0.6)',
+       }
+     }}
       onClick={() => onSelect?.(song)}
     >
       {/* 배경 패턴 */}
@@ -72,8 +73,8 @@ const SongCard: React.FC<SongCardProps> = ({
         right: 0,
         bottom: 0,
         background: `
-          radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%)
+          radial-gradient(circle at 20% 20%, rgba(251, 66, 212, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 80% 80%, rgba(66, 253, 235, 0.1) 0%, transparent 50%)
         `,
         zIndex: 0
       }} />

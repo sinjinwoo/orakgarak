@@ -1,30 +1,14 @@
 /**
- * 곡 검색 패널 컴포넌트
+ * 곡 검색 패널 컴포넌트 - 순수 HTML/CSS
  * - 실시간 곡 검색 기능 (곡명, 아티스트, 장르로 검색)
  * - 자동 추천 기능 (타이핑하는 즉시 검색 결과 표시)
  * - 검색된 곡을 예약 큐에 추가하는 기능
  * - 중복 예약 방지 및 사용자 알림
+ * - 검색 결과에 따른 동적 높이 조정
  * - 나중에 백엔드 API와 연동하여 실제 곡 데이터를 가져올 예정
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  ListItemButton,
-  Avatar,
-  Chip,
-  Paper,
-  InputAdornment,
-  IconButton,
-  Snackbar,
-  Alert
-} from '@mui/material';
-import { Search, MusicNote, Add } from '@mui/icons-material';
 import { useReservation } from '../../hooks/useReservation';
 import type { Song } from '../../types/song';
 
@@ -59,9 +43,9 @@ const SongSearchPanel: React.FC = () => {
   const [showResults, setShowResults] = useState(false);              // 검색 결과 표시 여부
   
   // 알림 관련 상태 관리
-  const [snackbarOpen, setSnackbarOpen] = useState(false);            // 스낵바 표시 여부
-  const [snackbarMessage, setSnackbarMessage] = useState('');         // 스낵바 메시지
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info'>('success'); // 스낵바 타입
+  const [showNotification, setShowNotification] = useState(false);    // 알림 표시 여부
+  const [notificationMessage, setNotificationMessage] = useState(''); // 알림 메시지
+  const [notificationType, setNotificationType] = useState<'success' | 'info'>('success'); // 알림 타입
   
   // 예약 큐 관련 함수들 가져오기
   const { addToQueue, reservationQueue } = useReservation();
@@ -92,18 +76,21 @@ const SongSearchPanel: React.FC = () => {
     
     if (isAlreadyInQueue) {
       // 이미 예약된 곡인 경우 정보 알림
-      setSnackbarMessage(`${song.title}은(는) 이미 예약 큐에 있습니다.`);
-      setSnackbarSeverity('info');
+      setNotificationMessage(`${song.title}은(는) 이미 예약 큐에 있습니다.`);
+      setNotificationType('info');
     } else {
       // 새로 예약하는 경우 성공 알림
       addToQueue(song);
-      setSnackbarMessage(`${song.title}이(가) 예약 큐에 추가되었습니다.`);
-      setSnackbarSeverity('success');
+      setNotificationMessage(`${song.title}이(가) 예약 큐에 추가되었습니다.`);
+      setNotificationType('success');
     }
     
-    setSnackbarOpen(true);    // 알림 표시
-    setSearchTerm('');        // 검색어 초기화
-    setShowResults(false);    // 검색 결과 숨기기
+    setShowNotification(true);   // 알림 표시
+    setSearchTerm('');           // 검색어 초기화
+    setShowResults(false);       // 검색 결과 숨기기
+    
+    // 3초 후 알림 자동 숨기기
+    setTimeout(() => setShowNotification(false), 3000);
   };
 
   // Enter 키 또는 검색 버튼 클릭 시 검색 실행
@@ -121,130 +108,343 @@ const SongSearchPanel: React.FC = () => {
     setShowResults(true);
   };
 
+  // 검색 결과에 따른 동적 높이 계산
+  const getDropdownHeight = () => {
+    if (!showResults || searchResults.length === 0) return '0px';
+    
+    const itemHeight = 80; // 각 검색 결과 아이템의 높이
+    const maxHeight = 400; // 최대 높이
+    const calculatedHeight = Math.min(searchResults.length * itemHeight, maxHeight);
+    
+    return `${calculatedHeight}px`;
+  };
+
   return (
-    <Box sx={{ position: 'relative' }}>
-      {/* 제목 */}
-      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-        곡 검색
-      </Typography>
+    <div style={{ 
+      position: 'relative',
+      minHeight: '450px',
+      transition: 'min-height 0.3s ease',
+      overflow: 'visible'
+    }}>
+      {/* 헤더 */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        marginBottom: '24px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '10px',
+            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
+          }}>
+            <span style={{ fontSize: '20px', color: '#000' }}>🎵</span>
+          </div>
+          <div>
+            <h6 style={{ 
+              color: '#00ffff',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textShadow: '0 0 10px rgba(0, 255, 255, 0.5)',
+              margin: 0,
+              fontSize: '1.25rem'
+            }}>
+              NEURAL SEARCH
+            </h6>
+            <p style={{ 
+              color: '#888',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              margin: 0,
+              fontSize: '0.75rem'
+            }}>
+              MUSIC DATABASE
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{
+            background: 'rgba(0, 255, 0, 0.2)',
+            color: '#00ff00',
+            border: '1px solid #00ff00',
+            fontWeight: 700,
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontSize: '0.75rem'
+          }}>
+            LIVE
+          </span>
+        </div>
+      </div>
       
       {/* 검색 입력 필드 */}
-      <TextField
-        fullWidth
-        placeholder="곡명, 아티스트, 장르로 검색하세요"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}  // 검색어 변경 시 자동 추천
-        onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}  // Enter 키로 검색
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Search color="action" />
-            </InputAdornment>
-          ),
-          endAdornment: searchTerm && (
-            <InputAdornment position="end">
-              <IconButton onClick={handleSearchSubmit} size="small">
-                <Search />
-              </IconButton>
-            </InputAdornment>
-          )
-        }}
-        sx={{ mb: 2 }}
-      />
+      <div style={{ position: 'relative', marginBottom: '16px' }}>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="곡명, 아티스트, 장르로 검색하세요"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}
+            style={{
+              width: '100%',
+              padding: '12px 16px 12px 45px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid rgba(0, 255, 255, 0.3)',
+              borderRadius: '8px',
+              color: '#00ffff',
+              fontSize: '1rem',
+              outline: 'none',
+              transition: 'all 0.3s ease'
+            }}
+            onFocus={(e) => {
+              e.target.style.border = '1px solid #00ffff';
+              e.target.style.boxShadow = '0 0 15px rgba(0, 255, 255, 0.3)';
+            }}
+            onBlur={(e) => {
+              e.target.style.border = '1px solid rgba(0, 255, 255, 0.3)';
+              e.target.style.boxShadow = 'none';
+            }}
+          />
+          
+          {/* 검색 아이콘 */}
+          <span style={{
+            position: 'absolute',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: '#00ffff',
+            fontSize: '20px'
+          }}>
+            🔍
+          </span>
+          
+          {/* 검색 버튼 */}
+          {searchTerm && (
+            <button
+              onClick={handleSearchSubmit}
+              style={{
+                position: 'absolute',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: '#00ffff',
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '4px',
+                fontSize: '16px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none';
+              }}
+            >
+              🔍
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* 검색 결과 드롭다운 */}
       {showResults && (
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            position: 'absolute', 
-            top: '100%', 
-            left: 0, 
-            right: 0, 
-            zIndex: 1000,
-            maxHeight: 400,
-            overflow: 'auto'
-          }}
-        >
+        <div style={{ 
+          position: 'absolute', 
+          top: 'calc(100% + 8px)', 
+          left: 0, 
+          right: 0, 
+          zIndex: 9999,
+          height: getDropdownHeight(),
+          overflow: 'auto',
+          background: 'rgba(26, 26, 26, 0.98)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(0, 255, 255, 0.5)',
+          borderRadius: '12px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+          transition: 'height 0.3s ease'
+        }}>
           {searchResults.length > 0 ? (
-            <List dense>
+            <div>
               {searchResults.map((song) => (
-                <ListItem key={song.id} disablePadding>
-                  <ListItemButton 
-                    onClick={() => handleSongSelect(song)}  // 곡 클릭 시 예약 큐에 추가
-                    sx={{ 
+                <div
+                  key={song.id}
+                  onClick={() => handleSongSelect(song)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
+                    e.currentTarget.style.border = '1px solid rgba(0, 255, 255, 0.3)';
+                    e.currentTarget.style.borderRadius = '8px';
+                    e.currentTarget.style.margin = '4px';
+                    e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.borderRadius = '0';
+                    e.currentTarget.style.margin = '0';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  {/* 곡 아이콘 */}
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 0 10px rgba(0, 255, 255, 0.3)',
+                    flexShrink: 0
+                  }}>
+                    <span style={{ fontSize: '20px', color: '#000' }}>🎵</span>
+                  </div>
+                  
+                  {/* 곡 정보 */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h6 style={{ 
+                      color: '#fff', 
+                      fontWeight: 600,
+                      margin: '0 0 4px 0',
+                      fontSize: '1rem',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {song.title}
+                    </h6>
+                    <div style={{ 
                       display: 'flex', 
                       alignItems: 'center', 
-                      gap: 2,
-                      py: 1.5
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <span style={{ 
+                        color: '#00ffff',
+                        fontSize: '0.875rem'
+                      }}>
+                        {song.artist}
+                      </span>
+                      <span style={{
+                        background: 'rgba(255, 0, 128, 0.2)',
+                        color: '#ff0080',
+                        border: '1px solid #ff0080',
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: '0.7rem',
+                        fontWeight: 600
+                      }}>
+                        {song.genre}
+                      </span>
+                      <span style={{ 
+                        color: '#888',
+                        fontSize: '0.75rem'
+                      }}>
+                        {song.duration}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* 추가 버튼 */}
+                  <button
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#00ffff',
+                      cursor: 'pointer',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      fontSize: '20px',
+                      flexShrink: 0
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
+                      e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'none';
+                      e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
-                    {/* 곡 아이콘 */}
-                    <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      <MusicNote />
-                    </Avatar>
-                    
-                    {/* 곡 정보 */}
-                    <ListItemText
-                      primary={song.title}
-                      secondary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {song.artist}
-                          </Typography>
-                          <Chip 
-                            label={song.genre} 
-                            size="small" 
-                            variant="outlined"
-                            sx={{ height: 20, fontSize: '0.7rem' }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            {song.duration}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    
-                    {/* 추가 버튼 */}
-                    <IconButton size="small" color="primary">
-                      <Add />
-                    </IconButton>
-                  </ListItemButton>
-                </ListItem>
+                    ➕
+                  </button>
+                </div>
               ))}
-            </List>
+            </div>
           ) : (
             // 검색 결과가 없을 때
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                검색 결과가 없습니다.
-              </Typography>
-            </Box>
+            <div style={{ 
+              padding: '24px', 
+              textAlign: 'center',
+              color: '#888'
+            }}>
+              <p style={{ margin: 0 }}>검색 결과가 없습니다.</p>
+            </div>
           )}
-        </Paper>
+        </div>
       )}
 
       {/* 검색 사용법 힌트 */}
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+      <p style={{ 
+        marginTop: '8px',
+        color: '#888',
+        fontSize: '0.75rem',
+        margin: '8px 0 0 0'
+      }}>
         💡 팁: "BTS", "K-Pop", "Dynamite" 등으로 검색해보세요
-      </Typography>
+      </p>
 
-      {/* 예약 결과 알림 스낵바 */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={() => setSnackbarOpen(false)} 
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+      {/* 예약 결과 알림 */}
+      {showNotification && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: notificationType === 'success' ? 'rgba(0, 255, 0, 0.9)' : 'rgba(255, 165, 0, 0.9)',
+          color: '#000',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          zIndex: 10000,
+          fontWeight: 600,
+          animation: 'slideUp 0.3s ease'
+        }}>
+          {notificationMessage}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+      `}</style>
+    </div>
   );
 };
 
