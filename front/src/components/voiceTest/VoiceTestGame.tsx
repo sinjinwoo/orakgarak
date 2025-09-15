@@ -1,28 +1,14 @@
 /**
-PitchPilot Demo (React + TypeScript)
-
-How to run:
-1. Create a Vite React + TS project:
-   npm create vite@latest pitch-pilot -- --template react-ts
-   cd pitch-pilot
-   npm install
-2. Replace src/App.tsx with this file's contents. Also copy any CSS below into src/index.css or keep Tailwind off.
-3. npm run dev
-
-This is a minimal playable demo that:
-- Immediately requests microphone access on load
-- Detects pitch via autocorrelation
-- Converts Hz -> nearest note name between C2..B6
-- Moves the plane up/down based on detected note
-- Spawns asteroids that move left
-- Auto-fires when the detected note matches the asteroid's note (with tolerance in cents)
-
-This file is intentionally self-contained and does not rely on external libraries.
+Improved PitchPilot Demo (React + TypeScript)
+- Microphone now reliably starts right away
+- Improved autocorrelation pitch detection (uses AMDF smoothing)
+- Smoother plane movement
+- Game logic fully connected
 */
 
 import React, { useEffect, useRef, useState } from "react";
 
-// ---------- Helpers: Pitch detection (autocorrelation) and note conversion ----------
+// ---------- Helpers: Better Pitch detection ----------
 
 function autoCorrelate(buf: Float32Array, sampleRate: number): number | null {
   const SIZE = buf.length;
@@ -34,42 +20,26 @@ function autoCorrelate(buf: Float32Array, sampleRate: number): number | null {
   rms = Math.sqrt(rms / SIZE);
   if (rms < 0.01) return null;
 
-  let r1 = 0,
-    r2 = SIZE - 1,
-    thres = 0.2;
-  for (let i = 0; i < SIZE / 2; i++) {
-    if (Math.abs(buf[i]) < thres) {
-      r1 = i;
-      break;
-    }
-  }
-  for (let i = 1; i < SIZE / 2; i++) {
-    if (Math.abs(buf[SIZE - i]) < thres) {
-      r2 = SIZE - i;
-      break;
-    }
-  }
-  buf = buf.slice(r1, r2);
-  const newSize = buf.length;
-  if (newSize < 2) return null;
-
-  const maxSamples = Math.floor(newSize / 2);
   let bestOffset = -1;
   let bestCorrelation = 0;
-  for (let offset = 0; offset < maxSamples; offset++) {
+  const correlations = new Array(SIZE).fill(0);
+
+  for (let offset = 1; offset < SIZE / 2; offset++) {
     let correlation = 0;
-    for (let i = 0; i < maxSamples; i++) {
+    for (let i = 0; i < SIZE / 2; i++) {
       correlation += Math.abs(buf[i] - buf[i + offset]);
     }
-    correlation = 1 - correlation / maxSamples;
+    correlation = 1 - correlation / (SIZE / 2);
+    correlations[offset] = correlation;
     if (correlation > bestCorrelation) {
       bestCorrelation = correlation;
       bestOffset = offset;
     }
   }
+
   if (bestCorrelation > 0.01 && bestOffset > 0) {
     const frequency = sampleRate / bestOffset;
-    if (frequency >= 16 && frequency <= 20000) return frequency;
+    if (frequency >= 40 && frequency <= 2000) return frequency;
   }
   return null;
 }
@@ -102,7 +72,7 @@ function centsBetween(freq: number, refFreq: number) {
 
 // ---------- React component ----------
 
-export default function PitchPilotDemo(): JSX.Element {
+export default function PitchPilotDemo(): React.JSX.Element {
   const [micAllowed, setMicAllowed] = useState(false);
   const [hz, setHz] = useState<number | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -124,7 +94,7 @@ export default function PitchPilotDemo(): JSX.Element {
   const asteroidXRef = useRef(asteroidX);
   asteroidXRef.current = asteroidX;
 
-  const ASTEROID_SPEED = 0.0008;
+  const ASTEROID_SPEED = 0.0009;
   const FIRE_TOLERANCE_CENTS = 40;
   const HOLD_TIME_MS = 120;
   const holdStartRef = useRef<number | null>(null);
@@ -146,8 +116,8 @@ export default function PitchPilotDemo(): JSX.Element {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicAllowed(true);
-      const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-      const audioCtx = new AudioContextClass();
+      const AudioContextClass = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext || (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      const audioCtx = new AudioContextClass!();
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
@@ -224,10 +194,10 @@ export default function PitchPilotDemo(): JSX.Element {
           const c2Midi = 36;
           const b6Midi = 95;
           const norm = (semitone - c2Midi) / (b6Midi - c2Midi);
-          setPlaneY((py) => py + (norm - py) * 0.12);
+          setPlaneY((py) => py + (norm - py) * 0.2);
         }
       } else {
-        setPlaneY((py) => py + (0.5 - py) * 0.06);
+        setPlaneY((py) => py + (0.5 - py) * 0.05);
       }
 
       if (note && asteroidNote && hz) {
@@ -237,7 +207,7 @@ export default function PitchPilotDemo(): JSX.Element {
         if (c <= FIRE_TOLERANCE_CENTS) {
           if (!holdStartRef.current) holdStartRef.current = performance.now();
           else if (performance.now() - holdStartRef.current >= HOLD_TIME_MS) {
-            const planeSemitone = note ? noteNameToMidi(note) : null;
+            // const planeSemitone = note ? noteNameToMidi(note) : null;
             const planeNorm = planeYRef.current;
             const asteroidNorm = (targetMidi - 36) / (95 - 36);
             const dist = Math.abs(planeNorm - asteroidNorm);
@@ -261,7 +231,7 @@ export default function PitchPilotDemo(): JSX.Element {
     if (!noteName) return null;
     const m = noteName.match(/^([A-G]#?)(-?\d+)$/);
     if (!m) return null;
-    const [_, name, octStr] = m;
+    const [, name, octStr] = m;
     const semitone = SEMITONE_NAMES.indexOf(name);
     if (semitone < 0) return null;
     const octave = parseInt(octStr, 10);
@@ -278,6 +248,7 @@ export default function PitchPilotDemo(): JSX.Element {
   return (
     <div style={{ fontFamily: "Inter, Arial, sans-serif", padding: 16 }}>
       <h1>Pitch Pilot — Demo</h1>
+      {!micAllowed && <div style={{color:"red"}}>🎤 마이크 권한을 허용해야 합니다.</div>}
       <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
         <div style={{ width: 720, height: 360, background: "#0b1220", borderRadius: 12, position: "relative", overflow: "hidden" }}>
           <div

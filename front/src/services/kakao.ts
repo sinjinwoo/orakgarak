@@ -99,7 +99,11 @@ class KakaoAPI {
     try {
       // 실제로는 우리 서버에서 Melon 차트 데이터를 가져와야 함
       const response = await apiClient.get('/melon/charts');
-      return response.data;
+      return response.data || {
+        realtime: [],
+        daily: [],
+        weekly: [],
+      };
     } catch (error) {
       console.error('Melon charts error:', error);
       return {
