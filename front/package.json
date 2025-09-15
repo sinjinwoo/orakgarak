@@ -25,6 +25,7 @@
     "axios": "^1.11.0",
     "framer-motion": "^12.23.12",
     "google-auth-library": "^10.3.0",
+    "isomorphic-fetch": "^3.0.0",
     "lucide-react": "^0.543.0",
     "motion": "^12.23.12",
     "react": "^19.1.1",

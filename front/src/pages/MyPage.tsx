@@ -135,26 +135,26 @@ const MyPage: React.FC = () => {
     { title: '밤편지', artist: '아이유', score: 88, quality: '보통', duration: '3:23', date: '1월 13일' }
   ]);
 
-  const [albums, setAlbums] = useState([
-    { 
-      title: 'My Favorite Songs', 
-      status: '공개', 
-      songs: 3, 
-      likes: 42, 
-      plays: 156, 
-      date: '1월 15일',
-      cover: '/api/placeholder/200/200'
-    },
-    { 
-      title: 'Rainy Day Mood', 
-      status: '비공개', 
-      songs: 5, 
-      likes: 0, 
-      plays: 23, 
-      date: '1월 10일',
-      cover: '/api/placeholder/200/200'
-    }
-  ]);
+  // const [albums, setAlbums] = useState([
+  //   { 
+  //     title: 'My Favorite Songs', 
+  //     status: '공개', 
+  //     songs: 3, 
+  //     likes: 42, 
+  //     plays: 156, 
+  //     date: '1월 15일',
+  //     cover: '/api/placeholder/200/200'
+  //   },
+  //   { 
+  //     title: 'Rainy Day Mood', 
+  //     status: '비공개', 
+  //     songs: 5, 
+  //     likes: 0, 
+  //     plays: 23, 
+  //     date: '1월 10일',
+  //     cover: '/api/placeholder/200/200'
+  //   }
+  // ]);
 
   // 실제 사용자 통계 데이터 (나중에 API에서 가져올 예정)
   const [userStats, setUserStats] = useState({
@@ -178,8 +178,8 @@ const MyPage: React.FC = () => {
     setUserStats({
       albums: myAlbums.length,
       recordings: recordings.length,
-      likes: myAlbums.reduce((sum, album) => sum + album.likeCount, 0),
-      totalPlays: myAlbums.reduce((sum, album) => sum + album.playCount, 0)
+      likes: myAlbums.reduce((sum: number, album: { likeCount: number }) => sum + album.likeCount, 0),
+      totalPlays: myAlbums.reduce((sum: number, album: { playCount: number }) => sum + album.playCount, 0)
     });
   }, [myAlbums, recordings]);
 
@@ -194,9 +194,9 @@ const MyPage: React.FC = () => {
     setTabValue(newValue);
   };
 
-  const handleCreateAlbum = () => {
-    navigate('/albums/create');
-  };
+  // const handleCreateAlbum = () => {
+  //   navigate('/albums/create');
+  // };
 
   const handleNewRecording = () => {
     navigate('/record');
@@ -227,13 +227,13 @@ const MyPage: React.FC = () => {
     if (file) {
       // 파일 크기 체크 (5MB 제한)
       if (file.size > 5 * 1024 * 1024) {
-        showToast('error', '파일 크기는 5MB 이하여야 합니다.');
+        showToast('파일 크기는 5MB 이하여야 합니다.', 'error');
         return;
       }
       
       // 이미지 파일 타입 체크
       if (!file.type.startsWith('image/')) {
-        showToast('error', '이미지 파일만 업로드 가능합니다.');
+        showToast('이미지 파일만 업로드 가능합니다.', 'error');
         return;
       }
 
@@ -244,7 +244,7 @@ const MyPage: React.FC = () => {
           profileImage: file,
           profileImageUrl: e.target?.result as string
         }));
-        showToast('success', '프로필 사진이 업로드되었습니다.');
+        showToast('프로필 사진이 업로드되었습니다.', 'success');
       };
       reader.readAsDataURL(file);
     }
@@ -258,7 +258,7 @@ const MyPage: React.FC = () => {
       introduction: editForm.introduction
     }));
     setProfileEditOpen(false);
-    showToast('success', '프로필이 성공적으로 저장되었습니다.');
+    showToast('프로필이 성공적으로 저장되었습니다.', 'success');
   };
 
   const handleResetProfileImage = () => {
@@ -267,31 +267,31 @@ const MyPage: React.FC = () => {
       profileImage: null,
       profileImageUrl: ''
     }));
-    showToast('success', '프로필 사진이 기본 이미지로 변경되었습니다.');
+    showToast('프로필 사진이 기본 이미지로 변경되었습니다.', 'success');
   };
 
   // 앨범 추가 함수 (나중에 앨범 생성 페이지에서 호출)
-  const addAlbum = (newAlbum: any) => {
-    setAlbums(prev => [...prev, newAlbum]);
-    showToast('success', '새 앨범이 추가되었습니다.');
-  };
+  // const addAlbum = (newAlbum: any) => {
+  //   setAlbums(prev => [...prev, newAlbum]);
+  //   showToast('success' as const, '새 앨범이 추가되었습니다.');
+  // };
 
   // 녹음 추가 함수 (나중에 녹음 페이지에서 호출)
-  const addRecording = (newRecording: any) => {
+  const addRecording = (newRecording: { title: string; artist: string; score: number; quality: string; duration: string; date: string }) => {
     setRecordings(prev => [...prev, newRecording]);
-    showToast('success', '새 녹음이 추가되었습니다.');
+    showToast('새 녹음이 추가되었습니다.', 'success');
   };
 
   // 앨범 삭제 함수
-  const deleteAlbum = (albumIndex: number) => {
-    setAlbums(prev => prev.filter((_, index) => index !== albumIndex));
-    showToast('success', '앨범이 삭제되었습니다.');
-  };
+  // const deleteAlbum = (albumIndex: number) => {
+  //   setAlbums(prev => prev.filter((_, index) => index !== albumIndex));
+  //   showToast('success' as const, '앨범이 삭제되었습니다.');
+  // };
 
   // 녹음 삭제 함수
   const deleteRecording = (recordingIndex: number) => {
     setRecordings(prev => prev.filter((_, index) => index !== recordingIndex));
-    showToast('success', '녹음이 삭제되었습니다.');
+    showToast('녹음이 삭제되었습니다.', 'success');
   };
 
   const getQualityColor = (quality: string) => {
@@ -483,7 +483,7 @@ const MyPage: React.FC = () => {
             </Box>
             
             <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-              {myAlbums.map((album) => (
+              {myAlbums.map((album: { id: string; title: string; description: string; coverImage: string; isPublic: boolean; trackCount: number; duration: string; likeCount: number; playCount: number; createdAt: string }) => (
                 <Card 
                   key={album.id} 
                   sx={{ width: 280, cursor: 'pointer' }}

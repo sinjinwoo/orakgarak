@@ -115,8 +115,11 @@ const QuickRecommendation: React.FC<QuickRecommendationProps> = ({
           reason: '선택한 녹음본의 음역대와 잘 맞는 곡입니다',
           vocalRange: { min: 80, max: 400 },
           genre: 'Pop',
-          difficulty: 'Medium',
-          mood: ['Romantic', 'Calm']
+          difficulty: 'medium',
+          mood: ['Romantic', 'Calm'],
+          duration: '4:23',
+          key: 'G',
+          tempo: 95
         },
         {
           id: 'rec_2',
@@ -127,8 +130,11 @@ const QuickRecommendation: React.FC<QuickRecommendationProps> = ({
           reason: '비슷한 음색과 감정 표현이 가능한 곡입니다',
           vocalRange: { min: 90, max: 380 },
           genre: 'R&B',
-          difficulty: 'Medium',
-          mood: ['Romantic', 'Soulful']
+          difficulty: 'medium',
+          mood: ['Romantic', 'Soulful'],
+          duration: '4:09',
+          key: 'C',
+          tempo: 120
         },
         {
           id: 'rec_3',
@@ -139,8 +145,11 @@ const QuickRecommendation: React.FC<QuickRecommendationProps> = ({
           reason: '녹음본의 감정적 표현과 잘 어울리는 곡입니다',
           vocalRange: { min: 85, max: 350 },
           genre: 'Pop',
-          difficulty: 'Easy',
-          mood: ['Emotional', 'Melancholic']
+          difficulty: 'easy',
+          mood: ['Emotional', 'Melancholic'],
+          duration: '3:02',
+          key: 'F',
+          tempo: 110
         }
       ];
       
