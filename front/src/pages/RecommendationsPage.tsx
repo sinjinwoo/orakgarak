@@ -7,7 +7,7 @@ import CoverFlow from '../components/recommendation/CoverFlow'; // 3D 커버플�
 import QuickRecommendation from '../components/recommendation/QuickRecommendation'; // 빠른 추천
 
 // 음성 테스트 관련 컴포넌트들
-import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
+// import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
 
 // 데이터 및 유틸리티
 import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스
@@ -382,10 +382,10 @@ const RecommendationsPage: React.FC = () => {
         background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
         minHeight: '100vh' 
       }}>
-        <VoiceTestGame
-          onTestComplete={handleVoiceTestComplete}
-          onTestCancel={handleVoiceTestCancel}
-        />
+        <div style={{ padding: '20px', color: 'white', textAlign: 'center' }}>
+          <h2>음성 테스트</h2>
+          <p>음성 테스트 기능이 준비 중입니다.</p>
+        </div>
       </Box>
     );
   }

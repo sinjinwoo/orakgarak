@@ -15,7 +15,7 @@
 # IntelliJ IDEA
 *.iml
 .idea/
-
+.idea/**
 # AWS User-specific
 .idea/**/aws.xml
 
