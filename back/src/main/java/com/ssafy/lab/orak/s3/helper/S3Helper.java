@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.time.Duration;
 
@@ -64,5 +66,25 @@ public class S3Helper {
     // 기본 24시간 유효한 Pre-signed URL 생성 (플레이리스트 고려)
     public String generatePresignedUrl(String s3Key) {
         return generatePresignedUrl(s3Key, Duration.ofHours(24));
+    }
+    
+    // Pre-signed PUT URL 생성 (업로드용)
+    public String generatePresignedPutUrl(String s3Key, Duration expiration) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(s3Key)
+                    .build();
+
+            PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                    .signatureDuration(expiration)
+                    .putObjectRequest(putObjectRequest)
+                    .build();
+
+            return s3Presigner.presignPutObject(presignRequest).url().toString();
+        } catch (Exception e) {
+            log.error("Pre-signed PUT URL 생성 실패: {} - {}", s3Key, e.getMessage(), e);
+            throw new S3UrlGenerationException(s3Key, "Pre-signed PUT URL 생성에 실패했습니다: " + e.getMessage(), e);
+        }
     }
 }

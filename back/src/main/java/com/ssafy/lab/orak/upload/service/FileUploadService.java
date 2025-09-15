@@ -4,6 +4,7 @@ import com.ssafy.lab.orak.s3.helper.S3Helper;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.s3.util.S3Uploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
+import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
 import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.exception.UploadNotFoundException;
@@ -173,6 +174,10 @@ public class FileUploadService {
                 .orElseThrow(() -> new UploadNotFoundException(uploadId));
     }
     
+    public Upload findByUuid(String uuid) {
+        return uploadRepository.findByUuid(uuid).orElse(null);
+    }
+    
     
     // URL 동적 생성 메서드 (Pre-signed URL 사용)
     public String getFileUrl(Upload upload) {
@@ -183,5 +188,55 @@ public class FileUploadService {
     public String getFileUrl(Long uploadId) {
         Upload upload = getUpload(uploadId);
         return getFileUrl(upload);
+    }
+    
+//    처리 상태 관리 메서드들
+    
+    // 처리 상태 업데이트
+    public void updateProcessingStatus(Long uploadId, ProcessingStatus status) {
+        Upload upload = getUpload(uploadId);
+        upload.updateProcessingStatus(status);
+        uploadRepository.save(upload);
+        log.info("Processing status updated: uploadId={}, status={}", uploadId, status);
+    }
+    
+    // 처리 실패 시 상태 업데이트
+    public void markProcessingFailed(Long uploadId, String errorMessage) {
+        Upload upload = getUpload(uploadId);
+        upload.markProcessingFailed(errorMessage);
+        uploadRepository.save(upload);
+        log.error("Processing failed: uploadId={}, error={}", uploadId, errorMessage);
+    }
+    
+    // 오디오 파일 처리가 필요한 업로드 목록 조회 (배치 처리용)
+    public List<Upload> getPendingAudioProcessing(int limit) {
+        return uploadRepository.findPendingAudioProcessing(limit);
+    }
+    
+    // 특정 상태의 업로드 목록 조회
+    public List<Upload> getUploadsByStatus(ProcessingStatus status, int limit) {
+        return uploadRepository.findByProcessingStatusOrderByCreatedAtAsc(status, 
+                org.springframework.data.domain.PageRequest.of(0, limit)).getContent();
+    }
+    
+    // 사용자별 특정 상태 업로드 조회
+    public List<Upload> getUserUploadsByStatus(Long userId, ProcessingStatus status) {
+        return uploadRepository.findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, status);
+    }
+    
+    // Repository 접근 메서드 (컨트롤러에서 직접 사용)
+    public UploadRepository getUploadRepository() {
+        return uploadRepository;
+    }
+    
+    // 파일 타입에 따른 초기 처리 상태 설정 (향후 확장용)
+    private ProcessingStatus determineInitialStatus(Upload upload) {
+        if (upload.isAudioFile()) {
+            return ProcessingStatus.UPLOADED; // 오디오 파일은 추가 처리 필요
+        } else if (upload.isImageFile()) {
+            return ProcessingStatus.UPLOADED; // 이미지 파일도 최적화 필요할 수 있음
+        } else {
+            return ProcessingStatus.COMPLETED; // 기타 파일은 업로드만으로 완료
+        }
     }
 }

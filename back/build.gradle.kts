@@ -79,9 +79,10 @@ dependencies {
     annotationProcessor("jakarta.annotation:jakarta.annotation-api")
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
 
-    // AWS S3
+    // AWS S3 & EventBridge
     implementation("io.awspring.cloud:spring-cloud-aws-starter:3.4.0")
     implementation("software.amazon.awssdk:s3:2.32.9")
+    implementation("software.amazon.awssdk:eventbridge:2.32.9")
 
     // Utilities
     implementation("net.coobird:thumbnailator:0.4.20")
@@ -89,6 +90,11 @@ dependencies {
 
     // Audio Processing
     implementation("com.github.kokorin.jaffree:jaffree:2023.09.10")
+
+    // Kafka 추가
+    implementation("org.springframework.kafka:spring-kafka")
+    testImplementation("org.springframework.kafka:spring-kafka-test")
+
 
     // API Documentation
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
