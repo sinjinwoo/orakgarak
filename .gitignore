@@ -339,6 +339,10 @@ pyrightconfig.json
 hs_err_pid*
 replay_pid*
 
+# Node
+/node_modules
+
 # End of https://www.toptal.com/developers/gitignore/api/java
 # End of https://www.toptal.com/developers/gitignore/api/intellij,visualstudiocode,python
+
 
