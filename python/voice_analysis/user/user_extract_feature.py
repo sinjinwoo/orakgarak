@@ -7,7 +7,7 @@ import logging
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from voice_analysis.features.extract_mel import extract_mel
+from features.extract_mel import extract_mel
 from extract_mfcc import extract_mfcc
 
 # 로깅 설정
@@ -17,10 +17,10 @@ logging.basicConfig(
 )
 
 # 유저 오디오 + pitch 입력 받아 DataFrame 생성
-def process_user_audio(audio_path, pitch_low, pitch_high, pitch_avg, output_csv="user_features.csv"):
+def process_user_audio(audio_path, pitch_low, pitch_high, pitch_avg, output_csv="C:/Users/SSAFY/Desktop/output/user_features.csv"):
     mel = extract_mel(audio_path)
     if mel is None:
-        logging.error("Mel-spectrogram 추출 실패. 종료합니다.")
+        logging.error("Mel-spectrogram 추출 실패")
         return None
 
     mfcc_mean = extract_mfcc(mel)
@@ -43,10 +43,9 @@ def process_user_audio(audio_path, pitch_low, pitch_high, pitch_avg, output_csv=
     logging.info(f"User feature 저장 완료 → {output_csv}")
     return df
 
-# 실행 예시
+
 if __name__ == "__main__":
-    # Correct the path to the sample audio file
-    sample_audio = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "voice_analysis", "data", "sample_data.wav")  # 테스트용 파일
-    # pitch 값은 유저 입력으로 전달 (예시 값)
+    sample_audio = "C:/min/special_pj/data/sample_data.wav"  # 테스트용
+    # pitch 값은 유저 입력으로 전달해야 됨
     result_df = process_user_audio(sample_audio, pitch_low=100.0, pitch_high=320.0, pitch_avg=180.0)
     print(result_df)

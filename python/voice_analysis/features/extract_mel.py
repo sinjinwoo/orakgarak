@@ -14,4 +14,4 @@ def extract_mel(filepath, sr=16000, n_mels=48, n_fft=512, hop_length=256):
     mel = librosa.feature.melspectrogram(y=y, sr=sr, n_fft=n_fft,
                                                hop_length=hop_length, n_mels=n_mels)
     log_mel = librosa.power_to_db(mel, ref=np.max)
-    return log_mel.mean(axis=1)         # 벡터로 변환 해줌
+    return log_mel

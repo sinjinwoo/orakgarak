@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 # 경로 설정
 features_base_dir = "E:/melondataset/features"
-output_csv_path = "E:/melondataset/all_features.csv"
+output_csv_path = "C:/Users/SSAFY/Desktop/output/all_features.csv"
 
 # 모든 파일 탐색 
 json_files = glob(os.path.join(features_base_dir, "**", "*.json"), recursive=True)
