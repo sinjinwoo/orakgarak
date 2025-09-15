@@ -32,7 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
   const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
   
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, { className: classes, ...props });
+    return React.cloneElement(children, { className: classes, ...props } as any);
   }
   
   return (

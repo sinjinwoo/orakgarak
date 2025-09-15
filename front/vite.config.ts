@@ -22,5 +22,13 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', '@mui/material', '@mui/icons-material']
+  },
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      'node-fetch': 'isomorphic-fetch'
+    }
   }
 })

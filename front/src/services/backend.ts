@@ -122,7 +122,7 @@ export const songAPI = {
   
   getSong: async (songId: string) => {
     await new Promise(resolve => setTimeout(resolve, 800));
-    const song = dummySongs.find(s => s.id === songId);
+    const song = dummySongs.find(s => s.id === parseInt(songId));
     return { data: song || dummySongs[0] };
   },
 };
