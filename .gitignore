@@ -197,7 +197,7 @@ docs/_build/
 # PyBuilder
 .pybuilder/
 target/
-
+__init__.py
 # Jupyter Notebook
 .ipynb_checkpoints
 
@@ -346,3 +346,9 @@ replay_pid*
 # End of https://www.toptal.com/developers/gitignore/api/intellij,visualstudiocode,python
 
 
+CLAUDE.md
+.claude
+othercode
+
+*.csv
+song_meta.json
