@@ -28,8 +28,8 @@ user_scaled = scaler.transform(user_features)
 # 2. 음색 유사도 계산
 sims = cosine_similarity(user_scaled, X_scaled)[0]
 
-# 3. popularity 기준 필터 (0.1 이상만)
-mask_popularity = popularity >= 0.1
+# 3. popularity 기준 필터 (1000 이상만)
+mask_popularity = popularity >= 1000
 
 # 4. pitch 조건 필터 (선택사항)
 mask_pitch = (

@@ -2,12 +2,12 @@ import pandas as pd
 import json
 import os
 import subprocess
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
 # 캐시 파일
-CACHE_FILE = "C:/Users/SSAFY/Desktop/youtube_cache.json"
+CACHE_FILE = "C:/Users/SSAFY/Desktop/output/youtube_cache.json"
 
 # 캐시 불러오기
 if os.path.exists(CACHE_FILE):
@@ -16,10 +16,19 @@ if os.path.exists(CACHE_FILE):
 else:
     cache = {}
 
+def clean_song_artist(text: str) -> str:
+    if not isinstance(text, str):
+        return text
+    # (Feat.), (Prod.) 같은 괄호 전부 제거
+    return re.sub(r"\([^)]*\)", "", text).strip()
+
 def get_tj_karaoke_views(song_name: str, artist_name: str):
     key = f"{artist_name}|{song_name}"
     if key in cache:
         return key, cache[key]
+
+    song_name = clean_song_artist(song_name)
+    artist_name = clean_song_artist(artist_name)
 
     query = f"{artist_name} {song_name} 노래방"
     cmd = ["yt-dlp", "ytsearch1:" + query, "--dump-json"]
@@ -64,8 +73,8 @@ if __name__ == "__main__":
     tasks = list(zip(df["song_name"], df["artist_names"]))
     results = {}
 
-    max_workers = 8
-    with ThreadPoolExecutor(max_workers=8) as executor: # 병렬 스레드 8개
+    max_workers = 16
+    with ThreadPoolExecutor(max_workers=16) as executor: # 병렬 스레드
         futures = [executor.submit(get_tj_karaoke_views, song, artist) for song, artist in tasks]
         for i, future in enumerate(tqdm(as_completed(futures), total=len(futures), desc="조회수 수집 중")):
             key, views = future.result()
@@ -73,24 +82,23 @@ if __name__ == "__main__":
 
             # 100곡마다 중간 저장
             if (i + 1) % 100 == 0:
-                df["popularity_view"] = [
+                df["popularity"] = [
                     results.get(f"{row['artist_names']}|{row['song_name']}", cache.get(f"{row['artist_names']}|{row['song_name']}", 0))
                     for _, row in df.iterrows()
                 ]
                 df.to_csv(output_csv, index=False, encoding="utf-8-sig")
-                print(f"[중간 저장] {i+1}곡 완료 -> {output_csv}")
+                print(f"[중간 저장] {i+1}곡 완료 : {output_csv}")
+
+                cache.update(results)
+                with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                    json.dump(cache, f, ensure_ascii=False, indent=2)
 
     # 최종 결과 병합
-    df["popularity_view"] = [
+    df["popularity"] = [
         results.get(f"{row['artist_names']}|{row['song_name']}", cache.get(f"{row['artist_names']}|{row['song_name']}", 0))
         for _, row in df.iterrows()
     ]
 
-    # 캐시 업데이트
-    cache.update(results)
-    with open(CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(cache, f, ensure_ascii=False, indent=2)
-
     # 최종 저장
     df.to_csv(output_csv, index=False, encoding="utf-8-sig")
-    print(f"[최종 저장 완료] → {output_csv}")
+    print(f"[최종 저장 완료] : {output_csv}")

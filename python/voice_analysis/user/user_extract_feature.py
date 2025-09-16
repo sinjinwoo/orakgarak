@@ -45,7 +45,7 @@ def process_user_audio(audio_path, pitch_low, pitch_high, pitch_avg, output_csv=
 
 
 if __name__ == "__main__":
-    sample_audio = "C:/min/special_pj/data/sample_data.wav"  # 테스트용
+    sample_audio = "C:/min/special_pj/data/26.wav"  # 테스트용
     # pitch 값은 유저 입력으로 전달해야 됨
     result_df = process_user_audio(sample_audio, pitch_low=100.0, pitch_high=320.0, pitch_avg=180.0)
     print(result_df)
