@@ -1,12 +1,6 @@
 /**
- * MR/가사 카드 컴포넌트 - 카드 뒤집기 시스템 (순수 HTML/CSS)
- * 
- * 주요 기능:
- * - MR 플레이어와 가사 패널을 하나의 카드로 통합
- * - 3D 뒤집기 애니메이션으로 MR과 가사 간 전환
- * - 깔끔한 디자인 (MUI CSS 클래스 없음)
- * - 실시간 가사 하이라이트 기능
- * - 가사 검색 기능
+ * MRLyricsCard - 완전 순수 HTML/CSS MR/가사 카드 컴포넌트
+ * 카드 크기에 맞춰 최적화된 레이아웃
  */
 
 import React, { useState } from 'react';
@@ -27,29 +21,37 @@ interface MRLyricsCardProps {
   onVolumeChange?: (volume: number) => void;
 }
 
-// 임시 더미 가사 데이터
-const dummyLyrics = [
-  { time: 0, text: "Welcome to the cyber world" },
-  { time: 5, text: "Where neon lights shine bright" },
-  { time: 10, text: "Digital dreams come alive" },
-  { time: 15, text: "In this electric night" },
-  { time: 20, text: "Neural pathways connect" },
-  { time: 25, text: "Through the matrix we flow" },
-  { time: 30, text: "Cyberpunk reality" },
-  { time: 35, text: "Where the future glows" },
-  { time: 40, text: "Electric pulse in my veins" },
-  { time: 45, text: "Technology runs through my mind" },
-  { time: 50, text: "In this digital domain" },
-  { time: 55, text: "True freedom we find" },
-  { time: 60, text: "Welcome to the cyber world" },
-  { time: 65, text: "Where neon lights shine bright" },
-  { time: 70, text: "Digital dreams come alive" },
-  { time: 75, text: "In this electric night" },
-  { time: 80, text: "Neural pathways connect" },
-  { time: 85, text: "Through the matrix we flow" },
-  { time: 90, text: "Cyberpunk reality" },
-  { time: 95, text: "Where the future glows" }
-];
+// 곡별 가사 데이터베이스
+const lyricsDatabase: { [key: string]: { time: number; text: string }[] } = {
+  '1': [ // NEURAL DANCE
+    { time: 0, text: "Welcome to the cyber world" },
+    { time: 5, text: "Where neon lights shine bright" },
+    { time: 10, text: "Digital dreams come alive" },
+    { time: 15, text: "In this electric night" },
+    { time: 20, text: "Neural pathways connect" },
+    { time: 25, text: "Through the matrix we flow" },
+    { time: 30, text: "Cyberpunk reality" },
+    { time: 35, text: "Where the future glows" },
+    { time: 40, text: "Electric pulse in my veins" },
+    { time: 45, text: "Technology runs through my mind" },
+    { time: 50, text: "In this digital domain" },
+    { time: 55, text: "True freedom we find" }
+  ],
+  '2': [ // Dynamite
+    { time: 0, text: "Cause ah-ah, I'm in the stars tonight" },
+    { time: 5, text: "So watch me bring the fire and set the night alight" },
+    { time: 10, text: "Shoes on, get up in the morn'" },
+    { time: 15, text: "Cup of milk, let's rock and roll" },
+    { time: 20, text: "King Kong, kick the drum" },
+    { time: 25, text: "Rolling on like a Rolling Stone" }
+  ],
+  '3': [ // Butter
+    { time: 0, text: "Smooth like butter, like a criminal undercover" },
+    { time: 5, text: "Gon' pop like trouble breaking into your heart like that" },
+    { time: 10, text: "Cool shade, stunner, yeah, I owe it all to my mother" },
+    { time: 15, text: "Hot like summer, yeah, I'm making you sweat like that" }
+  ]
+};
 
 const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
   currentSong = {
@@ -66,19 +68,17 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
   volume = 0.7,
   onVolumeChange
 }) => {
-  // 카드 뒤집기 상태
   const [isFlipped, setIsFlipped] = useState(false);
-  
-  // 가사 검색 관련 상태
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  // 가사 검색 결과 필터링
-  const filteredLyrics = dummyLyrics.filter(lyric => 
+  // 현재 곡의 가사 가져오기
+  const currentLyrics = lyricsDatabase[currentSong.id] || lyricsDatabase['1'];
+  
+  const filteredLyrics = currentLyrics.filter(lyric => 
     lyric.text.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 뒤집기 핸들러
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
   };
@@ -87,83 +87,70 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
     <div style={{ 
       perspective: '1000px',
       width: '100%',
-      height: '500px'
+      height: '100%'
     }}>
       <div style={{
         position: 'relative',
         width: '100%',
         height: '100%',
         transformStyle: 'preserve-3d',
-        transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'transform 0.8s ease',
         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
       }}>
+        
         {/* MR 면 (앞면) */}
         <div style={{
           position: 'absolute',
           width: '100%',
           height: '100%',
           backfaceVisibility: 'hidden',
-          background: `
-            linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(255, 0, 128, 0.1) 100%),
-            rgba(26, 26, 26, 0.95)
-          `,
-          backdropFilter: 'blur(20px)',
+          background: 'rgba(0, 0, 0, 0.3)',
           border: '1px solid rgba(0, 255, 255, 0.3)',
-          borderRadius: '16px',
-          padding: '20px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          borderRadius: '15px',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxSizing: 'border-box',
           overflow: 'hidden'
         }}>
-          {/* 홀로그램 코너 */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, #00ffff, transparent)',
-            boxShadow: '0 0 10px #00ffff'
-          }} />
           
           {/* MR 플레이어 헤더 */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            marginBottom: '20px'
+            width: '100%',
+            flexShrink: 0
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
+                width: '24px',
+                height: '24px',
+                borderRadius: '6px',
                 background: 'linear-gradient(45deg, #00ffff, #ff0080)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
+                fontSize: '12px'
               }}>
-                <span style={{ fontSize: '20px', color: '#000' }}>🎵</span>
+                🎵
               </div>
               <div>
-                <h6 style={{ 
+                <h4 style={{ 
                   color: '#00ffff',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  textShadow: '0 0 10px rgba(0, 255, 255, 0.5)',
-                  margin: 0,
-                  fontSize: '1.25rem'
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                  margin: '0 0 2px 0'
                 }}>
                   NEURAL PLAYER
-                </h6>
+                </h4>
                 <p style={{ 
                   color: '#888',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  margin: 0,
-                  fontSize: '0.75rem'
+                  fontSize: '0.6rem',
+                  margin: '0',
+                  textTransform: 'uppercase'
                 }}>
                   AUDIO SYSTEM
                 </p>
@@ -174,10 +161,10 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               background: isPlaying ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 255, 0, 0.2)',
               color: isPlaying ? '#00ff00' : '#ffff00',
               border: `1px solid ${isPlaying ? '#00ff00' : '#ffff00'}`,
-              fontWeight: 700,
-              padding: '4px 8px',
-              borderRadius: '12px',
-              fontSize: '0.75rem'
+              padding: '3px 6px',
+              borderRadius: '8px',
+              fontSize: '0.6rem',
+              fontWeight: 'bold'
             }}>
               {isPlaying ? "PLAYING" : "STANDBY"}
             </span>
@@ -186,52 +173,51 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           {/* 곡 정보 */}
           <div style={{ 
             textAlign: 'center',
-            marginBottom: '30px'
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center'
           }}>
             <div style={{ 
               background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-              width: 80,
-              height: 80,
+              width: '50px',
+              height: '50px',
               borderRadius: '50%',
-              margin: '0 auto 16px',
-              boxShadow: '0 0 20px rgba(0, 255, 255, 0.4)',
+              margin: '0 auto 12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '40px'
+              fontSize: '24px'
             }}>
               🎵
             </div>
             
-            <h5 style={{ 
+            <h3 style={{ 
               color: '#fff',
-              fontWeight: 700,
-              marginBottom: '8px',
-              textShadow: '0 0 10px rgba(255, 255, 255, 0.3)',
-              margin: '0 0 8px 0',
-              fontSize: '1.5rem'
+              fontSize: '1.1rem',
+              fontWeight: 'bold',
+              margin: '0 0 6px 0',
+              lineHeight: 1.2
             }}>
               {currentSong.title}
-            </h5>
+            </h3>
             
-            <h6 style={{ 
+            <h4 style={{ 
               color: '#00ffff',
-              fontWeight: 600,
-              marginBottom: '4px',
-              margin: '0 0 4px 0',
-              fontSize: '1.25rem'
+              fontSize: '0.9rem',
+              margin: '0 0 4px 0'
             }}>
               {currentSong.artist}
-            </h6>
+            </h4>
             
             <span style={{ 
               background: 'rgba(255, 0, 128, 0.2)',
               color: '#ff0080',
               border: '1px solid #ff0080',
-              fontWeight: 600,
-              padding: '4px 8px',
-              borderRadius: '12px',
-              fontSize: '0.75rem'
+              padding: '3px 6px',
+              borderRadius: '8px',
+              fontSize: '0.6rem'
             }}>
               {currentSong.genre}
             </span>
@@ -242,38 +228,38 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: '20px',
-            marginBottom: '20px'
+            gap: '12px',
+            width: '100%',
+            flexShrink: 0
           }}>
             <button
               onClick={onPlayPause}
               style={{
                 background: 'linear-gradient(45deg, #00ffff, #ff0080)',
                 color: '#000',
-                width: 60,
-                height: 60,
+                width: '40px',
+                height: '40px',
                 border: 'none',
                 borderRadius: '50%',
                 cursor: 'pointer',
-                fontSize: '30px',
+                fontSize: '18px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                transition: 'transform 0.2s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = '0 0 25px rgba(0, 255, 255, 0.6)';
                 e.currentTarget.style.transform = 'scale(1.1)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = 'none';
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
               {isPlaying ? '⏸️' : '▶️'}
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#00ffff', fontSize: '20px' }}>🔊</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: '#00ffff', fontSize: '14px' }}>🔊</span>
               <input
                 type="range"
                 min="0"
@@ -282,8 +268,8 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
                 value={volume}
                 onChange={(e) => onVolumeChange?.(parseFloat(e.target.value))}
                 style={{
-                  width: '100px',
-                  height: '4px',
+                  width: '60px',
+                  height: '3px',
                   background: 'rgba(0, 255, 255, 0.3)',
                   borderRadius: '2px',
                   outline: 'none',
@@ -296,25 +282,26 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           {/* 진행률 표시 */}
           <div style={{ 
             background: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '20px'
+            borderRadius: '6px',
+            padding: '8px',
+            width: '100%',
+            flexShrink: 0
           }}>
             <div style={{
               display: 'flex',
               justifyContent: 'space-between',
-              marginBottom: '8px'
+              marginBottom: '4px'
             }}>
-              <span style={{ color: '#00ffff', fontSize: '0.75rem' }}>
+              <span style={{ color: '#00ffff', fontSize: '0.6rem' }}>
                 {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
               </span>
-              <span style={{ color: '#888', fontSize: '0.75rem' }}>
+              <span style={{ color: '#888', fontSize: '0.6rem' }}>
                 {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
               </span>
             </div>
             <div style={{
               width: '100%',
-              height: '4px',
+              height: '3px',
               background: 'rgba(0, 255, 255, 0.2)',
               borderRadius: '2px',
               overflow: 'hidden'
@@ -329,37 +316,31 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           </div>
 
           {/* 뒤집기 버튼 */}
-          <div style={{ 
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: 'auto'
-          }}>
-            <button
-              onClick={handleFlip}
-              style={{
-                background: 'rgba(255, 0, 128, 0.2)',
-                color: '#ff0080',
-                border: '1px solid #ff0080',
-                cursor: 'pointer',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                fontSize: '14px',
-                fontWeight: 700
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 0, 128, 0.3)';
-                e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 0, 128, 0.4)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 0, 128, 0.2)';
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              🔄 FLIP
-            </button>
-          </div>
+          <button
+            onClick={handleFlip}
+            style={{
+              background: 'rgba(255, 0, 128, 0.2)',
+              color: '#ff0080',
+              border: '1px solid #ff0080',
+              cursor: 'pointer',
+              padding: '6px 12px',
+              borderRadius: '12px',
+              fontSize: '0.7rem',
+              fontWeight: 'bold',
+              transition: 'all 0.2s ease',
+              flexShrink: 0
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 0, 128, 0.3)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 0, 128, 0.2)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            🔄 FLIP
+          </button>
         </div>
 
         {/* 가사 면 (뒤면) */}
@@ -369,67 +350,52 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           height: '100%',
           backfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
-          background: `
-            linear-gradient(135deg, rgba(255, 0, 128, 0.1) 0%, rgba(0, 255, 255, 0.1) 100%),
-            rgba(26, 26, 26, 0.95)
-          `,
-          backdropFilter: 'blur(20px)',
+          background: 'rgba(0, 0, 0, 0.3)',
           border: '1px solid rgba(255, 0, 128, 0.3)',
-          borderRadius: '16px',
-          padding: '20px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          borderRadius: '15px',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden'
+          boxSizing: 'border-box',
+          overflow: 'visible', // 스피커가 카드 밖으로 나올 수 있도록
+          zIndex: 10 // 카드 레이어 (스피커보다 낮게)
         }}>
-          {/* 홀로그램 코너 */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '2px',
-            background: 'linear-gradient(90deg, transparent, #ff0080, transparent)',
-            boxShadow: '0 0 10px #ff0080'
-          }} />
           
           {/* 가사 헤더 */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            marginBottom: '20px'
+            marginBottom: '12px',
+            flexShrink: 0
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
+                width: '24px',
+                height: '24px',
+                borderRadius: '6px',
                 background: 'linear-gradient(45deg, #ff0080, #00ffff)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 15px rgba(255, 0, 128, 0.3)'
+                fontSize: '12px'
               }}>
-                <span style={{ fontSize: '20px', color: '#000' }}>📝</span>
+                📝
               </div>
               <div>
-                <h6 style={{ 
+                <h4 style={{ 
                   color: '#ff0080',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  textShadow: '0 0 10px rgba(255, 0, 128, 0.5)',
-                  margin: 0,
-                  fontSize: '1.25rem'
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                  margin: '0 0 2px 0'
                 }}>
                   NEURAL LYRICS
-                </h6>
+                </h4>
                 <p style={{ 
                   color: '#888',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                  margin: 0,
-                  fontSize: '0.75rem'
+                  fontSize: '0.6rem',
+                  margin: '0',
+                  textTransform: 'uppercase'
                 }}>
                   REAL-TIME SYNC
                 </p>
@@ -443,17 +409,8 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
                 border: 'none',
                 color: '#ff0080',
                 cursor: 'pointer',
-                padding: '8px',
-                borderRadius: '4px',
-                fontSize: '24px'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 0, 128, 0.1)';
-                e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'none';
-                e.currentTarget.style.boxShadow = 'none';
+                padding: '4px',
+                fontSize: '14px'
               }}
             >
               🔍
@@ -469,22 +426,16 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: '100%',
-                padding: '12px 16px',
+                padding: '6px 8px',
                 background: 'rgba(0, 0, 0, 0.3)',
                 border: '1px solid rgba(255, 0, 128, 0.3)',
-                borderRadius: '8px',
+                borderRadius: '4px',
                 color: '#ff0080',
-                fontSize: '1rem',
+                fontSize: '0.7rem',
                 outline: 'none',
-                marginBottom: '16px'
-              }}
-              onFocus={(e) => {
-                e.target.style.border = '1px solid #ff0080';
-                e.target.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.3)';
-              }}
-              onBlur={(e) => {
-                e.target.style.border = '1px solid rgba(255, 0, 128, 0.3)';
-                e.target.style.boxShadow = 'none';
+                marginBottom: '8px',
+                boxSizing: 'border-box',
+                flexShrink: 0
               }}
             />
           )}
@@ -493,43 +444,34 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           <div style={{ 
             flex: 1,
             overflow: 'auto',
-            paddingRight: '8px'
+            paddingRight: '4px',
+            minHeight: 0
           }}>
-            {(searchQuery ? filteredLyrics : dummyLyrics).map((lyric, index) => {
+            {(searchQuery ? filteredLyrics : currentLyrics).map((lyric, index) => {
               const isActive = Math.floor(currentTime) >= lyric.time && 
-                             Math.floor(currentTime) < (dummyLyrics[index + 1]?.time || duration);
+                             Math.floor(currentTime) < (currentLyrics[index + 1]?.time || duration);
               const isHighlighted = searchQuery && lyric.text.toLowerCase().includes(searchQuery.toLowerCase());
               
               return (
                 <div
                   key={index}
                   style={{
-                    padding: '8px 0',
+                    padding: '4px 0',
                     cursor: 'pointer'
                   }}
                 >
                   <p style={{ 
                     color: isActive ? '#ff0080' : isHighlighted ? '#00ffff' : '#fff',
-                    fontWeight: isActive ? 700 : 400,
-                    textShadow: isActive ? '0 0 10px rgba(255, 0, 128, 0.5)' : 'none',
-                    fontSize: '0.95rem',
-                    lineHeight: 1.4,
-                    margin: 0
-                  }}
-                  dangerouslySetInnerHTML={{
-                    __html: isHighlighted 
-                      ? lyric.text.replace(
-                          new RegExp(`(${searchQuery})`, 'gi'), 
-                          '<mark style="background: rgba(0, 255, 255, 0.3); color: #00ffff; padding: 2px 4px; border-radius: 4px;">$1</mark>'
-                        )
-                      : lyric.text
-                  }}
-                  />
+                    fontWeight: isActive ? 'bold' : 'normal',
+                    fontSize: '0.75rem',
+                    lineHeight: 1.3,
+                    margin: '0 0 2px 0'
+                  }}>
+                    {lyric.text}
+                  </p>
                   <span style={{ 
                     color: '#888',
-                    marginTop: '4px',
-                    display: 'block',
-                    fontSize: '0.75rem'
+                    fontSize: '0.6rem'
                   }}>
                     {Math.floor(lyric.time / 60)}:{(lyric.time % 60).toString().padStart(2, '0')}
                   </span>
@@ -539,37 +481,32 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           </div>
 
           {/* 뒤집기 버튼 */}
-          <div style={{ 
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: '16px'
-          }}>
-            <button
-              onClick={handleFlip}
-              style={{
-                background: 'rgba(0, 255, 255, 0.2)',
-                color: '#00ffff',
-                border: '1px solid #00ffff',
-                cursor: 'pointer',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                fontSize: '14px',
-                fontWeight: 700
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 255, 255, 0.3)';
-                e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 255, 255, 0.4)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 255, 255, 0.2)';
-                e.currentTarget.style.boxShadow = 'none';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              🔄 FLIP
-            </button>
-          </div>
+          <button
+            onClick={handleFlip}
+            style={{
+              background: 'rgba(0, 255, 255, 0.2)',
+              color: '#00ffff',
+              border: '1px solid #00ffff',
+              cursor: 'pointer',
+              padding: '6px 12px',
+              borderRadius: '12px',
+              fontSize: '0.7rem',
+              fontWeight: 'bold',
+              transition: 'all 0.2s ease',
+              marginTop: '8px',
+              flexShrink: 0
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 255, 255, 0.3)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            🔄 FLIP
+          </button>
         </div>
       </div>
     </div>

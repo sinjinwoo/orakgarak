@@ -1,33 +1,25 @@
 /**
- * 녹음 컨트롤 컴포넌트
+ * 녹음 컨트롤 컴포넌트 - 마이크 디자인 버튼
  * - 마이크를 사용한 실시간 녹음 기능
- * - 녹음 시작, 취소, 완료 버튼 제공
+ * - 마이크 모양의 큰 버튼으로 녹음 시작/중지
  * - 녹음 상태에 따른 UI 변화
  * - 녹음된 오디오 파일을 백엔드로 전송하는 기능
- * - 나중에 백엔드 API와 연동하여 실제 파일 업로드 구현 예정
  */
 
 import React, { useState, useRef, useCallback } from 'react';
 import { 
   Box, 
-  Typography, 
-  Button, 
+  Typography,
+  Button,
   Paper,
-  LinearProgress,
   Alert,
   Snackbar,
   Modal,
   IconButton,
-  Slider,
-  Chip
+  Slider
 } from '@mui/material';
 import { 
-  Mic, 
-  MicOff, 
-  Stop, 
-  Cancel,
-  CheckCircle,
-  Error,
+  Mic,
   PlayArrow,
   Pause,
   Save,
@@ -176,28 +168,6 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
     audioChunksRef.current = [];
   }, []);
 
-  // 녹음 취소 함수 (녹음 중일 때)
-  const cancelRecording = useCallback(() => {
-    console.log('녹음 취소 시작');
-    
-    // 취소 상태로 설정
-    isCancelledRef.current = true;
-    
-    // 리소스 정리
-    cleanupResources();
-
-    // 상태 초기화 (모달은 열지 않음, completed 상태로 설정하여 다시 녹음 버튼 표시)
-    setRecordingState('completed');
-    setRecordingTime(0);
-    setAudioBlob(null);
-    setErrorMessage('');
-    setShowModal(false);
-    
-    // 녹음 상태 변경 알림
-    onRecordingChange?.(false);
-    
-    console.log('녹음 취소 완료 - 상태: completed');
-  }, [onRecordingChange, cleanupResources]);
 
   // 다시 녹음 함수 (모달에서 또는 취소 후)
   const retakeRecording = useCallback(() => {
@@ -323,165 +293,73 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
   }, [cleanupResources]);
 
   return (
-    <Box sx={{ position: 'relative' }}>
-      {/* 헤더 */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        mb: 3
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{
-            width: 40,
-            height: 40,
-            borderRadius: '10px',
-            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
-          }}>
-            <Mic sx={{ color: '#000', fontSize: 20 }} />
-          </Box>
-          <Box>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#00ffff',
-                fontWeight: 700,
-                letterSpacing: '0.05em',
-                textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
-              }}
-            >
-              NEURAL RECORDER
-            </Typography>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: '#888',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
-              VOICE CAPTURE SYSTEM
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Chip 
-            label={recordingState === 'recording' ? 'REC' : 'STANDBY'} 
-            size="small" 
-            sx={{ 
-              background: recordingState === 'recording' ? 'rgba(255, 0, 128, 0.2)' : 'rgba(0, 255, 0, 0.2)',
-              color: recordingState === 'recording' ? '#ff0080' : '#00ff00',
-              border: recordingState === 'recording' ? '1px solid #ff0080' : '1px solid #00ff00',
-              fontWeight: 700
-            }} 
-          />
-        </Box>
-      </Box>
+    <Box sx={{ 
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      gap: 3
+    }}>
       
-      {/* 디버깅 정보 */}
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-        현재 상태: {recordingState} | 모달: {showModal ? '열림' : '닫힘'} | 취소: {isCancelledRef.current ? '예' : '아니오'}
+      {/* 시간 표시 */}
+      <Typography variant="h3" sx={{ 
+        fontFamily: 'monospace',
+        color: recordingState === 'recording' ? '#ff0080' : '#00ffff',
+        fontWeight: 700,
+        textShadow: '0 0 20px rgba(0, 255, 255, 0.5)',
+        fontSize: '3rem'
+      }}>
+        {formatTime(recordingTime)}
       </Typography>
 
-      {/* 녹음 상태 표시 */}
-      <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: 'grey.50' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          {/* 녹음 상태 아이콘 */}
-          {recordingState === 'idle' && <MicOff color="disabled" />}
-          {recordingState === 'recording' && <Mic color="error" sx={{ animation: 'pulse 1s infinite' }} />}
-          {recordingState === 'completed' && <CheckCircle color="success" />}
-          {recordingState === 'error' && <Error color="error" />}
-
-          {/* 녹음 시간 표시 */}
-          <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
-            {formatTime(recordingTime)}
-          </Typography>
-
-          {/* 녹음 상태 텍스트 */}
-          <Typography variant="body2" color="text.secondary">
-            {recordingState === 'idle' && '녹음 준비 완료'}
-            {recordingState === 'recording' && '녹음 중...'}
-            {recordingState === 'completed' && '녹음 완료'}
-            {recordingState === 'error' && '오류 발생'}
-          </Typography>
-        </Box>
-
-        {/* 녹음 중일 때 진행률 표시 */}
-        {recordingState === 'recording' && (
-          <LinearProgress 
-            sx={{ 
-              height: 4, 
-              borderRadius: 2,
-              '& .MuiLinearProgress-bar': {
-                animation: 'pulse 1s infinite'
-              }
-            }} 
-          />
-        )}
-      </Paper>
-
-      {/* 컨트롤 버튼들 */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-        {/* 녹음 시작 버튼 */}
-        {recordingState === 'idle' && (
-          <Button
-            variant="contained"
-            color="error"
-            size="large"
-            startIcon={<Mic />}
-            onClick={startRecording}
-            sx={{ minWidth: 140 }}
-          >
-            녹음 시작
-          </Button>
-        )}
-
-        {/* 다시 녹음 버튼 (취소 후 또는 모달에서) */}
-        {recordingState === 'completed' && (
-          <Button
-            variant="outlined"
-            color="primary"
-            size="large"
-            startIcon={<Mic />}
-            onClick={retakeRecording}
-            sx={{ minWidth: 140 }}
-          >
-            다시 녹음
-          </Button>
-        )}
-
-        {/* 녹음 중지 버튼 */}
-        {recordingState === 'recording' && (
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={<Stop />}
-            onClick={stopRecording}
-            sx={{ minWidth: 140 }}
-          >
-            녹음 완료
-          </Button>
-        )}
-
-         {/* 녹음 취소 버튼 */}
-         {recordingState === 'recording' && (
-           <Button
-             variant="outlined"
-             color="secondary"
-             size="large"
-             startIcon={<Cancel />}
-             onClick={cancelRecording}
-             sx={{ minWidth: 140 }}
-           >
-             녹음 취소
-           </Button>
-         )}
+      {/* 사이버펑크 마이크 버튼 */}
+      <Box
+        onClick={() => {
+          if (recordingState === 'idle') {
+            startRecording();
+          } else if (recordingState === 'recording') {
+            stopRecording();
+          } else if (recordingState === 'completed') {
+            retakeRecording();
+          }
+        }}
+        sx={{
+          position: 'relative',
+          width: 200,
+          height: 200,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'scale(1.05)',
+          },
+          '&:active': {
+            transform: 'scale(0.95)'
+          }
+        }}
+      >
+        {/* 마이크 이미지 */}
+        <Box
+          component="img"
+          src="/images/mic/mico.png"
+          alt="Cyberpunk Microphone"
+          sx={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: recordingState === 'recording' 
+              ? 'hue-rotate(280deg) saturate(1.5) brightness(1.2) drop-shadow(0 0 20px #ff0080)'
+              : recordingState === 'completed'
+              ? 'hue-rotate(120deg) saturate(1.3) brightness(1.1) drop-shadow(0 0 15px #00ff00)'
+              : 'hue-rotate(180deg) saturate(1.2) brightness(1.1) drop-shadow(0 0 15px #00ffff)',
+            transition: 'all 0.3s ease',
+            animation: recordingState === 'recording' ? 'pulse 1s infinite' : 'none'
+          }}
+        />
       </Box>
 
       {/* 녹음 미리보기 모달 */}

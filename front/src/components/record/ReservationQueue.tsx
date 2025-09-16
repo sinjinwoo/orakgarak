@@ -1,11 +1,6 @@
 /**
- * 예약 큐 컴포넌트 - 순수 HTML/CSS
- * - 예약된 곡들의 목록을 표시하고 관리
- * - 드래그 앤 드롭으로 곡 순서 변경 가능
- * - 개별 곡 삭제 및 전체 삭제 기능
- * - 다음 곡 재생 기능
- * - 곡 순서 번호 표시 및 시각적 피드백
- * - 나중에 Redis와 연동하여 실제 예약 데이터를 관리할 예정
+ * ReservationQueue - 완전 순수 HTML/CSS 예약 큐 컴포넌트
+ * MUI Box 자동 생성 CSS 완전 제거 버전
  */
 
 import React from 'react';
@@ -30,8 +25,14 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// 정렬 가능한 예약 아이템 컴포넌트
-const SortableReservationItem: React.FC<{ song: Song; index: number; onDelete: (songId: string) => void; onPlay: (song: Song) => void }> = ({ song, index, onDelete, onPlay }) => {
+const SortableReservationItem: React.FC<{ 
+  song: Song; 
+  index: number; 
+  onDelete: (songId: string) => void; 
+  onPlay: (song: Song) => void;
+  isCurrentlyPlaying?: boolean;
+  isPlaying?: boolean;
+}> = ({ song, index, onDelete, onPlay, isCurrentlyPlaying = false, isPlaying = false }) => {
   const {
     attributes,
     listeners,
@@ -54,15 +55,15 @@ const SortableReservationItem: React.FC<{ song: Song; index: number; onDelete: (
         ...style,
         display: 'flex',
         alignItems: 'center',
-        gap: '16px',
-        padding: '12px 16px',
+        gap: '12px',
+        padding: '12px',
         marginBottom: '8px',
-        background: 'rgba(255, 0, 128, 0.1)',
-        border: '1px solid rgba(255, 0, 128, 0.3)',
-        borderRadius: '12px',
+        background: isCurrentlyPlaying ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 128, 0.1)',
+        border: isCurrentlyPlaying ? '1px solid rgba(0, 255, 0, 0.5)' : '1px solid rgba(255, 0, 128, 0.3)',
+        borderRadius: '10px',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
-        position: 'relative'
+        boxShadow: isCurrentlyPlaying ? '0 0 15px rgba(0, 255, 0, 0.3)' : 'none'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = 'rgba(255, 0, 128, 0.15)';
@@ -83,29 +84,18 @@ const SortableReservationItem: React.FC<{ song: Song; index: number; onDelete: (
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '24px',
-          height: '24px',
+          width: '20px',
+          height: '20px',
           color: '#ff0080',
           cursor: 'grab',
-          borderRadius: '4px',
-          transition: 'all 0.3s ease',
+          fontSize: '12px',
           flexShrink: 0
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 0, 128, 0.2)';
-          e.currentTarget.style.boxShadow = '0 0 10px rgba(255, 0, 128, 0.3)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'none';
-          e.currentTarget.style.boxShadow = 'none';
         }}
         onMouseDown={(e) => {
           e.currentTarget.style.cursor = 'grabbing';
-          e.currentTarget.style.transform = 'scale(1.1)';
         }}
         onMouseUp={(e) => {
           e.currentTarget.style.cursor = 'grab';
-          e.currentTarget.style.transform = 'scale(1)';
         }}
       >
         ⋮⋮
@@ -113,17 +103,16 @@ const SortableReservationItem: React.FC<{ song: Song; index: number; onDelete: (
 
       {/* 순서 번호 */}
       <div style={{
-        width: '32px',
-        height: '32px',
+        width: '28px',
+        height: '28px',
         borderRadius: '50%',
         background: 'linear-gradient(45deg, #ff0080, #00ffff)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         color: '#000',
-        fontWeight: 700,
-        fontSize: '0.875rem',
-        boxShadow: '0 0 10px rgba(255, 0, 128, 0.3)',
+        fontWeight: 'bold',
+        fontSize: '0.8rem',
         flexShrink: 0
       }}>
         {index + 1}
@@ -131,94 +120,77 @@ const SortableReservationItem: React.FC<{ song: Song; index: number; onDelete: (
 
       {/* 곡 아이콘 */}
       <div style={{
-        width: '40px',
-        height: '40px',
+        width: '35px',
+        height: '35px',
         borderRadius: '50%',
         background: 'linear-gradient(45deg, #00ffff, #ff0080)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 0 10px rgba(0, 255, 255, 0.3)',
+        fontSize: '16px',
         flexShrink: 0
       }}>
-        <span style={{ fontSize: '20px', color: '#000' }}>🎵</span>
+        🎵
       </div>
 
       {/* 곡 정보 */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <h6 style={{ 
+        <h4 style={{
           color: '#fff',
-          fontWeight: 600,
+          fontSize: '0.9rem',
+          fontWeight: 'bold',
           margin: '0 0 4px 0',
-          fontSize: '1rem',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis'
         }}>
           {song.title}
-        </h6>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          flexWrap: 'wrap'
-        }}>
-          <span style={{ 
-            color: '#00ffff',
-            fontSize: '0.875rem'
-          }}>
+        </h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ color: '#00ffff', fontSize: '0.8rem' }}>
             {song.artist}
           </span>
           <span style={{
             background: 'rgba(0, 255, 255, 0.2)',
             color: '#00ffff',
-            border: '1px solid #00ffff',
             padding: '2px 6px',
-            borderRadius: '8px',
-            fontSize: '0.7rem',
-            fontWeight: 600
+            borderRadius: '6px',
+            fontSize: '0.7rem'
           }}>
             {song.genre}
           </span>
-          <span style={{ 
-            color: '#888',
-            fontSize: '0.75rem'
-          }}>
+          <span style={{ color: '#888', fontSize: '0.7rem' }}>
             {song.duration}
           </span>
         </div>
       </div>
 
       {/* 액션 버튼들 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-        {/* 재생 버튼 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
         <button
           onClick={() => onPlay(song)}
           style={{
             background: 'none',
             border: 'none',
-            color: '#00ffff',
+            color: isCurrentlyPlaying ? '#00ff00' : '#00ffff',
             cursor: 'pointer',
-            padding: '8px',
+            padding: '6px',
+            fontSize: '16px',
             borderRadius: '4px',
-            fontSize: '20px',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.2s ease'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
-            e.currentTarget.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
             e.currentTarget.style.transform = 'scale(1.1)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'none';
-            e.currentTarget.style.boxShadow = 'none';
             e.currentTarget.style.transform = 'scale(1)';
           }}
         >
-          ▶️
+          {isCurrentlyPlaying && isPlaying ? '⏸️' : '▶️'}
         </button>
 
-        {/* 삭제 버튼 */}
         <button
           onClick={() => onDelete(song.id.toString())}
           style={{
@@ -226,19 +198,17 @@ const SortableReservationItem: React.FC<{ song: Song; index: number; onDelete: (
             border: 'none',
             color: '#ff4444',
             cursor: 'pointer',
-            padding: '8px',
+            padding: '6px',
+            fontSize: '14px',
             borderRadius: '4px',
-            fontSize: '18px',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.2s ease'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(255, 68, 68, 0.1)';
-            e.currentTarget.style.boxShadow = '0 0 10px rgba(255, 68, 68, 0.3)';
             e.currentTarget.style.transform = 'scale(1.1)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'none';
-            e.currentTarget.style.boxShadow = 'none';
             e.currentTarget.style.transform = 'scale(1)';
           }}
         >
@@ -250,7 +220,15 @@ const SortableReservationItem: React.FC<{ song: Song; index: number; onDelete: (
 };
 
 const ReservationQueue: React.FC = () => {
-  const { reservationQueue, removeFromQueue, clearQueue, reorderQueue } = useReservation();
+  const { 
+    reservationQueue, 
+    removeFromQueue, 
+    clearQueue, 
+    reorderQueue,
+    playSong,
+    currentPlayingSong,
+    isPlaying
+  } = useReservation();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -259,7 +237,6 @@ const ReservationQueue: React.FC = () => {
     })
   );
 
-  // 드래그 앤 드롭 핸들러
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -271,18 +248,14 @@ const ReservationQueue: React.FC = () => {
     }
   };
 
-  // 개별 곡 삭제
   const handleDeleteSong = (songId: string) => {
     removeFromQueue(parseInt(songId));
   };
 
-  // 곡 재생 (다음 곡으로 설정)
   const handlePlaySong = (song: Song) => {
-    // 여기에 실제 재생 로직 구현
-    console.log('Playing song:', song);
+    playSong(song);
   };
 
-  // 전체 삭제
   const handleClearAll = () => {
     if (window.confirm('모든 예약을 삭제하시겠습니까?')) {
       clearQueue();
@@ -290,44 +263,42 @@ const ReservationQueue: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '500px' }}>
+    <div style={{ height: '100%' }}>
       {/* 헤더 */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '24px'
+        marginBottom: '20px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
+            width: '35px',
+            height: '35px',
+            borderRadius: '8px',
             background: 'linear-gradient(45deg, #ff0080, #00ffff)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(255, 0, 128, 0.3)'
+            fontSize: '18px'
           }}>
-            <span style={{ fontSize: '20px', color: '#000' }}>🎵</span>
+            🎵
           </div>
           <div>
-            <h6 style={{ 
+            <h3 style={{
               color: '#ff0080',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-              textShadow: '0 0 10px rgba(255, 0, 128, 0.5)',
-              margin: 0,
-              fontSize: '1.25rem'
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              margin: '0 0 4px 0',
+              textShadow: '0 0 10px rgba(255, 0, 128, 0.5)'
             }}>
               NEURAL QUEUE
-            </h6>
-            <p style={{ 
+            </h3>
+            <p style={{
               color: '#888',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              margin: 0,
-              fontSize: '0.75rem'
+              fontSize: '0.8rem',
+              margin: '0',
+              textTransform: 'uppercase'
             }}>
               RESERVATION SYSTEM
             </p>
@@ -339,10 +310,10 @@ const ReservationQueue: React.FC = () => {
             background: 'rgba(255, 0, 128, 0.2)',
             color: '#ff0080',
             border: '1px solid #ff0080',
-            fontWeight: 700,
             padding: '4px 8px',
-            borderRadius: '12px',
-            fontSize: '0.75rem'
+            borderRadius: '10px',
+            fontSize: '0.7rem',
+            fontWeight: 'bold'
           }}>
             {reservationQueue.length} SONGS
           </span>
@@ -355,20 +326,18 @@ const ReservationQueue: React.FC = () => {
                 color: '#ff4444',
                 border: '1px solid #ff4444',
                 cursor: 'pointer',
-                padding: '6px 12px',
-                borderRadius: '12px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                transition: 'all 0.3s ease'
+                padding: '6px 10px',
+                borderRadius: '10px',
+                fontSize: '0.7rem',
+                fontWeight: 'bold',
+                transition: 'all 0.2s ease'
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(255, 68, 68, 0.3)';
-                e.currentTarget.style.boxShadow = '0 0 10px rgba(255, 68, 68, 0.3)';
                 e.currentTarget.style.transform = 'scale(1.05)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255, 68, 68, 0.2)';
-                e.currentTarget.style.boxShadow = 'none';
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
@@ -386,7 +355,7 @@ const ReservationQueue: React.FC = () => {
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={reservationQueue.map(song => song.id)} strategy={verticalListSortingStrategy}>
-            <div>
+            <div style={{ maxHeight: '400px', overflow: 'auto' }}>
               {reservationQueue.map((song, index) => (
                 <SortableReservationItem
                   key={song.id}
@@ -394,21 +363,22 @@ const ReservationQueue: React.FC = () => {
                   index={index}
                   onDelete={handleDeleteSong}
                   onPlay={handlePlaySong}
+                  isCurrentlyPlaying={currentPlayingSong?.id === song.id}
+                  isPlaying={isPlaying}
                 />
               ))}
             </div>
           </SortableContext>
         </DndContext>
       ) : (
-        // 빈 상태 메시지
-        <div style={{ 
+        <div style={{
           textAlign: 'center',
           padding: '40px 20px',
           color: '#888'
         }}>
           <div style={{
-            width: '80px',
-            height: '80px',
+            width: '60px',
+            height: '60px',
             borderRadius: '50%',
             background: 'rgba(255, 0, 128, 0.1)',
             border: '2px dashed rgba(255, 0, 128, 0.3)',
@@ -416,22 +386,22 @@ const ReservationQueue: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px',
-            fontSize: '40px'
+            fontSize: '30px'
           }}>
             🎵
           </div>
-          <h6 style={{ 
+          <h4 style={{
             color: '#ff0080',
-            fontWeight: 600,
-            margin: '0 0 8px 0',
-            fontSize: '1.125rem'
+            fontSize: '1rem',
+            fontWeight: 'bold',
+            margin: '0 0 8px 0'
           }}>
             NO RESERVATIONS
-          </h6>
-          <p style={{ 
+          </h4>
+          <p style={{
             color: '#888',
-            margin: 0,
-            fontSize: '0.875rem'
+            fontSize: '0.8rem',
+            margin: '0'
           }}>
             검색한 곡을 예약해보세요
           </p>
