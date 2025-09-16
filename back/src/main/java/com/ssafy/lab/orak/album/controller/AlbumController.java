@@ -60,8 +60,8 @@ public class AlbumController {
     @Operation(summary = "특정 앨범 조회", description = "앨범 ID로 특정 앨범을 조회합니다.")
     public ResponseEntity<AlbumResponseDto> getAlbum(
             @PathVariable @Parameter(description = "앨범 ID") Long albumId,
-            @AuthenticationPrincipal(required = false) CustomUserPrincipal principal) {
-        Long userId = (principal !=null) ? principal.getUserId() : null;
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        Long userId = principal.getUserId();
         log.info("GET /api/albums/{} - Getting album by user: {}", albumId, userId);
         AlbumResponseDto album = albumService.getAlbum(albumId, userId);
         return ResponseEntity.ok(album);
