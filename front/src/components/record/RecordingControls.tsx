@@ -18,7 +18,8 @@ import {
   Snackbar,
   Modal,
   IconButton,
-  Slider
+  Slider,
+  Chip
 } from '@mui/material';
 import { 
   Mic, 
@@ -322,10 +323,65 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
   }, [cleanupResources]);
 
   return (
-    <Box>
-      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-        녹음 컨트롤
-      </Typography>
+    <Box sx={{ position: 'relative' }}>
+      {/* 헤더 */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        mb: 3
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{
+            width: 40,
+            height: 40,
+            borderRadius: '10px',
+            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
+          }}>
+            <Mic sx={{ color: '#000', fontSize: 20 }} />
+          </Box>
+          <Box>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#00ffff',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
+              }}
+            >
+              NEURAL RECORDER
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#888',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}
+            >
+              VOICE CAPTURE SYSTEM
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip 
+            label={recordingState === 'recording' ? 'REC' : 'STANDBY'} 
+            size="small" 
+            sx={{ 
+              background: recordingState === 'recording' ? 'rgba(255, 0, 128, 0.2)' : 'rgba(0, 255, 0, 0.2)',
+              color: recordingState === 'recording' ? '#ff0080' : '#00ff00',
+              border: recordingState === 'recording' ? '1px solid #ff0080' : '1px solid #00ff00',
+              fontWeight: 700
+            }} 
+          />
+        </Box>
+      </Box>
       
       {/* 디버깅 정보 */}
       <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
@@ -513,33 +569,58 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <Button
                   variant="contained"
-                  color="success"
                   size="large"
                   startIcon={<Save />}
                   onClick={saveRecording}
-                  sx={{ minWidth: 120 }}
+                  sx={{ 
+                    minWidth: 120,
+                    background: 'linear-gradient(45deg, #00ff00, #00cc00)',
+                    border: '1px solid #00ff00',
+                    color: '#000',
+                    fontWeight: 700,
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #00ff00, #00ff80)',
+                      boxShadow: '0 0 20px rgba(0, 255, 0, 0.5)'
+                    }
+                  }}
                 >
-                  저장하기
+                  SAVE
                 </Button>
                 <Button
                   variant="outlined"
-                  color="primary"
                   size="large"
                   startIcon={<Mic />}
                   onClick={retakeRecording}
-                  sx={{ minWidth: 120 }}
+                  sx={{ 
+                    minWidth: 120,
+                    border: '1px solid #00ffff',
+                    color: '#00ffff',
+                    '&:hover': {
+                      border: '1px solid #00ffff',
+                      background: 'rgba(0, 255, 255, 0.1)',
+                      boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
+                    }
+                  }}
                 >
-                  다시 녹음
+                  RETRY RECORD
                 </Button>
                 <Button
                   variant="outlined"
-                  color="error"
                   size="large"
                   startIcon={<Delete />}
                   onClick={deleteRecording}
-                  sx={{ minWidth: 120 }}
+                  sx={{ 
+                    minWidth: 120,
+                    border: '1px solid #ff0080',
+                    color: '#ff0080',
+                    '&:hover': {
+                      border: '1px solid #ff0080',
+                      background: 'rgba(255, 0, 128, 0.1)',
+                      boxShadow: '0 0 15px rgba(255, 0, 128, 0.3)'
+                    }
+                  }}
                 >
-                  삭제하기
+                  DELETE
                 </Button>
               </Box>
             </>

@@ -1,9 +1,40 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { copyFileSync, mkdirSync } from 'fs'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'copy-phaser',
+      buildStart() {
+        // Phaser 파일을 public으로 복사
+        try {
+          mkdirSync('public/assets/js', { recursive: true })
+          copyFileSync(
+            'node_modules/phaser/build/phaser.min.js',
+            'public/assets/js/phaser.min.js'
+          )
+        } catch (error) {
+          console.warn('Phaser 복사 실패:', error)
+        }
+      }
+    },
+    {
+      name: 'copy-game-assets',
+      buildStart() {
+        // 게임 에셋들을 public으로 복사
+        try {
+          mkdirSync('public/assets/images', { recursive: true })
+          // 이미 복사된 파일들이 있으므로 건너뜀
+          console.log('게임 에셋 파일들이 이미 복사되어 있습니다.')
+        } catch (error) {
+          console.warn('게임 에셋 복사 실패:', error)
+        }
+      }
+    }
+  ],
   server: {
     hmr: {
       overlay: false

@@ -69,38 +69,72 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="relative w-full h-[800px]">
+    <div style={{
+      position: 'relative',
+      width: '100%',
+      height: '800px',
+      fontFamily: 'neon, monospace'
+    }}>
       {/* 닫기 버튼 */}
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-50 w-10 h-10 bg-gray-800 hover:bg-gray-700 text-white rounded-full flex items-center justify-center transition-colors duration-200 shadow-lg"
           style={{
-            background: 'linear-gradient(135deg, #374151 0%, #1f2937 100%)',
-            border: '2px solid #4b5563',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            zIndex: 50,
+            width: '40px',
+            height: '40px',
+            background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)',
+            border: '2px solid rgba(251, 66, 212, 0.6)',
+            borderRadius: '50%',
+            color: '#000',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 0 20px rgba(251, 66, 212, 0.4)',
+            fontSize: '18px',
+            fontWeight: 'bold'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #4b5563 0%, #374151 100%)';
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 1) 0%, rgba(66, 253, 235, 1) 100%)';
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.boxShadow = '0 0 30px rgba(251, 66, 212, 0.6)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #374151 0%, #1f2937 100%)';
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)';
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(251, 66, 212, 0.4)';
           }}
         >
-          <span className="text-lg font-bold">×</span>
+          ×
         </button>
       )}
       {/* 커버플로우 컨테이너 */}
       <div 
-        className="relative h-[700px] w-[80%] mx-auto overflow-hidden flex justify-center items-center rounded-2xl z-10"
         style={{
+          position: 'relative',
+          height: '700px',
+          width: '80%',
+          margin: '0 auto',
+          overflow: 'hidden',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderRadius: '20px',
+          zIndex: 10,
           perspective: '1200px',
           perspectiveOrigin: 'center center',
           background: `
-            radial-gradient(ellipse at center, rgba(139, 92, 246, 0.05) 0%, transparent 70%),
-            radial-gradient(ellipse at 20% 80%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
-            radial-gradient(ellipse at 80% 20%, rgba(34, 197, 94, 0.03) 0%, transparent 50%)
-          `
+            radial-gradient(ellipse at center, rgba(251, 66, 212, 0.05) 0%, transparent 70%),
+            radial-gradient(ellipse at 20% 80%, rgba(66, 253, 235, 0.03) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 20%, rgba(251, 66, 212, 0.03) 0%, transparent 50%)
+          `,
+          border: '2px solid rgba(66, 253, 235, 0.2)',
+          boxShadow: '0 0 30px rgba(66, 253, 235, 0.1)'
         }}
       >
         {/* 카드들 */}
@@ -188,8 +222,88 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
         })}
       </div>
 
+      {/* 사이버펑크 네비게이션 버튼들 */}
+      <button
+        onClick={goToPrevious}
+        disabled={isAnimating}
+        style={{
+          position: 'absolute',
+          left: '20px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '60px',
+          height: '60px',
+          background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)',
+          border: '2px solid rgba(251, 66, 212, 0.6)',
+          borderRadius: '50%',
+          color: '#000',
+          fontSize: '24px',
+          fontWeight: 'bold',
+          cursor: isAnimating ? 'not-allowed' : 'pointer',
+          transition: 'all 0.3s ease',
+          boxShadow: '0 0 20px rgba(251, 66, 212, 0.4)',
+          opacity: isAnimating ? 0.5 : 1,
+          zIndex: 20
+        }}
+        onMouseEnter={(e) => {
+          if (!isAnimating) {
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 1) 0%, rgba(66, 253, 235, 1) 100%)';
+            e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+            e.currentTarget.style.boxShadow = '0 0 30px rgba(251, 66, 212, 0.6)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isAnimating) {
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)';
+            e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(251, 66, 212, 0.4)';
+          }
+        }}
+      >
+        ‹
+      </button>
 
-      {/* 아이팟 스타일 원형 컨트롤러 */}
+      <button
+        onClick={goToNext}
+        disabled={isAnimating}
+        style={{
+          position: 'absolute',
+          right: '20px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '60px',
+          height: '60px',
+          background: 'linear-gradient(135deg, rgba(66, 253, 235, 0.8) 0%, rgba(251, 66, 212, 0.8) 100%)',
+          border: '2px solid rgba(66, 253, 235, 0.6)',
+          borderRadius: '50%',
+          color: '#000',
+          fontSize: '24px',
+          fontWeight: 'bold',
+          cursor: isAnimating ? 'not-allowed' : 'pointer',
+          transition: 'all 0.3s ease',
+          boxShadow: '0 0 20px rgba(66, 253, 235, 0.4)',
+          opacity: isAnimating ? 0.5 : 1,
+          zIndex: 20
+        }}
+        onMouseEnter={(e) => {
+          if (!isAnimating) {
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(66, 253, 235, 1) 0%, rgba(251, 66, 212, 1) 100%)';
+            e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
+            e.currentTarget.style.boxShadow = '0 0 30px rgba(66, 253, 235, 0.6)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isAnimating) {
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(66, 253, 235, 0.8) 0%, rgba(251, 66, 212, 0.8) 100%)';
+            e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(66, 253, 235, 0.4)';
+          }
+        }}
+      >
+        ›
+      </button>
+
+      {/* 사이버펑크 스타일 원형 컨트롤러 */}
       <div style={{
         position: 'absolute',
         bottom: '-20px',
@@ -201,11 +315,12 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
           position: 'relative',
           width: '160px',
           height: '160px',
-          background: 'linear-gradient(135deg, #2d3748 0%, #1a202c 100%)',
+          background: 'linear-gradient(135deg, rgba(30, 10, 20, 0.9) 0%, rgba(10, 5, 15, 0.9) 100%)',
           borderRadius: '50%',
-          border: '5px solid #4a5568',
-          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
-          cursor: 'pointer'
+          border: '3px solid rgba(251, 66, 212, 0.6)',
+          boxShadow: '0 0 30px rgba(251, 66, 212, 0.3), 0 20px 50px rgba(0, 0, 0, 0.6)',
+          cursor: 'pointer',
+          backdropFilter: 'blur(10px)'
         }}>
           {/* 중앙 재생 버튼 */}
           <div style={{
@@ -215,31 +330,42 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
             transform: 'translate(-50%, -50%)',
             width: '80px',
             height: '80px',
-            background: 'linear-gradient(135deg, #4a5568 0%, #2d3748 100%)',
+            background: 'linear-gradient(135deg, rgba(66, 253, 235, 0.8) 0%, rgba(251, 66, 212, 0.8) 100%)',
             borderRadius: '50%',
-            border: '4px solid #718096',
+            border: '3px solid rgba(66, 253, 235, 0.6)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            boxShadow: '0 0 20px rgba(66, 253, 235, 0.4)'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #718096 0%, #4a5568 100%)';
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(66, 253, 235, 1) 0%, rgba(251, 66, 212, 1) 100%)';
+            e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)';
+            e.currentTarget.style.boxShadow = '0 0 30px rgba(66, 253, 235, 0.6)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #4a5568 0%, #2d3748 100%)';
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(66, 253, 235, 0.8) 0%, rgba(251, 66, 212, 0.8) 100%)';
+            e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(66, 253, 235, 0.4)';
           }}>
             <div style={{
               width: '60px',
               height: '60px',
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+              background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.9) 0%, rgba(66, 253, 235, 0.9) 100%)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              boxShadow: '0 0 15px rgba(251, 66, 212, 0.5)'
             }}>
-              <span style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>♪</span>
+              <span style={{ 
+                color: '#000', 
+                fontSize: '24px', 
+                fontWeight: 'bold',
+                textShadow: '0 0 10px rgba(255, 255, 255, 0.8)'
+              }}>♪</span>
             </div>
           </div>
           
