@@ -8,7 +8,7 @@ interface VolumeVisualizerProps {
 }
 
 // GLB 모델 컴포넌트
-function SpeakerModel({ isActive, intensity, color }: { isActive: boolean; intensity: number; color: string }) {
+function SpeakerModel({ intensity }: { intensity: number }) {
   const { scene } = useGLTF('/models/speaker1.glb');
   const meshRef = useRef<THREE.Group>(null);
 
@@ -28,7 +28,8 @@ function SpeakerModel({ isActive, intensity, color }: { isActive: boolean; inten
 }
 
 const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
-  const [isActive, setIsActive] = useState(false);
+  // isActive 상태 제거 (UI에 미사용)
+  const [, setIsActive] = useState(false);
   const [volume, setVolume] = useState(0);
   
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -49,7 +50,8 @@ const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
       
       streamRef.current = stream;
       
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextCtor = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+      const audioContext = new (AudioContextCtor as typeof AudioContext)();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       
@@ -128,14 +130,8 @@ const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
   }, [isRecording, startMicrophone, cleanupResources]);
 
   const volumeIntensity = volume / 100;
-  const getColorPalette = (vol: number) => {
-    if (vol > 80) return '#ff0080';
-    if (vol > 60) return '#ff4081';
-    if (vol > 40) return '#ffff00';
-    if (vol > 20) return '#00ffff';
-    return '#00ff00';
-  };
-  const sphereColor = getColorPalette(volume);
+  // getColorPalette 제거 (미사용)
+  // 색상은 현재 화면 표시 요소에 사용하지 않으므로 계산 생략
 
   return (
     <div style={{
@@ -150,15 +146,18 @@ const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
         position: 'fixed', // fixed로 변경하여 최상위 레이어
         top: '50%', // 원래 위치로 복원
         left: '50%',
-        width: '100%',
-        height: '100%',
-        transform: `translate(-50%, -50%) scale(${1 + volumeIntensity * 0.6})`,
+        width: '150%', // Canvas 크기 확대 (스피커 잘림 방지)
+        height: '150%', // Canvas 크기 확대 (스피커 잘림 방지)
+        transform: `translate(-50%, -50%) scale(${Math.min(1 + volumeIntensity * 0.6, 1.8)})`, // 최대 스케일 제한
         transition: 'transform 0.3s ease',
         zIndex: 9999, // 최상위 레이어
         pointerEvents: 'none' // 마우스 이벤트 차단하지 않음
       }}>
         <Canvas
-          camera={{ position: [0, 0, 5], fov: 60 }}
+          camera={{ 
+            position: [0, 0, 6], // 카메라를 더 뒤로 이동
+            fov: 75 // 시야각 확대
+          }}
           style={{ width: '100%', height: '100%' }}
           gl={{ alpha: true, antialias: true }}
           onCreated={({ gl }) => {
@@ -176,58 +175,15 @@ const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
           <pointLight position={[3, 3, 3]} color="#00ff00" intensity={0.8} />
           
           <SpeakerModel 
-            isActive={isActive}
             intensity={volumeIntensity}
-            color={sphereColor}
           />
           
           <OrbitControls enablePan={false} enableZoom={true} enableRotate={true} />
         </Canvas>
       </div>
       
-      {/* 볼륨 정보 - div 카드 아래쪽 */}
-      <div style={{
-        position: 'absolute',
-        top: '120%', // div 카드 아래쪽
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'rgba(0, 0, 0, 0.9)',
-        border: '2px solid #ff0080',
-        borderRadius: '15px',
-        padding: '20px',
-        zIndex: 10000,
-        minWidth: '300px',
-        textAlign: 'center',
-        boxShadow: '0 0 30px rgba(255, 0, 128, 0.5)',
-        marginTop: '20px'
-      }}>
-        <div style={{
-          fontSize: '2.5rem',
-          fontWeight: 'bold',
-          color: sphereColor,
-          textShadow: `0 0 20px ${sphereColor}`,
-          fontFamily: 'monospace',
-          marginBottom: '10px'
-        }}>
-          {Math.round(volume)}%
-        </div>
-        <div style={{
-          fontSize: '1.2rem',
-          color: '#00ff00',
-          textShadow: '0 0 10px #00ff00',
-          fontFamily: 'monospace',
-          marginBottom: '5px'
-        }}>
-          VOLUME LEVEL
-        </div>
-        <div style={{
-          fontSize: '0.9rem',
-          color: '#ff0080',
-          fontFamily: 'monospace'
-        }}>
-          {isActive ? 'VOLUME DETECTED' : 'STANDBY'}
-        </div>
-      </div>
+      {/* 3D 파티클 및 텍스트 정보 숨김 */}
+      <div style={{ display: 'none' }} />
     </div>
   );
 };

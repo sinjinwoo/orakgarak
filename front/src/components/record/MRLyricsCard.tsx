@@ -1,516 +1,442 @@
-/**
- * MRLyricsCard - 완전 순수 HTML/CSS MR/가사 카드 컴포넌트
- * 카드 크기에 맞춰 최적화된 레이아웃
- */
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState, useCallback } from 'react';
 
-import React, { useState } from 'react';
-
-interface MRLyricsCardProps {
-  currentSong?: {
-    id: string;
-    title: string;
-    artist: string;
-    genre: string;
-    duration: string;
-  };
-  onPlayPause?: () => void;
-  isPlaying?: boolean;
-  currentTime?: number;
-  duration?: number;
-  volume?: number;
-  onVolumeChange?: (volume: number) => void;
-}
-
-// 곡별 가사 데이터베이스
-const lyricsDatabase: { [key: string]: { time: number; text: string }[] } = {
-  '1': [ // NEURAL DANCE
-    { time: 0, text: "Welcome to the cyber world" },
-    { time: 5, text: "Where neon lights shine bright" },
-    { time: 10, text: "Digital dreams come alive" },
-    { time: 15, text: "In this electric night" },
-    { time: 20, text: "Neural pathways connect" },
-    { time: 25, text: "Through the matrix we flow" },
-    { time: 30, text: "Cyberpunk reality" },
-    { time: 35, text: "Where the future glows" },
-    { time: 40, text: "Electric pulse in my veins" },
-    { time: 45, text: "Technology runs through my mind" },
-    { time: 50, text: "In this digital domain" },
-    { time: 55, text: "True freedom we find" }
-  ],
-  '2': [ // Dynamite
-    { time: 0, text: "Cause ah-ah, I'm in the stars tonight" },
-    { time: 5, text: "So watch me bring the fire and set the night alight" },
-    { time: 10, text: "Shoes on, get up in the morn'" },
-    { time: 15, text: "Cup of milk, let's rock and roll" },
-    { time: 20, text: "King Kong, kick the drum" },
-    { time: 25, text: "Rolling on like a Rolling Stone" }
-  ],
-  '3': [ // Butter
-    { time: 0, text: "Smooth like butter, like a criminal undercover" },
-    { time: 5, text: "Gon' pop like trouble breaking into your heart like that" },
-    { time: 10, text: "Cool shade, stunner, yeah, I owe it all to my mother" },
-    { time: 15, text: "Hot like summer, yeah, I'm making you sweat like that" }
-  ]
+export type YouTubeMRPlayerHandle = {
+  play: () => void;
+  pause: () => void;
+  seekTo: (seconds: number) => void;
+  setVolume: (percent: number) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  isReady: () => boolean;
 };
 
-const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
-  currentSong = {
-    id: '1',
-    title: 'NEURAL DANCE',
-    artist: 'CYBER COLLECTIVE',
-    genre: 'Cyberpunk',
-    duration: '3:00'
-  },
-  onPlayPause,
-  isPlaying = false,
-  currentTime = 0,
-  duration = 180,
-  volume = 0.7,
-  onVolumeChange
-}) => {
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+interface YouTubeMRPlayerProps {
+  videoId: string;
+  startSeconds?: number;
+  volumePercent?: number; // 0-100
+  playing?: boolean;
+  onReady?: () => void;
+  onError?: (error: any) => void;
+  onStateChange?: (state: number) => void;
+}
 
-  // 현재 곡의 가사 가져오기
-  const currentLyrics = lyricsDatabase[currentSong.id] || lyricsDatabase['1'];
+type YTPlayer = {
+  playVideo: () => void;
+  pauseVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  setVolume: (percent: number) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  mute: () => void;
+  unMute: () => void;
+  getPlayerState: () => number;
+  getIframe?: () => HTMLIFrameElement;
+  destroy?: () => void;
+};
+
+// YouTube Player States
+const YTPlayerState = {
+  UNSTARTED: -1,
+  ENDED: 0,
+  PLAYING: 1,
+  PAUSED: 2,
+  BUFFERING: 3,
+  CUED: 5
+};
+
+declare global {
+  interface Window {
+    YT?: { 
+      Player: new (el: Element, opts: unknown) => YTPlayer;
+      PlayerState: typeof YTPlayerState;
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+const loadYouTubeAPI = (): Promise<void> => {
+  if (window.YT && window.YT.Player) return Promise.resolve();
   
-  const filteredLyrics = currentLyrics.filter(lyric => 
-    lyric.text.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  return new Promise<void>((resolve, reject) => {
+    // 이미 스크립트가 로딩 중인지 확인
+    const existing = document.querySelector('script[src="https://www.youtube.com/iframe_api"]');
+    
+    if (existing) {
+      // 이미 로드된 경우
+      if (window.YT && window.YT.Player) {
+        resolve();
+        return;
+      }
+      
+      // 로딩 중인 경우 기다림
+      const checkInterval = setInterval(() => {
+        if (window.YT && window.YT.Player) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+      
+      // 10초 후 타임아웃
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        reject(new Error('YouTube API loading timeout'));
+      }, 10000);
+      
+      return;
+    }
 
-  const handleFlip = () => {
-    setIsFlipped(!isFlipped);
-  };
+    // 새로 로드
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.onerror = () => reject(new Error('Failed to load YouTube API'));
+    
+    const originalCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      originalCallback?.();
+      resolve();
+    };
+    
+    document.body.appendChild(tag);
+  });
+};
+
+const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(({
+  videoId,
+  startSeconds = 0,
+  volumePercent = 70,
+  playing = false,
+  onReady,
+  onError,
+  onStateChange
+}, ref) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<YTPlayer | null>(null);
+  const [ready, setReady] = useState(false);
+  const [apiLoaded, setApiLoaded] = useState(false);
+  const [currentVideoId, setCurrentVideoId] = useState(videoId);
+
+  // 플레이어 준비 완료 콜백
+  const handleReady = useCallback(() => {
+    console.log('YouTube MR Player ready');
+    setReady(true);
+    onReady?.();
+  }, [onReady]);
+
+  // 에러 콜백
+  const handleError = useCallback((error: any) => {
+    console.error('YouTube MR Player error:', error);
+    setReady(false);
+    onError?.(error);
+  }, [onError]);
+
+  // 상태 변경 콜백
+  const handleStateChange = useCallback((event: any) => {
+    const state = event.data;
+    console.log('YouTube MR Player state changed:', state);
+    onStateChange?.(state);
+    
+    // 자동재생 정책 우회를 위한 추가 처리
+    if (state === YTPlayerState.CUED && playing) {
+      // 비디오가 큐되고 재생 요청이 있으면 재생 시도
+      setTimeout(() => {
+        if (playerRef.current && ready) {
+          try {
+            playerRef.current.playVideo();
+          } catch (err) {
+            console.warn('Auto-play failed:', err);
+          }
+        }
+      }, 100);
+    }
+  }, [onStateChange, playing, ready]);
+
+  // 플레이어 제어 메서드들
+  useImperativeHandle(ref, () => ({
+    play: () => {
+      if (playerRef.current && ready) {
+        try {
+          playerRef.current.playVideo();
+          console.log('YouTube MR play command executed');
+        } catch (error) {
+          console.error('Play error:', error);
+          handleError(error);
+        }
+      }
+    },
+    pause: () => {
+      if (playerRef.current && ready) {
+        try {
+          playerRef.current.pauseVideo();
+          console.log('YouTube MR pause command executed');
+        } catch (error) {
+          console.error('Pause error:', error);
+          handleError(error);
+        }
+      }
+    },
+    seekTo: (seconds: number) => {
+      if (playerRef.current && ready) {
+        try {
+          const safeSeconds = Math.max(0, Math.floor(seconds));
+          playerRef.current.seekTo(safeSeconds, true);
+          console.log(`YouTube MR seek to ${safeSeconds}s`);
+        } catch (error) {
+          console.error('Seek error:', error);
+          handleError(error);
+        }
+      }
+    },
+    setVolume: (percent: number) => {
+      if (playerRef.current && ready) {
+        try {
+          const safeVolume = Math.max(0, Math.min(100, Math.round(percent)));
+          playerRef.current.setVolume(safeVolume);
+          if (safeVolume > 0) {
+            playerRef.current.unMute();
+          }
+          console.log(`YouTube MR volume set to ${safeVolume}%`);
+        } catch (error) {
+          console.error('Volume error:', error);
+          handleError(error);
+        }
+      }
+    },
+    getCurrentTime: () => {
+      if (playerRef.current && ready) {
+        try {
+          return playerRef.current.getCurrentTime() ?? 0;
+        } catch (error) {
+          console.error('getCurrentTime error:', error);
+          return 0;
+        }
+      }
+      return 0;
+    },
+    getDuration: () => {
+      if (playerRef.current && ready) {
+        try {
+          return playerRef.current.getDuration() ?? 0;
+        } catch (error) {
+          console.error('getDuration error:', error);
+          return 0;
+        }
+      }
+      return 0;
+    },
+    isReady: () => ready
+  }), [ready]);
+
+  // YouTube API 로드
+  useEffect(() => {
+    let mounted = true;
+
+    loadYouTubeAPI()
+      .then(() => {
+        if (mounted) {
+          setApiLoaded(true);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load YouTube API:', error);
+        if (mounted) {
+          handleError(error);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [handleError]);
+
+  // 플레이어 생성/재생성
+  useEffect(() => {
+    if (!apiLoaded || !containerRef.current || !videoId) return;
+
+    let mounted = true;
+
+    // 기존 플레이어 정리
+    if (playerRef.current) {
+      try {
+        if (playerRef.current.destroy) {
+          playerRef.current.destroy();
+        }
+      } catch (error) {
+        console.warn('Player destroy error:', error);
+      }
+      playerRef.current = null;
+      setReady(false);
+    }
+
+    // 새 플레이어 생성
+    try {
+      playerRef.current = new window.YT!.Player(containerRef.current, {
+        videoId,
+        playerVars: {
+          start: Math.max(0, Math.floor(startSeconds)),
+          autoplay: playing ? 1 : 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          rel: 0,
+          iv_load_policy: 3,
+          playsinline: 1,
+          enablejsapi: 1,
+          origin: window.location.origin
+        },
+        events: {
+          onReady: (event: any) => {
+            if (!mounted) return;
+            
+            console.log('YouTube player onReady');
+            
+            // iframe 설정
+            const iframe = event.target?.getIframe?.();
+            if (iframe) {
+              iframe.setAttribute('allow', 'autoplay; encrypted-media');
+              iframe.setAttribute('tabindex', '-1');
+              iframe.style.width = '1px';
+              iframe.style.height = '1px';
+              iframe.style.position = 'absolute';
+              iframe.style.left = '-9999px';
+              iframe.style.top = '-9999px';
+              iframe.style.visibility = 'hidden';
+            }
+
+            // 초기 설정
+            const targetVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
+            
+            // 자동재생 정책 우회: mute → 볼륨 설정
+            if (event.target) {
+              event.target.mute();
+              
+              if (playing) {
+                // 사용자 인터랙션이 있었다고 가정하고 재생 시도
+                setTimeout(() => {
+                  if (mounted && event.target) {
+                    try {
+                      event.target.playVideo();
+                    } catch (err) {
+                      console.warn('Initial play failed:', err);
+                    }
+                  }
+                }, 100);
+              }
+              
+              // 볼륨 설정
+              setTimeout(() => {
+                if (mounted && event.target) {
+                  event.target.setVolume(targetVolume);
+                  if (targetVolume > 0) {
+                    event.target.unMute();
+                  }
+                }
+              }, 500);
+            }
+            
+            handleReady();
+          },
+          onStateChange: handleStateChange,
+          onError: (event: any) => {
+            if (!mounted) return;
+            console.error('YouTube player error:', event.data);
+            handleError(event.data);
+          }
+        }
+      });
+
+      setCurrentVideoId(videoId);
+
+    } catch (error) {
+      console.error('Player creation error:', error);
+      if (mounted) {
+        handleError(error);
+      }
+    }
+
+    return () => {
+      mounted = false;
+      if (playerRef.current) {
+        try {
+          if (playerRef.current.destroy) {
+            playerRef.current.destroy();
+          }
+        } catch (error) {
+          console.warn('Cleanup destroy error:', error);
+        }
+        playerRef.current = null;
+      }
+      setReady(false);
+    };
+  }, [apiLoaded, videoId, startSeconds, volumePercent, playing, handleReady, handleStateChange, handleError]);
+
+  // 비디오 변경 처리
+  useEffect(() => {
+    if (currentVideoId !== videoId && ready && playerRef.current) {
+      console.log(`Changing video from ${currentVideoId} to ${videoId}`);
+      // 비디오 변경 시 플레이어 재생성이 필요할 수 있음
+      setCurrentVideoId(videoId);
+      setReady(false);
+    }
+  }, [videoId, currentVideoId, ready]);
+
+  // 재생/일시정지 상태 동기화
+  useEffect(() => {
+    if (!ready || !playerRef.current) return;
+
+    try {
+      const currentState = playerRef.current.getPlayerState();
+      
+      if (playing && (currentState === YTPlayerState.PAUSED || currentState === YTPlayerState.CUED)) {
+        playerRef.current.playVideo();
+      } else if (!playing && currentState === YTPlayerState.PLAYING) {
+        playerRef.current.pauseVideo();
+      }
+    } catch (error) {
+      console.error('State sync error:', error);
+    }
+  }, [playing, ready]);
+
+  // 볼륨 동기화
+  useEffect(() => {
+    if (!ready || !playerRef.current) return;
+
+    try {
+      const targetVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
+      playerRef.current.setVolume(targetVolume);
+      
+      if (targetVolume > 0) {
+        playerRef.current.unMute();
+      } else {
+        playerRef.current.mute();
+      }
+    } catch (error) {
+      console.error('Volume sync error:', error);
+    }
+  }, [volumePercent, ready]);
 
   return (
     <div style={{ 
-      perspective: '1000px',
-      width: '100%',
-      height: '100%'
+      width: '1px', 
+      height: '1px', 
+      overflow: 'hidden',
+      position: 'absolute',
+      left: '-9999px',
+      top: '-9999px',
+      visibility: 'hidden',
+      pointerEvents: 'none'
     }}>
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        transformStyle: 'preserve-3d',
-        transition: 'transform 0.8s ease',
-        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-      }}>
-        
-        {/* MR 면 (앞면) */}
-        <div style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          backfaceVisibility: 'hidden',
-          background: 'rgba(0, 0, 0, 0.3)',
-          border: '1px solid rgba(0, 255, 255, 0.3)',
-          borderRadius: '15px',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          boxSizing: 'border-box',
-          overflow: 'hidden'
-        }}>
-          
-          {/* MR 플레이어 헤더 */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            width: '100%',
-            flexShrink: 0
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '6px',
-                background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px'
-              }}>
-                🎵
-              </div>
-              <div>
-                <h4 style={{ 
-                  color: '#00ffff',
-                  fontSize: '0.9rem',
-                  fontWeight: 'bold',
-                  margin: '0 0 2px 0'
-                }}>
-                  NEURAL PLAYER
-                </h4>
-                <p style={{ 
-                  color: '#888',
-                  fontSize: '0.6rem',
-                  margin: '0',
-                  textTransform: 'uppercase'
-                }}>
-                  AUDIO SYSTEM
-                </p>
-              </div>
-            </div>
-
-            <span style={{ 
-              background: isPlaying ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 255, 0, 0.2)',
-              color: isPlaying ? '#00ff00' : '#ffff00',
-              border: `1px solid ${isPlaying ? '#00ff00' : '#ffff00'}`,
-              padding: '3px 6px',
-              borderRadius: '8px',
-              fontSize: '0.6rem',
-              fontWeight: 'bold'
-            }}>
-              {isPlaying ? "PLAYING" : "STANDBY"}
-            </span>
-          </div>
-
-          {/* 곡 정보 */}
-          <div style={{ 
-            textAlign: 'center',
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <div style={{ 
-              background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-              width: '50px',
-              height: '50px',
-              borderRadius: '50%',
-              margin: '0 auto 12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px'
-            }}>
-              🎵
-            </div>
-            
-            <h3 style={{ 
-              color: '#fff',
-              fontSize: '1.1rem',
-              fontWeight: 'bold',
-              margin: '0 0 6px 0',
-              lineHeight: 1.2
-            }}>
-              {currentSong.title}
-            </h3>
-            
-            <h4 style={{ 
-              color: '#00ffff',
-              fontSize: '0.9rem',
-              margin: '0 0 4px 0'
-            }}>
-              {currentSong.artist}
-            </h4>
-            
-            <span style={{ 
-              background: 'rgba(255, 0, 128, 0.2)',
-              color: '#ff0080',
-              border: '1px solid #ff0080',
-              padding: '3px 6px',
-              borderRadius: '8px',
-              fontSize: '0.6rem'
-            }}>
-              {currentSong.genre}
-            </span>
-          </div>
-
-          {/* 플레이어 컨트롤 */}
-          <div style={{ 
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '12px',
-            width: '100%',
-            flexShrink: 0
-          }}>
-            <button
-              onClick={onPlayPause}
-              style={{
-                background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-                color: '#000',
-                width: '40px',
-                height: '40px',
-                border: 'none',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                fontSize: '18px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'transform 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              {isPlaying ? '⏸️' : '▶️'}
-            </button>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ color: '#00ffff', fontSize: '14px' }}>🔊</span>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={volume}
-                onChange={(e) => onVolumeChange?.(parseFloat(e.target.value))}
-                style={{
-                  width: '60px',
-                  height: '3px',
-                  background: 'rgba(0, 255, 255, 0.3)',
-                  borderRadius: '2px',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* 진행률 표시 */}
-          <div style={{ 
-            background: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '6px',
-            padding: '8px',
-            width: '100%',
-            flexShrink: 0
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '4px'
-            }}>
-              <span style={{ color: '#00ffff', fontSize: '0.6rem' }}>
-                {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
-              </span>
-              <span style={{ color: '#888', fontSize: '0.6rem' }}>
-                {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
-              </span>
-            </div>
-            <div style={{
-              width: '100%',
-              height: '3px',
-              background: 'rgba(0, 255, 255, 0.2)',
-              borderRadius: '2px',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                width: `${(currentTime / duration) * 100}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, #00ffff, #ff0080)',
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
-
-          {/* 뒤집기 버튼 */}
-          <button
-            onClick={handleFlip}
-            style={{
-              background: 'rgba(255, 0, 128, 0.2)',
-              color: '#ff0080',
-              border: '1px solid #ff0080',
-              cursor: 'pointer',
-              padding: '6px 12px',
-              borderRadius: '12px',
-              fontSize: '0.7rem',
-              fontWeight: 'bold',
-              transition: 'all 0.2s ease',
-              flexShrink: 0
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 0, 128, 0.3)';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 0, 128, 0.2)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            🔄 FLIP
-          </button>
-        </div>
-
-        {/* 가사 면 (뒤면) */}
-        <div style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          backfaceVisibility: 'hidden',
-          transform: 'rotateY(180deg)',
-          background: 'rgba(0, 0, 0, 0.3)',
-          border: '1px solid rgba(255, 0, 128, 0.3)',
-          borderRadius: '15px',
-          padding: '16px',
-          display: 'flex',
-          flexDirection: 'column',
-          boxSizing: 'border-box',
-          overflow: 'visible', // 스피커가 카드 밖으로 나올 수 있도록
-          zIndex: 10 // 카드 레이어 (스피커보다 낮게)
-        }}>
-          
-          {/* 가사 헤더 */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '12px',
-            flexShrink: 0
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: '24px',
-                height: '24px',
-                borderRadius: '6px',
-                background: 'linear-gradient(45deg, #ff0080, #00ffff)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px'
-              }}>
-                📝
-              </div>
-              <div>
-                <h4 style={{ 
-                  color: '#ff0080',
-                  fontSize: '0.9rem',
-                  fontWeight: 'bold',
-                  margin: '0 0 2px 0'
-                }}>
-                  NEURAL LYRICS
-                </h4>
-                <p style={{ 
-                  color: '#888',
-                  fontSize: '0.6rem',
-                  margin: '0',
-                  textTransform: 'uppercase'
-                }}>
-                  REAL-TIME SYNC
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#ff0080',
-                cursor: 'pointer',
-                padding: '4px',
-                fontSize: '14px'
-              }}
-            >
-              🔍
-            </button>
-          </div>
-
-          {/* 가사 검색 */}
-          {showSearch && (
-            <input
-              type="text"
-              placeholder="가사 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                border: '1px solid rgba(255, 0, 128, 0.3)',
-                borderRadius: '4px',
-                color: '#ff0080',
-                fontSize: '0.7rem',
-                outline: 'none',
-                marginBottom: '8px',
-                boxSizing: 'border-box',
-                flexShrink: 0
-              }}
-            />
-          )}
-
-          {/* 가사 목록 */}
-          <div style={{ 
-            flex: 1,
-            overflow: 'auto',
-            paddingRight: '4px',
-            minHeight: 0
-          }}>
-            {(searchQuery ? filteredLyrics : currentLyrics).map((lyric, index) => {
-              const isActive = Math.floor(currentTime) >= lyric.time && 
-                             Math.floor(currentTime) < (currentLyrics[index + 1]?.time || duration);
-              const isHighlighted = searchQuery && lyric.text.toLowerCase().includes(searchQuery.toLowerCase());
-              
-              return (
-                <div
-                  key={index}
-                  style={{
-                    padding: '4px 0',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <p style={{ 
-                    color: isActive ? '#ff0080' : isHighlighted ? '#00ffff' : '#fff',
-                    fontWeight: isActive ? 'bold' : 'normal',
-                    fontSize: '0.75rem',
-                    lineHeight: 1.3,
-                    margin: '0 0 2px 0'
-                  }}>
-                    {lyric.text}
-                  </p>
-                  <span style={{ 
-                    color: '#888',
-                    fontSize: '0.6rem'
-                  }}>
-                    {Math.floor(lyric.time / 60)}:{(lyric.time % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 뒤집기 버튼 */}
-          <button
-            onClick={handleFlip}
-            style={{
-              background: 'rgba(0, 255, 255, 0.2)',
-              color: '#00ffff',
-              border: '1px solid #00ffff',
-              cursor: 'pointer',
-              padding: '6px 12px',
-              borderRadius: '12px',
-              fontSize: '0.7rem',
-              fontWeight: 'bold',
-              transition: 'all 0.2s ease',
-              marginTop: '8px',
-              flexShrink: 0
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 255, 255, 0.3)';
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 255, 255, 0.2)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            🔄 FLIP
-          </button>
-        </div>
-      </div>
+      <div 
+        ref={containerRef} 
+        style={{ 
+          width: '1px', 
+          height: '1px' 
+        }} 
+      />
     </div>
   );
-};
+});
 
-export default MRLyricsCard;
+YouTubeMRPlayer.displayName = 'YouTubeMRPlayer';
+
+export default YouTubeMRPlayer;

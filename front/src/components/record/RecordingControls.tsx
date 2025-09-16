@@ -377,18 +377,106 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
           elevation={8}
           sx={{
             width: '90%',
-            maxWidth: 500,
-            p: 4,
+            maxWidth: 640,
+            p: 0,
             borderRadius: 3,
             outline: 'none',
+            position: 'relative',
+            overflow: 'hidden',
+            background: `linear-gradient(135deg, rgba(7,9,12,0.95) 0%, rgba(14,16,22,0.96) 60%, rgba(7,9,12,0.95) 100%)`,
+            border: '1px solid rgba(0, 255, 255, 0.25)',
+            boxShadow: `0 0 30px rgba(0,255,255,0.15), 0 0 60px rgba(255,0,128,0.1)`,
           }}
         >
+          {/* 배경 네온 그리드 */}
+          <Box sx={{
+            position: 'absolute',
+            inset: 0,
+            opacity: 0.15,
+            backgroundImage: `
+              linear-gradient(0deg, rgba(0,255,255,0.3) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,255,255,0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '40px 40px',
+            maskImage: 'radial-gradient(circle at 50% 20%, rgba(0,0,0,0.9), rgba(0,0,0,1))',
+            pointerEvents: 'none',
+            animation: 'gridScroll 18s linear infinite',
+          }} />
+          {/* 홀로그램 스캔 라인 */}
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                left: '-100%',
+                top: 0,
+                width: '40%',
+                height: '100%',
+                background: 'linear-gradient(45deg, transparent 45%, rgba(0,255,255,0.12) 50%, transparent 55%)',
+                animation: 'hologramScan 3.2s linear infinite',
+              },
+            }}
+          />
+
           {/* 모달 헤더 */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-              녹음 미리보기
-            </Typography>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 3,
+            py: 2.5,
+            borderBottom: '1px solid rgba(0,255,255,0.25)',
+            background: 'linear-gradient(180deg, rgba(0,255,255,0.08), rgba(0,255,255,0))',
+          }}>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, #00ffff, rgba(0,255,255,0.2))',
+                boxShadow: '0 0 12px #00ffff',
+              }} />
+              <Typography
+                id="recording-preview-modal"
+                variant="h6"
+                sx={{
+                  m: 0,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 18px rgba(0,255,255,0.35)',
+                }}
+              >
+                RECORDING PREVIEW
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography variant="caption" sx={{ letterSpacing: 1, color: 'rgba(0,255,255,0.7)' }}>CYBER STUDIO</Typography>
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowModal(false)}
+                size="small"
+                sx={{
+                  ml: 1,
+                  borderRadius: 1.5,
+                  color: '#00ffff',
+                  border: '1px solid rgba(0,255,255,0.35)',
+                  bgcolor: 'rgba(0,255,255,0.08)',
+                  '&:hover': { bgcolor: 'rgba(0,255,255,0.15)' }
+                }}
+              >
+                ✕
+              </IconButton>
+            </Box>
           </Box>
+
+          {/* 본문 */}
+          <Box sx={{ p: 3 }}>
 
           {/* 오디오 플레이어 */}
           {audioBlob && (
@@ -405,42 +493,87 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
 
               {/* 재생 컨트롤 */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                {/* EQ 장식 */}
+                <Box sx={{ display: 'flex', gap: 0.6, mr: 0.5 }}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Box key={i} sx={{
+                      width: 4,
+                      height: 18 + (i % 3) * 6,
+                      borderRadius: 1,
+                      background: 'linear-gradient(180deg, #00ffff, #ff0080)',
+                      boxShadow: '0 0 8px rgba(0,255,255,0.6)',
+                      animation: 'eqBar 1s ease-in-out infinite',
+                      animationDelay: `${i * 0.08}s`
+                    }} />
+                  ))}
+                </Box>
                 <IconButton
                   onClick={togglePlayPause}
                   size="large"
                   sx={{ 
-                    bgcolor: 'primary.main', 
-                    color: 'white',
-                    '&:hover': { bgcolor: 'primary.dark' }
+                    width: 56,
+                    height: 56,
+                    borderRadius: '14px',
+                    bgcolor: 'rgba(0,255,255,0.12)', 
+                    color: '#00ffff',
+                    border: '1px solid rgba(0,255,255,0.35)',
+                    boxShadow: '0 0 16px rgba(0,255,255,0.25)',
+                    backdropFilter: 'blur(6px)',
+                    '&:hover': { bgcolor: 'rgba(0,255,255,0.2)' }
                   }}
                 >
                   {isPlaying ? <Pause /> : <PlayArrow />}
                 </IconButton>
 
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="rgba(255,255,255,0.7)" sx={{ mb: 1, fontFamily: 'monospace' }}>
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </Typography>
                   <Slider
                     value={currentTime}
                     max={duration || 0}
                     onChange={handleSliderChange}
-                    sx={{ color: 'primary.main' }}
+                    sx={{ 
+                      color: '#00ffff',
+                      height: 8,
+                      '& .MuiSlider-rail': {
+                        opacity: 0.3,
+                        background: 'linear-gradient(90deg, rgba(0,255,255,0.2), rgba(255,0,128,0.2))',
+                        height: 8,
+                      },
+                      '& .MuiSlider-track': {
+                        border: 'none',
+                        background: 'linear-gradient(90deg, #00ffff, #ff0080)',
+                        boxShadow: '0 0 12px rgba(0,255,255,0.6)',
+                      },
+                      '& .MuiSlider-thumb': {
+                        width: 18,
+                        height: 18,
+                        backgroundColor: '#0b0f14',
+                        border: '2px solid #00ffff',
+                        boxShadow: '0 0 12px rgba(0,255,255,0.6)',
+                        '&:hover, &.Mui-focusVisible': {
+                          boxShadow: '0 0 16px rgba(0,255,255,0.9)'
+                        }
+                      }
+                    }}
                   />
                 </Box>
               </Box>
 
               {/* 파일 정보 */}
-              <Paper elevation={1} sx={{ p: 2, mb: 3, backgroundColor: 'grey.50' }}>
-                <Typography variant="body2" color="text.secondary">
-                  📁 파일 크기: {(audioBlob.size / 1024 / 1024).toFixed(2)} MB
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  ⏱️ 재생 시간: {formatTime(recordingTime)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  🎵 형식: {audioBlob.type}
-                </Typography>
+              <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    📁 파일 크기: {(audioBlob.size / 1024 / 1024).toFixed(2)} MB
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    ⏱️ 재생 시간: {formatTime(recordingTime)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    🎵 형식: {audioBlob.type}
+                  </Typography>
+                </Box>
               </Paper>
 
               {/* 액션 버튼들 */}
@@ -452,13 +585,14 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
                   onClick={saveRecording}
                   sx={{ 
                     minWidth: 120,
-                    background: 'linear-gradient(45deg, #00ff00, #00cc00)',
-                    border: '1px solid #00ff00',
+                    background: 'linear-gradient(45deg, #00ff88, #00cc66)',
+                    border: '1px solid #00ffaa',
                     color: '#000',
-                    fontWeight: 700,
+                    fontWeight: 800,
+                    letterSpacing: 1,
                     '&:hover': {
-                      background: 'linear-gradient(45deg, #00ff00, #00ff80)',
-                      boxShadow: '0 0 20px rgba(0, 255, 0, 0.5)'
+                      background: 'linear-gradient(45deg, #00ffaa, #00e695)',
+                      boxShadow: '0 0 20px rgba(0, 255, 170, 0.5)'
                     }
                   }}
                 >
@@ -473,10 +607,12 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
                     minWidth: 120,
                     border: '1px solid #00ffff',
                     color: '#00ffff',
+                    fontWeight: 800,
+                    letterSpacing: 1,
                     '&:hover': {
                       border: '1px solid #00ffff',
-                      background: 'rgba(0, 255, 255, 0.1)',
-                      boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
+                      background: 'rgba(0, 255, 255, 0.12)',
+                      boxShadow: '0 0 15px rgba(0, 255, 255, 0.35)'
                     }
                   }}
                 >
@@ -491,10 +627,12 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
                     minWidth: 120,
                     border: '1px solid #ff0080',
                     color: '#ff0080',
+                    fontWeight: 800,
+                    letterSpacing: 1,
                     '&:hover': {
                       border: '1px solid #ff0080',
-                      background: 'rgba(255, 0, 128, 0.1)',
-                      boxShadow: '0 0 15px rgba(255, 0, 128, 0.3)'
+                      background: 'rgba(255, 0, 128, 0.12)',
+                      boxShadow: '0 0 15px rgba(255, 0, 128, 0.35)'
                     }
                   }}
                 >
@@ -503,6 +641,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
               </Box>
             </>
           )}
+          </Box>
         </Paper>
       </Modal>
 
@@ -529,6 +668,18 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
+          }
+          @keyframes hologramScan {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(260%); }
+          }
+          @keyframes eqBar {
+            0%, 100% { transform: scaleY(0.6); opacity: 0.7; }
+            50% { transform: scaleY(1.2); opacity: 1; }
+          }
+          @keyframes gridScroll {
+            0% { background-position: 0 0, 0 0; }
+            100% { background-position: 0 40px, 40px 0; }
           }
         `}
       </style>

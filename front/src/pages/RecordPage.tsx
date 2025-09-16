@@ -18,10 +18,108 @@ const RecordPageContent: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration] = useState(180);
+  const [duration, setDuration] = useState(180);
   const [volume, setVolume] = useState(0.7);
   
   const { currentPlayingSong, isPlaying, setPlayingState } = useReservation();
+
+  // CSS 애니메이션 스타일 추가
+  const cyberpunkStyles = `
+    @keyframes hologramScan {
+      0% { transform: translateX(-100%) skewX(-15deg); }
+      100% { transform: translateX(200%) skewX(-15deg); }
+    }
+    
+    @keyframes pulseGlow {
+      0% { 
+        text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor, 0 0 80px currentColor;
+        transform: perspective(500px) rotateX(15deg) scale(1);
+      }
+      100% { 
+        text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor, 0 0 120px currentColor;
+        transform: perspective(500px) rotateX(15deg) scale(1.05);
+      }
+    }
+    
+    @keyframes frequencyPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    
+    @keyframes neonScan {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    
+    @keyframes volumePulse {
+      0%, 100% { 
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 0, 128, 0.5);
+        transform: scaleY(1);
+      }
+      50% { 
+        box-shadow: 0 0 25px rgba(255, 255, 255, 1), 0 0 50px rgba(255, 0, 128, 0.8);
+        transform: scaleY(1.2);
+      }
+    }
+    
+    @keyframes particlePulse {
+      0%, 100% { 
+        transform: scale(1);
+        opacity: 0.6;
+      }
+      50% { 
+        transform: scale(1.2);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes corePulse {
+      0% { 
+        transform: translate(-50%, -50%) scale(1);
+        box-shadow: 0 0 20px currentColor;
+      }
+      100% { 
+        transform: translate(-50%, -50%) scale(1.1);
+        box-shadow: 0 0 40px currentColor;
+      }
+    }
+    
+    @keyframes ringRotate {
+      0% { transform: translate(-50%, -50%) rotate(0deg); }
+      100% { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+    
+    @keyframes particle3DPulse {
+      0%, 100% { 
+        transform: scale(1) rotateZ(0deg);
+        opacity: 0.7;
+      }
+      50% { 
+        transform: scale(1.3) rotateZ(180deg);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes core3DPulse {
+      0% { 
+        transform: translate3d(-50%, -50%, 0) scale(1) rotateX(0deg);
+        box-shadow: 0 0 25px currentColor;
+      }
+      100% { 
+        transform: translate3d(-50%, -50%, 0) scale(1.2) rotateX(360deg);
+        box-shadow: 0 0 50px currentColor;
+      }
+    }
+    
+    @keyframes ring3DRotate {
+      0% { 
+        transform: translate3d(-50%, -50%, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+      }
+      100% { 
+        transform: translate3d(-50%, -50%, 0) rotateX(360deg) rotateY(360deg) rotateZ(360deg);
+      }
+    }
+  `;
 
   // 녹음 상태 변경 핸들러
   const handleRecordingChange = (recording: boolean) => {
@@ -56,6 +154,17 @@ const RecordPageContent: React.FC = () => {
     setVolume(newVolume);
   };
 
+  // MRLyricsCard로부터 시간 업데이트를 수신
+  const handleTimeUpdateRequest = (seconds: number, dur?: number) => {
+    setCurrentTime(Math.max(0, Math.floor(seconds)));
+    if (dur && dur > 0) setDuration(Math.floor(dur));
+  };
+
+  // 사용자가 시크 요청했을 때(유튜브/로컬 공통)
+  const handleSeekRequest = (seconds: number) => {
+    setCurrentTime(Math.max(0, Math.floor(seconds)));
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -63,6 +172,8 @@ const RecordPageContent: React.FC = () => {
       padding: '20px',
       fontFamily: 'Arial, sans-serif'
     }}>
+      {/* 사이버펑크 애니메이션 스타일 */}
+      <style dangerouslySetInnerHTML={{ __html: cyberpunkStyles }} />
       
       {/* 메인 컨테이너 */}
       <div style={{
@@ -157,28 +268,40 @@ const RecordPageContent: React.FC = () => {
                     fontSize: '12px',
                     opacity: 0.7
                   }}>
-                    🎵 노래 검색
+
                   </div>
                 </div>
                 
-                {/* 뒷면: 피치 스피커 */}
-                <div style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
-                  background: 'rgba(26, 26, 26, 0.9)',
-                  border: '2px solid #00ffff',
-                  borderRadius: '15px',
-                  padding: '20px',
-                  boxShadow: '0 0 30px rgba(0, 255, 255, 0.4)',
-                  overflow: 'visible', // 스피커가 카드 밖으로 나올 수 있도록
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  zIndex: 10 // 카드 레이어 (스피커보다 낮게)
-                }}>
+                     {/* 뒷면: 피치 스피커 */}
+                     <div style={{
+                       position: 'absolute',
+                       width: '100%',
+                       height: '100%',
+                       backfaceVisibility: 'hidden',
+                       transform: 'rotateY(180deg)',
+                       background: 'linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(26, 26, 26, 0.9) 50%, rgba(0, 255, 255, 0.05) 100%), radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(0, 255, 255, 0.2) 0%, transparent 50%)',
+                       border: '2px solid #00ffff',
+                       borderRadius: '15px',
+                       padding: '20px',
+                       boxShadow: '0 0 30px rgba(0, 255, 255, 0.4), inset 0 0 50px rgba(0, 255, 255, 0.1)',
+                       overflow: 'visible', // 스피커가 카드 밖으로 나올 수 있도록
+                       display: 'flex',
+                       flexDirection: 'column',
+                       justifyContent: 'space-between',
+                       zIndex: 10, // 카드 레이어 (스피커보다 낮게)
+                       
+                     }}>
+                       {/* 홀로그램 스캔 라인 */}
+                       <div style={{
+                         position: 'absolute',
+                         top: 0,
+                         left: 0,
+                         right: 0,
+                         bottom: 0,
+                         background: 'linear-gradient(45deg, transparent 30%, rgba(0, 255, 255, 0.1) 50%, transparent 70%)',
+                         animation: 'hologramScan 3s linear infinite',
+                         pointerEvents: 'none'
+                       }} />
                   <PitchGraph isRecording={isRecording} />
                   <div style={{
                     textAlign: 'center',
@@ -187,7 +310,7 @@ const RecordPageContent: React.FC = () => {
                     fontSize: '12px',
                     opacity: 0.7
                   }}>
-                    🎤 피치 분석
+
                   </div>
                 </div>
               </div>
@@ -217,7 +340,10 @@ const RecordPageContent: React.FC = () => {
                   title: currentPlayingSong.title,
                   artist: currentPlayingSong.artist,
                   genre: currentPlayingSong.genre,
-                  duration: currentPlayingSong.duration
+                  duration: currentPlayingSong.duration,
+                  // youtubeId 전달 (있을 경우)
+                  // @ts-expect-error - 선택 필드를 명시적으로 넘김
+                  youtubeId: (currentPlayingSong as unknown as { youtubeId?: string }).youtubeId
                 } : {
                   id: '1',
                   title: 'NEURAL DANCE',
@@ -231,6 +357,8 @@ const RecordPageContent: React.FC = () => {
                 duration={duration}
                 volume={volume}
                 onVolumeChange={handleVolumeChange}
+                onTimeUpdateRequest={handleTimeUpdateRequest}
+                onSeekRequest={handleSeekRequest}
               />
             </div>
             
@@ -293,28 +421,40 @@ const RecordPageContent: React.FC = () => {
                     fontSize: '12px',
                     opacity: 0.7
                   }}>
-                    📋 예약 큐
+
                   </div>
                 </div>
                 
-                {/* 뒷면: 볼륨 스피커 */}
-                <div style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
-                  background: 'rgba(26, 26, 26, 0.9)',
-                  border: '2px solid #ff0080',
-                  borderRadius: '15px',
-                  padding: '20px',
-                  boxShadow: '0 0 30px rgba(255, 0, 128, 0.4)',
-                  overflow: 'visible', // 스피커가 카드 밖으로 나올 수 있도록
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  zIndex: 10 // 카드 레이어 (스피커보다 낮게)
-                }}>
+                     {/* 뒷면: 볼륨 스피커 */}
+                     <div style={{
+                       position: 'absolute',
+                       width: '100%',
+                       height: '100%',
+                       backfaceVisibility: 'hidden',
+                       transform: 'rotateY(180deg)',
+                       background: 'linear-gradient(135deg, rgba(255, 0, 128, 0.1) 0%, rgba(26, 26, 26, 0.9) 50%, rgba(255, 0, 128, 0.05) 100%), radial-gradient(circle at 20% 20%, rgba(255, 0, 128, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 0, 128, 0.2) 0%, transparent 50%)',
+                       border: '2px solid #ff0080',
+                       borderRadius: '15px',
+                       padding: '20px',
+                       boxShadow: '0 0 30px rgba(255, 0, 128, 0.4), inset 0 0 50px rgba(255, 0, 128, 0.1)',
+                       overflow: 'visible', // 스피커가 카드 밖으로 나올 수 있도록
+                       display: 'flex',
+                       flexDirection: 'column',
+                       justifyContent: 'space-between',
+                       zIndex: 10, // 카드 레이어 (스피커보다 낮게)
+                       
+                     }}>
+                       {/* 홀로그램 스캔 라인 */}
+                       <div style={{
+                         position: 'absolute',
+                         top: 0,
+                         left: 0,
+                         right: 0,
+                         bottom: 0,
+                         background: 'linear-gradient(45deg, transparent 30%, rgba(255, 0, 128, 0.1) 50%, transparent 70%)',
+                         animation: 'hologramScan 3s linear infinite',
+                         pointerEvents: 'none'
+                       }} />
                   <VolumeVisualizer isRecording={isRecording} />
                   <div style={{
                     textAlign: 'center',
@@ -323,7 +463,7 @@ const RecordPageContent: React.FC = () => {
                     fontSize: '12px',
                     opacity: 0.7
                   }}>
-                    🔊 볼륨 분석
+          
                   </div>
                 </div>
               </div>

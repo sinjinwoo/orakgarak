@@ -82,7 +82,7 @@ function frequencyToNote(frequency: number): { note: string; octave: number; cen
 }
 
 // GLB 모델 컴포넌트
-function SpeakerModel({ isActive, intensity, color }: { isActive: boolean; intensity: number; color: string }) {
+function SpeakerModel({ intensity }: { intensity: number }) {
   const { scene } = useGLTF('/models/speaker1.glb');
   const meshRef = useRef<THREE.Group>(null);
 
@@ -102,7 +102,6 @@ function SpeakerModel({ isActive, intensity, color }: { isActive: boolean; inten
 }
 
 const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
-  const [isActive, setIsActive] = useState(false);
   const [currentPitch, setCurrentPitch] = useState<PitchData | null>(null);
   
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -123,7 +122,8 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
       
       streamRef.current = stream;
       
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextCtor = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+      const audioContext = new (AudioContextCtor as typeof AudioContext)();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       
@@ -139,7 +139,7 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
       analyserRef.current = analyser;
       dataArrayRef.current = dataArray;
       
-      setIsActive(true);
+      // 활성 상태 플래그 제거
       
       const analyzePitch = () => {
         if (!analyserRef.current || !dataArrayRef.current || !audioContextRef.current) return;
@@ -158,7 +158,6 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
       
     } catch (error) {
       console.error('마이크 접근 실패:', error);
-      setIsActive(false);
     }
   }, []);
 
@@ -180,7 +179,7 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
     
     analyserRef.current = null;
     dataArrayRef.current = null;
-    setIsActive(false);
+    // 활성 상태 플래그 제거
   }, []);
 
   useEffect(() => {
@@ -197,10 +196,6 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
   }, [isRecording, startMicrophone, cleanupResources]);
 
   const pitchIntensity = currentPitch ? Math.min(1, currentPitch.frequency / 400) : 0;
-  const sphereColor = currentPitch ? 
-    (currentPitch.frequency > 300 ? '#ff0080' : 
-     currentPitch.frequency > 200 ? '#ff4081' : 
-     currentPitch.frequency > 100 ? '#00ffff' : '#00ff00') : '#333';
 
   return (
     <div style={{
@@ -212,18 +207,21 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
     }}>
       {/* GLB 모델 - 중앙 배치 */}
       <div style={{
-        position: 'fixed', // fixed로 변경하여 최상위 레이어
-        top: '50%', // 원래 위치로 복원
+        position: 'absolute',
+        top: '50%',
         left: '50%',
-        width: '100%',
-        height: '100%',
-        transform: `translate(-50%, -50%) scale(${1 + pitchIntensity * 0.6})`,
+        width: '600px', // 고정 크기로 변경
+        height: '600px', // 고정 크기로 변경
+        transform: `translate(-50%, -50%) scale(${Math.min(1 + pitchIntensity * 0.6, 1.8)})`,
         transition: 'transform 0.3s ease',
-        zIndex: 9999, // 최상위 레이어
-        pointerEvents: 'none' // 마우스 이벤트 차단하지 않음
+        zIndex: 9999,
+        pointerEvents: 'none'
       }}>
         <Canvas
-          camera={{ position: [0, 0, 5], fov: 60 }}
+          camera={{ 
+            position: [0, 0, 6],
+            fov: 75
+          }}
           style={{ width: '100%', height: '100%' }}
           gl={{ alpha: true, antialias: true }}
           onCreated={({ gl }) => {
@@ -240,71 +238,14 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
           <pointLight position={[-3, -3, 3]} color="#ff00ff" intensity={0.8} />
           <pointLight position={[3, 3, 3]} color="#00ff00" intensity={0.8} />
           
-          <SpeakerModel 
-            isActive={isActive}
-            intensity={pitchIntensity}
-            color={sphereColor}
-          />
+          <SpeakerModel intensity={pitchIntensity} />
           
           <OrbitControls enablePan={false} enableZoom={true} enableRotate={true} />
         </Canvas>
       </div>
       
-      {/* 피치 정보 - div 카드 아래쪽 */}
-      <div style={{
-        position: 'absolute',
-        top: '120%', // div 카드 아래쪽
-        left: '50%',
-        transform: 'translateX(-50%)',
-        background: 'rgba(0, 0, 0, 0.9)',
-        border: '2px solid #00ffff',
-        borderRadius: '15px',
-        padding: '20px',
-        zIndex: 10000,
-        minWidth: '300px',
-        textAlign: 'center',
-        boxShadow: '0 0 30px rgba(0, 255, 255, 0.5)',
-        marginTop: '20px'
-      }}>
-        {currentPitch ? (
-          <>
-            <div style={{
-              fontSize: '2.5rem',
-            fontWeight: 'bold', 
-              color: sphereColor,
-              textShadow: `0 0 20px ${sphereColor}`,
-              fontFamily: 'monospace',
-              marginBottom: '10px'
-          }}>
-            {currentPitch.note}{currentPitch.octave}
-            </div>
-            <div style={{
-              fontSize: '1.2rem',
-              color: '#00ff00',
-              textShadow: '0 0 10px #00ff00',
-              fontFamily: 'monospace',
-              marginBottom: '5px'
-            }}>
-            {Math.round(currentPitch.frequency)}Hz
-            </div>
-            <div style={{
-              fontSize: '0.9rem',
-              color: '#00ffff',
-              fontFamily: 'monospace'
-            }}>
-              PITCH DETECTED
-            </div>
-          </>
-        ) : (
-          <div style={{
-            fontSize: '1.2rem',
-            color: '#666',
-            fontFamily: 'monospace'
-          }}>
-            {isActive ? 'WAITING FOR PITCH...' : 'MICROPHONE STANDBY'}
-          </div>
-        )}
-      </div>
+      {/* 3D 파티클 및 텍스트 정보 숨김 */}
+      <div style={{ display: 'none' }} />
     </div>
   );
 };

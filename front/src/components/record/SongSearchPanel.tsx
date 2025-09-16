@@ -27,7 +27,9 @@ const dummySongs = [
   { id: 17, title: 'Perfect', artist: 'Ed Sheeran', genre: 'Pop', duration: '4:23' },
   { id: 18, title: 'Thinking Out Loud', artist: 'Ed Sheeran', genre: 'Pop', duration: '4:41' },
   { id: 19, title: 'Blinding Lights', artist: 'The Weeknd', genre: 'Pop', duration: '3:20' },
-  { id: 20, title: 'Levitating', artist: 'Dua Lipa', genre: 'Pop', duration: '3:23' }
+  { id: 20, title: 'Levitating', artist: 'Dua Lipa', genre: 'Pop', duration: '3:23' },
+  // 추가 더미: 브라운아이드소울 - gone (유튜브 MR 사용)
+  { id: 21, title: 'gone', artist: '브라운아이드소울', genre: 'K-Pop', duration: '4:11', youtubeId: 'o-M16KEy7Ng' }
 ];
 
 const SongSearchPanel: React.FC = () => {
@@ -89,24 +91,20 @@ const SongSearchPanel: React.FC = () => {
     setShowResults(true);
   };
 
-  const getDropdownHeight = () => {
-    if (!showResults || searchResults.length === 0) return '0px';
-    
-    const itemHeight = 80;
-    const maxHeight = 400;
-    const calculatedHeight = Math.min(searchResults.length * itemHeight, maxHeight);
-    
-    return `${calculatedHeight}px`;
-  };
-
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <div style={{ 
+      position: 'relative', 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
       {/* 헤더 */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '20px'
+        marginBottom: '20px',
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
@@ -156,7 +154,11 @@ const SongSearchPanel: React.FC = () => {
       </div>
       
       {/* 검색 입력 필드 */}
-      <div style={{ position: 'relative', marginBottom: '15px' }}>
+      <div style={{ 
+        position: 'relative', 
+        marginBottom: '15px',
+        flexShrink: 0
+      }}>
         <input
           type="text"
           placeholder="곡명, 아티스트, 장르로 검색하세요"
@@ -216,121 +218,149 @@ const SongSearchPanel: React.FC = () => {
         )}
       </div>
 
-      {/* 검색 결과 드롭다운 */}
-      {showResults && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          left: '0',
-          right: '0',
-          zIndex: 9999,
-          height: getDropdownHeight(),
-          overflow: 'auto',
-          background: 'rgba(0, 0, 0, 0.95)',
-          border: '1px solid rgba(0, 255, 255, 0.5)',
-          borderRadius: '10px',
-          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.6)',
-          marginTop: '8px'
-        }}>
-          {searchResults.length > 0 ? (
-            <div>
-              {searchResults.map((song) => (
-                <div
-                  key={song.id}
-                  onClick={() => handleSongSelect(song)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                    transition: 'background 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <div style={{
-                    width: '35px',
-                    height: '35px',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '16px',
-                    flexShrink: 0
-                  }}>
-                    🎵
-                  </div>
-                  
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h4 style={{
-                      color: '#fff',
-                      fontSize: '0.9rem',
-                      fontWeight: 'bold',
-                      margin: '0 0 4px 0',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {song.title}
-                    </h4>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ color: '#00ffff', fontSize: '0.8rem' }}>
-                        {song.artist}
-                      </span>
-                      <span style={{
-                        background: 'rgba(255, 0, 128, 0.2)',
-                        color: '#ff0080',
-                        padding: '2px 6px',
-                        borderRadius: '6px',
-                        fontSize: '0.7rem'
-                      }}>
-                        {song.genre}
-                      </span>
-                      <span style={{ color: '#888', fontSize: '0.7rem' }}>
-                        {song.duration}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <button
+      {/* 검색 결과 영역 - 컴포넌트 내부에서 스크롤 */}
+      <div style={{ 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0
+      }}>
+        {showResults ? (
+          <div style={{
+            flex: 1,
+            overflow: 'auto',
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(0, 255, 255, 0.3)',
+            borderRadius: '8px',
+            marginBottom: '10px'
+          }}>
+            {searchResults.length > 0 ? (
+              <div>
+                {searchResults.map((song, index) => (
+                  <div
+                    key={song.id}
+                    onClick={() => handleSongSelect(song)}
                     style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#00ffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
                       cursor: 'pointer',
-                      padding: '6px',
-                      fontSize: '16px',
-                      flexShrink: 0
+                      borderBottom: index < searchResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                      transition: 'background 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    ➕
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
-              <p style={{ margin: '0' }}>검색 결과가 없습니다.</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 검색 힌트 */}
-      <p style={{
-        color: '#888',
-        fontSize: '0.75rem',
-        margin: '10px 0 0 0'
-      }}>
-        💡 팁: "BTS", "K-Pop", "Dynamite" 등으로 검색해보세요
-      </p>
+                    <div style={{
+                      width: '35px',
+                      height: '35px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      flexShrink: 0
+                    }}>
+                      🎵
+                    </div>
+                    
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        color: '#fff',
+                        fontSize: '0.9rem',
+                        fontWeight: 'bold',
+                        margin: '0 0 4px 0',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {song.title}
+                      </h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#00ffff', fontSize: '0.8rem' }}>
+                          {song.artist}
+                        </span>
+                        <span style={{
+                          background: 'rgba(255, 0, 128, 0.2)',
+                          color: '#ff0080',
+                          padding: '2px 6px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {song.genre}
+                        </span>
+                        <span style={{ color: '#888', fontSize: '0.7rem' }}>
+                          {song.duration}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#00ffff',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        fontSize: '16px',
+                        flexShrink: 0
+                      }}
+                    >
+                      ➕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ 
+                padding: '20px', 
+                textAlign: 'center', 
+                color: '#888',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
+              }}>
+                <p style={{ margin: '0' }}>검색 결과가 없습니다.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* 검색 힌트 - 검색 결과가 없을 때만 표시 */
+          <div style={{ 
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: '10px',
+            color: '#888',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2rem', opacity: 0.5 }}>🔍</div>
+            <p style={{
+              fontSize: '0.9rem',
+              margin: '0',
+              color: '#666'
+            }}>
+              곡명, 아티스트, 장르로 검색하세요
+            </p>
+            <p style={{
+              fontSize: '0.75rem',
+              margin: '0',
+              color: '#888'
+            }}>
+              💡 팁: "BTS", "K-Pop", "Dynamite" 등으로 검색해보세요
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* 알림 */}
       {showNotification && (
