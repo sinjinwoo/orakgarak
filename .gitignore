@@ -12,6 +12,12 @@
 .idea/**/dictionaries
 .idea/**/shelf
 
+# Log files and directories
+*.log
+*.log.*
+logs/
+log/
+app_logs/
 
 # AWS User-specific
 .idea/**/aws.xml
