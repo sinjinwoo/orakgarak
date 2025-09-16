@@ -252,7 +252,7 @@ const LandingPage: React.FC = () => {
               const Icon = feature.icon;
               return (
                 <motion.div
-                  key={index}
+              key={index}
                   initial={{ opacity: 0, y: 50 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -276,7 +276,7 @@ const LandingPage: React.FC = () => {
                     </motion.div>
                     <h3 className="text-xl font-semibold text-white group-hover:text-pink-300 transition-colors duration-300 relative z-10" style={{ textShadow: '0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(251, 66, 212, 0.3)' }}>{feature.title}</h3>
                     <p className="text-white/80 leading-relaxed group-hover:text-white/90 transition-colors duration-300 relative z-10" style={{ textShadow: '0 0 5px rgba(0,0,0,0.8)' }}>
-                      {feature.description}
+                  {feature.description}
                     </p>
                   </div>
                 </motion.div>
@@ -364,7 +364,7 @@ const LandingPage: React.FC = () => {
                   width: '18rem',
                   height: '5rem',
                   fontFamily: 'neon, monospace',
-                  textAlign: 'center',
+                textAlign: 'center',
                   padding: '16px',
                   fontSize: '28pt',
                   fontWeight: '900',

@@ -23,6 +23,7 @@ import {
   Lock,
   Send,
 } from '@mui/icons-material';
+import { theme, buttonStyles } from '../../styles/theme';
 
 interface AlbumPreviewStepProps {
   title: string;
@@ -66,22 +67,38 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
       {/* 헤더 */}
       <Box sx={{ textAlign: 'center', mb: 4 }}>
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: 48, color: '#2c2c2c' }}>👁️</Typography>
+          <Typography sx={{ fontSize: 48, color: '#C147E9' }}>👁️</Typography>
         </Box>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
           새 앨범 만들기
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
           녹음본으로 나만의 앨범을 만들어보세요
         </Typography>
       </Box>
 
       {/* 앨범 미리보기 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center' }}>
+      <Paper sx={{ 
+        p: 3, 
+        mb: 3,
+        background: 'transparent',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: 3
+      }}>
+        <Typography variant="h6" sx={{ 
+          fontWeight: 600, 
+          mb: 1, 
+          display: 'flex', 
+          alignItems: 'center',
+          color: '#FFFFFF'
+        }}>
           ◎ 앨범 미리보기
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography variant="body2" sx={{ 
+          mb: 3,
+          color: 'rgba(255, 255, 255, 0.6)'
+        }}>
           발행하기 전에 앨범이 어떻게 보일지 확인해보세요
         </Typography>
 
@@ -95,21 +112,21 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
               alt="Album cover"
             />
             <CardContent sx={{ flex: 1, p: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
                 {title || '앨범 제목'}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
                 음악러버 • 2025. 1. 15.
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
                 ♫ {selectedRecordings.length}곡 • {totalDuration}
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {title || '앨범 제목'}
+              <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
+                {description || '앨범 설명이 없습니다'}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                <Lock sx={{ fontSize: 14, color: '#666' }} />
-                <Typography variant="body2" color="text.secondary">
+                <Lock sx={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.6)' }} />
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                   {isPublic ? '공개 앨범' : '비공개 앨범'}
                 </Typography>
               </Box>
@@ -117,10 +134,18 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                 variant="contained"
                 startIcon={<PlayArrow />}
                 sx={{
-                  backgroundColor: '#2c2c2c',
+                  background: theme.colors.primary.gradient,
                   color: 'white',
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  boxShadow: '0 4px 15px rgba(196, 71, 233, 0.4)',
                   '&:hover': {
-                    backgroundColor: '#1a1a1a',
+                    background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
+                    boxShadow: '0 6px 20px rgba(196, 71, 233, 0.6)',
+                    transform: 'translateY(-2px)'
                   },
                 }}
               >
@@ -132,21 +157,26 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
 
         {/* 수록곡 */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', color: '#FFFFFF' }}>
             ♪ 수록곡
           </Typography>
-          <List sx={{ bgcolor: '#f9f9f9', borderRadius: 1 }}>
+          <List sx={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.05)', 
+            borderRadius: 2,
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)'
+          }}>
             {dummyTracks.map((track, index) => (
               <ListItem key={track.id} sx={{ py: 1 }}>
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>
+                    <Typography variant="body2" sx={{ minWidth: 20, color: 'rgba(255, 255, 255, 0.6)' }}>
                       {index + 1}.
                     </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 500, color: '#FFFFFF' }}>
                       {track.title}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       - {track.artist}
                     </Typography>
                   </Box>
@@ -160,13 +190,17 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                     >
                       {track.score}점
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       {track.duration}
                     </Typography>
                   </Box>
                 </Box>
-                <IconButton size="small">
-                  <PlayArrow sx={{ color: '#666' }} />
+                <IconButton size="small" sx={{
+                  '&:hover': {
+                    backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                  }
+                }}>
+                  <PlayArrow sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
                 </IconButton>
               </ListItem>
             ))}
@@ -176,7 +210,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
         {/* 앨범 설명 */}
         {description && (
           <Box sx={{ mb: 3 }}>
-            <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
+            <Typography variant="body1" sx={{ lineHeight: 1.6, color: 'rgba(255, 255, 255, 0.8)' }}>
               {description}
             </Typography>
           </Box>
@@ -189,11 +223,17 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
             variant="outlined"
             startIcon={<ExpandMore />}
             sx={{
-              borderColor: '#2c2c2c',
-              color: '#2c2c2c',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+              color: 'rgba(255, 255, 255, 0.7)',
+              borderRadius: 2,
+              px: 3,
+              py: 1,
+              textTransform: 'none',
+              fontWeight: 500,
               '&:hover': {
-                borderColor: '#1a1a1a',
-                backgroundColor: '#f5f5f5',
+                borderColor: '#C147E9',
+                backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                color: '#FFFFFF',
               },
             }}
           >
@@ -203,11 +243,18 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
       </Paper>
 
       {/* 발행 준비 완료 */}
-      <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#f9f9f9' }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+      <Paper sx={{ 
+        p: 3, 
+        textAlign: 'center', 
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: 3
+      }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
           앨범 발행 준비 완료!
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
           {isPublic ? '공개 앨범으로 발행하면 다른 사용자들이 볼 수 있습니다.' : '비공개 앨범으로 발행하면 나만 볼 수 있습니다.'}
         </Typography>
         <Button
@@ -215,14 +262,19 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
           startIcon={<Send />}
           onClick={onPublish}
           sx={{
-            backgroundColor: '#2c2c2c',
+            background: 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 100%)',
             color: 'white',
             px: 4,
             py: 1.5,
             fontSize: '1rem',
             fontWeight: 600,
+            borderRadius: 2,
+            textTransform: 'none',
+            boxShadow: '0 4px 15px rgba(196, 71, 233, 0.4)',
             '&:hover': {
-              backgroundColor: '#1a1a1a',
+              background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
+              boxShadow: '0 6px 20px rgba(196, 71, 233, 0.6)',
+              transform: 'translateY(-2px)'
             },
           }}
         >
@@ -236,11 +288,17 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
           variant="outlined"
           onClick={onPrev}
           sx={{
-            borderColor: '#2c2c2c',
-            color: '#2c2c2c',
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            color: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: 2,
+            px: 3,
+            py: 1.5,
+            textTransform: 'none',
+            fontWeight: 500,
             '&:hover': {
-              borderColor: '#1a1a1a',
-              backgroundColor: '#f5f5f5',
+              borderColor: '#C147E9',
+              backgroundColor: 'rgba(196, 71, 233, 0.1)',
+              color: '#FFFFFF',
             },
           }}
         >

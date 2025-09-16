@@ -27,11 +27,7 @@ public class User extends BaseEntity {
     @Column(unique = true)
     private String email;
 
-    @Column(name="nick_name")
-    private String nickname;
-
-    @Column(name="google_id",unique = true)
+    @Column(name = "google_id", unique = true)
     private String googleID;
-
 
 }

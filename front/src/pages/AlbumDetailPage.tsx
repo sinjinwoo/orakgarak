@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAlbumStore } from '../stores/albumStore';
 import ImmersivePlaybackModal from '../components/album/ImmersivePlaybackModal';
+import { theme } from '../styles/theme';
+import { motion } from 'framer-motion';
 import {
   Box,
   Container,
@@ -88,8 +90,12 @@ const dummyComments = [
 
 const AlbumDetailPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { albumId } = useParams<{ albumId: string }>();
   const { getAlbumById } = useAlbumStore();
+  
+  // 이전 페이지 추적을 위한 상태
+  const [previousPage, setPreviousPage] = useState<string>('/feed');
   const [album, setAlbum] = useState(dummyAlbum);
   const [comments, setComments] = useState(dummyComments);
   const [newComment, setNewComment] = useState('');
@@ -156,6 +162,45 @@ const AlbumDetailPage: React.FC = () => {
 
     loadAlbum();
   }, [albumId, getAlbumById]);
+
+  // 앨범을 찾을 수 없으면 피드 페이지로 리다이렉트
+  useEffect(() => {
+    if (!loading && (!album || album.id !== albumId)) {
+      navigate('/feed', { replace: true });
+    }
+  }, [loading, album, albumId, navigate]);
+
+  // 이전 페이지 추적
+  useEffect(() => {
+    // location.state에서 이전 페이지 정보를 가져오거나, referrer를 사용
+    if (location.state?.from) {
+      setPreviousPage(location.state.from);
+    } else if (document.referrer) {
+      try {
+        // referrer에서 페이지 경로 추출
+        const referrerPath = new URL(document.referrer).pathname;
+        if (referrerPath && referrerPath !== location.pathname) {
+          setPreviousPage(referrerPath);
+        }
+      } catch (error) {
+        // referrer 파싱 실패 시 기본값 사용
+        console.warn('Failed to parse referrer:', error);
+      }
+    }
+    
+    // 브라우저 히스토리에서 이전 페이지 확인
+    if (window.history.length > 1) {
+      // 현재 페이지가 아닌 이전 페이지로 설정
+      const currentPath = location.pathname;
+      if (currentPath !== '/feed' && currentPath !== '/me') {
+        // 현재 경로에 따라 적절한 이전 페이지 설정
+        if (currentPath.includes('/albums/')) {
+          // 앨범 상세 페이지에서 온 경우, 일반적으로 피드나 마이페이지에서 왔을 가능성이 높음
+          setPreviousPage('/feed');
+        }
+      }
+    }
+  }, [location]);
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return '#4caf50';
@@ -288,8 +333,22 @@ const AlbumDetailPage: React.FC = () => {
       localStorage.setItem('myAlbums', JSON.stringify(updatedAlbums));
     }
     
+    // 피드 데이터에서도 삭제
+    const feedAlbums = localStorage.getItem('feedAlbums');
+    if (feedAlbums) {
+      const feeds = JSON.parse(feedAlbums);
+      const updatedFeeds = feeds.filter((f: { albumId: string; id: string }) => f.albumId !== albumId && f.id !== albumId);
+      localStorage.setItem('feedAlbums', JSON.stringify(updatedFeeds));
+    }
+    
     setDeleteDialogOpen(false);
-    navigate('/me/albums');
+    // 이전 페이지로 돌아가기 (브라우저 히스토리 사용)
+    if (window.history.length > 1) {
+      navigate(-1); // 브라우저의 뒤로가기
+    } else {
+      // 히스토리가 없으면 이전 페이지로 이동
+      navigate(previousPage);
+    }
   };
 
   // 수록곡 편집 핸들러
@@ -346,74 +405,160 @@ const AlbumDetailPage: React.FC = () => {
   }
 
   if (!album || album.id !== albumId) {
-  return (
+    return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(-1)}
-          sx={{ mb: 3, color: '#666' }}
-        >
-          뒤로가기
-        </Button>
-        <Typography variant="h6" color="text.secondary">
-          앨범을 찾을 수 없습니다.
+        <Typography variant="h6" sx={{ color: '#B3B3B3' }}>
+          앨범을 찾을 수 없습니다. 피드 페이지로 이동합니다...
         </Typography>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* 뒤로가기 버튼 */}
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(-1)}
-          sx={{ mb: 3, color: '#666' }}
+    <Box sx={{
+      flex: 1,
+      background: `
+        radial-gradient(circle at 20% 20%, rgba(255, 107, 157, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(196, 71, 233, 0.4) 0%, transparent 50%),
+        radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
+        linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
+      `,
+      minHeight: '100vh',
+      position: 'relative',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 30% 30%, rgba(255, 107, 157, 0.15) 0%, transparent 40%),
+          radial-gradient(circle at 70% 70%, rgba(196, 71, 233, 0.2) 0%, transparent 40%),
+          radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 30%)
+        `,
+        pointerEvents: 'none',
+        zIndex: 1
+      },
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 80% 20%, rgba(255, 107, 157, 0.1) 0%, transparent 30%),
+          radial-gradient(circle at 20% 80%, rgba(196, 71, 233, 0.15) 0%, transparent 30%)
+        `,
+        pointerEvents: 'none',
+        zIndex: 1
+      }
+    }}>
+      <Container maxWidth="lg" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          뒤로가기
-        </Button>
+          {/* 뒤로가기 버튼 */}
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate(-1)}
+            sx={{ 
+              mb: 3, 
+              color: 'rgba(255, 255, 255, 0.8)',
+              '&:hover': {
+                color: '#FFFFFF',
+                backgroundColor: 'rgba(196, 71, 233, 0.1)'
+              }
+            }}
+          >
+            뒤로가기
+          </Button>
 
-        {/* 앨범 정보 */}
-        <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
-          <CardMedia
-            component="img"
-            sx={{ width: 200, height: 200, borderRadius: 2 }}
-            image={album.coverImage}
-            alt={album.title}
-          />
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h4" sx={{ fontWeight: 600, mb: 1 }}>
-              {album.title}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Avatar src={album.user.profileImage} sx={{ width: 32, height: 32 }} />
-        <Typography variant="body1" color="text.secondary">
-                {album.user.nickname}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {formatDate(album.createdAt)}
-              </Typography>
-            </Box>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              ♫ {album.tracks.length}곡 • {album.tracks.reduce((total, track) => {
-                const [minutes, seconds] = track.duration.split(':').map(Number);
-                return total + minutes * 60 + seconds;
-              }, 0) / 60}분
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-              {album.tags.map((tag) => (
-                <Chip
-                  key={tag}
-                  label={tag}
-                  size="small"
-                  sx={{
-                    backgroundColor: '#f0f0f0',
-                    color: '#666',
-                    fontSize: '0.75rem',
-                  }}
-                />
-              ))}
-            </Box>
+          {/* 앨범 정보 */}
+          <Paper sx={{ 
+            p: 4, 
+            mb: 4, 
+            borderRadius: 3,
+            background: 'transparent',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 0 20px rgba(196, 71, 233, 0.3)'
+          }}>
+            <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
+              <CardMedia
+                component="img"
+                sx={{ 
+                  width: 200, 
+                  height: 200, 
+                  borderRadius: 2,
+                  border: '3px solid rgba(196, 71, 233, 0.3)',
+                  boxShadow: '0 0 20px rgba(196, 71, 233, 0.3)'
+                }}
+                image={album.coverImage}
+                alt={album.title}
+              />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h4" sx={{ 
+                  fontWeight: 700, 
+                  mb: 1,
+                  color: '#FFFFFF',
+                  background: 'linear-gradient(135deg,rgb(249, 248, 248) 0%, #C147E9 50%, #8B5CF6 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 20px rgba(210, 151, 228, 0.5)'
+                }}>
+                  {album.title}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Avatar 
+                    src={album.user.profileImage} 
+                    sx={{ 
+                      width: 32, 
+                      height: 32,
+                      border: '2px solid rgba(196, 71, 233, 0.3)',
+                      boxShadow: '0 0 10px rgba(196, 71, 233, 0.3)'
+                    }} 
+                  />
+                  <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                    {album.user.nickname}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                    {formatDate(album.createdAt)}
+                  </Typography>
+                </Box>
+                <Typography variant="body1" sx={{ 
+                  mb: 2,
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '1.1rem'
+                }}>
+                  ♫ {album.tracks.length}곡 • {album.tracks.reduce((total, track) => {
+                    const [minutes, seconds] = track.duration.split(':').map(Number);
+                    return total + minutes * 60 + seconds;
+                  }, 0) / 60}분
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {album.tags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      size="small"
+                      sx={{
+                        backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                        color: '#C147E9',
+                        fontSize: '0.75rem',
+                        border: '1px solid rgba(196, 71, 233, 0.3)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(196, 71, 233, 0.2)',
+                          borderColor: 'rgba(196, 71, 233, 0.5)'
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Button
                 variant="contained"
@@ -464,22 +609,51 @@ const AlbumDetailPage: React.FC = () => {
             </Box>
           </Box>
         </Box>
+          </Paper>
 
         {/* 앨범 설명 */}
-        <Paper sx={{ p: 3, mb: 4 }}>
-          <Typography variant="body1" sx={{ lineHeight: 1.6 }}>
+        <Paper sx={{ 
+          p: 3, 
+          mb: 4,
+          background: 'transparent',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: 3
+        }}>
+          <Typography variant="body1" sx={{ 
+            lineHeight: 1.6,
+            color: 'rgba(255, 255, 255, 0.8)'
+          }}>
             {album.description}
           </Typography>
         </Paper>
 
         {/* 수록곡 */}
-        <Paper sx={{ p: 3, mb: 4 }}>
+        <Paper sx={{ 
+          p: 3, 
+          mb: 4,
+          background: 'transparent',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: 3
+        }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              display: 'flex', 
+              alignItems: 'center',
+              color: '#FFFFFF'
+            }}>
               ♪ 수록곡
             </Typography>
             <IconButton 
-              sx={{ color: '#666' }}
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#FFFFFF'
+                }
+              }}
               onClick={handleTrackMenuOpen}
             >
               <MoreVert />
@@ -490,13 +664,21 @@ const AlbumDetailPage: React.FC = () => {
               <ListItem key={track.id} sx={{ py: 1 }}>
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>
+                    <Typography variant="body2" sx={{ 
+                      minWidth: 20,
+                      color: 'rgba(255, 255, 255, 0.6)'
+                    }}>
                       {index + 1}.
                     </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    <Typography variant="body1" sx={{ 
+                      fontWeight: 500,
+                      color: '#FFFFFF'
+                    }}>
                       {track.title}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ 
+                      color: 'rgba(255, 255, 255, 0.6)'
+                    }}>
                       - {track.artist}
                     </Typography>
                   </Box>
@@ -510,13 +692,24 @@ const AlbumDetailPage: React.FC = () => {
                     >
                       {track.score}점
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ 
+                      color: 'rgba(255, 255, 255, 0.6)'
+                    }}>
                       {track.duration}
                     </Typography>
                   </Box>
                 </Box>
-                <IconButton size="small">
-                  <PlayArrow sx={{ color: '#666' }} />
+                <IconButton size="small" sx={{
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  }
+                }}>
+                  <PlayArrow sx={{ 
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    '&:hover': {
+                      color: '#FFFFFF'
+                    }
+                  }} />
                 </IconButton>
               </ListItem>
             ))}
@@ -524,8 +717,18 @@ const AlbumDetailPage: React.FC = () => {
         </Paper>
 
         {/* 댓글 섹션 */}
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+        <Paper sx={{ 
+          p: 3,
+          background: 'transparent',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: 3
+        }}>
+          <Typography variant="h6" sx={{ 
+            fontWeight: 600, 
+            mb: 2,
+            color: '#FFFFFF'
+          }}>
             댓글 ({comments.length})
           </Typography>
           
@@ -539,6 +742,30 @@ const AlbumDetailPage: React.FC = () => {
               onKeyPress={handleKeyPress}
               multiline
               maxRows={3}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: 2,
+                  '& fieldset': {
+                    border: 'none',
+                  },
+                  '&:hover fieldset': {
+                    border: 'none',
+                  },
+                  '&.Mui-focused fieldset': {
+                    border: '1px solid rgba(196, 71, 233, 0.5)',
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: '#FFFFFF',
+                  '&::placeholder': {
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    opacity: 1,
+                  },
+                },
+              }}
             />
             <Button
               variant="contained"
@@ -546,14 +773,13 @@ const AlbumDetailPage: React.FC = () => {
               onClick={handleCommentSubmit}
               disabled={!newComment.trim()}
               sx={{
-                backgroundColor: '#2c2c2c',
-                color: 'white',
+                background: theme.colors.primary.gradient,
                 '&:hover': {
-                  backgroundColor: '#1a1a1a',
+                  background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
                 },
                 '&:disabled': {
-                  backgroundColor: '#e0e0e0',
-                  color: '#9e9e9e',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: 'rgba(255, 255, 255, 0.3)',
                 },
               }}
             >
@@ -570,14 +796,22 @@ const AlbumDetailPage: React.FC = () => {
                 <Avatar src={comment.user.profileImage} sx={{ width: 40, height: 40 }} />
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 500,
+                      color: '#FFFFFF'
+                    }}>
                       {comment.user.nickname}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ 
+                      color: 'rgba(255, 255, 255, 0.6)'
+                    }}>
                       {formatDate(comment.createdAt)}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
+                  <Typography variant="body2" sx={{ 
+                    lineHeight: 1.5,
+                    color: 'rgba(255, 255, 255, 0.8)'
+                  }}>
                     {comment.content}
                   </Typography>
                 </Box>
@@ -591,8 +825,20 @@ const AlbumDetailPage: React.FC = () => {
           anchorEl={albumMenuAnchor}
           open={Boolean(albumMenuAnchor)}
           onClose={handleAlbumMenuClose}
+          PaperProps={{
+            sx: {
+              background: 'rgba(0, 0, 0, 0.9)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+            }
+          }}
         >
-          <MenuItem onClick={handleDeleteAlbum} sx={{ color: '#f44336' }}>
+          <MenuItem onClick={handleDeleteAlbum} sx={{ 
+            color: '#FF6B6B',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 107, 107, 0.1)',
+            }
+          }}>
             <Delete sx={{ mr: 1 }} />
             이 앨범 삭제
           </MenuItem>
@@ -603,8 +849,20 @@ const AlbumDetailPage: React.FC = () => {
           anchorEl={trackMenuAnchor}
           open={Boolean(trackMenuAnchor)}
           onClose={handleTrackMenuClose}
+          PaperProps={{
+            sx: {
+              background: 'rgba(0, 0, 0, 0.9)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+            }
+          }}
         >
-          <MenuItem onClick={handleEditTracks}>
+          <MenuItem onClick={handleEditTracks} sx={{
+            color: 'rgba(255, 255, 255, 0.8)',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            }
+          }}>
             <Edit sx={{ mr: 1 }} />
             수록곡 편집
           </MenuItem>
@@ -614,21 +872,61 @@ const AlbumDetailPage: React.FC = () => {
         <Dialog
           open={deleteDialogOpen}
           onClose={() => setDeleteDialogOpen(false)}
+          PaperProps={{
+            sx: {
+              background: `
+                radial-gradient(circle at 20% 20%, rgba(255, 107, 157, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(196, 71, 233, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
+                linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
+              `,
+              borderRadius: 3,
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+            }
+          }}
         >
-          <DialogTitle>앨범 삭제</DialogTitle>
+          <DialogTitle sx={{ 
+            color: '#FFFFFF',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            pb: 2
+          }}>
+            앨범 삭제
+          </DialogTitle>
           <DialogContent>
-            <Typography>
+            <Typography sx={{ 
+              color: 'rgba(255, 255, 255, 0.8)',
+              mt: 2
+            }}>
               정말로 이 앨범을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
             </Typography>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDeleteDialogOpen(false)}>
+          <DialogActions sx={{ 
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            pt: 2,
+            px: 3
+          }}>
+            <Button 
+              onClick={() => setDeleteDialogOpen(false)}
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#FFFFFF',
+                }
+              }}
+            >
               취소
             </Button>
             <Button 
               onClick={handleConfirmDelete} 
-              color="error"
               variant="contained"
+              sx={{
+                background: 'linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #FF7B7B 0%, #FF6B6B 100%)',
+                },
+              }}
             >
               삭제
             </Button>
@@ -641,20 +939,63 @@ const AlbumDetailPage: React.FC = () => {
           onClose={() => setEditTracksDialogOpen(false)}
           maxWidth="md"
           fullWidth
+          PaperProps={{
+            sx: {
+              background: `
+                radial-gradient(circle at 20% 20%, rgba(255, 107, 157, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(196, 71, 233, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
+                linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
+              `,
+              borderRadius: 3,
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+            }
+          }}
         >
-          <DialogTitle>
+          <DialogTitle sx={{ 
+            color: '#FFFFFF',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            pb: 2
+          }}>
             수록곡 편집
             <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <Button size="small" onClick={handleSelectAllTracks}>
+              <Button 
+                size="small" 
+                onClick={handleSelectAllTracks}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  '&:hover': {
+                    borderColor: '#C147E9',
+                    backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                  }
+                }}
+              >
                 전체 선택
               </Button>
-              <Button size="small" onClick={handleDeselectAllTracks}>
+              <Button 
+                size="small" 
+                onClick={handleDeselectAllTracks}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  '&:hover': {
+                    borderColor: '#C147E9',
+                    backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                  }
+                }}
+              >
                 전체 해제
               </Button>
             </Box>
           </DialogTitle>
           <DialogContent>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            <Typography variant="h6" sx={{ 
+              mb: 2, 
+              fontWeight: 600,
+              color: '#FFFFFF'
+            }}>
               내 녹음 목록에서 선택하세요
             </Typography>
             <List>
@@ -667,17 +1008,31 @@ const AlbumDetailPage: React.FC = () => {
                         <Checkbox
                           checked={selectedTracks.includes(recording.id)}
                           onChange={() => handleTrackToggle(recording.id)}
+                          sx={{
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            '&.Mui-checked': {
+                              color: '#C147E9',
+                            },
+                          }}
                         />
                       }
                       label={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 1 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>
+                          <Typography variant="body2" sx={{ 
+                            minWidth: 20,
+                            color: 'rgba(255, 255, 255, 0.6)'
+                          }}>
                             {index + 1}.
                           </Typography>
-                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                          <Typography variant="body1" sx={{ 
+                            fontWeight: 500,
+                            color: '#FFFFFF'
+                          }}>
                             {recording.title}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" sx={{ 
+                            color: 'rgba(255, 255, 255, 0.6)'
+                          }}>
                             - {recording.artist}
                           </Typography>
                           <Typography
@@ -689,9 +1044,11 @@ const AlbumDetailPage: React.FC = () => {
                           >
                             {recording.score}점
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" sx={{ 
+                            color: 'rgba(255, 255, 255, 0.6)'
+                          }}>
                             {duration}
-        </Typography>
+                          </Typography>
       </Box>
                       }
                       sx={{ width: '100%' }}
@@ -701,13 +1058,32 @@ const AlbumDetailPage: React.FC = () => {
               })}
             </List>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setEditTracksDialogOpen(false)}>
+          <DialogActions sx={{ 
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            pt: 2,
+            px: 3
+          }}>
+            <Button 
+              onClick={() => setEditTracksDialogOpen(false)}
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#FFFFFF',
+                }
+              }}
+            >
               취소
             </Button>
             <Button 
               onClick={handleSaveTracks} 
               variant="contained"
+              sx={{
+                background: theme.colors.primary.gradient,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
+                },
+              }}
             >
               저장
             </Button>
@@ -731,7 +1107,9 @@ const AlbumDetailPage: React.FC = () => {
             description: album.description,
           }}
         />
-    </Container>
+        </motion.div>
+      </Container>
+    </Box>
   );
 };
 
