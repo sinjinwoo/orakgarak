@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PitchCraft Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0b1220;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #game {
+            border: 2px solid #4dd0e1;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(77, 208, 225, 0.3);
+        }
+        .loading {
+            color: #ffffff;
+            text-align: center;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game"></div>
+    <div class="loading" id="loading">게임을 로딩 중입니다...</div>
+    
+    <script>
+        // 환경 변수 설정
+        window.process = {
+            env: {
+                WIDTH: 800,
+                HEIGHT: 600,
+                NODE_ENV: 'production'
+            }
+        };
+    </script>
+    <script src="/bundle.js"></script>
+    <script>
+        // 로딩 완료 후 로딩 메시지 숨기기
+        window.addEventListener('load', function() {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

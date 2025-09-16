@@ -456,10 +456,79 @@ const PitchGraph: React.FC<PitchGraphProps> = ({ isRecording }) => {
   }, [isActive, analyzePitch]);
 
   return (
-    <Box sx={{ p: 2, height: '100%' }}>
-      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', textAlign: 'center' }}>
-        🎵 피치 그래프
-      </Typography>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* 헤더 */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        mb: 3
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{
+            width: 40,
+            height: 40,
+            borderRadius: '10px',
+            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
+          }}>
+            <Typography sx={{ color: '#000', fontSize: 20, fontWeight: 'bold' }}>🎵</Typography>
+          </Box>
+          <Box>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#00ffff',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
+              }}
+            >
+              NEURAL PITCH
+            </Typography>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#888',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em'
+              }}
+            >
+              FREQUENCY ANALYZER
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: isActive ? '#00ff00' : '#888',
+            boxShadow: isActive ? '0 0 10px #00ff00' : 'none',
+            animation: isActive ? 'pulse 1s infinite' : 'none',
+            '@keyframes pulse': {
+              '0%': { opacity: 1 },
+              '50%': { opacity: 0.5 },
+              '100%': { opacity: 1 }
+            }
+          }} />
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              color: isActive ? '#00ff00' : '#888',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              fontFamily: 'monospace'
+            }}
+          >
+            {isActive ? 'ACTIVE' : 'STANDBY'}
+          </Typography>
+        </Box>
+      </Box>
       
       {/* 디버그 정보 표시 */}
       <Paper elevation={1} sx={{ p: 1, mb: 2, backgroundColor: '#f5f5f5' }}>
