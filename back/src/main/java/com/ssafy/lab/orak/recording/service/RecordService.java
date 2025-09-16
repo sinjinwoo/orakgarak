@@ -83,7 +83,7 @@ public class RecordService {
                 }
             }
             
-            throw new FileUploadException("녹음 파일 생성에 실패했습니다: " + e.getMessage(), e);
+            throw new RecordOperationException("녹음 파일 생성에 실패했습니다: " + e.getMessage(), e);
         }
     }
     
@@ -192,7 +192,7 @@ public class RecordService {
             
         } catch (Exception e) {
             log.error("오디오 파일 처리 실패: {}", audioFile.getOriginalFilename(), e);
-            throw new FileUploadException("오디오 파일 처리에 실패했습니다: " + e.getMessage(), e);
+            throw new RecordOperationException("오디오 파일 처리에 실패했습니다: " + e.getMessage(), e);
         }
     }
     

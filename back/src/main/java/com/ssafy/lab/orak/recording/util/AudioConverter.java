@@ -85,11 +85,14 @@ public class AudioConverter {
             log.info("오디오 파일 WAV 변환 완료: {} -> {}", fileName, wavFileName);
             return wavPath.toFile().getAbsolutePath();
             
-        } catch (Exception e) {
+        } catch (AudioConversionException e) {
             log.error("오디오 파일 WAV 변환 실패: {}", originalFilePath, e);
             // FFmpeg 변환 실패 시 원본 파일을 그대로 사용
             log.warn("FFmpeg 변환 실패로 인해 원본 파일을 사용합니다: {}", originalFilePath);
             return originalFilePath;
+        } catch (Exception e) {
+            log.error("오디오 파일 WAV 변환 중 예상치 못한 오류 발생: {}", originalFilePath, e);
+            throw new AudioConversionException("오디오 파일 WAV 변환 중 예상치 못한 오류가 발생했습니다", e);
         }
     }
     
@@ -101,8 +104,11 @@ public class AudioConverter {
             // FFmpeg 버전 확인을 통해 사용 가능 여부 테스트
             FFmpeg.atPath().addArgument("-version").execute();
             return true;
-        } catch (Exception e) {
+        } catch (AudioConversionException e) {
             log.debug("FFmpeg을 사용할 수 없습니다: {}", e.getMessage());
+            return false;
+        } catch (Exception e) {
+            log.debug("FFmpeg 사용 가능 여부 확인 중 오류 발생: {}", e.getMessage());
             return false;
         }
     }

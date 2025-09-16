@@ -97,8 +97,12 @@ fabric.properties
 # Compiled class file
 *.class
 
-# Log file
+# Log files and directories
 *.log
+*.log.*
+logs/
+log/
+app_logs/
 
 # BlueJ files
 *.ctxt

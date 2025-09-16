@@ -1,6 +1,7 @@
 package com.ssafy.lab.orak.processing.service;
 
 import com.ssafy.lab.orak.processing.config.ProcessingConfig;
+import com.ssafy.lab.orak.processing.exception.BatchProcessingException;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
@@ -29,7 +30,7 @@ public class BatchProcessingService {
     private final Semaphore processingLimiter = new Semaphore(3); // 기본 3개
     private final AtomicInteger activeJobs = new AtomicInteger(0);
     
-    @Scheduled(fixedRateString = "#{${processing.batch.cron-expression:60000}}")
+    @Scheduled(fixedRateString = "#{${processing.batch.interval-ms:60000}}")
     public void processPendingFiles() {
         if (!processingConfig.getBatch().isEnabled()) {
             return;
@@ -47,18 +48,18 @@ public class BatchProcessingService {
         int availableSlots = maxConcurrent - currentActive;
         int actualBatchSize = Math.min(batchSize, availableSlots);
         
-        log.info("Starting batch processing - Active: {}, Available: {}, Batch size: {}", 
+        log.info("배치 처리 시작 - 활성: {}, 가용: {}, 배치 크기: {}", 
                 currentActive, availableSlots, actualBatchSize);
         
         // 처리 대기 중인 파일 조회
         List<Upload> pendingUploads = fileUploadService.getPendingAudioProcessing(actualBatchSize);
         
         if (pendingUploads.isEmpty()) {
-            log.debug("No pending files to process");
+            log.debug("처리할 대기 파일이 없습니다");
             return;
         }
         
-        log.info("Found {} pending files for processing", pendingUploads.size());
+        log.info("처리 대기 중인 파일 {}개 발견", pendingUploads.size());
         
         // 각 파일에 대해 비동기 처리 시작
         for (Upload upload : pendingUploads) {
@@ -71,13 +72,13 @@ public class BatchProcessingService {
             processingLimiter.acquire();
             activeJobs.incrementAndGet();
             
-            log.info("Started processing upload: {} ({})", upload.getId(), upload.getOriginalFilename());
+            log.info("업로드 처리 시작: {} ({})", upload.getId(), upload.getOriginalFilename());
             
             // 적절한 처리 작업 찾기
             ProcessingJob selectedJob = findApplicableJob(upload);
             
             if (selectedJob == null) {
-                log.warn("No applicable processing job found for upload: {}", upload.getId());
+                log.warn("업로드에 적용 가능한 처리 작업을 찾을 수 없음: {}", upload.getId());
                 return;
             }
             
@@ -90,21 +91,27 @@ public class BatchProcessingService {
             if (success) {
                 // 처리 성공
                 fileUploadService.updateProcessingStatus(upload.getId(), selectedJob.getCompletedStatus());
-                log.info("Successfully processed upload: {} with job: {}", 
+                log.info("업로드 처리 성공: {} (작업: {})", 
                         upload.getId(), selectedJob.getClass().getSimpleName());
             } else {
                 // 처리 실패
-                String errorMessage = String.format("Processing failed with job: %s", 
+                String errorMessage = String.format("작업 처리 실패: %s", 
                         selectedJob.getClass().getSimpleName());
                 fileUploadService.markProcessingFailed(upload.getId(), errorMessage);
-                log.error("Failed to process upload: {} with job: {}", 
+                log.error("업로드 처리 실패: {} (작업: {})", 
                         upload.getId(), selectedJob.getClass().getSimpleName());
             }
             
-        } catch (Exception e) {
-            log.error("Unexpected error processing upload: {}", upload.getId(), e);
+        } catch (BatchProcessingException e) {
+            log.error("배치 처리 실패: uploadId={}", upload.getId(), e);
             fileUploadService.markProcessingFailed(upload.getId(), 
-                    "Unexpected error: " + e.getMessage());
+                    "배치 처리 실패: " + e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("배치 처리 중 예상치 못한 오류 발생: uploadId={}", upload.getId(), e);
+            fileUploadService.markProcessingFailed(upload.getId(), 
+                    "배치 처리 중 예상치 못한 오류: " + e.getMessage());
+            throw new BatchProcessingException("배치 처리 중 예상치 못한 오류가 발생했습니다", e);
         } finally {
             activeJobs.decrementAndGet();
             processingLimiter.release();
@@ -137,12 +144,12 @@ public class BatchProcessingService {
     // 배치 처리 제어 메서드
     public void pauseProcessing() {
         processingConfig.getBatch().setEnabled(false);
-        log.info("Batch processing paused");
+        log.info("배치 처리 일시 정지됨");
     }
     
     public void resumeProcessing() {
         processingConfig.getBatch().setEnabled(true);
-        log.info("Batch processing resumed");
+        log.info("배치 처리 재개됨");
     }
     
     @lombok.Builder

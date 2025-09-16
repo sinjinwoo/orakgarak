@@ -42,13 +42,13 @@ public class KafkaEventProducer {
                     log.info("Kafka event sent successfully: topic={}, key={}, partition={}, offset={}", 
                             topic, key, result.getRecordMetadata().partition(), result.getRecordMetadata().offset());
                 } else {
-                    log.error("Failed to send Kafka event: topic={}, key={}", topic, key, ex);
+                    log.error("Kafka 이벤트 전송 실패: topic={}, key={}", topic, key, ex);
                 }
             });
             
         } catch (Exception e) {
-            log.error("Failed to serialize and send upload event: {}", event, e);
-            throw new RuntimeException("Kafka event sending failed", e);
+            log.error("업로드 이벤트 직렬화 및 전송 실패: {}", event, e);
+            throw new com.ssafy.lab.orak.event.exception.KafkaSendException("Kafka 이벤트 전송 실패", e);
         }
     }
 
@@ -63,13 +63,13 @@ public class KafkaEventProducer {
                         log.info("Processing status event sent: uploadId={}, status={}", 
                                 event.getUploadId(), event.getCurrentStatus());
                     } else {
-                        log.error("Failed to send processing status event: uploadId={}", 
+                        log.error("처리 상태 이벤트 전송 실패: uploadId={}", 
                                 event.getUploadId(), ex);
                     }
                 });
                 
         } catch (Exception e) {
-            log.error("Failed to send processing status event: {}", event, e);
+            log.error("처리 상태 이벤트 전송 실패: {}", event, e);
         }
     }
 
@@ -84,13 +84,13 @@ public class KafkaEventProducer {
                         log.info("Processing result event sent: uploadId={}, status={}", 
                                 event.getUploadId(), event.getCurrentStatus());
                     } else {
-                        log.error("Failed to send processing result event: uploadId={}", 
+                        log.error("처리 결과 이벤트 전송 실패: uploadId={}", 
                                 event.getUploadId(), ex);
                     }
                 });
                 
         } catch (Exception e) {
-            log.error("Failed to send processing result event: {}", event, e);
+            log.error("처리 결과 이벤트 전송 실패: {}", event, e);
         }
     }
 
@@ -114,23 +114,44 @@ public class KafkaEventProducer {
         };
     }
 
+    public void sendStatusChangeEvent(UploadEvent event) {
+        try {
+            String eventJson = objectMapper.writeValueAsString(event);
+            String key = String.valueOf(event.getUploadId());
+
+            kafkaTemplate.send(processingStatusTopic, key, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("Status change event sent: uploadId={}, status={}→{}",
+                                event.getUploadId(), event.getPreviousStatus(), event.getCurrentStatus());
+                    } else {
+                        log.error("상태 변경 이벤트 전송 실패: uploadId={}",
+                                event.getUploadId(), ex);
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("상태 변경 이벤트 전송 실패: {}", event, e);
+        }
+    }
+
     // 배치 이벤트 발송 (배치 처리 시작/완료 알림용)
     public void sendBatchEvent(String eventType, Object batchInfo) {
         try {
             String eventJson = objectMapper.writeValueAsString(batchInfo);
             String key = "batch-" + System.currentTimeMillis();
-            
+
             kafkaTemplate.send(processingStatusTopic, key, eventJson)
                 .whenComplete((result, ex) -> {
                     if (ex == null) {
                         log.info("Batch event sent: type={}", eventType);
                     } else {
-                        log.error("Failed to send batch event: type={}", eventType, ex);
+                        log.error("배치 이벤트 전송 실패: type={}", eventType, ex);
                     }
                 });
-                
+
         } catch (Exception e) {
-            log.error("Failed to send batch event: type={}", eventType, e);
+            log.error("배치 이벤트 전송 실패: type={}", eventType, e);
         }
     }
 }

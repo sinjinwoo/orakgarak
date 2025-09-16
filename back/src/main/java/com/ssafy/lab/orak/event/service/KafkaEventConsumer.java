@@ -32,23 +32,23 @@ public class KafkaEventConsumer {
             String eventJson = record.value();
             UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
             
-            log.info("Processing upload event: type={}, uploadId={}, partition={}, offset={}", 
+            log.info("업로드 이벤트 처리 중: type={}, uploadId={}, partition={}, offset={}", 
                     event.getEventType(), event.getUploadId(), record.partition(), record.offset());
 
             switch (event.getEventType()) {
                 case "UPLOAD_COMPLETED" -> handleUploadCompleted(event);
                 case "PROCESSING_REQUESTED" -> handleProcessingRequested(event);
-                default -> log.warn("Unknown upload event type: {}", event.getEventType());
+                default -> log.warn("알 수 없는 업로드 이벤트 타입: {}", event.getEventType());
             }
 
             // 수동 커밋
             ack.acknowledge();
             processedEvents.incrementAndGet();
             
-            log.debug("Upload event processed successfully: {}", event.getEventId());
+            log.debug("업로드 이벤트 처리 완료: {}", event.getEventId());
             
         } catch (Exception e) {
-            log.error("Failed to process upload event: partition={}, offset={}, value={}", 
+            log.error("업로드 이벤트 처리 실패: partition={}, offset={}, value={}", 
                     record.partition(), record.offset(), record.value(), e);
             failedEvents.incrementAndGet();
             
@@ -64,7 +64,7 @@ public class KafkaEventConsumer {
             String eventJson = record.value();
             UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
             
-            log.info("Processing status event: uploadId={}, status={}, partition={}, offset={}", 
+            log.info("처리 상태 이벤트 처리 중: uploadId={}, status={}, partition={}, offset={}", 
                     event.getUploadId(), event.getCurrentStatus(), record.partition(), record.offset());
 
             if ("STATUS_CHANGED".equals(event.getEventType())) {
@@ -75,7 +75,7 @@ public class KafkaEventConsumer {
             processedEvents.incrementAndGet();
             
         } catch (Exception e) {
-            log.error("Failed to process status event: partition={}, offset={}, value={}", 
+            log.error("상태 이벤트 처리 실패: partition={}, offset={}, value={}", 
                     record.partition(), record.offset(), record.value(), e);
             failedEvents.incrementAndGet();
             ack.acknowledge();
@@ -89,7 +89,7 @@ public class KafkaEventConsumer {
             String eventJson = record.value();
             UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
             
-            log.info("Processing result event: uploadId={}, status={}, partition={}, offset={}", 
+            log.info("처리 결과 이벤트 처리 중: uploadId={}, status={}, partition={}, offset={}", 
                     event.getUploadId(), event.getCurrentStatus(), record.partition(), record.offset());
 
             handleProcessingResult(event);
@@ -98,7 +98,7 @@ public class KafkaEventConsumer {
             processedEvents.incrementAndGet();
             
         } catch (Exception e) {
-            log.error("Failed to process result event: partition={}, offset={}, value={}", 
+            log.error("결과 이벤트 처리 실패: partition={}, offset={}, value={}", 
                     record.partition(), record.offset(), record.value(), e);
             failedEvents.incrementAndGet();
             ack.acknowledge();
@@ -110,7 +110,7 @@ public class KafkaEventConsumer {
             // S3 업로드 완료 시 DB 상태 업데이트
             if (event.getUploadId() != null) {
                 fileUploadService.updateProcessingStatus(event.getUploadId(), event.getCurrentStatus());
-                log.info("Updated upload status to {} for uploadId: {}", 
+                log.info("업로드 상태 업데이트 완료 {} for uploadId: {}", 
                         event.getCurrentStatus(), event.getUploadId());
                 
                 // 추가 처리가 필요한 파일인지 확인
@@ -122,7 +122,7 @@ public class KafkaEventConsumer {
                 }
             }
         } catch (Exception e) {
-            log.error("Failed to handle upload completed event: {}", event, e);
+            log.error("업로드 완료 이벤트 처리 실패: {}", event, e);
         }
     }
 
@@ -132,21 +132,21 @@ public class KafkaEventConsumer {
             eventDrivenProcessingService.processUploadEvent(event);
             
         } catch (Exception e) {
-            log.error("Failed to handle processing request: {}", event, e);
+            log.error("처리 요청 이벤트 처리 실패: {}", event, e);
         }
     }
 
     private void handleStatusChanged(UploadEvent event) {
         try {
             // 상태 변경 이벤트를 다른 서비스들에 알림
-            log.info("Status changed for uploadId {}: {} -> {}", 
+            log.info("업로드 상태 변경: uploadId {}: {} -> {}", 
                     event.getUploadId(), event.getPreviousStatus(), event.getCurrentStatus());
             
             // 상태 변경에 따른 후속 처리
             eventDrivenProcessingService.handleStatusChange(event);
             
         } catch (Exception e) {
-            log.error("Failed to handle status change: {}", event, e);
+            log.error("상태 변경 처리 실패: {}", event, e);
         }
     }
 
@@ -160,12 +160,12 @@ public class KafkaEventConsumer {
                     fileUploadService.updateProcessingStatus(event.getUploadId(), event.getCurrentStatus());
                 }
                 
-                log.info("Processing result handled for uploadId: {}, finalStatus: {}", 
+                log.info("처리 결과 완료: uploadId: {}, finalStatus: {}", 
                         event.getUploadId(), event.getCurrentStatus());
             }
             
         } catch (Exception e) {
-            log.error("Failed to handle processing result: {}", event, e);
+            log.error("처리 결과 처리 실패: {}", event, e);
         }
     }
 

@@ -86,6 +86,11 @@ public class Upload extends BaseEntity {
         this.processingStatus = ProcessingStatus.FAILED;
         this.processingErrorMessage = errorMessage;
     }
+
+    // 편의 메서드: 에러 메시지 getter (테스트 호환성)
+    public String getErrorMessage() {
+        return this.processingErrorMessage;
+    }
     
     private boolean isAudioExtension(String ext) {
         if (ext == null) return false;

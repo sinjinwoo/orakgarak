@@ -36,7 +36,7 @@ public class EventDrivenProcessingService {
                 processingLimiter.acquire();
                 activeProcessingJobs.incrementAndGet();
                 
-                log.info("Starting event-driven processing for uploadId: {}", event.getUploadId());
+                log.info("이벤트 기반 처리 시작: uploadId: {}", event.getUploadId());
                 
                 // 업로드 정보 조회
                 Upload upload = fileUploadService.getUpload(event.getUploadId());
@@ -45,13 +45,13 @@ public class EventDrivenProcessingService {
                 ProcessingJob selectedJob = findApplicableJob(upload);
                 
                 if (selectedJob == null) {
-                    log.warn("No applicable processing job found for upload: {}", upload.getId());
-                    publishStatusChangeEvent(event, ProcessingStatus.FAILED, "No applicable processing job found");
+                    log.warn("업로드에 적용할 수 있는 처리 작업을 찾을 수 없음: {}", upload.getId());
+                    publishStatusChangeEvent(event, ProcessingStatus.FAILED, "적용할 수 있는 처리 작업을 찾을 수 없음");
                     return;
                 }
                 
                 // 처리 시작 상태 알림
-                publishStatusChangeEvent(event, selectedJob.getProcessingStatus(), "Processing started");
+                publishStatusChangeEvent(event, selectedJob.getProcessingStatus(), "처리 시작됨");
                 
                 // 실제 처리 수행
                 boolean success = selectedJob.process(upload);
@@ -59,23 +59,23 @@ public class EventDrivenProcessingService {
                 if (success) {
                     // 처리 성공
                     ProcessingStatus completedStatus = selectedJob.getCompletedStatus();
-                    publishProcessingResult(event, completedStatus, "Processing completed successfully");
-                    log.info("Successfully processed upload: {} with job: {}", 
+                    publishProcessingResult(event, completedStatus, "처리 성공적으로 완료됨");
+                    log.info("업로드 처리 성공: {} with job: {}", 
                             upload.getId(), selectedJob.getClass().getSimpleName());
                 } else {
                     // 처리 실패
-                    String errorMessage = String.format("Processing failed with job: %s", 
+                    String errorMessage = String.format("처리 작업 실패: %s", 
                             selectedJob.getClass().getSimpleName());
                     publishProcessingResult(event, ProcessingStatus.FAILED, errorMessage);
-                    log.error("Failed to process upload: {} with job: {}", 
+                    log.error("업로드 처리 실패: {} with job: {}", 
                             upload.getId(), selectedJob.getClass().getSimpleName());
                 }
                 
             } catch (Exception e) {
-                log.error("Unexpected error during event-driven processing for uploadId: {}", 
+                log.error("이벤트 기반 처리 중 예상치 못한 오류 발생: uploadId: {}", 
                         event.getUploadId(), e);
                 publishProcessingResult(event, ProcessingStatus.FAILED, 
-                        "Unexpected error: " + e.getMessage());
+                        "예상치 못한 오류: " + e.getMessage());
             } finally {
                 activeProcessingJobs.decrementAndGet();
                 processingLimiter.release();
@@ -94,16 +94,16 @@ public class EventDrivenProcessingService {
             );
             
             kafkaEventProducer.sendUploadEvent(processingRequest);
-            log.info("Processing request sent for uploadId: {}", uploadEvent.getUploadId());
+            log.info("처리 요청 전송 완료: uploadId: {}", uploadEvent.getUploadId());
             
         } catch (Exception e) {
-            log.error("Failed to request processing for uploadId: {}", uploadEvent.getUploadId(), e);
+            log.error("처리 요청 실패: uploadId: {}", uploadEvent.getUploadId(), e);
         }
     }
 
     public void handleStatusChange(UploadEvent event) {
         try {
-            log.info("Handling status change for uploadId {}: {} -> {}", 
+            log.info("상태 변경 처리 중: uploadId {}: {} -> {}", 
                     event.getUploadId(), event.getPreviousStatus(), event.getCurrentStatus());
             
             // 상태 변경에 따른 후속 처리 로직
@@ -121,7 +121,7 @@ public class EventDrivenProcessingService {
             }
             
         } catch (Exception e) {
-            log.error("Failed to handle status change: {}", event, e);
+            log.error("상태 변경 처리 실패: {}", event, e);
         }
     }
 
@@ -129,16 +129,16 @@ public class EventDrivenProcessingService {
         UploadEvent nextProcessingEvent = UploadEvent.createProcessingRequestEvent(
                 event.getUploadId(), event.getUuid(), nextStatus, event.getPriority());
         kafkaEventProducer.sendUploadEvent(nextProcessingEvent);
-        log.info("Requested next processing ({}) for uploadId: {}", nextStatus, event.getUploadId());
+        log.info("다음 처리 요청됨 ({}) for uploadId: {}", nextStatus, event.getUploadId());
     }
 
     private void notifyProcessingComplete(UploadEvent event) {
-        log.info("All processing completed for uploadId: {}", event.getUploadId());
+        log.info("모든 처리 완료: uploadId: {}", event.getUploadId());
         // 여기서 외부 시스템 알림, 웹소켓 푸시 등 추가 가능
     }
 
     private void notifyProcessingFailed(UploadEvent event) {
-        log.error("Processing failed for uploadId: {}, error: {}", 
+        log.error("처리 실패: uploadId: {}, error: {}", 
                 event.getUploadId(), event.getErrorMessage());
         // 여기서 에러 알림, 모니터링 시스템 연동 등 추가 가능
     }

@@ -1,0 +1,87 @@
+global:
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alertmanager@orakgaraki.com'
+  resolve_timeout: 5m
+
+# 알림 그룹화 설정
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: 'mattermost-notifications'
+  routes:
+    # 심각한 알림 (즉시 발송)
+    - match:
+        severity: critical
+      receiver: 'mattermost-critical'
+      group_wait: 10s
+      repeat_interval: 5m
+
+    # 경고 알림 (그룹화해서 발송)
+    - match:
+        severity: warning
+      receiver: 'mattermost-warnings'
+      group_wait: 2m
+      repeat_interval: 1h
+
+# 알림 수신자 설정
+receivers:
+  # 기본 Mattermost 알림
+  - name: 'mattermost-notifications'
+    webhook_configs:
+      - url: '${MATTERMOST_WEBHOOK_URL}'
+        send_resolved: true
+        title: '[{{.Status | toUpper}}] 오락가락이 알림'
+        text: |
+          {{- range .Alerts }}
+          **알림:** {{ .Annotations.summary }}
+          **설명:** {{ .Annotations.description }}
+          **심각도:** {{ .Labels.severity }}
+          **인스턴스:** {{ .Labels.instance }}
+          **시간:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          ---
+          {{- end }}
+
+  # 심각한 알림용 (빨간색)
+  - name: 'mattermost-critical'
+    webhook_configs:
+      - url: '${MATTERMOST_WEBHOOK_URL}'
+        send_resolved: true
+        title: '🚨 [긴급] 오락가락이 응급 알림'
+        text: |
+          ## 🔥 긴급 알림 🔥
+          {{- range .Alerts }}
+          **⚠️ 알림:** {{ .Annotations.summary }}
+          **📝 설명:** {{ .Annotations.description }}
+          **🎯 인스턴스:** {{ .Labels.instance }}
+          **⏰ 시작 시간:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          **🔍 상세 정보:** {{ .GeneratorURL }}
+          ---
+          {{- end }}
+
+          **조치 필요:** 즉시 조사가 필요합니다!
+
+  # 경고 알림용 (노란색)
+  - name: 'mattermost-warnings'
+    webhook_configs:
+      - url: '${MATTERMOST_WEBHOOK_URL}'
+        send_resolved: true
+        title: '⚠️ [경고] 오락가락이 알림'
+        text: |
+          ## ⚠️ 경고 알림
+          {{- range .Alerts }}
+          **알림:** {{ .Annotations.summary }}
+          **설명:** {{ .Annotations.description }}
+          **인스턴스:** {{ .Labels.instance }}
+          **시간:** {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          ---
+          {{- end }}
+
+# 억제 규칙 (중복 알림 방지)
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']

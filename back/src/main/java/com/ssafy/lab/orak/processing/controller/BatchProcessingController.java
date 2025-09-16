@@ -16,7 +16,7 @@ public class BatchProcessingController {
 
     @GetMapping("/statistics")
     public ResponseEntity<BatchProcessingService.ProcessingStatistics> getStatistics() {
-        log.info("Getting batch processing statistics");
+        log.info("배치 처리 통계 조회");
         BatchProcessingService.ProcessingStatistics statistics = batchProcessingService.getStatistics();
         return ResponseEntity.ok(statistics);
     }

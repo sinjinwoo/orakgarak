@@ -1,5 +1,6 @@
 package com.ssafy.lab.orak.upload.service;
 
+import com.ssafy.lab.orak.s3.exception.PresignedUrlException;
 import com.ssafy.lab.orak.s3.helper.S3Helper;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadRequest;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadResponse;
@@ -63,7 +64,7 @@ public class PresignedUploadService {
             
             Upload savedUpload = uploadRepository.save(upload);
             
-            log.info("Generated presigned URL for upload: {} (uuid: {})", 
+            log.info("Presigned URL 생성 완료: upload: {} (uuid: {})", 
                     savedUpload.getId(), uuid);
             
             return PresignedUploadResponse.builder()
@@ -76,8 +77,8 @@ public class PresignedUploadService {
                     .build();
             
         } catch (Exception e) {
-            log.error("Failed to generate presigned upload URL", e);
-            throw new RuntimeException("Presigned URL 생성 실패: " + e.getMessage(), e);
+            log.error("Presigned URL 생성에 실패했습니다", e);
+            throw new PresignedUrlException("Presigned URL 생성에 실패했습니다: " + e.getMessage(), e);
         }
     }
 

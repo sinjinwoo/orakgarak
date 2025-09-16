@@ -3,6 +3,11 @@ package com.ssafy.lab.orak.common.exception;
 import com.ssafy.lab.orak.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.lab.orak.auth.exception.MissingRefreshTokenException;
 import com.ssafy.lab.orak.auth.exception.UserNotFoundException;
+import com.ssafy.lab.orak.event.exception.EventBridgeSendException;
+import com.ssafy.lab.orak.event.exception.EventProcessingException;
+import com.ssafy.lab.orak.event.exception.KafkaSendException;
+import com.ssafy.lab.orak.processing.exception.AudioProcessingException;
+import com.ssafy.lab.orak.processing.exception.BatchProcessingException;
 import com.ssafy.lab.orak.recording.exception.AudioConversionException;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
 import com.ssafy.lab.orak.recording.exception.RecordOperationException;
@@ -15,168 +20,482 @@ import com.ssafy.lab.orak.s3.exception.ThumbnailCreationException;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
 import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.exception.UploadNotFoundException;
-import lombok.extern.log4j.Log4j2;
-import org.springframework.http.HttpStatus;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-
+@Slf4j
 @RestControllerAdvice
-@Log4j2
 public class CustomRestAdvice {
-    
-    @ExceptionHandler(RecordNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleRecordNotFoundException(RecordNotFoundException e) {
-        log.error("Record not found: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.NOT_FOUND, "RECORD_NOT_FOUND", e.getMessage());
-    }
-    
-    @ExceptionHandler(RecordPermissionDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleRecordPermissionDeniedException(RecordPermissionDeniedException e) {
-        log.warn("Record permission denied: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.FORBIDDEN, "RECORD_PERMISSION_DENIED", e.getMessage());
-    }
-    
-    @ExceptionHandler(UploadNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleUploadNotFoundException(UploadNotFoundException e) {
-        log.error("Upload not found: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.NOT_FOUND, "UPLOAD_NOT_FOUND", e.getMessage());
-    }
-    
-    @ExceptionHandler(FileUploadException.class)
-    public ResponseEntity<Map<String, Object>> handleFileUploadException(FileUploadException e) {
-        log.error("File upload error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "FILE_UPLOAD_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(InvalidFileException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidFileException(InvalidFileException e) {
-        log.warn("Invalid file error: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_FILE_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(AudioConversionException.class)
-    public ResponseEntity<Map<String, Object>> handleAudioConversionException(AudioConversionException e) {
-        log.error("Audio conversion error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "AUDIO_CONVERSION_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(S3UploadException.class)
-    public ResponseEntity<Map<String, Object>> handleS3UploadException(S3UploadException e) {
-        log.error("S3 upload error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "S3_UPLOAD_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(S3DeleteException.class)
-    public ResponseEntity<Map<String, Object>> handleS3DeleteException(S3DeleteException e) {
-        log.error("S3 delete error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "S3_DELETE_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(InvalidFileNameException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidFileNameException(InvalidFileNameException e) {
-        log.warn("Invalid file name: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_FILE_NAME", e.getMessage());
-    }
-    
-    @ExceptionHandler(PresignedUrlException.class)
-    public ResponseEntity<Map<String, Object>> handlePresignedUrlException(PresignedUrlException e) {
-        log.error("Presigned URL error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "PRESIGNED_URL_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(ThumbnailCreationException.class)
-    public ResponseEntity<Map<String, Object>> handleThumbnailCreationException(ThumbnailCreationException e) {
-        log.error("Thumbnail creation error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "THUMBNAIL_CREATION_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(InvalidRefreshTokenException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidRefreshTokenException(InvalidRefreshTokenException e) {
-        log.warn("Invalid refresh token: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN", e.getMessage());
-    }
-    
-    @ExceptionHandler(MissingRefreshTokenException.class)
-    public ResponseEntity<Map<String, Object>> handleMissingRefreshTokenException(MissingRefreshTokenException e) {
-        log.warn("Missing refresh token: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "MISSING_REFRESH_TOKEN", e.getMessage());
-    }
-    
-    @ExceptionHandler(RecordOperationException.class)
-    public ResponseEntity<Map<String, Object>> handleRecordOperationException(RecordOperationException e) {
-        log.error("Record operation error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "RECORD_OPERATION_ERROR", e.getMessage());
-    }
-    
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleUserNotFoundException(UserNotFoundException e) {
-        log.error("User not found: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", e.getMessage());
-    }
-    
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<Map<String, Object>> handleConstraintViolationException(ConstraintViolationException e) {
-        StringBuilder message = new StringBuilder("검증 오류: ");
-        for (ConstraintViolation<?> violation : e.getConstraintViolations()) {
-            message.append(violation.getMessage()).append("; ");
-        }
-        log.warn("Validation error: {}", message);
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message.toString());
-    }
-    
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        StringBuilder message = new StringBuilder("요청 데이터 검증 오류: ");
-        e.getBindingResult().getFieldErrors().forEach(error -> 
-            message.append(error.getField()).append(": ").append(error.getDefaultMessage()).append("; ")
+
+    /**
+     * 공통 베이스 예외 처리 (새로운 구조)
+     */
+    @ExceptionHandler(BaseException.class)
+    protected ResponseEntity<ErrorResponse> handleBaseException(
+            BaseException e, HttpServletRequest request) {
+
+        log.error("기본 예외 발생: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            e.getErrorCode(),
+            e.getMessage(),
+            request.getRequestURI()
         );
-        log.warn("Method argument validation error: {}", message);
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message.toString());
+
+        return ResponseEntity
+                .status(e.getErrorCode().getHttpStatus())
+                .body(errorResponse);
     }
-    
+
+    /**
+     * Bean Validation 예외 처리 (@Valid)
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    protected ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException e, HttpServletRequest request) {
+
+        log.error("유효성 검증 오류 발생: {}", e.getMessage());
+
+        List<ErrorResponse.FieldError> fieldErrors = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> ErrorResponse.FieldError.builder()
+                        .field(error.getField())
+                        .value(error.getRejectedValue() != null ? error.getRejectedValue().toString() : "")
+                        .reason(error.getDefaultMessage())
+                        .build())
+                .collect(Collectors.toList());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INVALID_REQUEST,
+            request.getRequestURI(),
+            fieldErrors
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * 파일 업로드 크기 초과 예외 처리
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    protected ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException e, HttpServletRequest request) {
+
+        log.error("파일 크기 초과 오류 발생: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.FILE_SIZE_EXCEEDED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    // ======== 도메인별 예외 처리 (ErrorResponse 사용) ========
+
+    /**
+     * Record 관련 예외 처리
+     */
+    @ExceptionHandler(RecordNotFoundException.class)
+    protected ResponseEntity<ErrorResponse> handleRecordNotFoundException(
+            RecordNotFoundException e, HttpServletRequest request) {
+
+        log.error("녹음 파일을 찾을 수 없음: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.RECORD_NOT_FOUND,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(RecordPermissionDeniedException.class)
+    protected ResponseEntity<ErrorResponse> handleRecordPermissionDeniedException(
+            RecordPermissionDeniedException e, HttpServletRequest request) {
+
+        log.warn("Record permission denied: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.RECORD_PERMISSION_DENIED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
+    @ExceptionHandler(RecordOperationException.class)
+    protected ResponseEntity<ErrorResponse> handleRecordOperationException(
+            RecordOperationException e, HttpServletRequest request) {
+
+        log.error("녹음 작업 오류: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.RECORD_OPERATION_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    /**
+     * Upload 관련 예외 처리
+     */
+    @ExceptionHandler(UploadNotFoundException.class)
+    protected ResponseEntity<ErrorResponse> handleUploadNotFoundException(
+            UploadNotFoundException e, HttpServletRequest request) {
+
+        log.error("업로드 파일을 찾을 수 없음: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.UPLOAD_NOT_FOUND,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(FileUploadException.class)
+    protected ResponseEntity<ErrorResponse> handleFileUploadException(
+            FileUploadException e, HttpServletRequest request) {
+
+        log.error("파일 업로드 오류: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.FILE_UPLOAD_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidFileException.class)
+    protected ResponseEntity<ErrorResponse> handleInvalidFileException(
+            InvalidFileException e, HttpServletRequest request) {
+
+        log.warn("Invalid file error: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INVALID_FILE_TYPE,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * S3 관련 예외 처리
+     */
+    @ExceptionHandler(S3UploadException.class)
+    protected ResponseEntity<ErrorResponse> handleS3UploadException(
+            S3UploadException e, HttpServletRequest request) {
+
+        log.error("S3 업로드 오류: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.S3_UPLOAD_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(S3DeleteException.class)
+    protected ResponseEntity<ErrorResponse> handleS3DeleteException(
+            S3DeleteException e, HttpServletRequest request) {
+
+        log.error("S3 삭제 오류: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.S3_DELETE_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidFileNameException.class)
+    protected ResponseEntity<ErrorResponse> handleInvalidFileNameException(
+            InvalidFileNameException e, HttpServletRequest request) {
+
+        log.warn("Invalid file name: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INVALID_FILE_NAME,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(PresignedUrlException.class)
+    protected ResponseEntity<ErrorResponse> handlePresignedUrlException(
+            PresignedUrlException e, HttpServletRequest request) {
+
+        log.error("Presigned URL 오류: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.PRESIGNED_URL_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(ThumbnailCreationException.class)
+    protected ResponseEntity<ErrorResponse> handleThumbnailCreationException(
+            ThumbnailCreationException e, HttpServletRequest request) {
+
+        log.error("썸네일 생성 오류: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.THUMBNAIL_CREATION_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    /**
+     * 오디오 처리 관련 예외 처리
+     */
+    @ExceptionHandler(AudioConversionException.class)
+    protected ResponseEntity<ErrorResponse> handleAudioConversionException(
+            AudioConversionException e, HttpServletRequest request) {
+
+        log.error("오디오 변환 오류: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.AUDIO_CONVERSION_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    /**
+     * 인증 관련 예외 처리
+     */
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    protected ResponseEntity<ErrorResponse> handleInvalidRefreshTokenException(
+            InvalidRefreshTokenException e, HttpServletRequest request) {
+
+        log.warn("Invalid refresh token: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INVALID_REFRESH_TOKEN,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    @ExceptionHandler(MissingRefreshTokenException.class)
+    protected ResponseEntity<ErrorResponse> handleMissingRefreshTokenException(
+            MissingRefreshTokenException e, HttpServletRequest request) {
+
+        log.warn("Missing refresh token: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.MISSING_REFRESH_TOKEN,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    protected ResponseEntity<ErrorResponse> handleUserNotFoundException(
+            UserNotFoundException e, HttpServletRequest request) {
+
+        log.error("사용자를 찾을 수 없음: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.USER_NOT_FOUND,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * 제약 조건 위반 예외 처리 (개선된 버전)
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    protected ResponseEntity<ErrorResponse> handleConstraintViolation(
+            ConstraintViolationException e, HttpServletRequest request) {
+
+        log.error("제약 조건 위반 발생: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INVALID_REQUEST,
+            e.getMessage(),
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * 누락된 요청 파라미터 예외 처리
+     */
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<Map<String, Object>> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
-        String message = "필수 요청 파라미터가 누락되었습니다: " + e.getParameterName();
+    protected ResponseEntity<ErrorResponse> handleMissingServletRequestParameter(
+            MissingServletRequestParameterException e, HttpServletRequest request) {
+
         log.warn("Missing required parameter: {}", e.getParameterName());
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "MISSING_PARAMETER", message);
+
+        String message = String.format("필수 요청 파라미터가 누락되었습니다: %s", e.getParameterName());
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INVALID_REQUEST,
+            message,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
     }
-    
+
+    /**
+     * 잘못된 인수 예외 처리
+     */
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException e) {
+    protected ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException e, HttpServletRequest request) {
+
         log.warn("Invalid argument: {}", e.getMessage());
-        return createErrorResponse(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INVALID_REQUEST,
+            e.getMessage(),
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(errorResponse);
     }
-    
+
+    /**
+     * 런타임 예외 처리
+     */
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException e) {
-        log.error("Runtime error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다");
+    protected ResponseEntity<ErrorResponse> handleRuntimeException(
+            RuntimeException e, HttpServletRequest request) {
+
+        log.error("런타임 오류 발생: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.internalServerError().body(errorResponse);
     }
-    
+
+    /**
+     * 이벤트 처리 예외 처리
+     */
+    @ExceptionHandler(EventProcessingException.class)
+    protected ResponseEntity<ErrorResponse> handleEventProcessingException(
+            EventProcessingException e, HttpServletRequest request) {
+
+        log.error("이벤트 처리 실패: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.EVENT_PROCESSING_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.internalServerError().body(errorResponse);
+    }
+
+    @ExceptionHandler(EventBridgeSendException.class)
+    protected ResponseEntity<ErrorResponse> handleEventBridgeSendException(
+            EventBridgeSendException e, HttpServletRequest request) {
+
+        log.error("EventBridge 전송 실패: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.EVENTBRIDGE_SEND_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.internalServerError().body(errorResponse);
+    }
+
+    @ExceptionHandler(KafkaSendException.class)
+    protected ResponseEntity<ErrorResponse> handleKafkaSendException(
+            KafkaSendException e, HttpServletRequest request) {
+
+        log.error("Kafka 전송 실패: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.KAFKA_SEND_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.internalServerError().body(errorResponse);
+    }
+
+    /**
+     * 처리 관련 예외 처리
+     */
+    @ExceptionHandler(BatchProcessingException.class)
+    protected ResponseEntity<ErrorResponse> handleBatchProcessingException(
+            BatchProcessingException e, HttpServletRequest request) {
+
+        log.error("배치 처리 실패: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.BATCH_PROCESSING_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.internalServerError().body(errorResponse);
+    }
+
+    @ExceptionHandler(AudioProcessingException.class)
+    protected ResponseEntity<ErrorResponse> handleAudioProcessingException(
+            AudioProcessingException e, HttpServletRequest request) {
+
+        log.error("오디오 처리 실패: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.AUDIO_PROCESSING_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.internalServerError().body(errorResponse);
+    }
+
+    /**
+     * 모든 기타 예외 처리 (최종 캐치)
+     */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception e) {
-        log.error("Unexpected error: {}", e.getMessage(), e);
-        return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "UNEXPECTED_ERROR", "예상치 못한 오류가 발생했습니다");
-    }
-    
-    private ResponseEntity<Map<String, Object>> createErrorResponse(HttpStatus status, String errorCode, String message) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("timestamp", LocalDateTime.now());
-        errorResponse.put("status", status.value());
-        errorResponse.put("error", status.getReasonPhrase());
-        errorResponse.put("errorCode", errorCode);
-        errorResponse.put("message", message);
-        
-        return new ResponseEntity<>(errorResponse, status);
+    protected ResponseEntity<ErrorResponse> handleGenericException(
+            Exception e, HttpServletRequest request) {
+
+        log.error("예상치 못한 오류 발생: {}", e.getMessage(), e);
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.INTERNAL_SERVER_ERROR,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.internalServerError().body(errorResponse);
     }
 }

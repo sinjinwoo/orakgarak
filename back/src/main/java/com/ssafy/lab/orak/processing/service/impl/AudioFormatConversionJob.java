@@ -1,5 +1,6 @@
 package com.ssafy.lab.orak.processing.service.impl;
 
+import com.ssafy.lab.orak.processing.exception.AudioProcessingException;
 import com.ssafy.lab.orak.processing.service.ProcessingJob;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
@@ -16,18 +17,21 @@ public class AudioFormatConversionJob implements ProcessingJob {
     
     @Override
     public boolean process(Upload upload) {
-        log.info("Starting format conversion for upload: {} ({})", upload.getId(), upload.getOriginalFilename());
+        log.info("포맷 변환 시작: upload: {} ({})", upload.getId(), upload.getOriginalFilename());
         
         try {
             // 포맷 변환 시뮬레이션
             simulateFormatConversion(upload);
             
-            log.info("Format conversion completed for upload: {}", upload.getId());
+            log.info("포맷 변환 완료: upload: {}", upload.getId());
             return true;
             
-        } catch (Exception e) {
-            log.error("Format conversion failed for upload: {}", upload.getId(), e);
+        } catch (AudioProcessingException e) {
+            log.error("포맷 변환 실패: upload: {}", upload.getId(), e);
             return false;
+        } catch (Exception e) {
+            log.error("포맷 변환 중 예상치 못한 오류 발생: upload: {}", upload.getId(), e);
+            throw new AudioProcessingException("포맷 변환 중 예상치 못한 오류가 발생했습니다", e);
         }
     }
     
@@ -69,17 +73,17 @@ public class AudioFormatConversionJob implements ProcessingJob {
             processingTime
         );
         
-        log.info("Simulating format conversion for {}ms", actualTime);
+        log.info("포맷 변환 시뮬레이션 실행: {}ms", actualTime);
         Thread.sleep(Math.min(actualTime, 3000)); // 최대 3초로 제한 (테스트용)
         
         // 95% 성공률로 시뮬레이션
         if (ThreadLocalRandom.current().nextDouble() < 0.05) {
-            throw new RuntimeException("Format conversion simulation failure");
+            throw new com.ssafy.lab.orak.processing.exception.AudioProcessingException("포맷 변환 시뮬레이션 실패");
         }
         
         // 변환 결과 시뮬레이션
         String convertedFormat = determineTargetFormat(upload);
-        log.info("Format conversion result for {}: {} -> {}", 
+        log.info("포맷 변환 결과: {}: {} -> {}", 
                 upload.getOriginalFilename(), upload.getExtension(), convertedFormat);
     }
     

@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class UploadEvent {
@@ -34,6 +34,7 @@ public class UploadEvent {
     private ProcessingStatus previousStatus;
     private String statusMessage;
     private String errorMessage;
+    private String errorCode;
     
     // 메타데이터
     private LocalDateTime eventTime;
@@ -44,6 +45,10 @@ public class UploadEvent {
     private Boolean requiresAudioProcessing;
     private Boolean requiresImageProcessing;
     private Integer priority; // 1-10 (낮을수록 높은 우선순위)
+
+    // 처리 결과
+    private String processedS3Key;
+    private Long processingDuration;
     
     public static UploadEvent createS3UploadEvent(Long uploadId, String uuid, String s3Key, 
                                                   String s3Bucket, Long fileSize, String contentType) {

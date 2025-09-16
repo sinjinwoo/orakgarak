@@ -37,7 +37,7 @@ public class S3Uploader {
 
     //로컬 파일을 S3로 업로드
     //filePath는 /Users/admin/Desktop/abc123_profile.png 이런느낌
-    public String upload(String filePath) throws RuntimeException{
+    public String upload(String filePath) throws S3UploadException{
         File targetFile = new File(filePath);
         
         if (!targetFile.exists()) {
@@ -58,7 +58,7 @@ public class S3Uploader {
         }
     }
     //로컬 파일을 S3의 특정 디렉토리로 업로드
-    public String upload(String filePath, String s3Directory) throws RuntimeException{
+    public String upload(String filePath, String s3Directory) throws S3UploadException{
         File targetFile = new File(filePath);
         
         if (!targetFile.exists()) {
