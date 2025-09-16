@@ -10,7 +10,7 @@ const NotFoundPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth="sm" sx={{ pt: { xs: 12, sm: 14 } }}>
       <Box
         display="flex"
         flexDirection="column"

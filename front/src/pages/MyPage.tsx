@@ -340,6 +340,7 @@ const MyPage: React.FC = () => {
           linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
         `,
         minHeight: '100vh',
+        pt: { xs: 12, sm: 14 },
         position: 'relative',
         '&::before': {
           content: '""',

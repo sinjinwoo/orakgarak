@@ -409,7 +409,8 @@ const RecommendationsPage: React.FC = () => {
       background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
       minHeight: '100vh',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      pt: { xs: 12, sm: 14 }
     }}>
       {/* 배경 효과 */}
       <Box sx={{

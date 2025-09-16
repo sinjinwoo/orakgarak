@@ -3,6 +3,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Navigation, Pagination } from 'swiper/modules';
 import { Box, Typography, IconButton } from '@mui/material';
 import { NavigateBefore, NavigateNext } from '@mui/icons-material';
+import { theme, textStyles } from '../styles/theme';
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
@@ -25,13 +26,12 @@ interface AlbumCoverflowProps {
 
 const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({ 
   albums, 
-  onAlbumClick, 
-  onPlayClick 
+  onAlbumClick
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const swiperRef = useRef<any>(null);
+  const swiperRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-  const handleSlideChange = (swiper: any) => {
+  const handleSlideChange = (swiper: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     setActiveIndex(swiper.activeIndex);
   };
 
@@ -48,7 +48,7 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
         justifyContent: 'center', 
         alignItems: 'center', 
         height: 400,
-        color: '#B3B3B3'
+        color: theme.colors.text.tertiary
       }}>
         <Typography variant="h6">앨범이 없습니다</Typography>
       </Box>
@@ -61,12 +61,7 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
       width: '100%',
       height: 600, // 앨범 + reflection + 정보를 위한 충분한 높이
       overflow: 'visible',
-      background: `
-        linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%),
-        radial-gradient(circle at 20% 20%, rgba(255, 107, 157, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(196, 71, 233, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.05) 0%, transparent 50%)
-      `,
+      background: theme.colors.background.main,
       borderRadius: 3,
     }}>
       {/* 제목 */}
@@ -79,15 +74,13 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
         textAlign: 'center'
       }}>
         <Typography variant="h3" sx={{ 
-          fontWeight: 'bold', 
-          color: '#FFFFFF',
+          ...textStyles.title,
           mb: 1,
-          textShadow: '0 0 20px rgba(255, 255, 255, 0.3)'
         }}>
           My Albums
         </Typography>
         <Typography variant="h6" sx={{ 
-          color: '#B3B3B3',
+          ...textStyles.caption,
           fontWeight: 400
         }}>
           나만의 음악 컬렉션
@@ -165,7 +158,7 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                     zIndex: 10,
                     '&:hover': {
                       transform: 'scale(1.05)',
-                      boxShadow: '0 15px 40px rgba(196, 71, 233, 0.4)',
+                      boxShadow: theme.shadows.glowHover,
                     }
                   }}
                   onClick={(e) => {
@@ -187,25 +180,26 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                   />
                 </Box>
                 
-                {/* Reflection - 앨범 바로 아래에 */}
+                {/* Reflection - 앨범과 간격을 두고 자연스러운 효과 */}
                 <Box
                   className="reflection"
                   sx={{
                     width: '180px',
-                    height: '180px',
-                    marginTop: 0, // 앨범 바로 아래 붙여서
+                    height: '120px', // 높이를 줄여서 더 자연스럽게
+                    marginTop: 2, // 앨범과 간격 추가
                     borderRadius: 2,
                     overflow: 'hidden',
+                    position: 'relative',
                     // 앨범 커버의 실제 이미지를 배경으로 설정
                     backgroundImage: `url(${album.coverImage})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat',
-                    // 자연스러운 반사 효과
-                    opacity: index === activeIndex ? 0.6 : 0.3,
-                    filter: 'blur(0.3px) brightness(0.7)',
+                    // 더 자연스러운 반사 효과
+                    opacity: index === activeIndex ? 0.4 : 0.2,
+                    filter: 'blur(1px) brightness(0.5) contrast(0.8)',
                     transform: 'scaleY(-1)', // 상하반전
-                    // 그라디언트로 자연스러운 페이드 효과
+                    // 더 부드러운 페이드 아웃 효과
                     '&::before': {
                       content: '""',
                       position: 'absolute',
@@ -213,7 +207,18 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.8) 100%)',
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.95) 100%)',
+                      borderRadius: 2,
+                    },
+                    // 추가적인 블러 효과로 더 자연스럽게
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.2) 100%)',
                       borderRadius: 2,
                     }
                   }} 
@@ -233,10 +238,10 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
           top: '50%',
           transform: 'translateY(-50%)',
           zIndex: 10,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          color: '#FFFFFF',
+          backgroundColor: theme.colors.navigation.background,
+          color: theme.colors.text.primary,
           '&:hover': {
-            backgroundColor: 'rgba(196, 71, 233, 0.3)',
+            backgroundColor: theme.colors.navigation.backgroundHover,
           }
         }}
       >
@@ -251,10 +256,10 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
           top: '50%',
           transform: 'translateY(-50%)',
           zIndex: 10,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          color: '#FFFFFF',
+          backgroundColor: theme.colors.navigation.background,
+          color: theme.colors.text.primary,
           '&:hover': {
-            backgroundColor: 'rgba(196, 71, 233, 0.3)',
+            backgroundColor: theme.colors.navigation.backgroundHover,
           }
         }}
       >
@@ -271,10 +276,10 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
           transform: 'translateX(-50%)',
           zIndex: 10,
           '& .swiper-pagination-bullet': {
-            backgroundColor: 'rgba(255, 255, 255, 0.3)',
+            backgroundColor: theme.colors.pagination.inactive,
             opacity: 1,
             '&.swiper-pagination-bullet-active': {
-              backgroundColor: '#C147E9',
+              backgroundColor: theme.colors.pagination.active,
             }
           }
         }}
@@ -289,15 +294,15 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
           transform: 'translateX(-50%)',
           textAlign: 'center',
           zIndex: 10,
-          color: '#FFFFFF'
+          color: theme.colors.text.primary
         }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+          <Typography variant="h6" sx={{ ...textStyles.subtitle, mb: 0.5 }}>
             {albums[activeIndex].title}
           </Typography>
-          <Typography variant="body2" sx={{ color: '#B3B3B3' }}>
+          <Typography variant="body2" sx={{ ...textStyles.caption }}>
             {albums[activeIndex].artist} • {albums[activeIndex].year}
           </Typography>
-          <Typography variant="body2" sx={{ color: '#B3B3B3' }}>
+          <Typography variant="body2" sx={{ ...textStyles.caption }}>
             {albums[activeIndex].trackCount}곡
           </Typography>
         </Box>

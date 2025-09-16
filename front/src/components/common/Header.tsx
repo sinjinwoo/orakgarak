@@ -1,60 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, Avatar } from '@mui/material';
-import { MusicNote, AccountCircle, Person } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Typography, Button, Box } from '@mui/material';
+import { MusicNote } from '@mui/icons-material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useSocialAuth } from '../../hooks/useAuth';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+  const { isAuthenticated, logout } = useAuth();
   const { loginWithGoogle, isLoading } = useSocialAuth();
-  
-  // 프로필 데이터 상태
-  const [profileData, setProfileData] = useState({
-    nickname: '음악러버',
-    profileImageUrl: ''
-  });
+  const isLandingPage = location.pathname === '/';
 
-  // localStorage에서 프로필 데이터 불러오기
-  useEffect(() => {
-    const savedProfile = localStorage.getItem('userProfile');
-    if (savedProfile) {
-      const parsed = JSON.parse(savedProfile);
-      setProfileData({
-        nickname: parsed.nickname || '음악러버',
-        profileImageUrl: parsed.profileImageUrl || ''
-      });
-    }
-  }, []);
-
-  // localStorage 변경 감지 및 커스텀 이벤트 감지
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const savedProfile = localStorage.getItem('userProfile');
-      if (savedProfile) {
-        const parsed = JSON.parse(savedProfile);
-        setProfileData({
-          nickname: parsed.nickname || '음악러버',
-          profileImageUrl: parsed.profileImageUrl || ''
-        });
-      }
-    };
-
-    const handleProfileUpdate = (event: CustomEvent) => {
-      setProfileData({
-        nickname: event.detail.nickname || '음악러버',
-        profileImageUrl: event.detail.profileImageUrl || ''
-      });
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('profileUpdated', handleProfileUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener);
-    };
-  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -64,146 +20,180 @@ const Header: React.FC = () => {
   const handleGoogleLogin = async () => {
     const success = await loginWithGoogle();
     if (success) {
-      // 로그인 성공 시 메인 페이지로 이동
       navigate('/recommendations');
     }
-    // 로그인 실패 시에는 현재 페이지에 그대로 머물러 있음
+  };
+
+  const menuItems = [
+    { label: '추천', path: '/recommendations' },
+    { label: 'AI 데모', path: '/ai-demo' },
+    { label: '녹음', path: '/record' },
+    { label: '피드', path: '/feed' },
+    { label: '앨범 만들기', path: '/albums/create' },
+    { label: '마이페이지', path: '/me' },
+  ];
+
+  const navButtonStyles = {
+    color: '#FFFFFF',
+    fontSize: '15px',
+    fontWeight: 500,
+    padding: '10px 20px',
+    borderRadius: '4px',
+    transition: 'all 0.3s ease',
+    textTransform: 'none' as const,
+    textShadow: isLandingPage ? '0 1px 2px rgba(0, 0, 0, 0.5)' : 'none',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      transform: 'translateY(-1px)',
+    }
+  };
+
+  const authButtonStyles = {
+    color: '#FFFFFF',
+    fontSize: '15px',
+    fontWeight: 500,
+    padding: '10px 20px',
+    borderRadius: '2px',
+    backgroundColor: isLandingPage ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    backdropFilter: 'blur(10px)',
+    textTransform: 'none' as const,
+    textShadow: isLandingPage ? '0 1px 2px rgba(0, 0, 0, 0.5)' : 'none',
+    transition: 'all 0.3s ease',
+    whiteSpace: 'nowrap',
+    '&:hover': {
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      borderColor: 'rgba(255, 255, 255, 0.4)',
+      transform: 'translateY(-1px)',
+    },
+    '&:disabled': {
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      color: 'rgba(255, 255, 255, 0.5)',
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+    }
   };
 
   return (
-    <AppBar 
-      position="static" 
-      sx={{ 
-        backgroundColor: '#2c2c2c',
-        boxShadow: 'none',
-        borderBottom: '1px solid #404040'
+    <div 
+      className="fixed top-0 left-0 right-2 z-40"
+      style={{
+        background: isLandingPage 
+          ? 'transparent'
+          : 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 100%)',
+        backdropFilter: isLandingPage ? 'none' : 'blur(20px)',
+        borderBottom: isLandingPage ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: isLandingPage ? 'none' : '0 4px 30px rgba(0, 0, 0, 0.3)',
       }}
     >
-      <Toolbar sx={{ justifyContent: 'space-between' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: { xs: '20px 16px', sm: '24px 32px' },
+          maxWidth: '1400px',
+          margin: '0 auto',
+          width: '100%',
+        }}
+      >
         {/* 로고 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
-          <MusicNote sx={{ mr: 1, color: 'white' }} />
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ 
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '1.5rem'
-            }}
-          >
-            오락가락
-          </Typography>
-        </Box>
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate('/');
+          }}
+          sx={{
+            color: '#FFFFFF',
+            fontSize: '15px',
+            fontWeight: 500,
+            padding: '10px 20px',
+            borderRadius: '4px',
+            transition: 'all 0.3s ease',
+            textTransform: 'none' as const,
+            textShadow: isLandingPage ? '0 1px 2px rgba(0, 0, 0, 0.5)' : 'none',
+            backgroundColor: 'transparent',
+            minWidth: 'auto',
+            width: 'fit-content',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              transform: 'translateY(-1px)',
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <MusicNote sx={{ 
+              color: '#FFFFFF', 
+              fontSize: '32px',
+              filter: isLandingPage
+                ? 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))'
+                : 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))',
+              transition: 'all 0.3s ease',
+            }} />
+            <Typography
+              component="h1"
+              sx={{ 
+                fontSize: { xs: '22px', sm: '24px' },
+                fontWeight: 700,
+                color: '#FFFFFF',
+                letterSpacing: '0.02em',
+                textShadow: isLandingPage
+                  ? '0 2px 4px rgba(0, 0, 0, 0.5)'
+                  : '0 1px 2px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              오락가락
+            </Typography>
+          </Box>
+        </Button>
 
-        {/* 네비게이션 메뉴 */}
-        <Box sx={{ display: 'flex', gap: 3 }}>
-          <Button 
-            color="inherit" 
-            onClick={() => navigate('/recommendations')}
-            sx={{ 
-              color: 'white',
-              fontWeight: 500,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-            }}
-          >
-            추천
-          </Button>
-          <Button 
-            color="inherit" 
-            onClick={() => navigate('/record')}
-            sx={{ 
-              color: 'white',
-              fontWeight: 500,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-            }}
-          >
-            녹음
-          </Button>
-          <Button 
-            color="inherit" 
-            onClick={() => navigate('/feed')}
-            sx={{ 
-              color: 'white',
-              fontWeight: 500,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-            }}
-          >
-            피드
-          </Button>
-          <Button 
-            color="inherit" 
-            onClick={() => navigate('/albums/create')}
-            sx={{ 
-              color: 'white',
-              fontWeight: 500,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-            }}
-          >
-            앨범 만들기
-          </Button>
-          <Button 
-            color="inherit" 
-            onClick={() => navigate('/me')}
-            sx={{ 
-              color: 'white',
-              fontWeight: 500,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-            }}
-          >
-            마이페이지
-          </Button>
-        </Box>
-
-        {/* 우측 버튼들 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {isAuthenticated ? (
-            <>
-              <Avatar 
-                src={profileData.profileImageUrl}
-                sx={{ 
-                  width: 32, 
-                  height: 32, 
-                  mr: 1,
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)'
-                }}
-              >
-                {!profileData.profileImageUrl && <Person sx={{ fontSize: 20 }} />}
-              </Avatar>
-              <Typography sx={{ color: 'white', mr: 2, fontWeight: 500 }}>
-                {profileData.nickname}
-              </Typography>
+        {/* 네비게이션 메뉴 + 인증 버튼 - 중간부터 오른쪽까지 */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          justifyContent: 'center',
+          flex: 1,
+        }}>
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3 }}>
+            {menuItems.map((item) => (
               <Button 
-                color="inherit" 
-                onClick={handleLogout}
-                sx={{ 
-                  color: 'white',
-                  px: 2,
-                  py: 1,
-                  borderRadius: 1,
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.2)'
-                  }
+                key={item.path}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(item.path);
                 }}
+                sx={navButtonStyles}
               >
-                로그아웃
+                {item.label}
               </Button>
-            </>
+            ))}
+          </Box>
+
+          {isAuthenticated ? (
+            <Button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLogout();
+              }}
+              sx={authButtonStyles}
+            >
+              로그아웃
+            </Button>
           ) : (
             <Button 
-              color="inherit" 
-              onClick={handleGoogleLogin}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGoogleLogin();
+              }}
               disabled={isLoading}
-              sx={{ color: 'white' }}
+              sx={authButtonStyles}
             >
-              {isLoading ? '로그인 중...' : '구글로 로그인'}
+              {isLoading ? '로그인 중...' : '구글 로그인'}
             </Button>
           )}
         </Box>
-      </Toolbar>
-    </AppBar>
+      </Box>
+    </div>
   );
 };
 

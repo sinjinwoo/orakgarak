@@ -3,7 +3,7 @@ import { Container, Typography, Box } from '@mui/material';
 
 const OnboardingRangePage: React.FC = () => {
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ pt: { xs: 12, sm: 14 } }}>
       <Box py={4}>
         <Typography variant="h4" component="h1" gutterBottom>
           음역대 측정

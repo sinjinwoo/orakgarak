@@ -23,7 +23,7 @@ const RecordPage: React.FC = () => {
   return (
     // 예약 큐 상태를 전역으로 관리하는 Provider
     <ReservationProvider>
-      <Box sx={{ flex: 1, backgroundColor: '#fafafa' }}>
+      <Box sx={{ flex: 1, backgroundColor: '#fafafa', pt: { xs: 12, sm: 14 } }}>
         <Container maxWidth="xl" sx={{ py: 3 }}>
           {/* 페이지 제목 */}
           <Typography 
