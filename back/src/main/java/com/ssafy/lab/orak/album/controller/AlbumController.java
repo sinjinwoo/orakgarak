@@ -7,7 +7,6 @@ import com.ssafy.lab.orak.album.service.AlbumService;
 import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +16,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/albums")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
-@Tag(name = "Album", description = "앨범 관리 API")
 public class AlbumController {
 
     private final AlbumService albumService;

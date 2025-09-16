@@ -43,5 +43,4 @@ public class Comment {
     @Column(name = "updated_at", nullable = false)
     private Long updatedAt;
 
-
 }

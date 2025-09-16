@@ -5,11 +5,12 @@ import com.ssafy.lab.orak.follow.dto.FollowDto;
 import com.ssafy.lab.orak.follow.service.FollowService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/social")
 @RequiredArgsConstructor
-@Tag(name = "팔로우 API", description = "팔로우/언팔로우 및 팔로워/팔로잉 목록 조회")
 public class FollowController {
 
     private final FollowService followService;
@@ -48,16 +48,23 @@ public class FollowController {
     @Operation(summary = "팔로잉 목록 조회", description = "특정 사용자가 팔로우하는 사용자 목록을 조회합니다.")
     public ResponseEntity<Page<FollowDto.UserResponse>> getFollowing(
             @Parameter(description = "사용자 ID") @PathVariable Long userId,
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") @Parameter(description = "페이지 번호") int page,
+            @RequestParam(defaultValue = "20") @Parameter(description = "페이지 크기") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
         Page<FollowDto.UserResponse> following = followService.getFollowing(userId, pageable);
         return ResponseEntity.ok(following);
     }
+
 
     @GetMapping("/followers/{userId}")
     @Operation(summary = "팔로워 목록 조회", description = "특정 사용자를 팔로우하는 사용자 목록을 조회합니다.")
     public ResponseEntity<Page<FollowDto.UserResponse>> getFollowers(
             @Parameter(description = "사용자 ID") @PathVariable Long userId,
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") @Parameter(description = "페이지 번호") int page,
+            @RequestParam(defaultValue = "20") @Parameter(description = "페이지 크기") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
         Page<FollowDto.UserResponse> followers = followService.getFollowers(userId, pageable);
         return ResponseEntity.ok(followers);
     }

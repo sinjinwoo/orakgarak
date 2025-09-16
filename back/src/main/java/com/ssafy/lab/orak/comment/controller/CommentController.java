@@ -1,17 +1,20 @@
 package com.ssafy.lab.orak.comment.controller;
 
+import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import com.ssafy.lab.orak.comment.dto.CommentDto;
 import com.ssafy.lab.orak.comment.service.CommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +23,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/social")
 @RequiredArgsConstructor
-@Tag(name = "댓글 API", description = "댓글 및 대댓글 CRUD")
 public class CommentController {
 
     private final CommentService commentService;
@@ -28,18 +30,21 @@ public class CommentController {
     @GetMapping("/albums/{albumId}/comments")
     @Operation(summary = "앨범 댓글 조회", description = "특정 앨범의 댓글 목록을 페이지네이션으로 조회합니다.")
     public ResponseEntity<Page<CommentDto.Response>> getComments(
-            @Parameter(description = "앨범 ID") @PathVariable Long albumId,
-            Pageable pageable) {
+            @PathVariable Long albumId,
+            @RequestParam(defaultValue = "0") @Parameter(description = "페이지 번호") int page,
+            @RequestParam(defaultValue = "20") @Parameter(description = "페이지 크기") int size) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<CommentDto.Response> comments = commentService.getCommentsByAlbumId(albumId, pageable);
         return ResponseEntity.ok(comments);
     }
-
     @PostMapping("/albums/{albumId}/comments")
     @Operation(summary = "앨범에 댓글 작성", description = "특정 앨범에 댓글을 생성합니다.")
     public ResponseEntity<Void> createComment(
             @Parameter(description = "앨범 ID") @PathVariable Long albumId,
-            @RequestHeader("User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody CommentDto.CreateRequest request) {
+        Long userId = principal.getUserId();
         commentService.createComment(userId, albumId, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -48,8 +53,9 @@ public class CommentController {
     @Operation(summary = "댓글 수정", description = "댓글을 수정합니다.")
     public ResponseEntity<Void> updateComment(
             @Parameter(description = "댓글 ID") @PathVariable Long commentId,
-            @RequestHeader("User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody CommentDto.UpdateRequest request) {
+        Long userId = principal.getUserId();
         commentService.updateComment(userId, commentId, request);
         return ResponseEntity.ok().build();
     }
@@ -58,7 +64,8 @@ public class CommentController {
     @Operation(summary = "댓글 삭제", description = "댓글을 삭제합니다.")
     public ResponseEntity<Void> deleteComment(
             @Parameter(description = "댓글 ID") @PathVariable Long commentId,
-            @RequestHeader("User-Id") Long userId) {
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        Long userId = principal.getUserId();
         commentService.deleteComment(userId, commentId);
         return ResponseEntity.noContent().build();
     }
@@ -75,8 +82,9 @@ public class CommentController {
     @Operation(summary = "대댓글 작성", description = "특정 댓글에 대댓글을 생성합니다.")
     public ResponseEntity<Void> createReply(
             @Parameter(description = "댓글 ID") @PathVariable Long commentId,
-            @RequestHeader("User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody CommentDto.CreateRequest request) {
+        Long userId = principal.getUserId();
         commentService.createReply(userId, commentId, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
@@ -86,8 +94,9 @@ public class CommentController {
     public ResponseEntity<Void> updateReply(
             @Parameter(description = "댓글 ID") @PathVariable Long commentId,
             @Parameter(description = "대댓글 ID") @PathVariable Long replyId,
-            @RequestHeader("User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserPrincipal principal,
             @Valid @RequestBody CommentDto.UpdateRequest request) {
+        Long userId = principal.getUserId();
         commentService.updateReply(userId, commentId, replyId, request);
         return ResponseEntity.ok().build();
     }
@@ -97,7 +106,8 @@ public class CommentController {
     public ResponseEntity<Void> deleteReply(
             @Parameter(description = "댓글 ID") @PathVariable Long commentId,
             @Parameter(description = "대댓글 ID") @PathVariable Long replyId,
-            @RequestHeader("User-Id") Long userId) {
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        Long userId = principal.getUserId();
         commentService.deleteReply(userId, commentId, replyId);
         return ResponseEntity.noContent().build();
     }
