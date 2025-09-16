@@ -27,14 +27,12 @@ public enum ErrorCode {
     INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, 1201, "지원하지 않는 파일 형식입니다."),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, 1202, "파일 크기가 제한을 초과했습니다."),
     UPLOAD_NOT_FOUND(HttpStatus.NOT_FOUND, 1203, "업로드 파일을 찾을 수 없습니다."),
-    INVALID_FILE_NAME(HttpStatus.BAD_REQUEST, 1204, "유효하지 않은 파일명입니다."),
 
     // S3 (1300-1399)
     S3_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1300, "S3 업로드에 실패했습니다."),
     S3_DELETE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1301, "S3 파일 삭제에 실패했습니다."),
     S3_URL_GENERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1302, "S3 URL 생성에 실패했습니다."),
     PRESIGNED_URL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1303, "Presigned URL 생성에 실패했습니다."),
-    THUMBNAIL_CREATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1304, "썸네일 생성에 실패했습니다."),
 
     // Audio Processing (1400-1499)
     AUDIO_CONVERSION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1400, "오디오 변환에 실패했습니다."),

@@ -16,6 +16,7 @@ import com.ssafy.lab.orak.albumtrack.repository.AlbumTrackRepository;
 import com.ssafy.lab.orak.recording.entity.Record;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
+import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -56,8 +57,10 @@ public class AlbumTrackService {
         if (album.getUploadId() != null) {
             try {
                 coverImageUrl = fileUploadService.getFileUrl(album.getUploadId());
+            } catch (S3UrlGenerationException e) {
+                log.warn("S3 URL 생성 실패 for album {}: {}", albumId, e.getMessage());
             } catch (Exception e) {
-                log.warn("Failed to generate cover image URL for album {}: {}", albumId, e.getMessage());
+                log.warn("커버 이미지 URL 생성 중 예상치 못한 오류 for album {}: {}", albumId, e.getMessage());
             }
         }
 

@@ -1,5 +1,7 @@
 package com.ssafy.lab.orak.common.exception;
 
+import com.ssafy.lab.orak.albumtrack.exception.AlbumTrackException;
+import com.ssafy.lab.orak.albumtrack.exception.TrackOrderConflictException;
 import com.ssafy.lab.orak.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.lab.orak.auth.exception.MissingRefreshTokenException;
 import com.ssafy.lab.orak.auth.exception.UserNotFoundException;
@@ -12,11 +14,10 @@ import com.ssafy.lab.orak.recording.exception.AudioConversionException;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
 import com.ssafy.lab.orak.recording.exception.RecordOperationException;
 import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
-import com.ssafy.lab.orak.s3.exception.InvalidFileNameException;
 import com.ssafy.lab.orak.s3.exception.PresignedUrlException;
 import com.ssafy.lab.orak.s3.exception.S3DeleteException;
 import com.ssafy.lab.orak.s3.exception.S3UploadException;
-import com.ssafy.lab.orak.s3.exception.ThumbnailCreationException;
+import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
 import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.exception.UploadNotFoundException;
@@ -108,6 +109,37 @@ public class CustomRestAdvice {
     }
 
     // ======== 도메인별 예외 처리 (ErrorResponse 사용) ========
+
+    /**
+     * Album Track 관련 예외 처리
+     */
+    @ExceptionHandler(AlbumTrackException.class)
+    protected ResponseEntity<ErrorResponse> handleAlbumTrackException(
+            AlbumTrackException e, HttpServletRequest request) {
+
+        log.error("앨범 트랙 오류: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.TRACK_OPERATION_FAILED,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
+    @ExceptionHandler(TrackOrderConflictException.class)
+    protected ResponseEntity<ErrorResponse> handleTrackOrderConflictException(
+            TrackOrderConflictException e, HttpServletRequest request) {
+
+        log.warn("트랙 순서 충돌: {}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+            ErrorCode.TRACK_ORDER_CONFLICT,
+            request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
 
     /**
      * Record 관련 예외 처리
@@ -230,20 +262,6 @@ public class CustomRestAdvice {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
-    @ExceptionHandler(InvalidFileNameException.class)
-    protected ResponseEntity<ErrorResponse> handleInvalidFileNameException(
-            InvalidFileNameException e, HttpServletRequest request) {
-
-        log.warn("Invalid file name: {}", e.getMessage());
-
-        ErrorResponse errorResponse = ErrorResponse.of(
-            ErrorCode.INVALID_FILE_NAME,
-            request.getRequestURI()
-        );
-
-        return ResponseEntity.badRequest().body(errorResponse);
-    }
-
     @ExceptionHandler(PresignedUrlException.class)
     protected ResponseEntity<ErrorResponse> handlePresignedUrlException(
             PresignedUrlException e, HttpServletRequest request) {
@@ -258,14 +276,14 @@ public class CustomRestAdvice {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 
-    @ExceptionHandler(ThumbnailCreationException.class)
-    protected ResponseEntity<ErrorResponse> handleThumbnailCreationException(
-            ThumbnailCreationException e, HttpServletRequest request) {
+    @ExceptionHandler(S3UrlGenerationException.class)
+    protected ResponseEntity<ErrorResponse> handleS3UrlGenerationException(
+            S3UrlGenerationException e, HttpServletRequest request) {
 
-        log.error("썸네일 생성 오류: {}", e.getMessage(), e);
+        log.error("S3 URL 생성 오류: {}", e.getMessage(), e);
 
         ErrorResponse errorResponse = ErrorResponse.of(
-            ErrorCode.THUMBNAIL_CREATION_FAILED,
+            ErrorCode.S3_URL_GENERATION_FAILED,
             request.getRequestURI()
         );
 

@@ -35,7 +35,7 @@ services:
 
   # Kafka (KRaft mode - Zookeeper 없이)
   kafka:
-    image: apache/kafka:3.8.1
+    image: apache/kafka:latest
     container_name: orakgaraki-kafka
     restart: unless-stopped
     user: "0:0"  # 현업 스타일 - 권한 문제 단순 해결
@@ -56,8 +56,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-      # JVM 옵션 - GC 로그를 Docker 로그로 출력
-      KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -Xlog:gc*:stdout:time,tags"
+      # JVM 옵션 - 성능 최적화 (GC 로그 제거)
+      KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35"
     volumes:
       - kafka_data:/opt/kafka/logs  # 실제 데이터만 영구 보존
     logging:
@@ -90,7 +90,7 @@ services:
   # Prometheus - 메트릭 수집 및 저장
   # ============================================
   prometheus:
-    image: prom/prometheus:v2.45.0
+    image: prom/prometheus:latest
     container_name: orakgaraki-prometheus
     restart: unless-stopped
     ports:
@@ -112,7 +112,7 @@ services:
   # Grafana - 시각화 및 대시보드
   # ============================================
   grafana:
-    image: grafana/grafana:10.0.0
+    image: grafana/grafana:latest
     container_name: orakgaraki-grafana
     restart: unless-stopped
     ports:
@@ -138,7 +138,7 @@ services:
   # Node Exporter - 시스템 메트릭
   # ============================================
   node-exporter:
-    image: prom/node-exporter:v1.6.0
+    image: prom/node-exporter:latest
     container_name: orakgaraki-node-exporter
     restart: unless-stopped
     ports:
@@ -157,7 +157,7 @@ services:
   # cAdvisor - 컨테이너 메트릭
   # ============================================
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    image: gcr.io/cadvisor/cadvisor:latest
     container_name: orakgaraki-cadvisor
     restart: unless-stopped
     ports:
@@ -176,7 +176,7 @@ services:
   # MySQL Exporter - MySQL 메트릭
   # ============================================
   mysql-exporter:
-    image: prom/mysqld-exporter:v0.15.0
+    image: prom/mysqld-exporter:latest
     container_name: orakgaraki-mysql-exporter
     restart: unless-stopped
     ports:
@@ -191,7 +191,7 @@ services:
   # Redis Exporter - Redis 메트릭
   # ============================================
   redis-exporter:
-    image: oliver006/redis_exporter:v1.52.0
+    image: oliver006/redis_exporter:latest
     container_name: orakgaraki-redis-exporter
     restart: unless-stopped
     ports:
@@ -206,7 +206,7 @@ services:
   # Kafka Exporter - Kafka 메트릭
   # ============================================
   kafka-exporter:
-    image: danielqsj/kafka-exporter:v1.6.0
+    image: danielqsj/kafka-exporter:latest
     container_name: orakgaraki-kafka-exporter
     restart: unless-stopped
     ports:
@@ -222,25 +222,27 @@ services:
   # Alertmanager - 알림 관리
   # ============================================
   alertmanager:
-    image: prom/alertmanager:v0.25.0
+    image: prom/alertmanager:latest
     container_name: orakgaraki-alertmanager
     restart: unless-stopped
     ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
+    environment:
+      MATTERMOST_WEBHOOK_URL: "${MATTERMOST_WEBHOOK_URL}"
     volumes:
       - alertmanager_data:/alertmanager
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:9093'
-      - '--cluster.advertise-address=0.0.0.0:9093'
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=http://localhost:9093
+      - --cluster.advertise-address=0.0.0.0:9093
 
   # ============================================
   # Loki - 로그 집계 및 저장
   # ============================================
   loki:
-    image: grafana/loki:2.9.0
+    image: grafana/loki:latest
     container_name: orakgaraki-loki
     restart: unless-stopped
     ports:
@@ -254,7 +256,7 @@ services:
   # Promtail - 로그 수집 에이전트
   # ============================================
   promtail:
-    image: grafana/promtail:2.9.0
+    image: grafana/promtail:latest
     container_name: orakgaraki-promtail
     restart: unless-stopped
     volumes:
