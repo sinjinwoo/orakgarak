@@ -1,6 +1,6 @@
-import React from 'react';
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
-import { MusicNote, AccountCircle } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { AppBar, Toolbar, Typography, Button, Box, Avatar } from '@mui/material';
+import { MusicNote, AccountCircle, Person } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, useSocialAuth } from '../../hooks/useAuth';
 
@@ -8,6 +8,53 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { loginWithGoogle, isLoading } = useSocialAuth();
+  
+  // 프로필 데이터 상태
+  const [profileData, setProfileData] = useState({
+    nickname: '음악러버',
+    profileImageUrl: ''
+  });
+
+  // localStorage에서 프로필 데이터 불러오기
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('userProfile');
+    if (savedProfile) {
+      const parsed = JSON.parse(savedProfile);
+      setProfileData({
+        nickname: parsed.nickname || '음악러버',
+        profileImageUrl: parsed.profileImageUrl || ''
+      });
+    }
+  }, []);
+
+  // localStorage 변경 감지 및 커스텀 이벤트 감지
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedProfile = localStorage.getItem('userProfile');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        setProfileData({
+          nickname: parsed.nickname || '음악러버',
+          profileImageUrl: parsed.profileImageUrl || ''
+        });
+      }
+    };
+
+    const handleProfileUpdate = (event: CustomEvent) => {
+      setProfileData({
+        nickname: event.detail.nickname || '음악러버',
+        profileImageUrl: event.detail.profileImageUrl || ''
+      });
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('profileUpdated', handleProfileUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -112,9 +159,20 @@ const Header: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {isAuthenticated ? (
             <>
-              <AccountCircle sx={{ color: 'white', mr: 1 }} />
-              <Typography sx={{ color: 'white', mr: 2 }}>
-                {user?.nickname}
+              <Avatar 
+                src={profileData.profileImageUrl}
+                sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  mr: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)'
+                }}
+              >
+                {!profileData.profileImageUrl && <Person sx={{ fontSize: 20 }} />}
+              </Avatar>
+              <Typography sx={{ color: 'white', mr: 2, fontWeight: 500 }}>
+                {profileData.nickname}
               </Typography>
               <Button 
                 color="inherit" 

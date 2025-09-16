@@ -8,7 +8,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,18 +29,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
-        
+
         // OAuth2 관련 경로는 JWT 필터 건너뜀
-        if (path.startsWith("/api/oauth2/") || 
-            path.startsWith("/api/login/oauth2/") || 
-            path.startsWith("/api/test/") ||
-            path.equals("/api/auth/refresh") ||
-            path.startsWith("/api/yjs/") ||
-            path.startsWith("/api/swagger-ui/") ||
-            path.startsWith("/swagger-ui/") ||
-            path.startsWith("/v3/api-docs") ||
-            path.startsWith("/api-docs") ||
-            path.startsWith("/api/api-docs")) {
+        if (path.startsWith("/api/oauth2/") ||
+                path.startsWith("/api/login/oauth2/") ||
+                path.startsWith("/api/test/") ||
+                path.equals("/api/auth/refresh") ||
+                path.startsWith("/api/yjs/") ||
+                path.startsWith("/api/swagger-ui/") ||
+                path.startsWith("/swagger-ui/") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/api-docs") ||
+                path.startsWith("/api/api-docs")||
+                path.startsWith("/api/images")) {
             filterChain.doFilter(request, response);
             return;
         }

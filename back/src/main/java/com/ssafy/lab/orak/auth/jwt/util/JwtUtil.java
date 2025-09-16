@@ -1,20 +1,21 @@
 package com.ssafy.lab.orak.auth.jwt.util;
+
 import com.ssafy.lab.orak.auth.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import java.util.Date;
+import java.util.Map;
+import javax.crypto.SecretKey;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
-import java.util.Date;
-import java.util.Map;
-
 @Component
 @Log4j2
 public class JwtUtil {
+
     private final SecretKey key;
     private final long accessExpMs;
     private final long refreshExpMs;
@@ -31,7 +32,8 @@ public class JwtUtil {
 
     // 이메일은 accessToken 만들때만 사용
     public String createAccessToken(User user) {
-        return createToken(String.valueOf(user.getId()), accessExpMs, Map.of("email",user.getGoogleID(), "type", "access"));
+        return createToken(String.valueOf(user.getId()), accessExpMs,
+                Map.of("email", user.getGoogleID(), "type", "access"));
     }
 
     public String createRefreshToken(User user) {
