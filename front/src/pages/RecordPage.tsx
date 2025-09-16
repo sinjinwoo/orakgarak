@@ -73,6 +73,7 @@ const RecordPage: React.FC = () => {
     <ReservationProvider>
       <div style={{ 
         flex: 1, 
+        paddingTop: '80px', // 녹음 페이지는 헤더 높이를 고려해 더 큰 padding-top 적용
         background: `
           radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
           radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%),

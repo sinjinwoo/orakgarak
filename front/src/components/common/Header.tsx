@@ -1,16 +1,37 @@
-import React from 'react';
-import { Typography, Button, Box } from '@mui/material';
-import { MusicNote } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { Typography, Button, Box, Avatar } from '@mui/material';
+import { MusicNote, Person } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, useSocialAuth } from '../../hooks/useAuth';
+import { theme } from '../../styles/theme';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const { loginWithGoogle, isLoading } = useSocialAuth();
+  const [isScrolled, setIsScrolled] = useState(false);
+  
   const isLandingPage = location.pathname === '/';
 
+  // 스크롤 이벤트 핸들러
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 50);
+    };
+
+    if (isLandingPage) {
+      window.addEventListener('scroll', handleScroll);
+      handleScroll(); // 초기 상태 설정
+    } else {
+      setIsScrolled(false);
+    }
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isLandingPage]);
 
   const handleLogout = async () => {
     await logout();
@@ -33,62 +54,78 @@ const Header: React.FC = () => {
     { label: '마이페이지', path: '/me' },
   ];
 
-  const navButtonStyles = {
-    color: '#FFFFFF',
+  // 동적 스타일 계산
+  const headerBackground = isLandingPage 
+    ? (isScrolled 
+        ? 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 100%)'
+        : 'transparent')
+    : 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 100%)';
+
+  const shouldShowShadow = isLandingPage ? isScrolled : true;
+
+  // 공통 버튼 스타일
+  const baseButtonStyles = {
+    color: theme.colors.text.primary,
     fontSize: '15px',
     fontWeight: 500,
-    padding: '10px 20px',
-    borderRadius: '4px',
     transition: 'all 0.3s ease',
     textTransform: 'none' as const,
-    textShadow: isLandingPage ? '0 1px 2px rgba(0, 0, 0, 0.5)' : 'none',
+    textShadow: (isLandingPage && !isScrolled) ? theme.shadows.text : 'none',
+    borderRadius: theme.borderRadius.medium,
+    whiteSpace: 'nowrap' as const,
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
       transform: 'translateY(-1px)',
+      backgroundColor: theme.colors.glassmorphism.background,
+    },
+    '&:focus': {
+      outline: 'none',
+      backgroundColor: theme.colors.glassmorphism.background,
+    },
+    '&:focus-visible': {
+      outline: `2px solid ${theme.colors.glassmorphism.border}`,
+      outlineOffset: '2px',
     }
   };
 
   const authButtonStyles = {
-    color: '#FFFFFF',
-    fontSize: '15px',
-    fontWeight: 500,
+    ...baseButtonStyles,
     padding: '10px 20px',
-    borderRadius: '2px',
-    backgroundColor: isLandingPage ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.15)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    backdropFilter: 'blur(10px)',
-    textTransform: 'none' as const,
-    textShadow: isLandingPage ? '0 1px 2px rgba(0, 0, 0, 0.5)' : 'none',
-    transition: 'all 0.3s ease',
-    whiteSpace: 'nowrap',
+    backgroundColor: theme.colors.glassmorphism.background,
+    border: `1px solid ${theme.colors.glassmorphism.border}`,
+    backdropFilter: theme.colors.glassmorphism.backdropFilter,
     '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      borderColor: 'rgba(255, 255, 255, 0.4)',
       transform: 'translateY(-1px)',
+      backgroundColor: theme.colors.glassmorphism.backgroundHover,
+      borderColor: 'rgba(255, 255, 255, 0.4)',
     },
     '&:disabled': {
       backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      color: 'rgba(255, 255, 255, 0.5)',
+      color: theme.colors.text.muted,
       borderColor: 'rgba(255, 255, 255, 0.1)',
     }
   };
 
   return (
-    <div 
-      className="fixed top-0 left-0 right-2 z-40"
-      style={{
-        background: isLandingPage 
-          ? 'transparent'
-          : 'linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 100%)',
-        backdropFilter: isLandingPage ? 'none' : 'blur(20px)',
-        borderBottom: isLandingPage ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: isLandingPage ? 'none' : '0 4px 30px rgba(0, 0, 0, 0.3)',
+    <Box
+      component="header"
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1100,
+        background: headerBackground,
+        backdropFilter: shouldShowShadow ? 'blur(20px)' : 'none',
+        borderBottom: shouldShowShadow ? `1px solid ${theme.colors.glassmorphism.border}` : 'none',
+        boxShadow: shouldShowShadow ? theme.shadows.card : 'none',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           padding: { xs: '20px 16px', sm: '24px 32px' },
           maxWidth: '1400px',
           margin: '0 auto',
@@ -96,95 +133,119 @@ const Header: React.FC = () => {
         }}
       >
         {/* 로고 */}
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate('/');
-          }}
+        <Box
+          component="button"
+          onClick={() => navigate('/')}
           sx={{
-            color: '#FFFFFF',
-            fontSize: '15px',
-            fontWeight: 500,
-            padding: '10px 20px',
-            borderRadius: '4px',
-            transition: 'all 0.3s ease',
-            textTransform: 'none' as const,
-            textShadow: isLandingPage ? '0 1px 2px rgba(0, 0, 0, 0.5)' : 'none',
+            ...baseButtonStyles,
+            padding: '8px',
             backgroundColor: 'transparent',
-            minWidth: 'auto',
-            width: 'fit-content',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              transform: 'translateY(-1px)',
-            }
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <MusicNote sx={{ 
-              color: '#FFFFFF', 
-              fontSize: '32px',
-              filter: isLandingPage
-                ? 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))'
-                : 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))',
+          <MusicNote sx={{
+            color: theme.colors.text.primary,
+            fontSize: '32px',
+            filter: (isLandingPage && !isScrolled)
+              ? 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))'
+              : 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))',
+            transition: 'all 0.3s ease',
+          }} />
+          <Typography
+            component="span"
+            sx={{
+              fontSize: { xs: '22px', sm: '24px' },
+              fontWeight: 700,
+              color: theme.colors.text.primary,
+              letterSpacing: '0.02em',
+              textShadow: (isLandingPage && !isScrolled)
+                ? theme.shadows.textStrong
+                : theme.shadows.text,
               transition: 'all 0.3s ease',
-            }} />
-            <Typography
-              component="h1"
-              sx={{ 
-                fontSize: { xs: '22px', sm: '24px' },
-                fontWeight: 700,
-                color: '#FFFFFF',
-                letterSpacing: '0.02em',
-                textShadow: isLandingPage
-                  ? '0 2px 4px rgba(0, 0, 0, 0.5)'
-                  : '0 1px 2px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.3s ease',
+            }}
+          >
+            오락가락
+          </Typography>
+        </Box>
+
+        {/* 네비게이션 메뉴 */}
+        <Box 
+          component="nav"
+          sx={{ 
+            display: { xs: 'none', md: 'flex' }, 
+            gap: 1,
+          }}
+        >
+          {menuItems.map((item) => (
+            <Button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              sx={{
+                ...baseButtonStyles,
+                padding: '10px 20px',
               }}
             >
-              오락가락
-            </Typography>
-          </Box>
-        </Button>
-
-        {/* 네비게이션 메뉴 + 인증 버튼 - 중간부터 오른쪽까지 */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          justifyContent: 'center',
-          flex: 1,
-        }}>
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3 }}>
-            {menuItems.map((item) => (
-              <Button 
-                key={item.path}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(item.path);
-                }}
-                sx={navButtonStyles}
-              >
-                {item.label}
-              </Button>
-            ))}
-          </Box>
-
-          {isAuthenticated ? (
-            <Button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleLogout();
-              }}
-              sx={authButtonStyles}
-            >
-              로그아웃
+              {item.label}
             </Button>
+          ))}
+        </Box>
+
+        {/* 사용자 영역 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {isAuthenticated ? (
+            <>
+              {/* 유저 정보 */}
+              <Button
+                onClick={() => navigate('/me')}
+                sx={{
+                  ...baseButtonStyles,
+                  padding: '8px 16px',
+                  backgroundColor: 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  minWidth: 'auto',
+                }}
+              >
+                <Avatar
+                  src={user?.profileImage}
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    border: `2px solid ${theme.colors.glassmorphism.border}`,
+                    boxShadow: theme.shadows.card,
+                  }}
+                >
+                  <Person sx={{ fontSize: '20px' }} />
+                </Avatar>
+                <Typography
+                  component="span"
+                  sx={{
+                    color: theme.colors.text.primary,
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textShadow: (isLandingPage && !isScrolled) ? theme.shadows.text : 'none',
+                  }}
+                >
+                  {user?.nickname || '사용자'}
+                </Typography>
+              </Button>
+
+              {/* 로그아웃 버튼 */}
+              <Button
+                onClick={handleLogout}
+                sx={authButtonStyles}
+              >
+                로그아웃
+              </Button>
+            </>
           ) : (
-            <Button 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleGoogleLogin();
-              }}
+            <Button
+              onClick={handleGoogleLogin}
               disabled={isLoading}
               sx={authButtonStyles}
             >
@@ -193,7 +254,7 @@ const Header: React.FC = () => {
           )}
         </Box>
       </Box>
-    </div>
+    </Box>
   );
 };
 

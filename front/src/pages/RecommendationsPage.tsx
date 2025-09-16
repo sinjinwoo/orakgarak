@@ -416,7 +416,7 @@ const RecommendationsPage: React.FC = () => {
       minHeight: '100vh',
       position: 'relative',
       overflow: 'hidden',
-      pt: { xs: 12, sm: 14 },
+      pt: { xs: 16, sm: 20 },
       fontFamily: 'neon, monospace' 
     }}>
       {/* 사이버펑크 배경 효과 */}

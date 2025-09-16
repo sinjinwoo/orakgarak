@@ -20,7 +20,7 @@ const AIDemoPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ flex: 1, backgroundColor: '#fafafa', pt: { xs: 12, sm: 14 } }}>
+    <Box sx={{ flex: 1, backgroundColor: '#fafafa', pt: { xs: 16, sm: 20 } }}>
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Paper 
           elevation={0}

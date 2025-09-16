@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Container, 
   Typography, 
   Box, 
   Paper, 
   Button, 
-  Card, 
-  CardContent, 
   Avatar,
   Chip,
   Tabs,
@@ -38,10 +36,12 @@ import {
   Person,
   CalendarToday,
   Star,
-  Delete
+  Delete,
+  Wallpaper
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
+import { useAuth } from '../hooks/useAuth';
 import { motion } from 'framer-motion';
 import AlbumCoverflow from '../components/AlbumCoverflow';
 
@@ -71,13 +71,120 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+// 이미지 fallback 컴포넌트
+interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  src: string;
+  fallback: string;
+  alt: string;
+}
+
+const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ 
+  src, 
+  fallback, 
+  alt, 
+  ...props 
+}) => {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+  
+  useEffect(() => {
+    setImgSrc(src);
+    setHasError(false);
+  }, [src]);
+  
+  const handleError = () => {
+    if (!hasError) {
+      setHasError(true);
+      setImgSrc(fallback);
+    }
+  };
+  
+  return (
+    <img
+      {...props}
+      src={imgSrc}
+      alt={alt}
+      onError={handleError}
+    />
+  );
+};
+
+// 통계 카드 컴포넌트
+interface StatCardProps {
+  icon: React.ComponentType<{ sx?: object }>;
+  value: number;
+  label: string;
+  color?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon: Icon, value, label, color = '#FFFFFF' }) => {
+  const cardStyles = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 0.8,
+    px: 1.2,
+    py: 0.8,
+    background: 'rgba(255, 255, 255, 0.05)',
+    backdropFilter: 'blur(8px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: 1.5,
+    boxShadow: '0 3px 12px rgba(0, 0, 0, 0.2)',
+    transition: 'all 0.3s ease',
+    minWidth: 'fit-content',
+    '&:hover': {
+      background: 'rgba(255, 255, 255, 0.08)',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+    }
+  };
+
+  const iconStyles = {
+    color,
+    fontSize: 16,
+    filter: color === '#FFFFFF' 
+      ? 'drop-shadow(0 0 4px rgba(255, 255, 255, 0.3))'
+      : `drop-shadow(0 0 4px ${color}50)`
+  };
+
+  return (
+    <Box sx={cardStyles}>
+      <Icon sx={iconStyles} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Typography variant="h6" sx={{ 
+          fontWeight: 600, 
+          color: '#FFFFFF',
+          fontSize: '0.9rem',
+          lineHeight: 1
+        }}>
+          {value}
+        </Typography>
+        <Typography variant="caption" sx={{ 
+          color: 'rgba(255, 255, 255, 0.7)',
+          fontSize: '0.65rem',
+          whiteSpace: 'nowrap'
+        }}>
+          {label}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useUIStore();
+  const { user, updateProfile } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followType, setFollowType] = useState<'following' | 'followers'>('following');
+  const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
+  
+  // 배경 이미지 캐싱
+  const backgroundImage = useMemo(() => {
+    const customBg = localStorage.getItem('customBackground');
+    return customBg ? `url(${customBg})` : 'url(/images/background/Music.jpg)';
+  }, []);
   
   // 앨범 데이터 (localStorage에서 불러오기)
   const [myAlbums, setMyAlbums] = useState(() => {
@@ -135,6 +242,7 @@ const MyPage: React.FC = () => {
     };
   });
   
+
   // 편집 폼 상태
   const [editForm, setEditForm] = useState({
     nickname: profileData.nickname,
@@ -238,13 +346,12 @@ const MyPage: React.FC = () => {
           profileImageUrl: e.target?.result as string
         }));
         
-        // 헤더 업데이트를 위한 커스텀 이벤트 발생
-        window.dispatchEvent(new CustomEvent('profileUpdated', {
-          detail: {
-            nickname: profileData.nickname,
-            profileImageUrl: e.target?.result as string
-          }
-        }));
+        // authStore 업데이트 (Header 동기화를 위해)
+        if (user) {
+          updateProfile({
+            profileImage: e.target?.result as string
+          });
+        }
         
         showToast('프로필 사진이 업로드되었습니다.', 'success');
       };
@@ -269,13 +376,13 @@ const MyPage: React.FC = () => {
       profileImageUrl: profileData.profileImageUrl
     }));
     
-    // 헤더 업데이트를 위한 커스텀 이벤트 발생
-    window.dispatchEvent(new CustomEvent('profileUpdated', {
-      detail: {
+    // authStore 업데이트 (Header 동기화를 위해)
+    if (user) {
+      updateProfile({
         nickname: editForm.nickname,
-        profileImageUrl: profileData.profileImageUrl
-      }
-    }));
+        profileImage: profileData.profileImageUrl
+      });
+    }
     
     setProfileEditOpen(false);
     showToast('프로필이 성공적으로 저장되었습니다.', 'success');
@@ -297,13 +404,12 @@ const MyPage: React.FC = () => {
       profileImageUrl: ''
     }));
     
-    // 헤더 업데이트를 위한 커스텀 이벤트 발생
-    window.dispatchEvent(new CustomEvent('profileUpdated', {
-      detail: {
-        nickname: profileData.nickname,
-        profileImageUrl: ''
-      }
-    }));
+    // authStore 업데이트 (Header 동기화를 위해)
+    if (user) {
+      updateProfile({
+        profileImage: ''
+      });
+    }
     
     showToast('프로필 사진이 기본 이미지로 변경되었습니다.', 'success');
   };
@@ -340,7 +446,7 @@ const MyPage: React.FC = () => {
           linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
         `,
         minHeight: '100vh',
-        pt: { xs: 12, sm: 14 },
+        pt: { xs: 16, sm: 20 },
         position: 'relative',
         '&::before': {
           content: '""',
@@ -387,8 +493,28 @@ const MyPage: React.FC = () => {
             }}
           >
           {/* 프로필 섹션 */}
-          <Box sx={{ p: 4, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3 }}>
+          <Box sx={{ 
+            p: 4, 
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            position: 'relative',
+            overflow: 'hidden',
+            backgroundImage,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%)',
+              pointerEvents: 'none',
+              zIndex: 0
+            }
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3, position: 'relative', zIndex: 1 }}>
               <Avatar 
                 src={profileData.profileImageUrl}
                 sx={{ 
@@ -459,123 +585,77 @@ const MyPage: React.FC = () => {
                 <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.8)' }}>
                   {profileData.introduction}
                 </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<Edit />}
-                  onClick={handleProfileEdit}
-                  sx={{ textTransform: 'none' }}
-                >
-                  프로필 편집
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Edit />}
+                    onClick={handleProfileEdit}
+                    sx={{ 
+                      textTransform: 'none',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      '&:hover': {
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        color: '#FFFFFF'
+                      }
+                    }}
+                  >
+                    프로필 편집
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Wallpaper />}
+                    onClick={() => setIsBackgroundModalOpen(true)}
+                    sx={{ 
+                      textTransform: 'none',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      '&:hover': {
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        color: '#FFFFFF'
+                      }
+                    }}
+                  >
+                    배경화면 설정
+                  </Button>
+                </Box>
               </Box>
             </Box>
 
-            {/* 통계 카드 */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-              <Card sx={{ 
-                flex: 1, 
-                textAlign: 'center', 
-                p: 2,
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
-                },
-                transition: 'all 0.3s ease'
-              }}>
-                <CardContent sx={{ p: 1 }}>
-                  <Album sx={{ color: '#FFFFFF', mb: 1, filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.3))' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#FFFFFF' }}>
-                    {userStats.albums}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                    앨범
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card sx={{ 
-                flex: 1, 
-                textAlign: 'center', 
-                p: 2,
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
-                },
-                transition: 'all 0.3s ease'
-              }}>
-                <CardContent sx={{ p: 1 }}>
-                  <Mic sx={{ color: '#FFFFFF', mb: 1, filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.3))' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#FFFFFF' }}>
-                    {userStats.recordings}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                    녹음
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card sx={{ 
-                flex: 1, 
-                textAlign: 'center', 
-                p: 2,
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
-                },
-                transition: 'all 0.3s ease'
-              }}>
-                <CardContent sx={{ p: 1 }}>
-                  <Favorite sx={{ color: '#FF6B9D', mb: 1, filter: 'drop-shadow(0 0 8px rgba(255, 107, 157, 0.5))' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#FFFFFF' }}>
-                    {userStats.likes}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                    좋아요
-                  </Typography>
-                </CardContent>
-              </Card>
-              <Card sx={{ 
-                flex: 1, 
-                textAlign: 'center', 
-                p: 2,
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-                '&:hover': {
-                  background: 'rgba(255, 255, 255, 0.15)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
-                },
-                transition: 'all 0.3s ease'
-              }}>
-                <CardContent sx={{ p: 1 }}>
-                  <PlayArrow sx={{ color: '#FFFFFF', mb: 1, filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.3))' }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#FFFFFF' }}>
-                    {userStats.totalPlays}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                    총 재생
-                  </Typography>
-                </CardContent>
-              </Card>
+            {/* 통계 카드 - 컴팩트 정돈 */}
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1, 
+              mb: 3,
+              justifyContent: 'center',
+              flexWrap: 'wrap'
+            }}>
+              <StatCard 
+                icon={Album} 
+                value={userStats.albums} 
+                label="앨범" 
+                color="#FFFFFF" 
+              />
+              <StatCard 
+                icon={Mic} 
+                value={userStats.recordings} 
+                label="녹음" 
+                color="#FFFFFF" 
+              />
+              <StatCard 
+                icon={Favorite} 
+                value={userStats.likes} 
+                label="좋아요" 
+                color="#FF6B9D" 
+              />
+              <StatCard 
+                icon={PlayArrow} 
+                value={userStats.totalPlays} 
+                label="총 재생" 
+                color="#8B5CF6" 
+              />
             </Box>
           </Box>
 
@@ -1056,6 +1136,201 @@ const MyPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setFollowModalOpen(false)}>
+            닫기
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 배경화면 설정 모달 */}
+      <Dialog 
+        open={isBackgroundModalOpen} 
+        onClose={() => setIsBackgroundModalOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            background: 'rgba(0, 0, 0, 0.9)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: 3,
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          color: '#FFFFFF', 
+          fontSize: '1.5rem', 
+          fontWeight: 600,
+          textAlign: 'center',
+          pb: 2
+        }}>
+          배경화면 설정
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 2 }}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ 
+              color: '#FFFFFF', 
+              mb: 2, 
+              fontSize: '1.1rem',
+              fontWeight: 500
+            }}>
+              사진 업로드
+            </Typography>
+            <Box 
+              component="label"
+              sx={{
+                border: '2px dashed rgba(255, 255, 255, 0.3)',
+                borderRadius: 2,
+                p: 3,
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                display: 'block',
+                '&:hover': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                }
+              }}
+            >
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/jpg"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const imageUrl = event.target?.result as string;
+                      // 배경 이미지 설정 로직
+                      localStorage.setItem('customBackground', imageUrl);
+                      showToast('배경 이미지가 설정되었습니다.', 'success');
+                      setIsBackgroundModalOpen(false);
+                      // 페이지 새로고침으로 배경 적용
+                      window.location.reload();
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+              <Wallpaper sx={{ 
+                fontSize: 48, 
+                color: 'rgba(255, 255, 255, 0.6)', 
+                mb: 1 
+              }} />
+              <Typography variant="body2" sx={{ 
+                color: 'rgba(255, 255, 255, 0.8)',
+                mb: 1
+              }}>
+                클릭하여 배경 이미지 업로드
+              </Typography>
+              <Typography variant="caption" sx={{ 
+                color: 'rgba(255, 255, 255, 0.6)'
+              }}>
+                JPG, PNG 파일만 지원됩니다
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ 
+              color: '#FFFFFF', 
+              mb: 2, 
+              fontSize: '1.1rem',
+              fontWeight: 500
+            }}>
+              앨범 커버에서 선택
+            </Typography>
+            <Box sx={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+              gap: 2,
+              maxHeight: 200,
+              overflowY: 'auto',
+              pr: 1
+            }}>
+              {myAlbums.map((album: { id: string; title: string; coverImage: string }) => (
+                <Box
+                  key={album.id}
+                  sx={{
+                    aspectRatio: '1',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    border: '2px solid transparent',
+                    '&:hover': {
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
+                      transform: 'scale(1.05)',
+                    }
+                  }}
+                  onClick={() => {
+                    // 앨범 커버를 배경으로 설정하는 로직
+                    localStorage.setItem('customBackground', album.coverImage);
+                    showToast('앨범 커버가 배경으로 설정되었습니다.', 'success');
+                    setIsBackgroundModalOpen(false);
+                    // 페이지 새로고침으로 배경 적용
+                    window.location.reload();
+                  }}
+                >
+                  <ImageWithFallback
+                    src={album.coverImage}
+                    fallback="/images/default-album-cover.jpg"
+                    alt={album.title}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                  />
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h6" sx={{ 
+              color: '#FFFFFF', 
+              mb: 2, 
+              fontSize: '1.1rem',
+              fontWeight: 500
+            }}>
+              기본 배경으로 복원
+            </Typography>
+            <Button
+              variant="outlined"
+              fullWidth
+              onClick={() => {
+                // 기본 배경으로 복원하는 로직
+                localStorage.removeItem('customBackground');
+                showToast('기본 배경으로 복원되었습니다.', 'success');
+                setIsBackgroundModalOpen(false);
+                // 페이지 새로고침으로 배경 적용
+                window.location.reload();
+              }}
+              sx={{
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                color: 'rgba(255, 255, 255, 0.8)',
+                py: 1.5,
+                '&:hover': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
+            >
+              기본 배경으로 복원
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button 
+            onClick={() => setIsBackgroundModalOpen(false)}
+            sx={{
+              color: 'rgba(255, 255, 255, 0.8)',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              }
+            }}
+          >
             닫기
           </Button>
         </DialogActions>
