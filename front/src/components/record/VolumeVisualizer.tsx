@@ -1,347 +1,190 @@
-/**
- * 실시간 볼륨 시각화 컴포넌트
- * - 녹음 상태에 따라 자동으로 마이크 입력 분석
- * - 단순한 파형과 원형 시각화로 볼륨 표시
- * - 녹음 중일 때만 활성화
- */
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
 
 interface VolumeVisualizerProps {
   isRecording: boolean;
 }
 
+// GLB 모델 컴포넌트
+function SpeakerModel({ intensity }: { intensity: number }) {
+  const { scene } = useGLTF('/models/speaker1.glb');
+  const meshRef = useRef<THREE.Group>(null);
+
+  useFrame(() => {
+    if (meshRef.current) {
+      // 강도에 따른 스케일 변화만
+      const scale = 1 + (intensity * 0.3);
+      meshRef.current.scale.setScalar(scale);
+    }
+  });
+
+  return (
+    <group ref={meshRef} rotation={[0, -Math.PI / 1.4, 0]}>
+      <primitive object={scene.clone()} scale={[3.5, 3.5, 3.5]} position={[0, 0, 0]} />
+    </group>
+  );
+}
+
 const VolumeVisualizer: React.FC<VolumeVisualizerProps> = ({ isRecording }) => {
-  // 상태 관리
-  const [volume, setVolume] = useState(0);           // 현재 볼륨 레벨 (0-100)
-  const [isActive, setIsActive] = useState(false);   // 시각화 활성화 상태
+  // isActive 상태 제거 (UI에 미사용)
+  const [, setIsActive] = useState(false);
+  const [volume, setVolume] = useState(0);
   
-  // refs
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number | undefined>(undefined);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Float32Array | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  // 색상 팔레트 (볼륨에 따라 변화)
-  const getColorPalette = (vol: number) => {
-    if (vol < 20) return '#4A90E2'; // 파란색
-    if (vol < 40) return '#32CD32'; // 초록색
-    if (vol < 60) return '#FFD700'; // 노란색
-    if (vol < 80) return '#FF6347'; // 주황색
-    return '#FF0000'; // 빨간색
-  };
-
-  // 볼륨 분석 함수
-  const analyzeVolume = useCallback(() => {
-    if (!analyserRef.current || !dataArrayRef.current) return;
-
-    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-    
-    // 평균 볼륨 계산
-    let sum = 0;
-    for (let i = 0; i < dataArrayRef.current.length; i++) {
-      sum += dataArrayRef.current[i];
-    }
-    const average = sum / dataArrayRef.current.length;
-    const volumeLevel = Math.min(100, (average / 255) * 100);
-    
-    setVolume(volumeLevel);
-  }, []);
-
-  // 애니메이션 루프
-  const animate = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const { width, height } = canvas;
-    
-    // 캔버스 클리어
-    ctx.clearRect(0, 0, width, height);
-    
-    // 배경
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, width, height);
-
-    // 파형 그리기
-    if (analyserRef.current && dataArrayRef.current) {
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-      
-      const color = getColorPalette(volume);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      
-      const sliceWidth = width / dataArrayRef.current.length;
-      let x = 0;
-      
-      for (let i = 0; i < dataArrayRef.current.length; i++) {
-        const v = dataArrayRef.current[i] / 255.0;
-        const y = height - (v * height * 0.6) - height * 0.2;
-        
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-        
-        x += sliceWidth;
-      }
-      
-      ctx.stroke();
-    }
-
-    // 중앙 원형 시각화
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const radius = (volume / 100) * Math.min(width, height) * 0.25;
-    const color = getColorPalette(volume);
-    
-    // 외부 링
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius + 15, 0, Math.PI * 2);
-    ctx.stroke();
-    
-    // 내부 원
-    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-    gradient.addColorStop(0, color + '80');
-    gradient.addColorStop(1, color + '20');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.fill();
-
-    animationRef.current = requestAnimationFrame(animate);
-  }, [volume]);
-
-  // 마이크 시작 함수
   const startMicrophone = useCallback(async () => {
     try {
-      // 오디오 컨텍스트 생성
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const audioContext = new AudioContextClass() as AudioContext;
-      audioContextRef.current = audioContext;
-      
-      // 마이크 스트림 가져오기
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100
+        audio: { 
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
         } 
       });
       
-      // 오디오 소스 생성
-      const microphone = audioContext.createMediaStreamSource(stream);
-      microphoneRef.current = microphone;
+      streamRef.current = stream;
       
-      // 분석기 생성
+      const AudioContextCtor = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+      const audioContext = new (AudioContextCtor as typeof AudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
+      
+      analyser.fftSize = 2048;
       analyser.smoothingTimeConstant = 0.8;
-      analyserRef.current = analyser;
       
-      // 데이터 배열 생성
       const bufferLength = analyser.frequencyBinCount;
-      dataArrayRef.current = new Uint8Array(bufferLength);
+      const dataArray = new Float32Array(bufferLength);
       
-      // 연결
-      microphone.connect(analyser);
+      source.connect(analyser);
+      
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+      dataArrayRef.current = dataArray;
       
       setIsActive(true);
       
-    } catch (err) {
-      console.error('마이크 접근 실패:', err);
+      const analyzeVolume = () => {
+        if (!analyserRef.current || !dataArrayRef.current) return;
+        
+        // 시간 도메인 데이터 사용 (더 정확한 볼륨 측정)
+        analyserRef.current.getFloatTimeDomainData(dataArrayRef.current);
+        
+        // RMS 계산으로 볼륨 측정
+        let sum = 0;
+        for (let i = 0; i < dataArrayRef.current.length; i++) {
+          sum += Math.pow(dataArrayRef.current[i], 2);
+        }
+        const rms = Math.sqrt(sum / dataArrayRef.current.length);
+        const volumePercent = Math.min(100, Math.max(0, rms * 1000)); // 더 민감한 볼륨 감지
+        
+        setVolume(volumePercent);
+        animationFrameRef.current = requestAnimationFrame(analyzeVolume);
+      };
+      
+      analyzeVolume();
+      
+    } catch (error) {
+      console.error('마이크 접근 실패:', error);
       setIsActive(false);
     }
   }, []);
 
-  // 리소스 정리 함수
   const cleanupResources = useCallback(() => {
-    // 애니메이션 정리
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = undefined;
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
     
-    // 마이크 연결 해제
-    if (microphoneRef.current) {
-      try {
-        microphoneRef.current.disconnect();
-      } catch (error) {
-        console.warn('마이크 연결 해제 중 오류:', error);
-      }
-      microphoneRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
     
-    // 오디오 컨텍스트 정리
     if (audioContextRef.current) {
-      try {
-        if (audioContextRef.current.state !== 'closed') {
-          audioContextRef.current.close();
-        }
-      } catch (error) {
-        console.warn('오디오 컨텍스트 정리 중 오류:', error);
-      }
+      audioContextRef.current.close();
       audioContextRef.current = null;
     }
     
-    // 분석기 정리
     analyserRef.current = null;
     dataArrayRef.current = null;
-    
     setIsActive(false);
-    setVolume(0);
   }, []);
 
-  // 마이크 중지 함수
-  const stopMicrophone = useCallback(() => {
-    cleanupResources();
-  }, [cleanupResources]);
-
-  // 녹음 상태에 따라 마이크 시작/중지
   useEffect(() => {
     if (isRecording) {
       startMicrophone();
     } else {
-      stopMicrophone();
+      cleanupResources();
+      setVolume(0);
     }
     
-    // 컴포넌트 언마운트 시 정리
     return () => {
       cleanupResources();
     };
-  }, [isRecording, startMicrophone, stopMicrophone, cleanupResources]);
+  }, [isRecording, startMicrophone, cleanupResources]);
 
-  // 활성화 상태에 따라 애니메이션 시작/중지
-  useEffect(() => {
-    if (isActive) {
-      animate();
-    } else {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    }
-  }, [isActive, animate]);
-
-  // 볼륨 분석 주기적 실행
-  useEffect(() => {
-    if (!isActive) return;
-    
-    const interval = setInterval(analyzeVolume, 50);
-    return () => clearInterval(interval);
-  }, [isActive, analyzeVolume]);
+  const volumeIntensity = volume / 100;
+  // getColorPalette 제거 (미사용)
+  // 색상은 현재 화면 표시 요소에 사용하지 않으므로 계산 생략
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* 헤더 */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        mb: 3
+    <div style={{
+      height: '100%',
+      width: '100%',
+      position: 'relative',
+      background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)',
+      overflow: 'visible'
+    }}>
+      {/* GLB 모델 - 중앙 배치 */}
+      <div style={{
+        position: 'fixed', // fixed로 변경하여 최상위 레이어
+        top: '50%', // 원래 위치로 복원
+        left: '50%',
+        width: '150%', // Canvas 크기 확대 (스피커 잘림 방지)
+        height: '150%', // Canvas 크기 확대 (스피커 잘림 방지)
+        transform: `translate(-50%, -50%) scale(${Math.min(1 + volumeIntensity * 0.6, 1.8)})`, // 최대 스케일 제한
+        transition: 'transform 0.3s ease',
+        zIndex: 9999, // 최상위 레이어
+        pointerEvents: 'none' // 마우스 이벤트 차단하지 않음
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{
-            width: 40,
-            height: 40,
-            borderRadius: '10px',
-            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
-          }}>
-            <Typography sx={{ color: '#000', fontSize: 20, fontWeight: 'bold' }}>🔊</Typography>
-          </Box>
-          <Box>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#00ffff',
-                fontWeight: 700,
-                letterSpacing: '0.05em',
-                textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
-              }}
-            >
-              NEURAL VOLUME
-            </Typography>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: '#888',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
-              AUDIO ANALYZER
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Box sx={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: isActive ? '#00ff00' : '#888',
-            boxShadow: isActive ? '0 0 10px #00ff00' : 'none',
-            animation: isActive ? 'pulse 1s infinite' : 'none',
-            '@keyframes pulse': {
-              '0%': { opacity: 1 },
-              '50%': { opacity: 0.5 },
-              '100%': { opacity: 1 }
-            }
-          }} />
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              color: isActive ? '#00ff00' : '#888',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              fontFamily: 'monospace'
-            }}
-          >
-            {isActive ? 'ACTIVE' : 'STANDBY'}
-          </Typography>
-        </Box>
-      </Box>
-      
-      {/* 볼륨 레벨 표시 */}
-      <Paper elevation={2} sx={{ p: 2, mb: 2, textAlign: 'center' }}>
-        <Typography variant="h4" sx={{ 
-          fontWeight: 'bold', 
-          color: getColorPalette(volume),
-          textShadow: `0 0 10px ${getColorPalette(volume)}40`
-        }}>
-          {Math.round(volume)}%
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {isRecording ? '녹음 중...' : '대기 중...'}
-        </Typography>
-      </Paper>
-
-      {/* 시각화 캔버스 */}
-      <Paper elevation={3} sx={{ overflow: 'hidden', borderRadius: 2 }}>
-        <canvas
-          ref={canvasRef}
-          width={300}
-          height={200}
-          style={{
-            width: '100%',
-            height: '200px',
-            display: 'block'
+        <Canvas
+          camera={{ 
+            position: [0, 0, 6], // 카메라를 더 뒤로 이동
+            fov: 75 // 시야각 확대
           }}
-        />
-      </Paper>
-    </Box>
+          style={{ width: '100%', height: '100%' }}
+          gl={{ alpha: true, antialias: true }}
+          onCreated={({ gl }) => {
+            gl.setClearColor('#000000', 0);
+            gl.shadowMap.enabled = true;
+            gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          }}
+        >
+          <ambientLight intensity={1.2} />
+          <directionalLight position={[5, 5, 5]} intensity={2.0} castShadow />
+          <pointLight position={[-5, 5, 5]} color="#00ffff" intensity={1.5} />
+          <pointLight position={[5, -5, 5]} color="#ff0080" intensity={1.5} />
+          <pointLight position={[0, 0, 5]} color="#ffff00" intensity={1.0} />
+          <pointLight position={[-3, -3, 3]} color="#ff00ff" intensity={0.8} />
+          <pointLight position={[3, 3, 3]} color="#00ff00" intensity={0.8} />
+          
+          <SpeakerModel 
+            intensity={volumeIntensity}
+          />
+          
+          <OrbitControls enablePan={false} enableZoom={true} enableRotate={true} />
+        </Canvas>
+      </div>
+      
+      {/* 3D 파티클 및 텍스트 정보 숨김 */}
+      <div style={{ display: 'none' }} />
+    </div>
   );
 };
 
