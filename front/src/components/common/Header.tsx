@@ -62,12 +62,8 @@ const Header: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
-    const success = await loginWithGoogle();
-    if (success) {
-      // 로그인 성공 시 메인 페이지로 이동
-      navigate('/recommendations');
-    }
-    // 로그인 실패 시에는 현재 페이지에 그대로 머물러 있음
+    // 구글 OAuth2 리다이렉트 시작 (페이지가 리다이렉트됨)
+    await loginWithGoogle();
   };
 
   return (
