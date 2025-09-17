@@ -4,6 +4,7 @@ import com.ssafy.lab.orak.recording.dto.RecordRequestDTO;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.entity.Record;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
+import com.ssafy.lab.orak.recording.exception.RecordOperationException;
 import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
@@ -172,7 +173,7 @@ class RecordServiceTest {
             .thenThrow(new RuntimeException("파일 업로드 실패"));
 
         // when & then
-        assertThrows(FileUploadException.class, () -> 
+        assertThrows(RecordOperationException.class, () ->
             recordService.createRecord(title, songId, testAudioFile, userId)
         );
 

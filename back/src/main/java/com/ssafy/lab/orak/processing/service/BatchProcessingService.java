@@ -5,10 +5,13 @@ import com.ssafy.lab.orak.processing.exception.BatchProcessingException;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 import java.util.Comparator;
 import java.util.List;
@@ -25,6 +28,8 @@ public class BatchProcessingService {
     private final FileUploadService fileUploadService;
     private final ProcessingConfig processingConfig;
     private final List<ProcessingJob> processingJobs;
+    private final Timer processingDurationTimer;
+    private final AtomicLong processingQueueSize;
     
     // 동시 처리 제한을 위한 세마포어
     private final Semaphore processingLimiter = new Semaphore(3); // 기본 3개
@@ -53,12 +58,15 @@ public class BatchProcessingService {
         
         // 처리 대기 중인 파일 조회
         List<Upload> pendingUploads = fileUploadService.getPendingAudioProcessing(actualBatchSize);
-        
+
+        // 큐 크기 업데이트
+        processingQueueSize.set(pendingUploads.size());
+
         if (pendingUploads.isEmpty()) {
             log.debug("처리할 대기 파일이 없습니다");
             return;
         }
-        
+
         log.info("처리 대기 중인 파일 {}개 발견", pendingUploads.size());
         
         // 각 파일에 대해 비동기 처리 시작
@@ -68,10 +76,11 @@ public class BatchProcessingService {
     }
     
     private void processUploadFile(Upload upload) {
+        Timer.Sample sample = Timer.start();
         try {
             processingLimiter.acquire();
             activeJobs.incrementAndGet();
-            
+
             log.info("업로드 처리 시작: {} ({})", upload.getId(), upload.getOriginalFilename());
             
             // 적절한 처리 작업 찾기
@@ -113,6 +122,7 @@ public class BatchProcessingService {
                     "배치 처리 중 예상치 못한 오류: " + e.getMessage());
             throw new BatchProcessingException("배치 처리 중 예상치 못한 오류가 발생했습니다", e);
         } finally {
+            sample.stop(processingDurationTimer);
             activeJobs.decrementAndGet();
             processingLimiter.release();
         }

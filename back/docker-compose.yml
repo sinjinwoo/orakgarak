@@ -15,6 +15,7 @@ services:
       - "${DB_PORT_LOCAL:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD_LOCAL}"]
       timeout: 20s
@@ -109,7 +110,7 @@ services:
       - '--web.enable-admin-api'
 
   # ============================================
-  # Grafana - 시각화 및 대시보드
+  # z - 시각화 및 대시보드
   # ============================================
   grafana:
     image: grafana/grafana:latest
@@ -127,9 +128,20 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: false
       GF_USERS_DEFAULT_THEME: dark
       GF_AUTH_ANONYMOUS_ENABLED: false
+      # 플러그인 서명 검증 비활성화
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: true
+      GF_PLUGINS_PLUGIN_ADMIN_ENABLED: false
+      # 로그 레벨 설정
+      GF_LOG_LEVEL: warn
+      # 프로비저닝 안정성 개선
+      GF_PROVISIONING_RELOAD_INTERVAL: 10s
+      # Public Dashboard 비활성화
+      GF_FEATURE_TOGGLES_ENABLE: ""
+      GF_PUBLIC_DASHBOARDS_ENABLED: false
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
       - prometheus
@@ -181,8 +193,11 @@ services:
     restart: unless-stopped
     ports:
       - "9104:9104"
-    environment:
-      DATA_SOURCE_NAME: "${DB_USERNAME_LOCAL}:${DB_PASSWORD_LOCAL}@tcp(mysql:3306)/"
+    command:
+      - "--mysqld.username=${MYSQL_EXPORTER_USER}:${MYSQL_EXPORTER_PASSWORD}"
+      - "--mysqld.address=mysql:3306"
+    env_file:
+      - .env
     depends_on:
       mysql:
         condition: service_healthy
@@ -219,6 +234,22 @@ services:
         condition: service_healthy
 
   # ============================================
+  # Alertmanager Config Generator - 설정 파일 생성
+  # ============================================
+  alertmanager-config:
+    image: alpine:latest
+    container_name: orakgaraki-alertmanager-config
+    environment:
+      MATTERMOST_WEBHOOK_URL: "${MATTERMOST_WEBHOOK_URL:-http://localhost:8065/hooks/disabled}"
+    volumes:
+      - ./monitoring/alertmanager:/templates:ro
+      - alertmanager_config:/config
+    command: |
+      sh -c "apk add --no-cache gettext &&
+             envsubst < /templates/alertmanager.yml.template > /config/alertmanager.yml &&
+             echo 'Configuration generated successfully'"
+
+  # ============================================
   # Alertmanager - 알림 관리
   # ============================================
   alertmanager:
@@ -227,17 +258,16 @@ services:
     restart: unless-stopped
     ports:
       - "${ALERTMANAGER_PORT:-9093}:9093"
-    environment:
-      MATTERMOST_WEBHOOK_URL: "${MATTERMOST_WEBHOOK_URL}"
     volumes:
       - alertmanager_data:/alertmanager
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_config:/etc/alertmanager:ro
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
       - --web.external-url=http://localhost:9093
       - --cluster.advertise-address=0.0.0.0:9093
-
+    depends_on:
+      - alertmanager-config
   # ============================================
   # Loki - 로그 집계 및 저장
   # ============================================
@@ -277,3 +307,4 @@ volumes:
   prometheus_data:
   grafana_data:
   alertmanager_data:
+  alertmanager_config:

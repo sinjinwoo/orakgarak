@@ -67,6 +67,38 @@ public class S3Helper {
     public String generatePresignedUrl(String s3Key) {
         return generatePresignedUrl(s3Key, Duration.ofHours(24));
     }
+
+    /**
+     * S3 키에서 UUID 추출
+     * 패턴: {directory}/{uuid}_{filename} → {uuid}
+     * 예: recordings/abc123_audio.mp3 → abc123
+     *     profiles/def456_image.jpg → def456
+     */
+    public String extractUuidFromS3Key(String s3Key) {
+        if (s3Key == null || !s3Key.contains("/")) {
+            return null;
+        }
+
+        try {
+            String[] parts = s3Key.split("/");
+            if (parts.length >= 2) {
+                String directory = parts[0]; // recordings, profiles 등
+                String filenamePart = parts[1]; // uuid_filename 부분
+
+                // 지원하는 디렉토리인지 확인
+                if ("recordings".equals(directory) || "profiles".equals(directory)) {
+                    int underscoreIndex = filenamePart.indexOf("_");
+                    if (underscoreIndex > 0) {
+                        return filenamePart.substring(0, underscoreIndex); // UUID 부분만 반환
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("S3 키에서 UUID 추출 실패: {} - {}", s3Key, e.getMessage());
+        }
+
+        return null;
+    }
     
     // Pre-signed PUT URL 생성 (업로드용)
     public String generatePresignedPutUrl(String s3Key, Duration expiration) {

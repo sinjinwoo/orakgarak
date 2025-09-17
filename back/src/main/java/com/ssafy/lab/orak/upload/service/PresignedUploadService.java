@@ -8,9 +8,13 @@ import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.repository.UploadRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 import java.time.Duration;
 import java.util.UUID;
@@ -22,8 +26,17 @@ public class PresignedUploadService {
 
     private final S3Helper s3Helper;
     private final UploadRepository uploadRepository;
+    private final Counter uploadStartedCounter;
+    private final Counter uploadCompletedCounter;
+    private final Counter uploadFailedCounter;
+    private final Timer uploadDurationTimer;
+    private final AtomicLong activeUploadCount;
 
     public PresignedUploadResponse generatePresignedUploadUrl(PresignedUploadRequest request, Long userId) {
+        Timer.Sample sample = Timer.start();
+        uploadStartedCounter.increment();
+        activeUploadCount.incrementAndGet();
+
         try {
             // 파일 유효성 검증
             validateUploadRequest(request);
@@ -41,10 +54,10 @@ public class PresignedUploadService {
             // UUID 생성
             String uuid = UUID.randomUUID().toString();
             
-            // S3 키 생성 (uploads/{uuid}/originalFilename)
-            String s3Key = String.format("%s/%s/%s", 
-                    request.getDirectory(), 
-                    uuid, 
+            // S3 키 생성 ({directory}/{uuid}_{originalFilename})
+            String s3Key = String.format("%s/%s_%s",
+                    request.getDirectory(),
+                    uuid,
                     originalFilename);
             
             // Presigned URL 생성 (PUT 요청용, 1시간 유효)
@@ -64,9 +77,14 @@ public class PresignedUploadService {
             
             Upload savedUpload = uploadRepository.save(upload);
             
-            log.info("Presigned URL 생성 완료: upload: {} (uuid: {})", 
+            log.info("Presigned URL 생성 완료: upload: {} (uuid: {})",
                     savedUpload.getId(), uuid);
-            
+
+            // 성공 메트릭 기록
+            uploadCompletedCounter.increment();
+            sample.stop(uploadDurationTimer);
+            activeUploadCount.decrementAndGet();
+
             return PresignedUploadResponse.builder()
                     .uploadId(savedUpload.getId())
                     .uuid(uuid)
@@ -75,8 +93,13 @@ public class PresignedUploadService {
                     .originalFilename(originalFilename)
                     .uploadMetadata("Upload metadata created, awaiting S3 upload completion")
                     .build();
-            
+
         } catch (Exception e) {
+            // 실패 메트릭 기록
+            uploadFailedCounter.increment();
+            sample.stop(uploadDurationTimer);
+            activeUploadCount.decrementAndGet();
+
             log.error("Presigned URL 생성에 실패했습니다", e);
             throw new PresignedUrlException("Presigned URL 생성에 실패했습니다: " + e.getMessage(), e);
         }

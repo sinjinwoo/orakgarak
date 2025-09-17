@@ -30,10 +30,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
-        
+
+        log.info("JWT Filter - Request path: {}", path);
+
         // OAuth2 관련 경로는 JWT 필터 건너뜀
-        if (path.startsWith("/api/oauth2/") || 
-            path.startsWith("/api/login/oauth2/") || 
+        if (path.startsWith("/api/oauth2/") ||
+            path.startsWith("/api/login/oauth2/") ||
             path.startsWith("/api/test/") ||
             path.equals("/api/auth/refresh") ||
             path.startsWith("/api/yjs/") ||
@@ -41,7 +43,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             path.startsWith("/swagger-ui/") ||
             path.startsWith("/v3/api-docs") ||
             path.startsWith("/api-docs") ||
-            path.startsWith("/api/api-docs")) {
+            path.startsWith("/api/api-docs") ||
+            path.startsWith("/api/actuator")) {
+            log.info("JWT Filter - Bypassing authentication for path: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
@@ -64,7 +68,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
         } else {
-            // 토큰이 없으면 401 반환
+            log.info("JWT Filter - No token provided for non-actuator path: {}", path);
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
             response.getWriter().write("JWT token is required.");
             return;

@@ -1,15 +1,17 @@
 {
-  "dashboard": {
-    "id": null,
-    "title": "Orakgaraki File Upload System - Complete Observability",
-    "description": "통합 모니터링 대시보드: 메트릭 + 로그",
-    "tags": ["orakgaraki", "upload", "observability"],
-    "timezone": "Asia/Seoul",
-    "refresh": "30s",
-    "time": {
-      "from": "now-1h",
-      "to": "now"
-    },
+  "id": null,
+  "uid": "orakgaraki-main",
+  "title": "Orakgaraki File Upload System - Complete Observability",
+  "description": "통합 모니터링 대시보드: 메트릭 + 로그",
+  "tags": ["orakgaraki", "upload", "observability"],
+  "timezone": "Asia/Seoul",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "version": 1,
+  "schemaVersion": 27,
     "panels": [
       {
         "id": 1,
@@ -20,22 +22,38 @@
           {
             "expr": "up{job=\"orakgaraki-app\"}",
             "legendFormat": "애플리케이션 상태",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "rate(http_server_requests_seconds_count[5m])",
+            "expr": "rate(http_server_requests_seconds_count{job=\"orakgaraki-app\"}[5m])",
             "legendFormat": "초당 요청 수",
-            "refId": "B"
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "upload_active_count",
+            "expr": "upload_active_count{job=\"orakgaraki-app\"}",
             "legendFormat": "활성 업로드",
-            "refId": "C"
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "processing_queue_size",
+            "expr": "processing_queue_size{job=\"orakgaraki-app\"}",
             "legendFormat": "처리 대기",
-            "refId": "D"
+            "refId": "D",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ],
         "fieldConfig": {
@@ -58,19 +76,31 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
         "targets": [
           {
-            "expr": "rate(upload_started_total[5m])",
+            "expr": "rate(upload_started_total{job=\"orakgaraki-app\"}[5m])",
             "legendFormat": "업로드 시작",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "rate(upload_completed_total[5m])",
+            "expr": "rate(upload_completed_total{job=\"orakgaraki-app\"}[5m])",
             "legendFormat": "업로드 완료",
-            "refId": "B"
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "rate(upload_failed_total[5m])",
+            "expr": "rate(upload_failed_total{job=\"orakgaraki-app\"}[5m])",
             "legendFormat": "업로드 실패",
-            "refId": "C"
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ],
         "fieldConfig": {
@@ -92,19 +122,31 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
         "targets": [
           {
-            "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
             "legendFormat": "50th percentile",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
             "legendFormat": "95th percentile",
-            "refId": "B"
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket[5m]))",
+            "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
             "legendFormat": "99th percentile",
-            "refId": "C"
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ]
       },
@@ -115,14 +157,22 @@
         "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
         "targets": [
           {
-            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+            "expr": "(1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\"} / node_memory_MemTotal_bytes{job=\"node-exporter\"})) * 100",
             "legendFormat": "메모리 사용률 (%)",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",job=\"node-exporter\"}[5m])) * 100)",
             "legendFormat": "CPU 사용률 (%)",
-            "refId": "B"
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ]
       },
@@ -133,19 +183,31 @@
         "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
         "targets": [
           {
-            "expr": "hikaricp_connections_active",
+            "expr": "hikaricp_connections_active{job=\"orakgaraki-app\"}",
             "legendFormat": "활성 연결",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "hikaricp_connections_idle",
+            "expr": "hikaricp_connections_idle{job=\"orakgaraki-app\"}",
             "legendFormat": "유휴 연결",
-            "refId": "B"
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "hikaricp_connections_pending",
+            "expr": "hikaricp_connections_pending{job=\"orakgaraki-app\"}",
             "legendFormat": "대기 중인 연결",
-            "refId": "C"
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ]
       },
@@ -156,14 +218,22 @@
         "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
         "targets": [
           {
-            "expr": "kafka_consumer_lag_sum",
+            "expr": "kafka_consumer_lag_sum{job=\"kafka\"}",
             "legendFormat": "총 컨슈머 랙",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "rate(kafka_consumer_fetch_manager_records_consumed_total[5m])",
-            "legendFormat": "초당 처리된 메시지",
-            "refId": "B"
+            "expr": "rate(kafka_messages_received_total{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "초당 수신된 메시지",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ]
       },
@@ -174,8 +244,12 @@
         "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
         "targets": [
           {
-            "expr": "{job=\"orakgaraki-app\"} |= \"ERROR\" or \"WARN\" or \"upload\" or \"processing\"",
-            "refId": "A"
+            "expr": "{job=\"orakgaraki-app\"} |~ \"ERROR|WARN|upload|processing\"",
+            "refId": "A",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            }
           }
         ],
         "options": {
@@ -197,7 +271,11 @@
         "targets": [
           {
             "expr": "{job=\"orakgaraki-app\"} |= \"ERROR\" | json | __error__=\"\"",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            }
           }
         ],
         "options": {
@@ -213,9 +291,13 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
         "targets": [
           {
-            "expr": "sum by (file_type) (upload_started_total)",
+            "expr": "sum by (file_type) (upload_started_total{job=\"orakgaraki-app\"})",
             "legendFormat": "{{file_type}}",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ],
         "options": {
@@ -239,24 +321,40 @@
         "gridPos": {"h": 6, "w": 24, "x": 0, "y": 40},
         "targets": [
           {
-            "expr": "rate(upload_duration_sum[5m]) / rate(upload_duration_count[5m])",
+            "expr": "rate(upload_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(upload_duration_count{job=\"orakgaraki-app\"}[5m])",
             "legendFormat": "평균 업로드 시간 (초)",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "rate(processing_duration_sum[5m]) / rate(processing_duration_count[5m])",
+            "expr": "rate(processing_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(processing_duration_count{job=\"orakgaraki-app\"}[5m])",
             "legendFormat": "평균 처리 시간 (초)",
-            "refId": "B"
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "rate(upload_completed_total[5m]) / rate(upload_started_total[5m]) * 100",
+            "expr": "rate(upload_completed_total{job=\"orakgaraki-app\"}[5m]) / rate(upload_started_total{job=\"orakgaraki-app\"}[5m]) * 100",
             "legendFormat": "업로드 성공률 (%)",
-            "refId": "C"
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           },
           {
-            "expr": "processing_queue_size",
+            "expr": "processing_queue_size{job=\"orakgaraki-app\"}",
             "legendFormat": "현재 큐 크기",
-            "refId": "D"
+            "refId": "D",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
           }
         ],
         "fieldConfig": {
@@ -296,7 +394,11 @@
         "targets": [
           {
             "expr": "{job=\"orakgaraki-app\"} |~ \"ALERT|CRITICAL|FATAL|OutOfMemory|TimeoutException|SQLException\"",
-            "refId": "A"
+            "refId": "A",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            }
           }
         ],
         "options": {
@@ -346,6 +448,4 @@
         }
       ]
     }
-  },
-  "overwrite": true
 }

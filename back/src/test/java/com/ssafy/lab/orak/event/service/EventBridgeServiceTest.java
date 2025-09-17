@@ -30,6 +30,9 @@ class EventBridgeServiceTest {
     @MockitoBean
     private EventBridgeClient eventBridgeClient;
 
+    @MockitoBean
+    private KafkaEventProducer kafkaEventProducer;
+
     private UploadEvent testUploadEvent;
 
     @BeforeEach
@@ -51,33 +54,26 @@ class EventBridgeServiceTest {
     }
 
     @Test
-    @DisplayName("S3 업로드 완료 이벤트 발송 테스트")
+    @DisplayName("S3 업로드 완료 이벤트 큐잉 테스트")
     void testSendUploadCompletedEvent() {
-        // Given: EventBridge 클라이언트 Mock 설정
-        PutEventsResponse mockResponse = PutEventsResponse.builder()
-                .entries(PutEventsResultEntry.builder()
-                        .eventId("event-123")
-                        .build())
-                .failedEntryCount(0)
-                .build();
+        // Given: Kafka Producer Mock 설정
+        doNothing().when(kafkaEventProducer).sendUploadEvent(any(UploadEvent.class));
 
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenReturn(mockResponse);
-
-        // When: 업로드 완료 이벤트 발송
+        // When: 업로드 완료 이벤트 큐잉
         boolean success = eventBridgeService.publishUploadEvent(testUploadEvent);
 
-        // Then: 이벤트 발송 성공 확인
+        // Then: 이벤트 큐잉 성공 확인
         assert success;
 
-        // EventBridge 클라이언트 호출 확인
-        verify(eventBridgeClient, times(1)).putEvents(any(PutEventsRequest.class));
+        // Kafka Producer 호출 확인 (EventBridge는 호출되지 않음)
+        verify(kafkaEventProducer, times(1)).sendUploadEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
 
-        System.out.println("✅ S3 업로드 완료 이벤트 발송 성공");
+        System.out.println("✅ S3 업로드 완료 이벤트 큐잉 성공");
     }
 
     @Test
-    @DisplayName("처리 상태 변경 이벤트 발송 테스트")
+    @DisplayName("처리 상태 변경 이벤트 큐잉 테스트")
     void testSendProcessingStatusChangeEvent() {
         // Given: 상태 변경 이벤트 준비
         UploadEvent statusChangeEvent = testUploadEvent.toBuilder()
@@ -86,29 +82,22 @@ class EventBridgeServiceTest {
                 .currentStatus(ProcessingStatus.PROCESSING)
                 .build();
 
-        PutEventsResponse mockResponse = PutEventsResponse.builder()
-                .entries(PutEventsResultEntry.builder()
-                        .eventId("status-event-456")
-                        .build())
-                .failedEntryCount(0)
-                .build();
+        doNothing().when(kafkaEventProducer).sendStatusChangeEvent(any(UploadEvent.class));
 
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenReturn(mockResponse);
-
-        // When: 상태 변경 이벤트 발송
+        // When: 상태 변경 이벤트 큐잉
         boolean success = eventBridgeService.publishStatusChangeEvent(statusChangeEvent);
 
-        // Then: 이벤트 발송 성공 확인
+        // Then: 이벤트 큐잉 성공 확인
         assert success;
 
-        verify(eventBridgeClient, times(1)).putEvents(any(PutEventsRequest.class));
+        verify(kafkaEventProducer, times(1)).sendStatusChangeEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
 
-        System.out.println("✅ 처리 상태 변경 이벤트 발송 성공");
+        System.out.println("✅ 처리 상태 변경 이벤트 큐잉 성공");
     }
 
     @Test
-    @DisplayName("처리 완료 결과 이벤트 발송 테스트")
+    @DisplayName("처리 완료 결과 이벤트 큐잉 테스트")
     void testSendProcessingCompletedEvent() {
         // Given: 처리 완료 이벤트 준비
         UploadEvent completedEvent = testUploadEvent.toBuilder()
@@ -118,29 +107,22 @@ class EventBridgeServiceTest {
                 .processingDuration(45000L) // 45초
                 .build();
 
-        PutEventsResponse mockResponse = PutEventsResponse.builder()
-                .entries(PutEventsResultEntry.builder()
-                        .eventId("completed-event-789")
-                        .build())
-                .failedEntryCount(0)
-                .build();
+        doNothing().when(kafkaEventProducer).sendProcessingResultEvent(any(UploadEvent.class));
 
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenReturn(mockResponse);
-
-        // When: 처리 완료 이벤트 발송
+        // When: 처리 완료 이벤트 큐잉
         boolean success = eventBridgeService.publishProcessingCompletedEvent(completedEvent);
 
-        // Then: 이벤트 발송 성공 확인
+        // Then: 이벤트 큐잉 성공 확인
         assert success;
 
-        verify(eventBridgeClient, times(1)).putEvents(any(PutEventsRequest.class));
+        verify(kafkaEventProducer, times(1)).sendProcessingResultEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
 
-        System.out.println("✅ 처리 완료 결과 이벤트 발송 성공");
+        System.out.println("✅ 처리 완료 결과 이벤트 큐잉 성공");
     }
 
     @Test
-    @DisplayName("처리 실패 이벤트 발송 테스트")
+    @DisplayName("처리 실패 이벤트 큐잉 테스트")
     void testSendProcessingFailedEvent() {
         // Given: 처리 실패 이벤트 준비
         UploadEvent failedEvent = testUploadEvent.toBuilder()
@@ -150,73 +132,62 @@ class EventBridgeServiceTest {
                 .errorCode("CONVERSION_ERROR")
                 .build();
 
-        PutEventsResponse mockResponse = PutEventsResponse.builder()
-                .entries(PutEventsResultEntry.builder()
-                        .eventId("failed-event-999")
-                        .build())
-                .failedEntryCount(0)
-                .build();
+        doNothing().when(kafkaEventProducer).sendProcessingResultEvent(any(UploadEvent.class));
 
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenReturn(mockResponse);
-
-        // When: 처리 실패 이벤트 발송
+        // When: 처리 실패 이벤트 큐잉
         boolean success = eventBridgeService.publishProcessingFailedEvent(failedEvent);
 
-        // Then: 이벤트 발송 성공 확인
+        // Then: 이벤트 큐잉 성공 확인
         assert success;
 
-        verify(eventBridgeClient, times(1)).putEvents(any(PutEventsRequest.class));
+        verify(kafkaEventProducer, times(1)).sendProcessingResultEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
 
-        System.out.println("✅ 처리 실패 이벤트 발송 성공");
+        System.out.println("✅ 처리 실패 이벤트 큐잉 성공");
     }
 
     @Test
-    @DisplayName("EventBridge 이벤트 발송 실패 처리 테스트")
+    @DisplayName("Kafka 이벤트 큐잉 실패 처리 테스트")
     void testEventBridgeFailureHandling() {
-        // Given: EventBridge 클라이언트에서 실패 응답
-        PutEventsResponse mockFailureResponse = PutEventsResponse.builder()
-                .entries(PutEventsResultEntry.builder()
-                        .errorCode("InternalFailure")
-                        .errorMessage("Internal service error")
-                        .build())
-                .failedEntryCount(1)
-                .build();
+        // Given: Kafka Producer에서 실패하도록 설정
+        doThrow(new com.ssafy.lab.orak.event.exception.KafkaSendException("Kafka failed", new RuntimeException("Mock failure")))
+                .when(kafkaEventProducer).sendUploadEvent(any(UploadEvent.class));
 
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenReturn(mockFailureResponse);
+        // When & Then: 이벤트 큐잉 시도 시 예외 발생 확인
+        try {
+            eventBridgeService.publishUploadEvent(testUploadEvent);
+            assert false : "Expected EventProcessingException to be thrown";
+        } catch (com.ssafy.lab.orak.event.exception.EventProcessingException e) {
+            // 예상된 예외
+            System.out.println("✅ Kafka 이벤트 큐잉 실패 처리 확인 완료");
+        }
 
-        // When: 이벤트 발송 시도
-        boolean success = eventBridgeService.publishUploadEvent(testUploadEvent);
-
-        // Then: 실패 처리 확인
-        assert !success;
-
-        verify(eventBridgeClient, times(1)).putEvents(any(PutEventsRequest.class));
-
-        System.out.println("✅ EventBridge 이벤트 발송 실패 처리 확인 완료");
+        verify(kafkaEventProducer, times(1)).sendUploadEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
     }
 
     @Test
-    @DisplayName("EventBridge 클라이언트 예외 처리 테스트")
+    @DisplayName("일반 예외 처리 테스트")
     void testEventBridgeExceptionHandling() {
-        // Given: EventBridge 클라이언트에서 예외 발생
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenThrow(new RuntimeException("AWS Service unavailable"));
+        // Given: Kafka Producer에서 일반 예외 발생
+        doThrow(new RuntimeException("Unexpected error"))
+                .when(kafkaEventProducer).sendUploadEvent(any(UploadEvent.class));
 
-        // When: 이벤트 발송 시도
-        boolean success = eventBridgeService.publishUploadEvent(testUploadEvent);
+        // When & Then: 이벤트 큐잉 시도 시 예외 발생 확인
+        try {
+            eventBridgeService.publishUploadEvent(testUploadEvent);
+            assert false : "Expected EventProcessingException to be thrown";
+        } catch (com.ssafy.lab.orak.event.exception.EventProcessingException e) {
+            // 예상된 예외
+            System.out.println("✅ 일반 예외 처리 확인 완료");
+        }
 
-        // Then: 예외 처리 확인
-        assert !success;
-
-        verify(eventBridgeClient, times(1)).putEvents(any(PutEventsRequest.class));
-
-        System.out.println("✅ EventBridge 클라이언트 예외 처리 확인 완료");
+        verify(kafkaEventProducer, times(1)).sendUploadEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
     }
 
     @Test
-    @DisplayName("배치 이벤트 발송 테스트")
+    @DisplayName("배치 이벤트 큐잉 테스트")
     void testBatchEventSending() {
         // Given: 여러 개의 이벤트 준비
         java.util.List<UploadEvent> events = java.util.stream.IntStream.range(1, 6)
@@ -227,59 +198,36 @@ class EventBridgeServiceTest {
                         .build())
                 .collect(java.util.stream.Collectors.toList());
 
-        PutEventsResponse mockResponse = PutEventsResponse.builder()
-                .entries(events.stream()
-                        .map(event -> PutEventsResultEntry.builder()
-                                .eventId(event.getEventId())
-                                .build())
-                        .collect(java.util.stream.Collectors.toList()))
-                .failedEntryCount(0)
-                .build();
+        doNothing().when(kafkaEventProducer).sendUploadEvent(any(UploadEvent.class));
 
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenReturn(mockResponse);
-
-        // When: 배치 이벤트 발송
+        // When: 배치 이벤트 큐잉
         boolean success = eventBridgeService.publishBatchEvents(events);
 
-        // Then: 배치 이벤트 발송 성공 확인
+        // Then: 배치 이벤트 큐잉 성공 확인
         assert success;
 
-        verify(eventBridgeClient, times(1)).putEvents(any(PutEventsRequest.class));
+        verify(kafkaEventProducer, times(5)).sendUploadEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
 
-        System.out.println("✅ 배치 이벤트 발송 성공: " + events.size() + "개 이벤트");
+        System.out.println("✅ 배치 이벤트 큐잉 성공: " + events.size() + "개 이벤트");
     }
 
     @Test
     @DisplayName("이벤트 재시도 로직 테스트")
     void testEventRetryLogic() {
         // Given: 처음에는 실패, 두 번째는 성공하는 시나리오
-        PutEventsResponse failureResponse = PutEventsResponse.builder()
-                .entries(PutEventsResultEntry.builder()
-                        .errorCode("Throttling")
-                        .errorMessage("Request rate exceeded")
-                        .build())
-                .failedEntryCount(1)
-                .build();
+        doThrow(new com.ssafy.lab.orak.event.exception.KafkaSendException("첫 번째 시도 실패", new RuntimeException()))
+                .doNothing()
+                .when(kafkaEventProducer).sendUploadEvent(any(UploadEvent.class));
 
-        PutEventsResponse successResponse = PutEventsResponse.builder()
-                .entries(PutEventsResultEntry.builder()
-                        .eventId("retry-success-123")
-                        .build())
-                .failedEntryCount(0)
-                .build();
-
-        when(eventBridgeClient.putEvents(any(PutEventsRequest.class)))
-                .thenReturn(failureResponse)
-                .thenReturn(successResponse);
-
-        // When: 재시도 로직이 있는 이벤트 발송
+        // When: 재시도 로직이 있는 이벤트 큐잉
         boolean success = eventBridgeService.publishUploadEventWithRetry(testUploadEvent, 2);
 
         // Then: 재시도 후 성공 확인
         assert success;
 
-        verify(eventBridgeClient, times(2)).putEvents(any(PutEventsRequest.class));
+        verify(kafkaEventProducer, times(2)).sendUploadEvent(any(UploadEvent.class));
+        verify(eventBridgeClient, never()).putEvents(any(PutEventsRequest.class));
 
         System.out.println("✅ 이벤트 재시도 로직 확인 완료");
     }

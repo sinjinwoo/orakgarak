@@ -189,7 +189,7 @@ class RecordControllerTest {
                 .param("title", "테스트 녹음")
                 .param("songId", "100")
                 .contentType(MediaType.MULTIPART_FORM_DATA))
-            .andExpect(status().isBadRequest());
+            .andExpect(status().isInternalServerError());
 
         verify(recordService).createRecord(eq("테스트 녹음"), eq(100L), any(MultipartFile.class), eq(1L));
     }

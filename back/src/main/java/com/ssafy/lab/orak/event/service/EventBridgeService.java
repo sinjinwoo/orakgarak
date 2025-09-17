@@ -3,7 +3,9 @@ package com.ssafy.lab.orak.event.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.lab.orak.event.dto.UploadEvent;
 import com.ssafy.lab.orak.event.exception.EventBridgeSendException;
+import com.ssafy.lab.orak.event.exception.EventProcessingException;
 import com.ssafy.lab.orak.event.exception.KafkaSendException;
+import io.micrometer.core.instrument.Counter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,8 @@ public class EventBridgeService {
     private final EventBridgeClient eventBridgeClient;
     private final ObjectMapper objectMapper;
     private final KafkaEventProducer kafkaEventProducer;
+    private final Counter kafkaMessagesSentCounter;
+    private final Counter kafkaMessagesReceivedCounter;
 
     @Value("${aws.eventbridge.bus-name}")
     private String eventBusName;
@@ -34,109 +38,120 @@ public class EventBridgeService {
     @Value("${aws.eventbridge.detail-type}")
     private String detailType;
 
+    /**
+     * 업로드 이벤트를 Kafka로 발송
+     * 비동기 배치 처리를 위한 이벤트 큐잉
+     */
     public boolean publishUploadEvent(UploadEvent event) {
         try {
-            // EventBridge로 이벤트 발송
-            publishToEventBridge(event);
-
-            // Kafka로도 발송 (EventBridge 실패 시 백업 및 로컬 처리용)
             kafkaEventProducer.sendUploadEvent(event);
+            kafkaMessagesSentCounter.increment();
 
-            log.info("업로드 이벤트 발송 성공: {} (uploadId: {})",
+            log.info("업로드 이벤트 큐잉 완료: eventType={}, uploadId={}",
                     event.getEventType(), event.getUploadId());
             return true;
 
-        } catch (EventBridgeSendException e) {
-            log.error("업로드 이벤트 발송 실패: {}", event, e);
-
-            // EventBridge 실패 시 Kafka라도 보내기
-            try {
-                kafkaEventProducer.sendUploadEvent(event);
-                log.info("대체 경로로 Kafka 전송 성공: uploadId={}", event.getUploadId());
-                return true;
-            } catch (KafkaSendException kafkaError) {
-                log.error("심각: EventBridge와 Kafka 모두 실패: {}", event, kafkaError);
-                throw new EventBridgeSendException("이벤트 발송에 완전히 실패했습니다", kafkaError);
-            }
         } catch (KafkaSendException e) {
-            log.error("Kafka 이벤트 발송 실패: {}", event, e);
-            throw e;
+            log.error("업로드 이벤트 큐잉 실패: uploadId={}, error={}",
+                    event.getUploadId(), e.getMessage(), e);
+            throw new EventProcessingException("업로드 이벤트 처리 실패", e);
+        } catch (Exception e) {
+            log.error("업로드 이벤트 처리 중 예상치 못한 오류: uploadId={}",
+                    event.getUploadId(), e);
+            throw new EventProcessingException("업로드 이벤트 처리 중 시스템 오류 발생", e);
         }
     }
 
     public boolean publishStatusChangeEvent(UploadEvent event) {
         try {
-            publishToEventBridge(event);
             kafkaEventProducer.sendStatusChangeEvent(event);
 
-            log.info("상태 변경 이벤트 발송 성공: {} (uploadId: {})",
+            log.info("상태 변경 이벤트 큐잉 완료: eventType={}, uploadId={}",
                     event.getEventType(), event.getUploadId());
             return true;
 
-        } catch (EventBridgeSendException | KafkaSendException e) {
-            log.error("상태 변경 이벤트 발송 실패: {}", event, e);
-            throw e;
+        } catch (KafkaSendException e) {
+            log.error("상태 변경 이벤트 큐잉 실패: uploadId={}, error={}",
+                    event.getUploadId(), e.getMessage(), e);
+            throw new EventProcessingException("상태 변경 이벤트 처리 실패", e);
+        } catch (Exception e) {
+            log.error("상태 변경 이벤트 처리 중 예상치 못한 오류: uploadId={}",
+                    event.getUploadId(), e);
+            throw new EventProcessingException("상태 변경 이벤트 처리 중 시스템 오류 발생", e);
         }
     }
 
     public boolean publishProcessingCompletedEvent(UploadEvent event) {
         try {
-            publishToEventBridge(event);
             kafkaEventProducer.sendProcessingResultEvent(event);
 
-            log.info("처리 완료 이벤트 발송 성공: {} (uploadId: {})",
+            log.info("처리 완료 이벤트 큐잉 완료: eventType={}, uploadId={}",
                     event.getEventType(), event.getUploadId());
             return true;
 
-        } catch (EventBridgeSendException | KafkaSendException e) {
-            log.error("처리 완료 이벤트 발송 실패: {}", event, e);
-            throw e;
+        } catch (KafkaSendException e) {
+            log.error("처리 완료 이벤트 큐잉 실패: uploadId={}, error={}",
+                    event.getUploadId(), e.getMessage(), e);
+            throw new EventProcessingException("처리 완료 이벤트 처리 실패", e);
+        } catch (Exception e) {
+            log.error("처리 완료 이벤트 처리 중 예상치 못한 오류: uploadId={}",
+                    event.getUploadId(), e);
+            throw new EventProcessingException("처리 완료 이벤트 처리 중 시스템 오류 발생", e);
         }
     }
 
     public boolean publishProcessingFailedEvent(UploadEvent event) {
         try {
-            publishToEventBridge(event);
             kafkaEventProducer.sendProcessingResultEvent(event);
 
-            log.info("처리 실패 이벤트 발송 성공: {} (uploadId: {})",
+            log.info("처리 실패 이벤트 큐잉 완료: eventType={}, uploadId={}",
                     event.getEventType(), event.getUploadId());
             return true;
 
-        } catch (EventBridgeSendException | KafkaSendException e) {
-            log.error("처리 실패 이벤트 발송 실패: {}", event, e);
-            throw e;
+        } catch (KafkaSendException e) {
+            log.error("처리 실패 이벤트 큐잉 실패: uploadId={}, error={}",
+                    event.getUploadId(), e.getMessage(), e);
+            throw new EventProcessingException("처리 실패 이벤트 처리 실패", e);
+        } catch (Exception e) {
+            log.error("처리 실패 이벤트 처리 중 예상치 못한 오류: uploadId={}",
+                    event.getUploadId(), e);
+            throw new EventProcessingException("처리 실패 이벤트 처리 중 시스템 오류 발생", e);
         }
     }
 
     public boolean publishBatchEvents(java.util.List<UploadEvent> events) {
         try {
             for (UploadEvent event : events) {
-                publishToEventBridge(event);
+                kafkaEventProducer.sendUploadEvent(event);
             }
 
-            log.info("배치 이벤트 발송 성공: {} 개 이벤트", events.size());
+            log.info("배치 이벤트 큐잉 완료: {} 개 이벤트", events.size());
             return true;
 
-        } catch (EventBridgeSendException e) {
-            log.error("배치 이벤트 발송 실패", e);
-            throw e;
+        } catch (KafkaSendException e) {
+            log.error("배치 이벤트 큐잉 실패: eventCount={}, error={}",
+                    events.size(), e.getMessage(), e);
+            throw new EventProcessingException("배치 이벤트 처리 실패", e);
+        } catch (Exception e) {
+            log.error("배치 이벤트 처리 중 예상치 못한 오류: eventCount={}",
+                    events.size(), e);
+            throw new EventProcessingException("배치 이벤트 처리 중 시스템 오류 발생", e);
         }
     }
 
     public boolean publishUploadEventWithRetry(UploadEvent event, int maxRetries) {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                publishToEventBridge(event);
-                log.info("이벤트 발송 성공 ({}번째 시도): {}", attempt, event.getEventId());
+                kafkaEventProducer.sendUploadEvent(event);
+                log.info("이벤트 큐잉 성공 ({}번째 시도): eventId={}", attempt, event.getEventId());
                 return true;
 
-            } catch (EventBridgeSendException e) {
-                log.warn("이벤트 발송 실패 ({}번째 시도): {}", attempt, e.getMessage());
+            } catch (KafkaSendException e) {
+                log.warn("이벤트 큐잉 실패 ({}번째 시도): error={}", attempt, e.getMessage());
 
                 if (attempt == maxRetries) {
-                    log.error("모든 재시도 실패 ({}회): {}", maxRetries, event.getEventId());
-                    throw new EventBridgeSendException("재시도 횟수 초과로 이벤트 발송 실패: " + event.getEventId(), e);
+                    log.error("모든 재시도 실패 ({}회): eventId={}", maxRetries, event.getEventId());
+                    throw new EventProcessingException("재시도 횟수 초과로 이벤트 처리 실패: " + event.getEventId(), e);
                 }
 
                 // 재시도 전 대기 (백오프)
@@ -144,7 +159,13 @@ public class EventBridgeService {
                     Thread.sleep(1000 * attempt); // 1초, 2초, 3초...
                 } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
-                    throw new EventBridgeSendException("재시도 중 인터럽트 발생: " + event.getEventId(), ie);
+                    throw new EventProcessingException("재시도 중 인터럽트 발생: " + event.getEventId(), ie);
+                }
+            } catch (Exception e) {
+                log.error("이벤트 처리 중 예상치 못한 오류 ({}번째 시도): eventId={}",
+                        attempt, event.getEventId(), e);
+                if (attempt == maxRetries) {
+                    throw new EventProcessingException("이벤트 처리 중 시스템 오류 발생", e);
                 }
             }
         }
