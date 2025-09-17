@@ -73,7 +73,7 @@ pip install -r requirements.txt
 ### 5. 전체 파이프라인 실행
 
 ```bash
-python main.py
+python run_recommendation.py
 ```
 
 * 사용자 음성 분석 + feature 추출 + 곡 추천까지 한 번에 수행

@@ -7,7 +7,7 @@ import logging
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_ROOT)
 
-from user.user_extract_feature import process_user_audio
+from voice_analysis.user.user_extract_feature import process_user_audio
 from recommend.recommend_with_voice import get_recommendations
 
 # 로깅 설정
