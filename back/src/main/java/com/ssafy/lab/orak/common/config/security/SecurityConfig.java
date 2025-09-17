@@ -1,11 +1,7 @@
 package com.ssafy.lab.orak.common.config.security;
 
-import com.ssafy.lab.orak.auth.handler.OAuth2AuthenticationSuccessHandler;
-import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
-import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +16,13 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.ssafy.lab.orak.auth.handler.OAuth2AuthenticationSuccessHandler;
+import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
+import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
+
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+
 
 @EnableWebSecurity
 @Configuration
@@ -30,10 +33,8 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
-    @Value("${app.front.url:http://localhost:3000}")
-    private String frontUrl;
-    @Value("${app.ai.url:http://localhost:5000}")
-    private String aiUrl;
+    @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
+    private String[] allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
@@ -92,7 +93,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOriginPatterns(List.of(frontUrl, aiUrl)); // 프론트 AI 도메인 허용
+        configuration.setAllowedOriginPatterns(List.of(allowedOrigins)); // 설정된 도메인들 허용
         configuration.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
