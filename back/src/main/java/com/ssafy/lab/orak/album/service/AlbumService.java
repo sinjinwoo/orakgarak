@@ -118,5 +118,36 @@ public class AlbumService {
         }
         return album;
     }
+
+//    공개 앨범 목록 조회 (검색 포함)
+    @Transactional(readOnly = true)
+    public Page<AlbumResponseDto> getPublicAlbums(int page, int size, String keyword) {
+        log.info("getPublicAlbums - page: {}, size: {}, keyword: {}", page, size, keyword);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Album> albums;
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            albums = albumRepository.findPublicAlbumsByKeyword(keyword.trim(), pageable);
+        } else {
+            albums = albumRepository.findByIsPublicTrueOrderByCreatedAtDesc(pageable);
+        }
+
+        return albums.map(AlbumResponseDto::from);
+    }
+
+//    공개 앨범 상세 조회
+    @Transactional(readOnly = true)
+    public AlbumResponseDto getPublicAlbum(Long albumId) {
+        log.info("getPublicAlbum: {}", albumId);
+
+        Album album = findAlbumById(albumId);
+
+        if (!album.getIsPublic()) {
+            throw new AlbumAccessDeniedException("비공개 앨범입니다.");
+        }
+
+        return AlbumResponseDto.from(album);
+    }
 }
 

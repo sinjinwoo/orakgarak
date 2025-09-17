@@ -94,3 +94,35 @@ public class AlbumController {
     }
 
 }
+
+@Slf4j
+@RestController
+@RequestMapping("/api/social")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
+class SocialAlbumController {
+
+    private final AlbumService albumService;
+
+    @GetMapping("/albums")
+    @Operation(summary = "공개 앨범 검색 및 목록 조회", description = "공개 앨범을 검색하고 목록을 조회합니다.")
+    public ResponseEntity<Page<AlbumResponseDto>> getPublicAlbums(
+            @RequestParam(defaultValue = "0") @Parameter(description = "페이지 번호") int page,
+            @RequestParam(defaultValue = "20") @Parameter(description = "페이지 크기") int size,
+            @RequestParam(required = false) @Parameter(description = "검색어") String keyword) {
+
+        log.info("GET /api/social/albums - Getting public albums - page: {}, size: {}, keyword: {}", page, size, keyword);
+        Page<AlbumResponseDto> albums = albumService.getPublicAlbums(page, size, keyword);
+        return ResponseEntity.ok(albums);
+    }
+
+    @GetMapping("/albums/{albumId}")
+    @Operation(summary = "공개 앨범 상세 조회", description = "공개 앨범의 상세 정보를 조회합니다.")
+    public ResponseEntity<AlbumResponseDto> getPublicAlbum(
+            @PathVariable @Parameter(description = "앨범 ID") Long albumId) {
+
+        log.info("GET /api/social/albums/{} - Getting public album", albumId);
+        AlbumResponseDto album = albumService.getPublicAlbum(albumId);
+        return ResponseEntity.ok(album);
+    }
+}
