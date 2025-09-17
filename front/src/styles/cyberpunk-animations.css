@@ -1,0 +1,317 @@
+/* 사이버펑크 애니메이션 스타일 */
+
+/* 네온 글로우 효과 */
+@keyframes neonGlow {
+  0%, 100% {
+    text-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 15px currentColor,
+      0 0 20px currentColor;
+  }
+  50% {
+    text-shadow: 
+      0 0 2px currentColor,
+      0 0 5px currentColor,
+      0 0 8px currentColor,
+      0 0 12px currentColor;
+  }
+}
+
+/* 홀로그램 스캔 효과 */
+@keyframes hologramScan {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* 데이터 스트림 효과 */
+@keyframes dataStream {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+/* 네온 펄스 효과 */
+@keyframes neonPulse {
+  0%, 100% {
+    box-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 15px currentColor;
+  }
+  50% {
+    box-shadow: 
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 30px currentColor;
+  }
+}
+
+/* 사이버 그리드 애니메이션 */
+@keyframes cyberGrid {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 50px 50px;
+  }
+}
+
+/* 홀로그램 깜빡임 효과 */
+@keyframes hologramFlicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  98% {
+    opacity: 1;
+  }
+  99% {
+    opacity: 0.8;
+  }
+}
+
+/* 네온 버튼 호버 효과 */
+.cyberpunk-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.cyberpunk-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.cyberpunk-button:hover::before {
+  left: 100%;
+}
+
+/* 홀로그램 패널 효과 */
+.hologram-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.hologram-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 49%, rgba(0, 255, 255, 0.03) 50%, transparent 51%);
+  background-size: 20px 20px;
+  animation: cyberGrid 10s linear infinite;
+  pointer-events: none;
+}
+
+/* 네온 텍스트 효과 */
+.neon-text {
+  animation: neonGlow 2s ease-in-out infinite alternate;
+}
+
+/* 사이버펑크 스크롤바 */
+.cyberpunk-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cyberpunk-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.cyberpunk-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #00ffff, #ff0080);
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.cyberpunk-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #ff0080, #00ffff);
+  box-shadow: 0 0 15px rgba(255, 0, 128, 0.7);
+}
+
+/* 데이터 매트릭스 효과 */
+.matrix-bg {
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(0, 255, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+    linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+  position: relative;
+}
+
+.matrix-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.3;
+  animation: cyberGrid 20s linear infinite;
+}
+
+/* 네온 보더 애니메이션 */
+.neon-border {
+  position: relative;
+}
+
+.neon-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  background: linear-gradient(45deg, #00ffff, #ff0080, #00ff00, #ff0080) border-box;
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: subtract;
+  animation: neonPulse 3s ease-in-out infinite;
+}
+
+/* 홀로그램 텍스트 효과 */
+.hologram-text {
+  background: linear-gradient(45deg, #00ffff, #ff0080, #00ff00);
+  background-size: 400% 400%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: hologramFlicker 0.15s ease-in-out infinite;
+}
+
+/* 사이버펑크 로딩 스피너 */
+.cyberpunk-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 255, 255, 0.3);
+  border-top: 4px solid #00ffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 네온 포커스 효과 */
+.neon-focus:focus {
+  outline: none;
+  box-shadow: 
+    0 0 5px #00ffff,
+    0 0 10px #00ffff,
+    0 0 15px #00ffff,
+    0 0 20px #00ffff;
+  animation: neonPulse 0.5s ease-in-out;
+}
+
+/* 홀로그램 모달 오버레이 */
+.hologram-overlay {
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%),
+    linear-gradient(135deg, rgba(10, 10, 10, 0.9) 0%, rgba(26, 26, 26, 0.9) 50%, rgba(10, 10, 10, 0.9) 100%);
+  backdrop-filter: blur(20px);
+}
+
+/* 사이버펑크 입력 필드 */
+.cyberpunk-input {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  border-radius: 8px;
+  color: #00ffff;
+  padding: 12px 16px;
+  font-family: 'Courier New', monospace;
+  transition: all 0.3s ease;
+}
+
+.cyberpunk-input:focus {
+  border-color: #00ffff;
+  box-shadow: 
+    0 0 5px rgba(0, 255, 255, 0.5),
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.cyberpunk-input::placeholder {
+  color: rgba(0, 255, 255, 0.5);
+}
+
+/* 네온 카드 효과 */
+.neon-card {
+  background: rgba(26, 26, 26, 0.8);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(0, 255, 255, 0.1),
+    0 0 20px rgba(0, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.neon-card:hover {
+  border-color: rgba(0, 255, 255, 0.4);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(0, 255, 255, 0.2),
+    0 0 30px rgba(0, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* 홀로그램 코너 효과 */
+.hologram-corners::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  border-top: 2px solid #00ffff;
+  border-left: 2px solid #00ffff;
+  border-radius: 16px 0 0 0;
+}
+
+.hologram-corners::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  border-bottom: 2px solid #ff0080;
+  border-right: 2px solid #ff0080;
+  border-radius: 0 0 16px 0;
+}
