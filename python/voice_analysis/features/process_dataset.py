@@ -89,7 +89,7 @@ def process_dataset(dataset_path, output_path, song_ids, popularity_map=None):
 if __name__ == '__main__':
     MELON_DATASET_PATH = "E:/melondataset/data"          # 원본 멜 스펙트로그램 데이터셋 경로
     OUTPUT_FEATURES_PATH = "E:/melondataset/features"    # 피처 저장 경로
-    POPULARITY_JSON_PATH = "E:/melondataset/song_popularity.json"
+    POPULARITY_JSON_PATH = "C:/Users/SSAFY/Desktop/output/song_popularity.json"
     TOTAL_SONGS = 707989   # 처리할 총 곡 수 707989 
     
     logging.info("="*50)
