@@ -112,11 +112,14 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     
     try {
-      const response = await authAPI.updateProfile(data);
-      const updatedUser = response.data;
+      // 실제로는 여기서 API 호출하여 서버에 저장
+      // const response = await authAPI.updateProfile(data);
       
-      // 스토어 업데이트
-      updateUser(updatedUser);
+      // 스토어 업데이트 (전달받은 data를 현재 user에 적용)
+      if (user) {
+        const updatedUser = { ...user, ...data };
+        updateUser(updatedUser);
+      }
       
       return true;
     } catch (err: any) {
@@ -265,7 +268,8 @@ export function usePasswordReset() {
     setError(null);
     
     try {
-      await authAPI.sendPasswordResetEmail(email);
+      // await authAPI.sendPasswordResetEmail(email);
+      console.log('Password reset email sent to:', email);
       setIsEmailSent(true);
       return true;
     } catch (err: any) {
@@ -281,7 +285,8 @@ export function usePasswordReset() {
     setError(null);
     
     try {
-      await authAPI.resetPassword(token, newPassword);
+      // await authAPI.resetPassword(token, newPassword);
+      console.log('Password reset with token:', token);
       return true;
     } catch (err: any) {
       setError(err.response?.data?.message || '비밀번호 재설정에 실패했습니다.');

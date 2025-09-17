@@ -1,34 +1,12 @@
 /**
- * 곡 검색 패널 컴포넌트
- * - 실시간 곡 검색 기능 (곡명, 아티스트, 장르로 검색)
- * - 자동 추천 기능 (타이핑하는 즉시 검색 결과 표시)
- * - 검색된 곡을 예약 큐에 추가하는 기능
- * - 중복 예약 방지 및 사용자 알림
- * - 나중에 백엔드 API와 연동하여 실제 곡 데이터를 가져올 예정
+ * SongSearchPanel - 완전 순수 HTML/CSS 곡 검색 패널
+ * MUI Box 자동 생성 CSS 완전 제거 버전
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  ListItemButton,
-  Avatar,
-  Chip,
-  Paper,
-  InputAdornment,
-  IconButton,
-  Snackbar,
-  Alert
-} from '@mui/material';
-import { Search, MusicNote, Add } from '@mui/icons-material';
 import { useReservation } from '../../hooks/useReservation';
 import type { Song } from '../../types/song';
 
-// 임시 더미 데이터 (나중에 백엔드 API로 대체 예정)
 const dummySongs = [
   { id: 1, title: 'Dynamite', artist: 'BTS', genre: 'K-Pop', duration: '3:19' },
   { id: 2, title: 'Butter', artist: 'BTS', genre: 'K-Pop', duration: '2:42' },
@@ -49,24 +27,21 @@ const dummySongs = [
   { id: 17, title: 'Perfect', artist: 'Ed Sheeran', genre: 'Pop', duration: '4:23' },
   { id: 18, title: 'Thinking Out Loud', artist: 'Ed Sheeran', genre: 'Pop', duration: '4:41' },
   { id: 19, title: 'Blinding Lights', artist: 'The Weeknd', genre: 'Pop', duration: '3:20' },
-  { id: 20, title: 'Levitating', artist: 'Dua Lipa', genre: 'Pop', duration: '3:23' }
+  { id: 20, title: 'Levitating', artist: 'Dua Lipa', genre: 'Pop', duration: '3:23' },
+  // 추가 더미: 브라운아이드소울 - gone (유튜브 MR 사용)
+  { id: 21, title: 'gone', artist: '브라운아이드소울', genre: 'K-Pop', duration: '4:11', youtubeId: 'o-M16KEy7Ng' }
 ];
 
 const SongSearchPanel: React.FC = () => {
-  // 검색 관련 상태 관리
-  const [searchTerm, setSearchTerm] = useState('');                    // 검색어
-  const [searchResults, setSearchResults] = useState<Song[]>([]);      // 검색 결과 목록
-  const [showResults, setShowResults] = useState(false);              // 검색 결과 표시 여부
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<Song[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState<'success' | 'info'>('success');
   
-  // 알림 관련 상태 관리
-  const [snackbarOpen, setSnackbarOpen] = useState(false);            // 스낵바 표시 여부
-  const [snackbarMessage, setSnackbarMessage] = useState('');         // 스낵바 메시지
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'info'>('success'); // 스낵바 타입
-  
-  // 예약 큐 관련 함수들 가져오기
   const { addToQueue, reservationQueue } = useReservation();
 
-  // 검색어 변경 시 자동 추천 기능
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setSearchResults([]);
@@ -74,43 +49,38 @@ const SongSearchPanel: React.FC = () => {
       return;
     }
 
-    // 곡명, 아티스트, 장르에서 검색어 포함 여부 확인 (대소문자 무시)
     const filtered = dummySongs.filter(song => 
       song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
       song.genre.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    setSearchResults(filtered.slice(0, 8)); // 최대 8개 결과만 표시
+    setSearchResults(filtered.slice(0, 8));
     setShowResults(true);
   }, [searchTerm]);
 
-  // 곡 선택 시 예약 큐에 추가하는 함수
   const handleSongSelect = (song: Song) => {
-    // 이미 큐에 있는 곡인지 확인 (중복 방지)
     const isAlreadyInQueue = reservationQueue.some(item => item.id === song.id);
     
     if (isAlreadyInQueue) {
-      // 이미 예약된 곡인 경우 정보 알림
-      setSnackbarMessage(`${song.title}은(는) 이미 예약 큐에 있습니다.`);
-      setSnackbarSeverity('info');
+      setNotificationMessage(`${song.title}은(는) 이미 예약 큐에 있습니다.`);
+      setNotificationType('info');
     } else {
-      // 새로 예약하는 경우 성공 알림
       addToQueue(song);
-      setSnackbarMessage(`${song.title}이(가) 예약 큐에 추가되었습니다.`);
-      setSnackbarSeverity('success');
+      setNotificationMessage(`${song.title}이(가) 예약 큐에 추가되었습니다.`);
+      setNotificationType('success');
     }
     
-    setSnackbarOpen(true);    // 알림 표시
-    setSearchTerm('');        // 검색어 초기화
-    setShowResults(false);    // 검색 결과 숨기기
+    setShowNotification(true);
+    setSearchTerm('');
+    setShowResults(false);
+    
+    setTimeout(() => setShowNotification(false), 3000);
   };
 
-  // Enter 키 또는 검색 버튼 클릭 시 검색 실행
   const handleSearchSubmit = () => {
     if (searchTerm.trim() === '') return;
     
-    // 전체 검색 결과 필터링
     const filtered = dummySongs.filter(song => 
       song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       song.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,129 +92,295 @@ const SongSearchPanel: React.FC = () => {
   };
 
   return (
-    <Box sx={{ position: 'relative' }}>
-      {/* 제목 */}
-      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-        곡 검색
-      </Typography>
+    <div style={{ 
+      position: 'relative', 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      {/* 헤더 */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '20px',
+        flexShrink: 0
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '35px',
+            height: '35px',
+            borderRadius: '8px',
+            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '18px'
+          }}>
+            🎵
+          </div>
+          <div>
+            <h3 style={{
+              color: '#00ffff',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              margin: '0 0 4px 0',
+              textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
+            }}>
+              NEURAL SEARCH
+            </h3>
+            <p style={{
+              color: '#888',
+              fontSize: '0.8rem',
+              margin: '0',
+              textTransform: 'uppercase'
+            }}>
+              MUSIC DATABASE
+            </p>
+          </div>
+        </div>
+
+        <span style={{
+          background: 'rgba(0, 255, 0, 0.2)',
+          color: '#00ff00',
+          border: '1px solid #00ff00',
+          padding: '4px 8px',
+          borderRadius: '10px',
+          fontSize: '0.7rem',
+          fontWeight: 'bold'
+        }}>
+          LIVE
+        </span>
+      </div>
       
       {/* 검색 입력 필드 */}
-      <TextField
-        fullWidth
-        placeholder="곡명, 아티스트, 장르로 검색하세요"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}  // 검색어 변경 시 자동 추천
-        onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}  // Enter 키로 검색
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Search color="action" />
-            </InputAdornment>
-          ),
-          endAdornment: searchTerm && (
-            <InputAdornment position="end">
-              <IconButton onClick={handleSearchSubmit} size="small">
-                <Search />
-              </IconButton>
-            </InputAdornment>
-          )
-        }}
-        sx={{ mb: 2 }}
-      />
-
-      {/* 검색 결과 드롭다운 */}
-      {showResults && (
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            position: 'absolute', 
-            top: '100%', 
-            left: 0, 
-            right: 0, 
-            zIndex: 1000,
-            maxHeight: 400,
-            overflow: 'auto'
+      <div style={{ 
+        position: 'relative', 
+        marginBottom: '15px',
+        flexShrink: 0
+      }}>
+        <input
+          type="text"
+          placeholder="곡명, 아티스트, 장르로 검색하세요"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}
+          style={{
+            width: '100%',
+            padding: '12px 16px 12px 40px',
+            background: 'rgba(0, 0, 0, 0.4)',
+            border: '1px solid rgba(0, 255, 255, 0.3)',
+            borderRadius: '8px',
+            color: '#00ffff',
+            fontSize: '0.9rem',
+            outline: 'none',
+            boxSizing: 'border-box'
           }}
-        >
-          {searchResults.length > 0 ? (
-            <List dense>
-              {searchResults.map((song) => (
-                <ListItem key={song.id} disablePadding>
-                  <ListItemButton 
-                    onClick={() => handleSongSelect(song)}  // 곡 클릭 시 예약 큐에 추가
-                    sx={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 2,
-                      py: 1.5
+          onFocus={(e) => {
+            e.target.style.border = '1px solid #00ffff';
+            e.target.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
+          }}
+          onBlur={(e) => {
+            e.target.style.border = '1px solid rgba(0, 255, 255, 0.3)';
+            e.target.style.boxShadow = 'none';
+          }}
+        />
+        
+        <span style={{
+          position: 'absolute',
+          left: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          color: '#00ffff',
+          fontSize: '16px'
+        }}>
+          🔍
+        </span>
+        
+        {searchTerm && (
+          <button
+            onClick={handleSearchSubmit}
+            style={{
+              position: 'absolute',
+              right: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: '#00ffff',
+              cursor: 'pointer',
+              padding: '4px',
+              fontSize: '14px'
+            }}
+          >
+            🔍
+          </button>
+        )}
+      </div>
+
+      {/* 검색 결과 영역 - 컴포넌트 내부에서 스크롤 */}
+      <div style={{ 
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0
+      }}>
+        {showResults ? (
+          <div style={{
+            flex: 1,
+            overflow: 'auto',
+            background: 'rgba(0, 0, 0, 0.3)',
+            border: '1px solid rgba(0, 255, 255, 0.3)',
+            borderRadius: '8px',
+            marginBottom: '10px'
+          }}>
+            {searchResults.length > 0 ? (
+              <div>
+                {searchResults.map((song, index) => (
+                  <div
+                    key={song.id}
+                    onClick={() => handleSongSelect(song)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      cursor: 'pointer',
+                      borderBottom: index < searchResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                      transition: 'background 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    {/* 곡 아이콘 */}
-                    <Avatar sx={{ bgcolor: 'primary.main' }}>
-                      <MusicNote />
-                    </Avatar>
+                    <div style={{
+                      width: '35px',
+                      height: '35px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      flexShrink: 0
+                    }}>
+                      🎵
+                    </div>
                     
-                    {/* 곡 정보 */}
-                    <ListItemText
-                      primary={song.title}
-                      secondary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {song.artist}
-                          </Typography>
-                          <Chip 
-                            label={song.genre} 
-                            size="small" 
-                            variant="outlined"
-                            sx={{ height: 20, fontSize: '0.7rem' }}
-                          />
-                          <Typography variant="caption" color="text.secondary">
-                            {song.duration}
-                          </Typography>
-                        </Box>
-                      }
-                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4 style={{
+                        color: '#fff',
+                        fontSize: '0.9rem',
+                        fontWeight: 'bold',
+                        margin: '0 0 4px 0',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {song.title}
+                      </h4>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#00ffff', fontSize: '0.8rem' }}>
+                          {song.artist}
+                        </span>
+                        <span style={{
+                          background: 'rgba(255, 0, 128, 0.2)',
+                          color: '#ff0080',
+                          padding: '2px 6px',
+                          borderRadius: '6px',
+                          fontSize: '0.7rem'
+                        }}>
+                          {song.genre}
+                        </span>
+                        <span style={{ color: '#888', fontSize: '0.7rem' }}>
+                          {song.duration}
+                        </span>
+                      </div>
+                    </div>
                     
-                    {/* 추가 버튼 */}
-                    <IconButton size="small" color="primary">
-                      <Add />
-                    </IconButton>
-                  </ListItemButton>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            // 검색 결과가 없을 때
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                검색 결과가 없습니다.
-              </Typography>
-            </Box>
-          )}
-        </Paper>
+                    <button
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#00ffff',
+                        cursor: 'pointer',
+                        padding: '6px',
+                        fontSize: '16px',
+                        flexShrink: 0
+                      }}
+                    >
+                      ➕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ 
+                padding: '20px', 
+                textAlign: 'center', 
+                color: '#888',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%'
+              }}>
+                <p style={{ margin: '0' }}>검색 결과가 없습니다.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* 검색 힌트 - 검색 결과가 없을 때만 표시 */
+          <div style={{ 
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: '10px',
+            color: '#888',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '2rem', opacity: 0.5 }}>🔍</div>
+            <p style={{
+              fontSize: '0.9rem',
+              margin: '0',
+              color: '#666'
+            }}>
+              곡명, 아티스트, 장르로 검색하세요
+            </p>
+            <p style={{
+              fontSize: '0.75rem',
+              margin: '0',
+              color: '#888'
+            }}>
+              💡 팁: "BTS", "K-Pop", "Dynamite" 등으로 검색해보세요
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* 알림 */}
+      {showNotification && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: notificationType === 'success' ? 'rgba(0, 255, 0, 0.9)' : 'rgba(255, 165, 0, 0.9)',
+          color: '#000',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          zIndex: 10000,
+          fontWeight: 'bold'
+        }}>
+          {notificationMessage}
+        </div>
       )}
-
-      {/* 검색 사용법 힌트 */}
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-        💡 팁: "BTS", "K-Pop", "Dynamite" 등으로 검색해보세요
-      </Typography>
-
-      {/* 예약 결과 알림 스낵바 */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={() => setSnackbarOpen(false)} 
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
+    </div>
   );
 };
 

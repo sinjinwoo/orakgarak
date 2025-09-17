@@ -1,9 +1,10 @@
 package com.ssafy.lab.orak.common.config.security;
 
-import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
 import com.ssafy.lab.orak.auth.handler.OAuth2AuthenticationSuccessHandler;
+import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
 import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -19,13 +20,12 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
-
 
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
@@ -54,7 +54,9 @@ public class SecurityConfig {
                                 "/test/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api-docs/**"
+                                "/api-docs/**",
+                                "/api/images/**",
+                                "/images/**"
                         ).permitAll()
                         // 그 외는 모두 인증 필요
                         .anyRequest().authenticated()
@@ -67,9 +69,11 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint((req, res, ex) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
+                        .authenticationEntryPoint((req, res, ex) -> res.sendError(
+                                HttpServletResponse.SC_UNAUTHORIZED))
                         .accessDeniedHandler((req, res, ex) -> {
-                            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                            Authentication auth = SecurityContextHolder.getContext()
+                                    .getAuthentication();
                             if (auth == null) {
                                 res.sendError(HttpServletResponse.SC_UNAUTHORIZED); // 토큰 없음 → 401
                             } else {
@@ -78,7 +82,8 @@ public class SecurityConfig {
                         })
                 )
                 // JWT 인증 필터 등록
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -88,7 +93,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
         configuration.setAllowedOriginPatterns(List.of(frontUrl, aiUrl)); // 프론트 AI 도메인 허용
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Set-Cookie"));
 

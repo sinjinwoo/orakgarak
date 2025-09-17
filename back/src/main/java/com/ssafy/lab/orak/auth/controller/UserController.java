@@ -25,19 +25,19 @@ import java.util.Map;
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 public class UserController {
-    
+
     private final UserService userService;
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@AuthenticationPrincipal CustomUserPrincipal principal, 
-                                   HttpServletRequest request, 
-                                   HttpServletResponse response) {
+    public ResponseEntity<?> logout(@AuthenticationPrincipal CustomUserPrincipal principal,
+            HttpServletRequest request,
+            HttpServletResponse response) {
         if (principal != null) {
             // Redis에서 리프레시 토큰 삭제
             userService.logout(principal.getUserId());
             log.info("사용자 로그아웃 - userId: {}", principal.getUserId());
         }
-        
+
         // refreshToken 쿠키 삭제
         Cookie refreshTokenCookie = new Cookie("refreshToken", "");
         refreshTokenCookie.setHttpOnly(true);
@@ -45,18 +45,20 @@ public class UserController {
         refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge(0); // 즉시 만료
         response.addCookie(refreshTokenCookie);
-        
+
         return ResponseEntity.ok(Map.of("message", "로그아웃 성공"));
     }
-    
+
     @GetMapping("/me")
-    public ResponseEntity<User> getCurrentUser(@AuthenticationPrincipal CustomUserPrincipal principal) {
+    public ResponseEntity<User> getCurrentUser(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
         User user = userService.findById(principal.getUserId());
         return ResponseEntity.ok(user);
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<AccessTokenResponseDto> refresh(HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<AccessTokenResponseDto> refresh(HttpServletRequest request,
+            HttpServletResponse response) {
         // 쿠키에서 리프레시 토큰 추출
         String refreshToken = null;
         if (request.getCookies() != null) {
@@ -67,23 +69,24 @@ public class UserController {
                 }
             }
         }
-        
+
         if (refreshToken == null) {
             throw new MissingRefreshTokenException("리프레시 토큰이 없습니다");
         }
-        
+
         AccessTokenResponseDto tokenResponse = userService.refreshAccessToken(refreshToken);
-        
+
         // 새로운 리프레시 토큰을 쿠키에 저장 (토큰 로테이션)
         if (tokenResponse.getRefreshToken() != null) {
-            Cookie newRefreshTokenCookie = new Cookie("refreshToken", tokenResponse.getRefreshToken());
+            Cookie newRefreshTokenCookie = new Cookie("refreshToken",
+                    tokenResponse.getRefreshToken());
             newRefreshTokenCookie.setHttpOnly(true);
             newRefreshTokenCookie.setSecure(false); // HTTPS에서는 true로 설정
             newRefreshTokenCookie.setPath("/");
             newRefreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
             response.addCookie(newRefreshTokenCookie);
         }
-        
+
         // 응답에서는 accessToken만 반환 (refreshToken은 쿠키에 저장됨)
         return ResponseEntity.ok(AccessTokenResponseDto.builder()
                 .accessToken(tokenResponse.getAccessToken())
