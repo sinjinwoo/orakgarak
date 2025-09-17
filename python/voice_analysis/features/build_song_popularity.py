@@ -83,8 +83,8 @@ if __name__ == "__main__":
     logging.info("곡별 popularity 계산 시작")
     df_sorted = build_song_popularity(all_playlists, alpha=0.7, beta=0.3)
 
-    csv_path = "E:/melondataset/song_popularity.csv"
-    json_path = "E:/melondataset/song_popularity.json"
+    csv_path = "C:/Users/SSAFY/Desktop/output/song_popularity.csv"
+    json_path = "C:/Users/SSAFY/Desktop/output/song_popularity.json"
 
     df_sorted.to_csv(csv_path, index=False, encoding="utf-8-sig")
     df_sorted.to_json(json_path, orient="records", force_ascii=False)
