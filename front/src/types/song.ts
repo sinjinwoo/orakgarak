@@ -9,4 +9,5 @@ export interface Song {
   artist: string;    // 아티스트명
   genre: string;     // 장르
   duration: string;  // 재생 시간
+  youtubeId?: string; // 유튜브 MR 영상 ID (선택)
 }

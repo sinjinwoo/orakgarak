@@ -1,33 +1,25 @@
 /**
- * 녹음 컨트롤 컴포넌트
+ * 녹음 컨트롤 컴포넌트 - 마이크 디자인 버튼
  * - 마이크를 사용한 실시간 녹음 기능
- * - 녹음 시작, 취소, 완료 버튼 제공
+ * - 마이크 모양의 큰 버튼으로 녹음 시작/중지
  * - 녹음 상태에 따른 UI 변화
  * - 녹음된 오디오 파일을 백엔드로 전송하는 기능
- * - 나중에 백엔드 API와 연동하여 실제 파일 업로드 구현 예정
  */
 
 import React, { useState, useRef, useCallback } from 'react';
 import { 
   Box, 
-  Typography, 
-  Button, 
+  Typography,
+  Button,
   Paper,
-  LinearProgress,
   Alert,
   Snackbar,
   Modal,
   IconButton,
-  Slider,
-  Chip
+  Slider
 } from '@mui/material';
 import { 
-  Mic, 
-  MicOff, 
-  Stop, 
-  Cancel,
-  CheckCircle,
-  Error,
+  Mic,
   PlayArrow,
   Pause,
   Save,
@@ -176,28 +168,6 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
     audioChunksRef.current = [];
   }, []);
 
-  // 녹음 취소 함수 (녹음 중일 때)
-  const cancelRecording = useCallback(() => {
-    console.log('녹음 취소 시작');
-    
-    // 취소 상태로 설정
-    isCancelledRef.current = true;
-    
-    // 리소스 정리
-    cleanupResources();
-
-    // 상태 초기화 (모달은 열지 않음, completed 상태로 설정하여 다시 녹음 버튼 표시)
-    setRecordingState('completed');
-    setRecordingTime(0);
-    setAudioBlob(null);
-    setErrorMessage('');
-    setShowModal(false);
-    
-    // 녹음 상태 변경 알림
-    onRecordingChange?.(false);
-    
-    console.log('녹음 취소 완료 - 상태: completed');
-  }, [onRecordingChange, cleanupResources]);
 
   // 다시 녹음 함수 (모달에서 또는 취소 후)
   const retakeRecording = useCallback(() => {
@@ -323,165 +293,73 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
   }, [cleanupResources]);
 
   return (
-    <Box sx={{ position: 'relative' }}>
-      {/* 헤더 */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        mb: 3
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{
-            width: 40,
-            height: 40,
-            borderRadius: '10px',
-            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
-          }}>
-            <Mic sx={{ color: '#000', fontSize: 20 }} />
-          </Box>
-          <Box>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#00ffff',
-                fontWeight: 700,
-                letterSpacing: '0.05em',
-                textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
-              }}
-            >
-              NEURAL RECORDER
-            </Typography>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: '#888',
-                textTransform: 'uppercase',
-                letterSpacing: '0.1em'
-              }}
-            >
-              VOICE CAPTURE SYSTEM
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Chip 
-            label={recordingState === 'recording' ? 'REC' : 'STANDBY'} 
-            size="small" 
-            sx={{ 
-              background: recordingState === 'recording' ? 'rgba(255, 0, 128, 0.2)' : 'rgba(0, 255, 0, 0.2)',
-              color: recordingState === 'recording' ? '#ff0080' : '#00ff00',
-              border: recordingState === 'recording' ? '1px solid #ff0080' : '1px solid #00ff00',
-              fontWeight: 700
-            }} 
-          />
-        </Box>
-      </Box>
+    <Box sx={{ 
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      gap: 3
+    }}>
       
-      {/* 디버깅 정보 */}
-      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-        현재 상태: {recordingState} | 모달: {showModal ? '열림' : '닫힘'} | 취소: {isCancelledRef.current ? '예' : '아니오'}
+      {/* 시간 표시 */}
+      <Typography variant="h3" sx={{ 
+        fontFamily: 'monospace',
+        color: recordingState === 'recording' ? '#ff0080' : '#00ffff',
+        fontWeight: 700,
+        textShadow: '0 0 20px rgba(0, 255, 255, 0.5)',
+        fontSize: '3rem'
+      }}>
+        {formatTime(recordingTime)}
       </Typography>
 
-      {/* 녹음 상태 표시 */}
-      <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: 'grey.50' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          {/* 녹음 상태 아이콘 */}
-          {recordingState === 'idle' && <MicOff color="disabled" />}
-          {recordingState === 'recording' && <Mic color="error" sx={{ animation: 'pulse 1s infinite' }} />}
-          {recordingState === 'completed' && <CheckCircle color="success" />}
-          {recordingState === 'error' && <Error color="error" />}
-
-          {/* 녹음 시간 표시 */}
-          <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
-            {formatTime(recordingTime)}
-          </Typography>
-
-          {/* 녹음 상태 텍스트 */}
-          <Typography variant="body2" color="text.secondary">
-            {recordingState === 'idle' && '녹음 준비 완료'}
-            {recordingState === 'recording' && '녹음 중...'}
-            {recordingState === 'completed' && '녹음 완료'}
-            {recordingState === 'error' && '오류 발생'}
-          </Typography>
-        </Box>
-
-        {/* 녹음 중일 때 진행률 표시 */}
-        {recordingState === 'recording' && (
-          <LinearProgress 
-            sx={{ 
-              height: 4, 
-              borderRadius: 2,
-              '& .MuiLinearProgress-bar': {
-                animation: 'pulse 1s infinite'
-              }
-            }} 
-          />
-        )}
-      </Paper>
-
-      {/* 컨트롤 버튼들 */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-        {/* 녹음 시작 버튼 */}
-        {recordingState === 'idle' && (
-          <Button
-            variant="contained"
-            color="error"
-            size="large"
-            startIcon={<Mic />}
-            onClick={startRecording}
-            sx={{ minWidth: 140 }}
-          >
-            녹음 시작
-          </Button>
-        )}
-
-        {/* 다시 녹음 버튼 (취소 후 또는 모달에서) */}
-        {recordingState === 'completed' && (
-          <Button
-            variant="outlined"
-            color="primary"
-            size="large"
-            startIcon={<Mic />}
-            onClick={retakeRecording}
-            sx={{ minWidth: 140 }}
-          >
-            다시 녹음
-          </Button>
-        )}
-
-        {/* 녹음 중지 버튼 */}
-        {recordingState === 'recording' && (
-          <Button
-            variant="contained"
-            color="primary"
-            size="large"
-            startIcon={<Stop />}
-            onClick={stopRecording}
-            sx={{ minWidth: 140 }}
-          >
-            녹음 완료
-          </Button>
-        )}
-
-         {/* 녹음 취소 버튼 */}
-         {recordingState === 'recording' && (
-           <Button
-             variant="outlined"
-             color="secondary"
-             size="large"
-             startIcon={<Cancel />}
-             onClick={cancelRecording}
-             sx={{ minWidth: 140 }}
-           >
-             녹음 취소
-           </Button>
-         )}
+      {/* 사이버펑크 마이크 버튼 */}
+      <Box
+        onClick={() => {
+          if (recordingState === 'idle') {
+            startRecording();
+          } else if (recordingState === 'recording') {
+            stopRecording();
+          } else if (recordingState === 'completed') {
+            retakeRecording();
+          }
+        }}
+        sx={{
+          position: 'relative',
+          width: 200,
+          height: 200,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'scale(1.05)',
+          },
+          '&:active': {
+            transform: 'scale(0.95)'
+          }
+        }}
+      >
+        {/* 마이크 이미지 */}
+        <Box
+          component="img"
+          src="/images/mic/mico.png"
+          alt="Cyberpunk Microphone"
+          sx={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: recordingState === 'recording' 
+              ? 'hue-rotate(280deg) saturate(1.5) brightness(1.2) drop-shadow(0 0 20px #ff0080)'
+              : recordingState === 'completed'
+              ? 'hue-rotate(120deg) saturate(1.3) brightness(1.1) drop-shadow(0 0 15px #00ff00)'
+              : 'hue-rotate(180deg) saturate(1.2) brightness(1.1) drop-shadow(0 0 15px #00ffff)',
+            transition: 'all 0.3s ease',
+            animation: recordingState === 'recording' ? 'pulse 1s infinite' : 'none'
+          }}
+        />
       </Box>
 
       {/* 녹음 미리보기 모달 */}
@@ -499,18 +377,106 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
           elevation={8}
           sx={{
             width: '90%',
-            maxWidth: 500,
-            p: 4,
+            maxWidth: 640,
+            p: 0,
             borderRadius: 3,
             outline: 'none',
+            position: 'relative',
+            overflow: 'hidden',
+            background: `linear-gradient(135deg, rgba(7,9,12,0.95) 0%, rgba(14,16,22,0.96) 60%, rgba(7,9,12,0.95) 100%)`,
+            border: '1px solid rgba(0, 255, 255, 0.25)',
+            boxShadow: `0 0 30px rgba(0,255,255,0.15), 0 0 60px rgba(255,0,128,0.1)`,
           }}
         >
+          {/* 배경 네온 그리드 */}
+          <Box sx={{
+            position: 'absolute',
+            inset: 0,
+            opacity: 0.15,
+            backgroundImage: `
+              linear-gradient(0deg, rgba(0,255,255,0.3) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,255,255,0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '40px 40px',
+            maskImage: 'radial-gradient(circle at 50% 20%, rgba(0,0,0,0.9), rgba(0,0,0,1))',
+            pointerEvents: 'none',
+            animation: 'gridScroll 18s linear infinite',
+          }} />
+          {/* 홀로그램 스캔 라인 */}
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                left: '-100%',
+                top: 0,
+                width: '40%',
+                height: '100%',
+                background: 'linear-gradient(45deg, transparent 45%, rgba(0,255,255,0.12) 50%, transparent 55%)',
+                animation: 'hologramScan 3.2s linear infinite',
+              },
+            }}
+          />
+
           {/* 모달 헤더 */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-              녹음 미리보기
-            </Typography>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 3,
+            py: 2.5,
+            borderBottom: '1px solid rgba(0,255,255,0.25)',
+            background: 'linear-gradient(180deg, rgba(0,255,255,0.08), rgba(0,255,255,0))',
+          }}>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, #00ffff, rgba(0,255,255,0.2))',
+                boxShadow: '0 0 12px #00ffff',
+              }} />
+              <Typography
+                id="recording-preview-modal"
+                variant="h6"
+                sx={{
+                  m: 0,
+                  fontWeight: 800,
+                  letterSpacing: 1,
+                  background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 18px rgba(0,255,255,0.35)',
+                }}
+              >
+                RECORDING PREVIEW
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Typography variant="caption" sx={{ letterSpacing: 1, color: 'rgba(0,255,255,0.7)' }}>CYBER STUDIO</Typography>
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowModal(false)}
+                size="small"
+                sx={{
+                  ml: 1,
+                  borderRadius: 1.5,
+                  color: '#00ffff',
+                  border: '1px solid rgba(0,255,255,0.35)',
+                  bgcolor: 'rgba(0,255,255,0.08)',
+                  '&:hover': { bgcolor: 'rgba(0,255,255,0.15)' }
+                }}
+              >
+                ✕
+              </IconButton>
+            </Box>
           </Box>
+
+          {/* 본문 */}
+          <Box sx={{ p: 3 }}>
 
           {/* 오디오 플레이어 */}
           {audioBlob && (
@@ -527,42 +493,87 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
 
               {/* 재생 컨트롤 */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                {/* EQ 장식 */}
+                <Box sx={{ display: 'flex', gap: 0.6, mr: 0.5 }}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Box key={i} sx={{
+                      width: 4,
+                      height: 18 + (i % 3) * 6,
+                      borderRadius: 1,
+                      background: 'linear-gradient(180deg, #00ffff, #ff0080)',
+                      boxShadow: '0 0 8px rgba(0,255,255,0.6)',
+                      animation: 'eqBar 1s ease-in-out infinite',
+                      animationDelay: `${i * 0.08}s`
+                    }} />
+                  ))}
+                </Box>
                 <IconButton
                   onClick={togglePlayPause}
                   size="large"
                   sx={{ 
-                    bgcolor: 'primary.main', 
-                    color: 'white',
-                    '&:hover': { bgcolor: 'primary.dark' }
+                    width: 56,
+                    height: 56,
+                    borderRadius: '14px',
+                    bgcolor: 'rgba(0,255,255,0.12)', 
+                    color: '#00ffff',
+                    border: '1px solid rgba(0,255,255,0.35)',
+                    boxShadow: '0 0 16px rgba(0,255,255,0.25)',
+                    backdropFilter: 'blur(6px)',
+                    '&:hover': { bgcolor: 'rgba(0,255,255,0.2)' }
                   }}
                 >
                   {isPlaying ? <Pause /> : <PlayArrow />}
                 </IconButton>
 
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="rgba(255,255,255,0.7)" sx={{ mb: 1, fontFamily: 'monospace' }}>
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </Typography>
                   <Slider
                     value={currentTime}
                     max={duration || 0}
                     onChange={handleSliderChange}
-                    sx={{ color: 'primary.main' }}
+                    sx={{ 
+                      color: '#00ffff',
+                      height: 8,
+                      '& .MuiSlider-rail': {
+                        opacity: 0.3,
+                        background: 'linear-gradient(90deg, rgba(0,255,255,0.2), rgba(255,0,128,0.2))',
+                        height: 8,
+                      },
+                      '& .MuiSlider-track': {
+                        border: 'none',
+                        background: 'linear-gradient(90deg, #00ffff, #ff0080)',
+                        boxShadow: '0 0 12px rgba(0,255,255,0.6)',
+                      },
+                      '& .MuiSlider-thumb': {
+                        width: 18,
+                        height: 18,
+                        backgroundColor: '#0b0f14',
+                        border: '2px solid #00ffff',
+                        boxShadow: '0 0 12px rgba(0,255,255,0.6)',
+                        '&:hover, &.Mui-focusVisible': {
+                          boxShadow: '0 0 16px rgba(0,255,255,0.9)'
+                        }
+                      }
+                    }}
                   />
                 </Box>
               </Box>
 
               {/* 파일 정보 */}
-              <Paper elevation={1} sx={{ p: 2, mb: 3, backgroundColor: 'grey.50' }}>
-                <Typography variant="body2" color="text.secondary">
-                  📁 파일 크기: {(audioBlob.size / 1024 / 1024).toFixed(2)} MB
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  ⏱️ 재생 시간: {formatTime(recordingTime)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  🎵 형식: {audioBlob.type}
-                </Typography>
+              <Paper elevation={0} sx={{ p: 2, mb: 3, backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    📁 파일 크기: {(audioBlob.size / 1024 / 1024).toFixed(2)} MB
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    ⏱️ 재생 시간: {formatTime(recordingTime)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                    🎵 형식: {audioBlob.type}
+                  </Typography>
+                </Box>
               </Paper>
 
               {/* 액션 버튼들 */}
@@ -574,13 +585,14 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
                   onClick={saveRecording}
                   sx={{ 
                     minWidth: 120,
-                    background: 'linear-gradient(45deg, #00ff00, #00cc00)',
-                    border: '1px solid #00ff00',
+                    background: 'linear-gradient(45deg, #00ff88, #00cc66)',
+                    border: '1px solid #00ffaa',
                     color: '#000',
-                    fontWeight: 700,
+                    fontWeight: 800,
+                    letterSpacing: 1,
                     '&:hover': {
-                      background: 'linear-gradient(45deg, #00ff00, #00ff80)',
-                      boxShadow: '0 0 20px rgba(0, 255, 0, 0.5)'
+                      background: 'linear-gradient(45deg, #00ffaa, #00e695)',
+                      boxShadow: '0 0 20px rgba(0, 255, 170, 0.5)'
                     }
                   }}
                 >
@@ -595,10 +607,12 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
                     minWidth: 120,
                     border: '1px solid #00ffff',
                     color: '#00ffff',
+                    fontWeight: 800,
+                    letterSpacing: 1,
                     '&:hover': {
                       border: '1px solid #00ffff',
-                      background: 'rgba(0, 255, 255, 0.1)',
-                      boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)'
+                      background: 'rgba(0, 255, 255, 0.12)',
+                      boxShadow: '0 0 15px rgba(0, 255, 255, 0.35)'
                     }
                   }}
                 >
@@ -613,10 +627,12 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
                     minWidth: 120,
                     border: '1px solid #ff0080',
                     color: '#ff0080',
+                    fontWeight: 800,
+                    letterSpacing: 1,
                     '&:hover': {
                       border: '1px solid #ff0080',
-                      background: 'rgba(255, 0, 128, 0.1)',
-                      boxShadow: '0 0 15px rgba(255, 0, 128, 0.3)'
+                      background: 'rgba(255, 0, 128, 0.12)',
+                      boxShadow: '0 0 15px rgba(255, 0, 128, 0.35)'
                     }
                   }}
                 >
@@ -625,6 +641,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
               </Box>
             </>
           )}
+          </Box>
         </Paper>
       </Modal>
 
@@ -651,6 +668,18 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
+          }
+          @keyframes hologramScan {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(260%); }
+          }
+          @keyframes eqBar {
+            0%, 100% { transform: scaleY(0.6); opacity: 0.7; }
+            50% { transform: scaleY(1.2); opacity: 1; }
+          }
+          @keyframes gridScroll {
+            0% { background-position: 0 0, 0 0; }
+            100% { background-position: 0 40px, 40px 0; }
           }
         `}
       </style>
