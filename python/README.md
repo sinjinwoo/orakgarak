@@ -50,16 +50,27 @@
 
 ## 실행 방법
 
-### ⚠️ 주의 사항  
+### 1. 가상환경 생성 및 활성화 (권장)
+```bash
+conda create -n voice_env python=3.9
+conda activate voice_env
+```
 
-- **경로 설정 확인 필수**  
+### 3. 라이브러리 설치
+```bash
+pip install -r requirements.txt
+```
+
+### 4. 파일 경로 설정 
+
+- **⚠️ 경로 설정 확인 필수**  
   - `main.py` 및 각 스크립트에서 사용하는 파일 경로를 실제 환경에 맞게 수정 필요 
   - 예시:  
     - 사용자 음성 파일 → `C:/Users/project/data/sample_audio.wav`  
     - 전체 곡 Feature CSV → `C:/Users/SSAFY/Desktop/output/all_features.csv`  
     - 사용자 Feature CSV → `C:/Users/SSAFY/Desktop/output/user_features.csv`  
 
-### 전체 파이프라인 실행
+### 5. 전체 파이프라인 실행
 
 ```bash
 python main.py
@@ -69,7 +80,7 @@ python main.py
 
 
 
-### 단일 기능 실행
+### +) 단일 기능 실행
 
 * **사용자 음성 → Feature 추출**
 
