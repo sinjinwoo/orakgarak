@@ -267,6 +267,7 @@ const FeedPage: React.FC = () => {
         linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
       `,
       minHeight: '100vh',
+      pt: { xs: 16, sm: 20 },
       position: 'relative',
       '&::before': {
         content: '""',

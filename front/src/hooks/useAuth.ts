@@ -112,12 +112,12 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     
     try {
+      // 실제로는 여기서 API 호출하여 서버에 저장
       // const response = await authAPI.updateProfile(data);
-      const response = { data: user };
-      const updatedUser = response.data;
       
-      // 스토어 업데이트
-      if (updatedUser) {
+      // 스토어 업데이트 (전달받은 data를 현재 user에 적용)
+      if (user) {
+        const updatedUser = { ...user, ...data };
         updateUser(updatedUser);
       }
       
