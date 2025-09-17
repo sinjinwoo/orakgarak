@@ -25,11 +25,8 @@ BROWSER_HEADERS = {
 TIMEOUT = 10  # 요청 타임아웃(초)
 SIMILARITY_THRESHOLD = 0.7  # 유사도 임계값 (0.6 이상이면 일치로 판단)
 
-# 허용된 공식 채널 ID/이름
+# 허용된 공식 채널 ID/이름 (금영만 - TJ는 백그라운드 재생 제한)
 OFFICIAL_CHANNELS = [
-    "TJ노래방",
-    "tjkaraoke",
-    "TJ Media",
     "금영노래방",
     "KumyoungKTV",
     "KUMYOUNG",
