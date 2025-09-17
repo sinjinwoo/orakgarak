@@ -4,11 +4,10 @@ import numpy as np
 import pandas as pd
 import logging
 
-# Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from features.extract_mel import extract_mel
-from extract_mfcc import extract_mfcc
+from .extract_mfcc import extract_mfcc
 
 # 로깅 설정
 logging.basicConfig(
@@ -40,7 +39,7 @@ def process_user_audio(audio_path, pitch_low, pitch_high, pitch_avg, output_csv=
     df = pd.DataFrame(feature_dict)
     df.to_csv(output_csv, index=False)
 
-    logging.info(f"User feature 저장 완료 → {output_csv}")
+    logging.info(f"User feature 저장 완료: {output_csv}")
     return df
 
 
