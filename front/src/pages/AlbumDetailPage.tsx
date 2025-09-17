@@ -417,12 +417,7 @@ const AlbumDetailPage: React.FC = () => {
   return (
     <Box sx={{
       flex: 1,
-      background: `
-        radial-gradient(circle at 20% 20%, rgba(255, 107, 157, 0.3) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(196, 71, 233, 0.4) 0%, transparent 50%),
-        radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
-        linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
-      `,
+      background: theme.colors.background.main,
       minHeight: '100vh',
       pt: { xs: 16, sm: 20 },
       position: 'relative',
@@ -875,12 +870,7 @@ const AlbumDetailPage: React.FC = () => {
           onClose={() => setDeleteDialogOpen(false)}
           PaperProps={{
             sx: {
-              background: `
-                radial-gradient(circle at 20% 20%, rgba(255, 107, 157, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(196, 71, 233, 0.4) 0%, transparent 50%),
-                radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
-                linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
-              `,
+              background: theme.colors.background.main,
               borderRadius: 3,
               border: '1px solid rgba(255, 255, 255, 0.2)',
               backdropFilter: 'blur(10px)',
@@ -942,12 +932,7 @@ const AlbumDetailPage: React.FC = () => {
           fullWidth
           PaperProps={{
             sx: {
-              background: `
-                radial-gradient(circle at 20% 20%, rgba(255, 107, 157, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(196, 71, 233, 0.4) 0%, transparent 50%),
-                radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.2) 0%, transparent 50%),
-                linear-gradient(135deg, #0A0A0A 0%, #1A0A1A 25%, #2A0A2A 50%, #1A0A1A 75%, #0A0A0A 100%)
-              `,
+              background: theme.colors.background.main,
               borderRadius: 3,
               border: '1px solid rgba(255, 255, 255, 0.2)',
               backdropFilter: 'blur(10px)',

@@ -14,15 +14,23 @@ const Header: React.FC = () => {
   
   const isLandingPage = location.pathname === '/';
 
-  // 스크롤 이벤트 핸들러
+  // 스크롤 이벤트 핸들러 - 성능 최적화를 위해 쓰로틀링 적용
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      setIsScrolled(scrollTop > 50);
+      // 쓰로틀링: 16ms (약 60fps)마다 실행
+      if (timeoutId) return;
+      
+      timeoutId = setTimeout(() => {
+        const scrollTop = window.scrollY;
+        setIsScrolled(scrollTop > 50);
+        timeoutId = undefined as unknown as NodeJS.Timeout;
+      }, 16);
     };
 
     if (isLandingPage) {
-      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', handleScroll, { passive: true });
       handleScroll(); // 초기 상태 설정
     } else {
       setIsScrolled(false);
@@ -30,6 +38,9 @@ const Header: React.FC = () => {
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [isLandingPage]);
 
