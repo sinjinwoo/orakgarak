@@ -4,26 +4,15 @@ import {
   Typography,
   Button,
   Paper,
-  Card,
-  CardMedia,
-  CardContent,
   List,
   ListItem,
-  ListItemText,
-  Chip,
   IconButton,
-  Divider,
 } from '@mui/material';
 import {
   PlayArrow,
   ExpandMore,
-  Favorite,
-  Share,
-  MoreVert,
-  Lock,
   Send,
 } from '@mui/icons-material';
-import { theme, buttonStyles } from '../../styles/theme';
 import ImmersivePlaybackModal from './ImmersivePlaybackModal';
 
 interface AlbumPreviewStepProps {
@@ -126,7 +115,9 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
             width: '400px',
             height: '450px',
             transformStyle: 'preserve-3d',
-            transition: 'transform 1s ease-in-out',
+            // 성능 최적화: will-change 속성 추가 및 transition 간소화
+            willChange: 'transform',
+            transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
             transform: isAlbumOpen 
               ? 'translate(40px, 0) rotateX(35deg) rotateY(0deg) rotateZ(35deg) scale(0.7)' 
               : 'translate(0, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.7)',
@@ -156,7 +147,8 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
               borderRadius: '8px',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
               transformStyle: 'preserve-3d',
-              transition: 'transform 1s ease-in-out',
+              // 성능 최적화: transition 간소화
+              transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
               transform: isAlbumOpen ? 'rotateY(-180deg)' : 'rotateY(0deg)'
             }}>
               {/* 앨범 앞면 */}
@@ -204,7 +196,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
               </Box>
             </Box>
 
-            {/* 앨범 옆면 */}
+            {/* 앨범 옆면 - 성능 최적화를 위해 transform 간소화 */}
             <Box sx={{
               position: 'absolute',
               left: '-30px',
@@ -213,11 +205,11 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
               height: '100%',
               background: '#007e8a',
               transformOrigin: '100% 100%',
-              transform: 'rotateY(-90deg) rotateX(0deg)',
+              transform: 'rotateY(-90deg)',
               borderRadius: '6px 0 0 6px'
             }} />
 
-            {/* 앨범 하단 */}
+            {/* 앨범 하단 - 성능 최적화를 위해 transform 간소화 */}
             <Box sx={{
               position: 'absolute',
               bottom: '-30px',
@@ -230,7 +222,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
               borderRadius: '0 0 6px 6px'
             }} />
 
-            {/* 앨범 그림자 */}
+            {/* 앨범 그림자 - 성능 최적화를 위해 box-shadow 대신 pseudo-element 사용 고려 */}
             <Box sx={{
               position: 'absolute',
               top: 0,
