@@ -31,6 +31,11 @@ def main():
         action="store_true",
         help="기존 CSV 파일에서 이어서 진행"
     )
+    parser.add_argument(
+        "--start-from",
+        type=int,
+        help="시작할 songid 지정"
+    )
 
     args = parser.parse_args()
 
@@ -51,7 +56,7 @@ def main():
 
         # 음악 URL + 가사/앨범 크롤링
         print("음악 반주 URL + 가사/앨범 정보 크롤링 시작...")
-        results = crawl_music_urls_with_lyrics_album(songs)
+        results = crawl_music_urls_with_lyrics_album(songs, start_from_id=args.start_from)
 
         # CSV 파일로 저장 (가사/앨범 정보 포함)
         print(f"결과를 {args.output} 파일로 저장 중...")

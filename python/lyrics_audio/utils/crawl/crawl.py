@@ -429,9 +429,11 @@ def get_spotify_access_token() -> Optional[str]:
     data = {"grant_type": "client_credentials"}
 
     try:
-        res = requests.post(token_url, headers=headers, data=data)
+        res = requests.post(token_url, headers=headers, data=data, timeout=TIMEOUT)
+        res.raise_for_status()
         return res.json()["access_token"]
-    except:
+    except Exception as e:
+        print(f"Spotify 토큰 획득 실패: {str(e)}")
         return None
 
 def search_spotify_track(access_token: str, query: str) -> Optional[Dict[str, Any]]:
@@ -441,8 +443,11 @@ def search_spotify_track(access_token: str, query: str) -> Optional[Dict[str, An
     headers = {"Authorization": f"Bearer {access_token}"}
 
     try:
-        res = requests.get(search_url, headers=headers, params=params)
-        tracks = res.json()["tracks"]["items"]
+        res = requests.get(search_url, headers=headers, params=params, timeout=TIMEOUT)
+        res.raise_for_status()
+
+        response_data = res.json()
+        tracks = response_data["tracks"]["items"]
 
         if tracks:
             track = tracks[0]
@@ -459,7 +464,14 @@ def search_spotify_track(access_token: str, query: str) -> Optional[Dict[str, An
                 "popularity": track["popularity"]
             }
         return None
-    except:
+    except requests.exceptions.HTTPError as e:
+        if res.status_code == 401:
+            print(f"Spotify 토큰이 만료되었습니다: {str(e)}")
+            return "TOKEN_EXPIRED"
+        print(f"Spotify API 요청 실패: {str(e)}")
+        return None
+    except Exception as e:
+        print(f"Spotify 트랙 검색 중 오류: {str(e)}")
         return None
 
 def get_lyrics_from_spotify(sp_dc: str, track_id: str) -> Optional[str]:
@@ -471,11 +483,29 @@ def get_lyrics_from_spotify(sp_dc: str, track_id: str) -> Optional[str]:
     except:
         return None
 
-def crawl_music_urls_with_lyrics_album(songs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def crawl_music_urls_with_lyrics_album(songs: List[Dict[str, Any]], start_from_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     음악 반주 URL + 가사/앨범 정보를 함께 크롤링
+
+    Args:
+        songs: 노래 정보 리스트
+        start_from_id: 시작할 songid (None이면 처음부터)
     """
     from .parsing import save_batch_csv
+
+    # 시작 지점 찾기
+    if start_from_id is not None:
+        start_index = None
+        for i, song in enumerate(songs):
+            if song.get('id') == start_from_id:
+                start_index = i
+                break
+
+        if start_index is not None:
+            songs = songs[start_index:]
+            print(f"🎯 songid {start_from_id}부터 시작 (전체 {len(songs)}개 곡 처리 예정)")
+        else:
+            print(f"⚠️  songid {start_from_id}를 찾을 수 없습니다. 처음부터 시작합니다.")
 
     # Spotify 설정
     sp_dc = os.getenv("SPOTIFY_SP_DC")
@@ -493,6 +523,8 @@ def crawl_music_urls_with_lyrics_album(songs: List[Dict[str, Any]]) -> List[Dict
     all_results = []
     batch_size = 1000
     batch_num = 1
+    token_retry_count = 0
+    max_token_retries = 3
 
     for i in range(0, len(songs), batch_size):
         batch_songs = songs[i:i + batch_size]
@@ -540,11 +572,30 @@ def crawl_music_urls_with_lyrics_album(songs: List[Dict[str, Any]]) -> List[Dict
                 for query in search_queries:
                     if query.strip():
                         track_info = search_spotify_track(access_token, query.strip())
-                        if track_info:
+
+                        # 토큰 만료 처리
+                        if track_info == "TOKEN_EXPIRED" and token_retry_count < max_token_retries:
+                            print(f"    🔄 토큰 만료 감지, 재발급 시도 ({token_retry_count + 1}/{max_token_retries})")
+                            access_token = get_spotify_access_token()
+
+                            if access_token:
+                                print("    ✅ 새 토큰 발급 성공, 재시도 중...")
+                                track_info = search_spotify_track(access_token, query.strip())
+                                token_retry_count += 1
+                            else:
+                                print("    ❌ 토큰 재발급 실패")
+                                access_token = None
+                                break
+                        elif track_info == "TOKEN_EXPIRED":
+                            print(f"    ❌ 토큰 재발급 최대 시도 횟수 초과 ({max_token_retries}회)")
+                            access_token = None
+                            break
+
+                        if track_info and track_info != "TOKEN_EXPIRED":
                             print(f"    ✅ Spotify: {track_info['name']} - {track_info['artist']}")
                             break
 
-                if track_info:
+                if track_info and track_info != "TOKEN_EXPIRED":
                     result['spotify_track_id'] = track_info['id']
                     result['album_cover_url'] = track_info['album_cover_url']
                     result['album_name'] = track_info['album']
@@ -558,7 +609,7 @@ def crawl_music_urls_with_lyrics_album(songs: List[Dict[str, Any]]) -> List[Dict
                         print(f"    ✅ 가사 수집 성공 (길이: {len(lyrics)} 문자)")
                     else:
                         print(f"    ❌ 가사 없음")
-                else:
+                elif access_token:
                     print(f"    ❌ Spotify에서 트랙 없음")
 
             batch_results.append(result)
