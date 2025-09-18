@@ -2,6 +2,8 @@ package com.ssafy.lab.orak.processing.service;
 
 import com.ssafy.lab.orak.processing.config.ProcessingConfig;
 import com.ssafy.lab.orak.processing.exception.BatchProcessingException;
+import com.ssafy.lab.orak.recording.entity.Record;
+import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
@@ -30,6 +32,7 @@ public class BatchProcessingService {
     private final List<ProcessingJob> processingJobs;
     private final Timer processingDurationTimer;
     private final AtomicLong processingQueueSize;
+    private final RecordRepository recordRepository;
     
     // 동시 처리 제한을 위한 세마포어
     private final Semaphore processingLimiter = new Semaphore(3); // 기본 3개
@@ -82,7 +85,18 @@ public class BatchProcessingService {
             activeJobs.incrementAndGet();
 
             log.info("업로드 처리 시작: {} ({})", upload.getId(), upload.getOriginalFilename());
-            
+
+            // Recording 파일인 경우 Record 존재 확인
+            if (isRecordingUpload(upload)) {
+                Record record = recordRepository.findByUploadId(upload.getId());
+                if (record == null) {
+                    log.info("Record가 아직 생성되지 않음, 다음 배치에서 재시도: uploadId={}", upload.getId());
+                    return; // 스킵하고 다음 배치에서 재시도
+                }
+                log.info("Record 확인 완료: uploadId={}, recordId={}, title={}",
+                        upload.getId(), record.getId(), record.getTitle());
+            }
+
             // 적절한 처리 작업 찾기
             ProcessingJob selectedJob = findApplicableJob(upload);
             
@@ -133,6 +147,13 @@ public class BatchProcessingService {
                 .filter(job -> job.canProcess(upload))
                 .min(Comparator.comparing(ProcessingJob::getPriority))
                 .orElse(null);
+    }
+
+    /**
+     * Recording 디렉토리의 Upload인지 확인
+     */
+    private boolean isRecordingUpload(Upload upload) {
+        return "recordings".equals(upload.getDirectory());
     }
     
     // 통계 조회용 메서드

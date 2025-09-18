@@ -1,12 +1,15 @@
 package com.ssafy.lab.orak.recording.controller;
 
 import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
+import com.ssafy.lab.orak.recording.dto.CreateRecordRequest;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.service.AsyncRecordService;
 import com.ssafy.lab.orak.recording.service.RecordingBatchProcessor;
+import com.ssafy.lab.orak.upload.dto.PresignedUploadRequest;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadResponse;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
+import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import com.ssafy.lab.orak.s3.helper.S3Helper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,23 +40,32 @@ public class AsyncRecordController {
     private final AsyncRecordService asyncRecordService;
     private final RecordingBatchProcessor batchProcessor;
     private final FileUploadService fileUploadService;
+    private final PresignedUploadService presignedUploadService;
     private final S3Helper s3Helper;
 
     /**
-     * 1단계: Presigned URL 생성 (비동기 업로드용)
+     * 1단계: Presigned URL 생성 (파일 업로드용)
+     * - 제목, songId 등 메타데이터는 별도 API로 처리
      */
     @PostMapping("/presigned-url")
     public ResponseEntity<PresignedUploadResponse> generatePresignedUrl(
-            @RequestParam("title") @NotBlank String title,
-            @RequestParam(value = "songId", required = false) Long songId,
             @RequestParam("originalFilename") @NotBlank String originalFilename,
             @RequestParam("fileSize") @Positive Long fileSize,
             @RequestParam("contentType") @NotBlank String contentType,
             @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        PresignedUploadResponse response = asyncRecordService.generatePresignedUrlForRecord(
-                title, songId, originalFilename, fileSize, contentType, durationSeconds, principal.getUserId());
+        // PresignedUploadRequest 생성
+        PresignedUploadRequest request = PresignedUploadRequest.builder()
+                .originalFilename(originalFilename)
+                .fileSize(fileSize)
+                .contentType(contentType)
+                .directory("recordings")
+                .build();
+
+        // 일반적인 파일 업로드 서비스 사용
+        PresignedUploadResponse response = presignedUploadService
+                .generatePresignedUploadUrl(request, principal.getUserId());
 
         return ResponseEntity.ok(response);
     }
@@ -115,6 +127,29 @@ public class AsyncRecordController {
                     "status", "error",
                     "message", "업로드 처리 중 오류가 발생했습니다: " + e.getMessage()
             ));
+        }
+    }
+
+    /**
+     * 3단계: Record 생성 (메타데이터 저장)
+     * - S3 업로드 완료 후 호출
+     * - 즉시 처리 시도 + 실패 시 비동기 처리
+     */
+    @PostMapping("")
+    public ResponseEntity<RecordResponseDTO> createRecord(
+            @RequestBody @jakarta.validation.Valid CreateRecordRequest request,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        log.info("Record 생성 요청: uploadId={}, title={}, userId={}",
+                request.getUploadId(), request.getTitle(), principal.getUserId());
+
+        try {
+            RecordResponseDTO response = asyncRecordService.createRecord(request, principal.getUserId());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Record 생성 실패: uploadId={}, title={}",
+                    request.getUploadId(), request.getTitle(), e);
+            throw e;
         }
     }
 
