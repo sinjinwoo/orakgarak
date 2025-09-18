@@ -123,29 +123,67 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
           rel: 0,
           iv_load_policy: 3,
           playsinline: 1,
+          // 임베드 제한 우회 시도
+          origin: window.location.origin,
+          enablejsapi: 1
         },
         events: {
           onReady: () => {
+            console.log('YouTube Player Ready');
             setReady(true);
             // autoplay 권한 부여
             const iframe = playerRef.current?.getIframe?.();
             if (iframe) {
-              iframe.setAttribute('allow', 'autoplay');
+              iframe.setAttribute('allow', 'autoplay; encrypted-media; microphone');
               iframe.setAttribute('tabindex', '-1');
-              iframe.style.width = '1px';
-              iframe.style.height = '1px';
-              iframe.style.position = 'absolute';
-              iframe.style.left = '-9999px';
             }
             const targetVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
-            // mute → play → volume 올리기 (자동재생 우회)
-            if (playerRef.current) playerRef.current.mute();
-            if (playing && playerRef.current) playerRef.current.playVideo();
-            setTimeout(() => {
-              if (playerRef.current) playerRef.current.setVolume(targetVolume);
-              if (targetVolume > 0 && playerRef.current) playerRef.current.unMute();
-            }, 250);
+            
+            // 자동재생 정책 우회: 무음→재생→볼륨복구 시퀀스
+            if (playerRef.current) {
+              try {
+                playerRef.current.mute();
+                if (playing) {
+                  playerRef.current.playVideo();
+                  console.log('Auto-play attempted');
+                }
+                setTimeout(() => {
+                  if (playerRef.current && targetVolume > 0) {
+                    playerRef.current.unMute();
+                    playerRef.current.setVolume(targetVolume);
+                    console.log('Volume restored to', targetVolume);
+                  }
+                }, 300);
+              } catch (error) {
+                console.error('Auto-play setup failed:', error);
+              }
+            }
           },
+          onStateChange: (event: { data: number }) => {
+            console.log('YouTube Player State:', event.data);
+          },
+          onError: (event: { data: number }) => {
+            console.error('YouTube Player Error:', event.data);
+            // 오류 코드별 처리
+            switch (event.data) {
+              case 2:
+                console.error('Invalid video ID');
+                break;
+              case 5:
+                console.error('HTML5 player error');
+                break;
+              case 100:
+                console.error('Video not found');
+                break;
+              case 101:
+              case 150:
+                console.error('Video cannot be embedded (restricted by owner)');
+                // 대체 영상으로 시도할 수 있음
+                break;
+              default:
+                console.error('Unknown YouTube error');
+            }
+          }
         },
       });
     });
@@ -175,8 +213,28 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
   }, [playing, ready]);
 
   return (
-    <div style={{ width: '100%', height: '1px', opacity: 0, pointerEvents: 'none' }}>
-      <div ref={containerRef} />
+    <div style={{ 
+      position: 'fixed', 
+      top: '-1000px', 
+      left: '-1000px', 
+      width: '560px', 
+      height: '315px', 
+      zIndex: -9999,
+      pointerEvents: 'none',
+      opacity: 0
+    }}>
+      <iframe
+        ref={containerRef}
+        width="560"
+        height="315"
+        src={`https://www.youtube.com/embed/${videoId}?autoplay=${playing ? 1 : 0}&controls=0&disablekb=1&fs=0&modestbranding=1&rel=0&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
+        title="YouTube MR Player"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+        style={{ width: '100%', height: '100%' }}
+      />
     </div>
   );
 });
