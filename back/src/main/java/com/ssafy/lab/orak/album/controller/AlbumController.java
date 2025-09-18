@@ -116,19 +116,21 @@ public class AlbumController {
     // AI 앨범 커버 생성 (앨범 생성 전)
     @PostMapping("/covers/generate")
     @Operation(summary = "AI 앨범 커버 생성", description = "녹음 데이터를 기반으로 AI가 앨범 커버를 생성합니다. (앨범 생성 전)")
-    public Mono<ResponseEntity<AlbumCoverUploadResponseDto>> generateAlbumCover(
+    public ResponseEntity<AlbumCoverUploadResponseDto> generateAlbumCover(
             @RequestBody @Valid AlbumCoverGenerateRequestDto request,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("POST /api/albums/covers/generate - Generating AI album cover by user: {}", userId);
+        log.info("POST /api/albums/covers/generate - Generating AI album cover by user: {} with uploadIds: {}", userId, request.uploadIds());
 
-        return albumCoverService.generateAlbumCover(userId, request)
-                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
-                .onErrorResume(error -> {
-                    log.error("Error generating AI album cover for user {}", userId, error);
-                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
-                });
+        try {
+            AlbumCoverUploadResponseDto response = albumCoverService.generateAlbumCover(userId, request).block();
+            log.info("AI album cover generation successful for user: {}, returning response", userId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception error) {
+            log.error("Error generating AI album cover for user: {}", userId, error);
+            throw new RuntimeException("앨범 커버 생성 중 오류가 발생했습니다: " + error.getMessage(), error);
+        }
     }
 
 
