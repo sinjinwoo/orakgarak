@@ -293,10 +293,72 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
   }, [cleanupResources]);
 
   return (
-    <Box sx={{ 
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
+    <>
+      {/* 네온 사이버펑크 애니메이션 스타일 */}
+      <style>
+        {`
+          @keyframes neonBorderPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+          
+          @keyframes cyberGridFlow {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-10px, -5px) rotate(1deg); }
+            50% { transform: translate(0, -10px) rotate(0deg); }
+            75% { transform: translate(5px, -5px) rotate(-1deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+          }
+          
+          @keyframes neonScanLine1 {
+            0% { left: -120%; opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { left: 120%; opacity: 0; }
+          }
+          
+          @keyframes neonScanLine2 {
+            0% { right: -120%; opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { right: 120%; opacity: 0; }
+          }
+          
+          @keyframes neonParticle1 {
+            0%, 100% { transform: translateY(0px) scale(1); opacity: 1; }
+            25% { transform: translateY(-15px) scale(1.2); opacity: 0.8; }
+            50% { transform: translateY(-25px) scale(0.8); opacity: 1; }
+            75% { transform: translateY(-10px) scale(1.1); opacity: 0.9; }
+          }
+          
+          @keyframes neonParticle2 {
+            0%, 100% { transform: translateX(0px) scale(1); opacity: 1; }
+            25% { transform: translateX(20px) scale(0.9); opacity: 0.7; }
+            50% { transform: translateX(30px) scale(1.3); opacity: 1; }
+            75% { transform: translateX(10px) scale(0.8); opacity: 0.8; }
+          }
+          
+          @keyframes neonPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.8); }
+          }
+          
+          @keyframes neonTextFlow {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+          
+          @keyframes eqBar {
+            0%, 100% { transform: scaleY(1); opacity: 0.7; }
+            50% { transform: scaleY(1.5); opacity: 1; }
+          }
+        `}
+      </style>
+      
+      <Box sx={{ 
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
@@ -374,103 +436,286 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
         }}
       >
         <Paper
-          elevation={8}
+          elevation={0}
           sx={{
-            width: '90%',
-            maxWidth: 640,
+            width: '92%',
+            maxWidth: 680,
             p: 0,
-            borderRadius: 3,
+            borderRadius: '24px',
             outline: 'none',
             position: 'relative',
             overflow: 'hidden',
-            background: `linear-gradient(135deg, rgba(7,9,12,0.95) 0%, rgba(14,16,22,0.96) 60%, rgba(7,9,12,0.95) 100%)`,
-            border: '1px solid rgba(0, 255, 255, 0.25)',
-            boxShadow: `0 0 30px rgba(0,255,255,0.15), 0 0 60px rgba(255,0,128,0.1)`,
+            background: `
+              radial-gradient(circle at 15% 15%, rgba(0, 255, 255, 0.12) 0%, transparent 60%),
+              radial-gradient(circle at 85% 85%, rgba(255, 0, 128, 0.12) 0%, transparent 60%),
+              radial-gradient(circle at 50% 50%, rgba(0, 255, 170, 0.08) 0%, transparent 70%),
+              linear-gradient(135deg, 
+                rgba(2, 6, 12, 0.98) 0%, 
+                rgba(8, 12, 20, 0.96) 25%,
+                rgba(12, 16, 26, 0.94) 50%,
+                rgba(6, 10, 18, 0.96) 75%,
+                rgba(2, 6, 12, 0.98) 100%
+              )
+            `,
+            border: '2px solid transparent',
+            backgroundClip: 'padding-box',
+            boxShadow: `
+              0 0 80px rgba(0, 255, 255, 0.25),
+              0 0 120px rgba(255, 0, 128, 0.15),
+              0 0 160px rgba(0, 255, 170, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08),
+              inset 0 -1px 0 rgba(0, 255, 255, 0.15)
+            `,
+            backdropFilter: 'blur(30px)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '24px',
+              padding: '2px',
+              background: `
+                linear-gradient(45deg, 
+                  #00ffff 0%, 
+                  #ff0080 25%, 
+                  #00ffaa 50%, 
+                  #ff0080 75%, 
+                  #00ffff 100%
+                )
+              `,
+              WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+              WebkitMaskComposite: 'xor',
+              maskComposite: 'exclude',
+              animation: 'neonBorderPulse 4s ease-in-out infinite',
+            },
           }}
         >
-          {/* 배경 네온 그리드 */}
+          {/* 강화된 네온 그리드 패턴 */}
           <Box sx={{
             position: 'absolute',
             inset: 0,
-            opacity: 0.15,
+            opacity: 0.2,
             backgroundImage: `
-              linear-gradient(0deg, rgba(0,255,255,0.3) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,255,255,0.3) 1px, transparent 1px)
+              radial-gradient(circle at 20% 30%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 70%, rgba(255, 0, 128, 0.15) 0%, transparent 50%),
+              linear-gradient(0deg, rgba(0,255,255,0.4) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,255,255,0.3) 1px, transparent 1px),
+              linear-gradient(45deg, rgba(255,0,128,0.2) 1px, transparent 1px)
             `,
-            backgroundSize: '40px 40px',
-            maskImage: 'radial-gradient(circle at 50% 20%, rgba(0,0,0,0.9), rgba(0,0,0,1))',
+            backgroundSize: '100px 100px, 120px 120px, 35px 35px, 35px 35px, 50px 50px',
+            maskImage: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,1) 20%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.2) 100%)',
             pointerEvents: 'none',
-            animation: 'gridScroll 18s linear infinite',
+            animation: 'cyberGridFlow 25s linear infinite',
           }} />
-          {/* 홀로그램 스캔 라인 */}
+          
+          {/* 다중 네온 스캔 라인 */}
           <Box
             sx={{
               position: 'absolute',
               inset: 0,
               pointerEvents: 'none',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: '-120%',
+                top: '25%',
+                width: '60%',
+                height: '3px',
+                background: `
+                  linear-gradient(90deg, 
+                    transparent, 
+                    rgba(0,255,255,0.3), 
+                    rgba(0,255,255,0.9), 
+                    rgba(0,255,255,0.3), 
+                    transparent
+                  )
+                `,
+                boxShadow: '0 0 15px rgba(0,255,255,0.6), 0 0 30px rgba(0,255,255,0.3)',
+                animation: 'neonScanLine1 5s ease-in-out infinite',
+              },
               '&::after': {
                 content: '""',
                 position: 'absolute',
-                left: '-100%',
-                top: 0,
-                width: '40%',
-                height: '100%',
-                background: 'linear-gradient(45deg, transparent 45%, rgba(0,255,255,0.12) 50%, transparent 55%)',
-                animation: 'hologramScan 3.2s linear infinite',
+                right: '-120%',
+                top: '65%',
+                width: '50%',
+                height: '2px',
+                background: `
+                  linear-gradient(90deg, 
+                    transparent, 
+                    rgba(255,0,128,0.3), 
+                    rgba(255,0,128,0.8), 
+                    rgba(255,0,128,0.3), 
+                    transparent
+                  )
+                `,
+                boxShadow: '0 0 12px rgba(255,0,128,0.5), 0 0 25px rgba(255,0,128,0.2)',
+                animation: 'neonScanLine2 6s ease-in-out infinite 1.5s',
               },
             }}
           />
+          
+          {/* 네온 파티클 효과 */}
+          <Box sx={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: '15%',
+              left: '12%',
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, #00ffff, rgba(0,255,255,0.3))',
+              boxShadow: '0 0 20px #00ffff, 0 0 40px rgba(0,255,255,0.5)',
+              animation: 'neonParticle1 8s ease-in-out infinite',
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: '75%',
+              right: '18%',
+              width: '4px',
+              height: '4px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, #ff0080, rgba(255,0,128,0.3))',
+              boxShadow: '0 0 15px #ff0080, 0 0 30px rgba(255,0,128,0.4)',
+              animation: 'neonParticle2 10s ease-in-out infinite 3s',
+            },
+          }} />
 
-          {/* 모달 헤더 */}
+          {/* 네온 사이버펑크 헤더 */}
           <Box sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            px: 3,
-            py: 2.5,
-            borderBottom: '1px solid rgba(0,255,255,0.25)',
-            background: 'linear-gradient(180deg, rgba(0,255,255,0.08), rgba(0,255,255,0))',
+            px: 4,
+            py: 3,
+            borderBottom: '2px solid transparent',
+            background: `
+              linear-gradient(135deg, 
+                rgba(0,255,255,0.12) 0%, 
+                rgba(255,0,128,0.08) 50%,
+                rgba(0,255,255,0.12) 100%
+              ),
+              linear-gradient(180deg, rgba(0,0,0,0.3), transparent)
+            `,
+            backdropFilter: 'blur(15px)',
+            position: 'relative',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '2px',
+              background: 'linear-gradient(90deg, transparent, #00ffff 20%, #ff0080 50%, #00ffff 80%, transparent)',
+              boxShadow: '0 0 10px rgba(0,255,255,0.5)',
+            },
           }}>
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, #00ffff, rgba(0,255,255,0.2))',
-                boxShadow: '0 0 12px #00ffff',
-              }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {/* 네온 상태 인디케이터 */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, #00ffff 30%, rgba(0,255,255,0.3) 70%)',
+                  boxShadow: `
+                    0 0 20px #00ffff,
+                    0 0 40px rgba(0,255,255,0.5),
+                    inset 0 0 10px rgba(255,255,255,0.2)
+                  `,
+                  animation: 'neonPulse 2s ease-in-out infinite',
+                }} />
+                <Box sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, #ff0080 30%, rgba(255,0,128,0.3) 70%)',
+                  boxShadow: '0 0 15px #ff0080, 0 0 30px rgba(255,0,128,0.4)',
+                  animation: 'neonPulse 2s ease-in-out infinite 0.5s',
+                }} />
+                <Box sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, #00ffaa 30%, rgba(0,255,170,0.3) 70%)',
+                  boxShadow: '0 0 12px #00ffaa, 0 0 25px rgba(0,255,170,0.3)',
+                  animation: 'neonPulse 2s ease-in-out infinite 1s',
+                }} />
+              </Box>
+              
               <Typography
                 id="recording-preview-modal"
-                variant="h6"
+                variant="h5"
                 sx={{
                   m: 0,
-                  fontWeight: 800,
-                  letterSpacing: 1,
+                  fontWeight: 900,
+                  letterSpacing: 2,
+                  fontFamily: 'monospace',
+                  background: `
+                    linear-gradient(45deg, 
+                      #00ffff 0%, 
+                      #ffffff 25%, 
+                      #ff0080 50%, 
+                      #ffffff 75%, 
+                      #00ffff 100%
+                    )
+                  `,
+                  backgroundSize: '200% 100%',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 30px rgba(0,255,255,0.5)',
+                  animation: 'neonTextFlow 3s linear infinite',
+                  textTransform: 'uppercase',
+                }}
+              >
+                ◆ NEURAL AUDIO ◆
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  letterSpacing: 1.5,
+                  color: 'rgba(0,255,255,0.8)',
+                  fontFamily: 'monospace',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
                   background: 'linear-gradient(45deg, #00ffff, #ff0080)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  textShadow: '0 0 18px rgba(0,255,255,0.35)',
                 }}
               >
-                RECORDING PREVIEW
+                CYBER_STUDIO.EXE
               </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Typography variant="caption" sx={{ letterSpacing: 1, color: 'rgba(0,255,255,0.7)' }}>CYBER STUDIO</Typography>
               <IconButton
                 aria-label="close"
                 onClick={() => setShowModal(false)}
-                size="small"
+                size="medium"
                 sx={{
-                  ml: 1,
-                  borderRadius: 1.5,
+                  width: 40,
+                  height: 40,
+                  borderRadius: '8px',
                   color: '#00ffff',
-                  border: '1px solid rgba(0,255,255,0.35)',
-                  bgcolor: 'rgba(0,255,255,0.08)',
-                  '&:hover': { bgcolor: 'rgba(0,255,255,0.15)' }
+                  border: '2px solid rgba(0,255,255,0.4)',
+                  bgcolor: 'rgba(0,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 0 20px rgba(0,255,255,0.2)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { 
+                    bgcolor: 'rgba(255,0,128,0.15)',
+                    borderColor: 'rgba(255,0,128,0.6)',
+                    color: '#ff0080',
+                    boxShadow: '0 0 25px rgba(255,0,128,0.4)',
+                    transform: 'scale(1.05)',
+                  }
                 }}
               >
-                ✕
+                <Typography sx={{ fontWeight: 900, fontSize: '18px' }}>✕</Typography>
               </IconButton>
             </Box>
           </Box>
@@ -682,8 +927,8 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
             100% { background-position: 0 40px, 40px 0; }
           }
         `}
-      </style>
-    </Box>
+      </Box>
+    </>
   );
 };
 
