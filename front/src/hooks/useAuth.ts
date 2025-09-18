@@ -48,6 +48,7 @@ export function useAuth(): UseAuthReturn {
       
       // 토큰 저장
       localStorage.setItem('auth-token', token);
+      localStorage.setItem('token-created-time', Date.now().toString());
       
       // 스토어 업데이트
       loginStore(userData);
@@ -73,6 +74,7 @@ export function useAuth(): UseAuthReturn {
       
       // 토큰 저장
       localStorage.setItem('auth-token', token);
+      localStorage.setItem('token-created-time', Date.now().toString());
       
       // 스토어 업데이트
       loginStore(userData);
@@ -135,10 +137,11 @@ export function useAuth(): UseAuthReturn {
   const refreshToken = async (): Promise<boolean> => {
     try {
       const response = await authAPI.refreshToken();
-      const { token } = response.data;
+      const { accessToken } = response.data;
       
       // 새 토큰 저장
-      localStorage.setItem('auth-token', token);
+      localStorage.setItem('auth-token', accessToken);
+      localStorage.setItem('token-created-time', Date.now().toString());
       
       return true;
     } catch (err) {
@@ -197,34 +200,22 @@ export function useRequireAuth() {
 export function useSocialAuth() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login: loginStore } = useAuthStore();
 
   const loginWithGoogle = async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // 구글 로그인 팝업 열기
+      // 구글 OAuth2 리다이렉트 시작
       const { GoogleAuthService } = await import('../services/googleAuth');
-      const googleUser = await GoogleAuthService.signInWithPopup();
+      GoogleAuthService.initiateGoogleLogin();
       
-      if (!googleUser) {
-        throw new Error('구글 로그인이 취소되었습니다.');
-      }
-
-      // 백엔드에 구글 사용자 정보 전송
-      const response = await authAPI.loginWithGoogle(googleUser.id);
-      const { user, token } = response.data;
-      
-      localStorage.setItem('auth-token', token);
-      loginStore(user);
-      
+      // 리다이렉트가 시작되므로 이 함수는 여기서 끝남
       return true;
     } catch (err: any) {
       setError(err.message || 'Google 로그인에 실패했습니다.');
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
   };
 
