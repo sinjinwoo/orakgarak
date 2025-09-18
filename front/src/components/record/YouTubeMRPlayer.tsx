@@ -10,10 +10,12 @@ export type YouTubeMRPlayerHandle = {
 };
 
 interface YouTubeMRPlayerProps {
-  videoId: string;
+  videoId: string; // YouTube 비디오 ID (예: 'szCnpElg-4k' from https://www.youtube.com/watch?v=szCnpElg-4k)
   startSeconds?: number;
   volumePercent?: number; // 0-100
   playing?: boolean;
+  onSongFinished?: () => void; // 곡이 끝났을 때 호출할 콜백
+  onPlayerReady?: () => void; // 플레이어가 준비되었을 때 호출할 콜백
 }
 
 type YTPlayer = {
@@ -36,6 +38,7 @@ declare global {
   }
 }
 
+// YouTube iframe API 로드 - MR 비디오 재생을 위해 필요
 const loadYouTubeAPI = () => {
   if (window.YT && window.YT.Player) return Promise.resolve();
   return new Promise<void>((resolve) => {
@@ -53,7 +56,7 @@ const loadYouTubeAPI = () => {
       return;
     }
     const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
+    tag.src = 'https://www.youtube.com/iframe_api'; // YouTube iframe API 로드
     window.onYouTubeIframeAPIReady = () => resolve();
     document.body.appendChild(tag);
   });
@@ -64,33 +67,98 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
   startSeconds = 0,
   volumePercent = 70,
   playing = false,
+  onSongFinished,
+  onPlayerReady,
 }, ref) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLIFrameElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
 
+  // 플레이어가 실제로 준비되었는지 확인하는 함수
+  const isPlayerActuallyReady = () => {
+    return playerRef.current && 
+           ready && 
+           typeof playerRef.current.playVideo === 'function' &&
+           typeof playerRef.current.pauseVideo === 'function' &&
+           typeof playerRef.current.setVolume === 'function';
+  };
+
   useImperativeHandle(ref, () => ({
     play: () => {
-      if (playerRef.current && ready) playerRef.current.playVideo();
+      if (isPlayerActuallyReady()) {
+        try {
+          playerRef.current!.playVideo();
+          console.log('YouTube playVideo called successfully');
+        } catch (error) {
+          console.error('YouTube playVideo failed:', error);
+        }
+      } else {
+        console.warn('YouTube player not ready for play operation', {
+          hasPlayer: !!playerRef.current,
+          ready,
+          hasPlayVideo: playerRef.current ? typeof playerRef.current.playVideo === 'function' : false
+        });
+      }
     },
     pause: () => {
-      if (playerRef.current && ready) playerRef.current.pauseVideo();
+      if (isPlayerActuallyReady()) {
+        try {
+          playerRef.current!.pauseVideo();
+          console.log('YouTube pauseVideo called successfully');
+        } catch (error) {
+          console.error('YouTube pauseVideo failed:', error);
+        }
+      } else {
+        console.warn('YouTube player not ready for pause operation', {
+          hasPlayer: !!playerRef.current,
+          ready,
+          hasPauseVideo: playerRef.current ? typeof playerRef.current.pauseVideo === 'function' : false
+        });
+      }
     },
     seekTo: (seconds: number) => {
-      if (playerRef.current && ready) playerRef.current.seekTo(seconds, true);
+      if (isPlayerActuallyReady()) {
+        try {
+          playerRef.current!.seekTo(seconds, true);
+          console.log('YouTube seekTo called successfully');
+        } catch (error) {
+          console.error('YouTube seekTo failed:', error);
+        }
+      } else {
+        console.warn('YouTube player not ready for seek operation');
+      }
     },
     setVolume: (percent: number) => {
-      if (playerRef.current && ready) playerRef.current.setVolume(Math.max(0, Math.min(100, Math.round(percent))));
+      if (isPlayerActuallyReady()) {
+        try {
+          playerRef.current!.setVolume(Math.max(0, Math.min(100, Math.round(percent))));
+          console.log('YouTube setVolume called successfully');
+        } catch (error) {
+          console.error('YouTube setVolume failed:', error);
+        }
+      } else {
+        console.warn('YouTube player not ready for volume operation');
+      }
     },
     getCurrentTime: () => {
-      if (playerRef.current && ready && typeof playerRef.current.getCurrentTime === 'function') {
-        return playerRef.current.getCurrentTime() ?? 0;
+      if (isPlayerActuallyReady()) {
+        try {
+          return playerRef.current!.getCurrentTime() ?? 0;
+        } catch (error) {
+          console.error('YouTube getCurrentTime failed:', error);
+          return 0;
+        }
       }
       return 0;
     },
     getDuration: () => {
-      if (playerRef.current && ready && typeof playerRef.current.getDuration === 'function') {
-        return playerRef.current.getDuration() ?? 0;
+      if (isPlayerActuallyReady()) {
+        try {
+          return playerRef.current!.getDuration() ?? 0;
+        } catch (error) {
+          console.error('YouTube getDuration failed:', error);
+          return 0;
+        }
       }
       return 0;
     }
@@ -129,38 +197,78 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
         },
         events: {
           onReady: () => {
-            console.log('YouTube Player Ready');
-            setReady(true);
-            // autoplay 권한 부여
-            const iframe = playerRef.current?.getIframe?.();
-            if (iframe) {
-              iframe.setAttribute('allow', 'autoplay; encrypted-media; microphone');
-              iframe.setAttribute('tabindex', '-1');
-            }
-            const targetVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
+            console.log('YouTube Player Ready - checking methods...');
             
-            // 자동재생 정책 우회: 무음→재생→볼륨복구 시퀀스
-            if (playerRef.current) {
-              try {
-                playerRef.current.mute();
-                if (playing) {
-                  playerRef.current.playVideo();
-                  console.log('Auto-play attempted');
-                }
-                setTimeout(() => {
-                  if (playerRef.current && targetVolume > 0) {
-                    playerRef.current.unMute();
-                    playerRef.current.setVolume(targetVolume);
-                    console.log('Volume restored to', targetVolume);
-                  }
-                }, 300);
-              } catch (error) {
-                console.error('Auto-play setup failed:', error);
+            // 플레이어 메서드들이 실제로 사용 가능한지 확인
+            const hasRequiredMethods = playerRef.current && 
+              typeof playerRef.current.playVideo === 'function' &&
+              typeof playerRef.current.pauseVideo === 'function' &&
+              typeof playerRef.current.setVolume === 'function';
+            
+            if (hasRequiredMethods) {
+              console.log('YouTube Player fully ready with all methods');
+              setReady(true);
+              
+              // 상위 컴포넌트에 플레이어 준비 완료 알림
+              if (onPlayerReady) {
+                onPlayerReady();
               }
+              
+              // autoplay 권한 부여
+              const iframe = playerRef.current?.getIframe?.();
+              if (iframe) {
+                iframe.setAttribute('allow', 'autoplay; encrypted-media; microphone');
+                iframe.setAttribute('tabindex', '-1');
+              }
+              const targetVolume = Math.max(0, Math.min(100, Math.round(volumePercent)));
+              
+              // 자동재생 정책 우회: 무음→재생→볼륨복구 시퀀스
+              if (playerRef.current) {
+                try {
+                  playerRef.current.mute();
+                  if (playing) {
+                    playerRef.current.playVideo();
+                    console.log('Auto-play attempted');
+                  }
+                  setTimeout(() => {
+                    if (playerRef.current && targetVolume > 0) {
+                      playerRef.current.unMute();
+                      playerRef.current.setVolume(targetVolume);
+                      console.log('Volume restored to', targetVolume);
+                    }
+                  }, 300);
+                } catch (error) {
+                  console.error('Auto-play setup failed:', error);
+                }
+              }
+            } else {
+              console.warn('YouTube Player ready but methods not available yet, retrying...');
+              // 메서드가 아직 준비되지 않았으면 잠시 후 다시 시도
+              setTimeout(() => {
+                const recheckMethods = playerRef.current && 
+                  typeof playerRef.current.playVideo === 'function' &&
+                  typeof playerRef.current.pauseVideo === 'function' &&
+                  typeof playerRef.current.setVolume === 'function';
+                
+                if (recheckMethods) {
+                  console.log('YouTube Player methods now available');
+                  setReady(true);
+                  if (onPlayerReady) {
+                    onPlayerReady();
+                  }
+                } else {
+                  console.error('YouTube Player methods still not available');
+                }
+              }, 500);
             }
           },
           onStateChange: (event: { data: number }) => {
             console.log('YouTube Player State:', event.data);
+            // 상태 0: 종료됨 (곡이 끝남)
+            if (event.data === 0 && onSongFinished) {
+              console.log('Song finished, calling onSongFinished');
+              onSongFinished();
+            }
           },
           onError: (event: { data: number }) => {
             console.error('YouTube Player Error:', event.data);
@@ -227,6 +335,7 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
         ref={containerRef}
         width="560"
         height="315"
+        // YouTube MR 비디오 임베드 URL (예: https://www.youtube.com/watch?v=szCnpElg-4k)
         src={`https://www.youtube.com/embed/${videoId}?autoplay=${playing ? 1 : 0}&controls=0&disablekb=1&fs=0&modestbranding=1&rel=0&iv_load_policy=3&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
         title="YouTube MR Player"
         frameBorder="0"

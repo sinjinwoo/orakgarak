@@ -22,6 +22,7 @@ interface ReservationContextType {
   playSong: (song: Song) => void;                             // 곡 재생 시작
   stopSong: () => void;                                       // 곡 재생 정지
   setPlayingState: (playing: boolean) => void;                // 재생 상태 설정
+  onSongFinished: () => void;                                 // 곡이 끝났을 때 호출 (자동으로 큐에서 제거)
 }
 
 // Context 생성
@@ -95,6 +96,18 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({ childr
     setIsPlaying(playing);
   };
 
+  // 곡이 끝났을 때 현재 곡을 큐에서 제거하고 재생 정지 (자동 재생 없음)
+  const onSongFinished = () => {
+    if (currentPlayingSong) {
+      // 현재 재생 중인 곡을 큐에서 제거
+      removeFromQueue(currentPlayingSong.id);
+      
+      // 재생 정지 (다음 곡 자동 재생 없음)
+      setCurrentPlayingSong(null);
+      setIsPlaying(false);
+    }
+  };
+
   // Context Provider로 자식 컴포넌트들에게 상태와 함수들 제공
   return (
     <ReservationContext.Provider
@@ -109,6 +122,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({ childr
         playSong,
         stopSong,
         setPlayingState,
+        onSongFinished,
       }}
     >
       {children}

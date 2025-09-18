@@ -29,7 +29,21 @@ const dummySongs = [
   { id: 19, title: 'Blinding Lights', artist: 'The Weeknd', genre: 'Pop', duration: '3:20' },
   { id: 20, title: 'Levitating', artist: 'Dua Lipa', genre: 'Pop', duration: '3:23' },
   // 추가 더미: 브라운아이드소울 - gone (유튜브 MR 사용)
-  { id: 21, title: 'gone', artist: '브라운아이드소울', genre: 'K-Pop', duration: '4:11', youtubeId: 'yNdQjHnyy_c' }
+  { id: 21, title: 'gone', artist: '브라운아이드소울', genre: 'K-Pop', duration: '4:11', youtubeId: 'yNdQjHnyy_c' },
+  // 추가 더미: 이승환 - 다만 (유튜브 MR 사용)
+  { id: 27015, title: '다만', artist: '이승환', genre: 'Ballad', duration: '3:35', youtubeId: 'NHwn7cGbciU' },
+  // 추가 더미: 이선희 - 끝사랑 (유튜브 MR 사용)
+  { id: 27071, title: '끝사랑', artist: '이선희', genre: 'Ballad', duration: '4:10', youtubeId: 'UZy29hJkWfY' },
+  // 추가 한국 가요들
+  { id: 22, title: '사랑해요', artist: '김태우', genre: 'Ballad', duration: '4:15' },
+  { id: 23, title: '겨울비', artist: '박효신', genre: 'Ballad', duration: '4:32' },
+  { id: 24, title: '벚꽃엔딩', artist: '버스커 버스커', genre: 'Indie', duration: '4:20' },
+  { id: 25, title: '너를 만나', artist: '김범수', genre: 'Ballad', duration: '4:05' },
+  { id: 26, title: '사랑이란', artist: '김동률', genre: 'Ballad', duration: '4:18' },
+  { id: 27, title: '내가 사랑한 사람', artist: '김건모', genre: 'Ballad', duration: '4:30' },
+  { id: 28, title: '너의 모든 순간', artist: '성시경', genre: 'Ballad', duration: '4:25' },
+  { id: 29, title: '사랑할 때', artist: '이승기', genre: 'Ballad', duration: '4:12' },
+  { id: 30, title: '가시', artist: '버즈', genre: 'Rock', duration: '4:05' }
 ];
 
 const SongSearchPanel: React.FC = () => {
