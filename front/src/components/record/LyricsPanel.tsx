@@ -6,6 +6,7 @@ interface LyricsPanelProps {
     title: string;
     artist: string;
     lyrics?: string;
+    albumCoverUrl?: string;
   };
   currentTime: number;
   isPlaying: boolean;
@@ -182,34 +183,30 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
   }, [currentTime, parsedLyrics, currentLine, isPlaying]);
 
   return (
-    <div style={{
+      <div style={{ 
       width: '100%',
       height: '100%',
-      display: 'flex',
+        display: 'flex', 
       flexDirection: 'column',
       background: `
-        linear-gradient(135deg, 
-          rgba(10, 0, 30, 0.98) 0%,
-          rgba(30, 0, 50, 0.95) 25%,
-          rgba(20, 10, 40, 0.95) 50%,
-          rgba(40, 0, 60, 0.95) 75%,
-          rgba(15, 5, 35, 0.98) 100%
-        ),
-        radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(255, 0, 128, 0.1) 0%, transparent 50%)
+        linear-gradient(145deg, 
+          rgba(15, 15, 25, 0.95) 0%,
+          rgba(25, 15, 35, 0.92) 50%,
+          rgba(15, 15, 25, 0.95) 100%
+        )
       `,
-      borderRadius: '20px',
-      border: '2px solid rgba(0, 255, 255, 0.4)',
+      borderRadius: '16px',
+      border: '1px solid rgba(0, 255, 255, 0.3)',
       boxShadow: `
-        0 0 30px rgba(0, 255, 255, 0.3),
-        0 0 60px rgba(255, 0, 128, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.3)
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 60px rgba(0, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05)
       `,
       overflow: 'hidden',
-      position: 'relative'
+      position: 'relative',
+      backdropFilter: 'blur(10px)'
     }}>
-      {/* 사이버펑크 배경 효과 */}
+      {/* 미니멀 배경 효과 */}
       <div style={{
         position: 'absolute',
         top: 0,
@@ -217,120 +214,93 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
         right: 0,
         bottom: 0,
         background: `
-          repeating-linear-gradient(
-            90deg,
-            transparent,
-            transparent 2px,
-            rgba(0, 255, 255, 0.03) 2px,
-            rgba(0, 255, 255, 0.03) 4px
-          )
+          radial-gradient(circle at 10% 20%, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 90% 80%, rgba(255, 0, 128, 0.05) 0%, transparent 50%)
         `,
-        pointerEvents: 'none',
-        zIndex: 1
-      }} />
-      
-      {/* 네온 그리드 효과 */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundImage: `
-          linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px)
-        `,
-        backgroundSize: '20px 20px',
-        opacity: 0.3,
         pointerEvents: 'none',
         zIndex: 1
       }} />
 
-      {/* 헤더 */}
+      {/* 헤더 - 모던 미니멀 */}
       <div style={{
-        padding: '20px',
-        borderBottom: '2px solid rgba(0, 255, 255, 0.3)',
+        padding: '16px 20px',
+        borderBottom: '1px solid rgba(0, 255, 255, 0.2)',
         textAlign: 'center',
-        background: `
-          linear-gradient(90deg, 
-            rgba(0, 255, 255, 0.1) 0%,
-            rgba(255, 0, 128, 0.1) 50%,
-            rgba(0, 255, 255, 0.1) 100%
-          )
-        `,
         position: 'relative',
         zIndex: 2
       }}>
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '60%',
-          height: '1px',
-          background: 'linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.8), transparent)',
-          boxShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
-        }} />
-        
         <h3 style={{
           color: '#00ffff',
-          fontSize: '1.3rem',
-          fontWeight: 'bold',
+          fontSize: '1.1rem',
+          fontWeight: '600',
           margin: '0',
-          textShadow: `
-            0 0 10px rgba(0, 255, 255, 0.8),
-            0 0 20px rgba(0, 255, 255, 0.4),
-            0 0 30px rgba(0, 255, 255, 0.2)
-          `,
-          letterSpacing: '2px',
-          textTransform: 'uppercase'
+          textShadow: '0 0 10px rgba(0, 255, 255, 0.6)',
+          letterSpacing: '1px'
         }}>
-          ⚡ LYRICS ⚡
+          🎵 가사
         </h3>
         {selectedSong && (
-          <p style={{
-            color: '#ff0080',
-            fontSize: '0.95rem',
-            margin: '12px 0 0 0',
-            textShadow: '0 0 8px rgba(255, 0, 128, 0.6)',
-            fontWeight: '500'
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: '8px',
+            gap: '8px'
           }}>
-            <span style={{ color: '#00ffff' }}>{selectedSong.title}</span>
-            <span style={{ color: '#888', margin: '0 8px' }}>•</span>
-            <span style={{ color: '#ff0080' }}>{selectedSong.artist}</span>
-          </p>
+            {/* 앨범 커버 */}
+            {selectedSong.albumCoverUrl && (
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '2px solid rgba(0, 255, 255, 0.4)',
+                boxShadow: '0 0 8px rgba(0, 255, 255, 0.3)'
+              }}>
+                <img 
+                  src={selectedSong.albumCoverUrl} 
+                  alt="album cover"
+            style={{
+              width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+            }}
+          />
+        </div>
+      )}
+            <p style={{
+              color: '#ffffff',
+              fontSize: '0.9rem',
+              margin: '0',
+              fontWeight: '500'
+            }}>
+              <span style={{ color: '#00ffff' }}>{selectedSong.title}</span>
+              <span style={{ color: '#666', margin: '0 6px' }}>•</span>
+              <span style={{ color: '#ff0080' }}>{selectedSong.artist}</span>
+            </p>
+          </div>
         )}
-        
-        <div style={{
-          position: 'absolute',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '80%',
-          height: '1px',
-          background: 'linear-gradient(90deg, transparent, rgba(255, 0, 128, 0.8), transparent)',
-          boxShadow: '0 0 8px rgba(255, 0, 128, 0.5)'
-        }} />
       </div>
 
-      {/* 가사 영역 */}
+      {/* 가사 영역 - 모던 스크롤 */}
       <div 
         ref={lyricsContainerRef}
-        style={{
+                style={{
           flex: 1,
-          padding: '20px',
+          padding: '16px 20px',
           overflowY: 'auto',
+          scrollBehavior: 'smooth',
           scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(0, 255, 255, 0.3) rgba(20, 20, 30, 0.3)',
+          scrollbarColor: 'rgba(0, 255, 255, 0.4) rgba(15, 15, 25, 0.3)',
         }}
         className="lyrics-scrollbar"
       >
         {parsedLyrics.length === 0 ? (
-          <div style={{
-            display: 'flex',
+      <div style={{ 
+        display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
+        justifyContent: 'center',
             height: '100%',
             color: '#666',
             textAlign: 'center'
@@ -347,65 +317,53 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
           parsedLyrics.map((lyric, index) => (
             <div
               key={index}
-              style={{
-                padding: '16px 20px',
-                margin: '6px 0',
-                borderRadius: '15px',
-                fontSize: '1.1rem',
-                lineHeight: '1.7',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
+          style={{
+                padding: '12px 16px',
+                margin: '4px 0',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                lineHeight: '1.6',
+                transition: 'all 0.3s ease',
+            cursor: 'pointer',
                 position: 'relative',
                 zIndex: 2,
                 ...(index === currentLine ? {
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(0, 255, 255, 0.25) 0%,
-                      rgba(255, 0, 128, 0.25) 50%,
-                      rgba(0, 255, 255, 0.25) 100%
-                    )
-                  `,
+                  // 현재 재생 중인 가사 - 강조
+                  background: 'linear-gradient(90deg, rgba(0, 255, 255, 0.15), rgba(255, 0, 128, 0.15))',
                   color: '#ffffff',
-                  fontWeight: 'bold',
-                  textShadow: `
-                    0 0 15px rgba(0, 255, 255, 1),
-                    0 0 30px rgba(0, 255, 255, 0.6),
-                    0 0 45px rgba(0, 255, 255, 0.3),
-                    2px 2px 4px rgba(0, 0, 0, 0.8)
-                  `,
-                  border: '2px solid rgba(0, 255, 255, 0.6)',
-                  transform: 'scale(1.03) translateX(10px)',
-                  boxShadow: `
-                    0 0 20px rgba(0, 255, 255, 0.4),
-                    0 0 40px rgba(255, 0, 128, 0.2),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2)
-                  `,
-                  animation: 'pulse-glow 2s ease-in-out infinite alternate'
+                  fontWeight: '600',
+                  textShadow: '0 0 12px rgba(0, 255, 255, 0.8)',
+                  border: '1px solid rgba(0, 255, 255, 0.4)',
+                  transform: 'translateX(8px) scale(1.02)',
+                  boxShadow: '0 4px 16px rgba(0, 255, 255, 0.2)'
+                } : index < currentLine ? {
+                  // 이미 지나간 가사 - 흐리게
+                  color: '#555',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  opacity: 0.6
                 } : {
-                  color: index < currentLine ? '#666' : '#999',
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(255, 255, 255, 0.03) 0%,
-                      rgba(0, 255, 255, 0.02) 50%,
-                      rgba(255, 255, 255, 0.03) 100%
-                    )
-                  `,
+                  // 아직 나오지 않은 가사 - 기본
+                  color: '#aaa',
+                  background: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid rgba(0, 255, 255, 0.1)',
-                  textShadow: index < currentLine ? 'none' : '0 0 5px rgba(255, 255, 255, 0.1)'
+                  opacity: 0.8
                 })
-              }}
-              onMouseEnter={(e) => {
+          }}
+          onMouseEnter={(e) => {
                 if (index !== currentLine) {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 128, 0.1))';
-                  e.currentTarget.style.border = '1px solid rgba(0, 255, 255, 0.3)';
-                  e.currentTarget.style.transform = 'translateX(5px)';
+                  e.currentTarget.style.background = 'rgba(0, 255, 255, 0.08)';
+                  e.currentTarget.style.border = '1px solid rgba(0, 255, 255, 0.2)';
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  e.currentTarget.style.opacity = '1';
                 }
-              }}
-              onMouseLeave={(e) => {
+          }}
+          onMouseLeave={(e) => {
                 if (index !== currentLine) {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(0, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0.03) 100%)';
-                  e.currentTarget.style.border = '1px solid rgba(0, 255, 255, 0.1)';
+                  e.currentTarget.style.background = index < currentLine ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.border = index < currentLine ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(0, 255, 255, 0.1)';
                   e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.opacity = index < currentLine ? '0.6' : '0.8';
                 }
               }}
             >
@@ -413,113 +371,77 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
               {index === currentLine && (
                 <div style={{
                   position: 'absolute',
-                  left: '-10px',
+                  left: '-8px',
                   top: '50%',
                   transform: 'translateY(-50%)',
-                  width: '4px',
-                  height: '60%',
+                  width: '3px',
+                  height: '70%',
                   background: 'linear-gradient(180deg, #00ffff, #ff0080)',
                   borderRadius: '2px',
-                  boxShadow: '0 0 10px rgba(0, 255, 255, 0.8)',
-                  animation: 'slide-in 0.3s ease-out'
+                  boxShadow: '0 0 8px rgba(0, 255, 255, 0.6)'
                 }} />
               )}
               
               {/* 가사 텍스트 */}
-              <span style={{
-                position: 'relative',
-                zIndex: 1
-              }}>
-                {lyric.text}
-              </span>
+              {lyric.text}
             </div>
           ))
         )}
       </div>
 
-      {/* 플립 버튼 */}
+      {/* 플립 버튼 - 모던 미니멀 */}
       <div style={{
-        padding: '20px',
-        borderTop: '1px solid rgba(0, 255, 255, 0.2)',
+        padding: '16px 20px',
+        borderTop: '1px solid rgba(0, 255, 255, 0.15)',
         textAlign: 'center'
       }}>
         <button
           onClick={onFlip}
           style={{
-            padding: '12px 24px',
-            background: 'linear-gradient(45deg, #ff0080, #00ffff)',
-            border: 'none',
-            borderRadius: '25px',
-            color: 'white',
-            fontSize: '0.9rem',
-            fontWeight: 'bold',
+            padding: '10px 20px',
+            background: 'linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 128, 0.2))',
+            border: '1px solid rgba(0, 255, 255, 0.3)',
+            borderRadius: '20px',
+            color: '#00ffff',
+            fontSize: '0.85rem',
+            fontWeight: '500',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-            boxShadow: '0 4px 15px rgba(0, 255, 255, 0.3)'
+            textShadow: '0 0 8px rgba(0, 255, 255, 0.6)',
+            boxShadow: '0 2px 8px rgba(0, 255, 255, 0.2)',
+            backdropFilter: 'blur(10px)'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'scale(1.05)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 255, 255, 0.5)';
+            e.currentTarget.style.background = 'linear-gradient(45deg, rgba(0, 255, 255, 0.3), rgba(255, 0, 128, 0.3))';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 255, 255, 0.4)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 255, 255, 0.3)';
+            e.currentTarget.style.background = 'linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 128, 0.2))';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 255, 255, 0.2)';
           }}
         >
-          🔄 MR로 돌아가기
+          🎤 MR 컨트롤
         </button>
       </div>
 
       <style jsx>{`
         .lyrics-scrollbar::-webkit-scrollbar {
-          width: 10px;
+          width: 6px;
         }
         .lyrics-scrollbar::-webkit-scrollbar-track {
-          background: rgba(10, 0, 30, 0.5);
-          border-radius: 5px;
-          border: 1px solid rgba(0, 255, 255, 0.1);
+          background: rgba(15, 15, 25, 0.4);
+          border-radius: 3px;
         }
         .lyrics-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, #00ffff, #ff0080);
-          border-radius: 5px;
-          border: 1px solid rgba(0, 255, 255, 0.3);
-          box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+          background: linear-gradient(180deg, rgba(0, 255, 255, 0.6), rgba(255, 0, 128, 0.6));
+          border-radius: 3px;
+          transition: all 0.3s ease;
         }
         .lyrics-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, #ff0080, #00ffff);
-          box-shadow: 0 0 15px rgba(255, 0, 128, 0.5);
-        }
-        
-        @keyframes pulse-glow {
-          0% {
-            box-shadow: 
-              0 0 20px rgba(0, 255, 255, 0.4),
-              0 0 40px rgba(255, 0, 128, 0.2),
-              inset 0 1px 0 rgba(255, 255, 255, 0.2);
-          }
-          100% {
-            box-shadow: 
-              0 0 30px rgba(0, 255, 255, 0.6),
-              0 0 60px rgba(255, 0, 128, 0.4),
-              inset 0 1px 0 rgba(255, 255, 255, 0.3);
-          }
-        }
-        
-        @keyframes slide-in {
-          0% {
-            transform: translateY(-50%) translateX(-20px);
-            opacity: 0;
-          }
-          100% {
-            transform: translateY(-50%) translateX(0);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes neon-flicker {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
+          background: linear-gradient(180deg, rgba(0, 255, 255, 0.8), rgba(255, 0, 128, 0.8));
+          box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
         }
       `}</style>
     </div>

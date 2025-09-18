@@ -132,9 +132,27 @@ const SortableReservationItem: React.FC<{
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: '16px',
-        flexShrink: 0
+        flexShrink: 0,
+        overflow: 'hidden',
+        border: '2px solid rgba(0, 255, 255, 0.4)',
+        boxShadow: '0 0 8px rgba(0, 255, 255, 0.3)'
       }}>
-        🎵
+        {song.albumCoverUrl ? (
+          <img 
+            src={song.albumCoverUrl} 
+            alt={`${song.title} album cover`}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
+        ) : (
+          <span style={{
+            color: '#ffffff',
+            textShadow: '0 0 6px rgba(255, 255, 255, 0.8)'
+          }}>🎵</span>
+        )}
       </div>
 
       {/* 곡 정보 */}
@@ -370,6 +388,7 @@ const ReservationQueue: React.FC = () => {
               style={{ 
                 maxHeight: '400px', 
                 overflow: 'auto',
+                scrollBehavior: 'smooth',
                 paddingRight: '4px' // 스크롤바 공간 확보
               }}
             >

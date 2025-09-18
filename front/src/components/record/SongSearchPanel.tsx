@@ -406,6 +406,7 @@ const SongSearchPanel: React.FC = () => {
             style={{
             flex: 1,
             overflow: 'auto',
+            scrollBehavior: 'smooth',
             background: 'rgba(0, 0, 0, 0.3)',
             border: '1px solid rgba(0, 255, 255, 0.3)',
             borderRadius: '8px',
@@ -588,20 +589,13 @@ const SongSearchPanel: React.FC = () => {
             color: '#888',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '2rem', opacity: 0.5 }}>🔍</div>
+
             <p style={{
               fontSize: '0.9rem',
               margin: '0',
               color: '#666'
             }}>
               곡명, 아티스트로 검색하세요
-            </p>
-            <p style={{
-              fontSize: '0.75rem',
-              margin: '0',
-              color: '#888'
-            }}>
-              💡 팁: "끝사랑", "이선희", "사랑" 등으로 검색해보세요
             </p>
             <div style={{
               background: 'rgba(0, 255, 255, 0.1)',
