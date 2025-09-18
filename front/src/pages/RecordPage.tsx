@@ -13,6 +13,7 @@ import PitchGraph from '../components/record/PitchGraph';
 import VolumeVisualizer from '../components/record/VolumeVisualizer';
 import { ReservationProvider } from '../contexts/ReservationContext';
 import { useReservation } from '../hooks/useReservation';
+import type { Song } from '../types/song';
 
 const RecordPageContent: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
@@ -21,7 +22,37 @@ const RecordPageContent: React.FC = () => {
   const [duration, setDuration] = useState(180);
   const [volume, setVolume] = useState(0.7);
   
-  const { currentPlayingSong, isPlaying, setPlayingState, onSongFinished } = useReservation();
+  const { 
+    reservationQueue,
+    addToQueue,
+    removeFromQueue,
+    selectedSong, 
+    currentPlayingSong, 
+    isPlaying, 
+    selectSong,
+    playSong,
+    pauseSong,
+    stopSong,
+    onSongFinished 
+  } = useReservation();
+
+
+  // 선택된 노래 변경 감지 - 새로고침 효과로 완전 초기화
+  useEffect(() => {
+    if (selectedSong) {
+      console.log('🔄 새로고침 효과 - 새 노래 초기화:', selectedSong.title);
+      // 모든 상태 완전 초기화 (새로고침 효과)
+      setCurrentTime(0);
+      setDuration(180);
+      setVolume(0.7); // 볼륨도 초기화
+      console.log('✅ 새로고침 효과 완료 - 모든 상태 초기화됨');
+    } else {
+      console.log('🔄 노래 선택 해제 - 대기 상태로 초기화');
+      setCurrentTime(0);
+      setDuration(180);
+    }
+  }, [selectedSong]);
+
 
   // CSS 애니메이션 스타일 추가
   const cyberpunkStyles = `
@@ -131,33 +162,52 @@ const RecordPageContent: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (isPlaying) {
-      const interval = setInterval(() => {
-        setCurrentTime(prev => {
-          if (prev >= duration) {
-            setPlayingState(false);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isPlaying, duration, setPlayingState]);
+  // YouTube 플레이어에서 실제 시간 업데이트 받기 (MRLyricsCard에서 처리)
+  // 내부 타이머는 제거하고 YouTube 플레이어의 실제 시간을 사용
 
+  // 재생/정지 버튼 핸들러 - 명확한 토글 방식
   const handlePlayPause = () => {
-    setPlayingState(!isPlaying);
+    if (!selectedSong) {
+      console.log('❌ 선택된 노래가 없습니다');
+      return;
+    }
+    
+    console.log('🎮 재생/정지 버튼 클릭:', {
+      selectedSong: selectedSong.title,
+      currentPlayingSong: currentPlayingSong?.title,
+      isPlaying
+    });
+    
+    // 재생 중이면 완전 정지 (새로고침 효과), 정지 중이면 재생 시작
+    if (isPlaying) {
+      console.log('⏹️ 재생 중 → 완전 초기화 (새로고침 효과)');
+      stopSong(); // 완전 정지 (곡 해제)
+      setCurrentTime(0); // 시간 초기화
+      setDuration(180); // 기본 시간으로 초기화
+    } else {
+      console.log('▶️ 정지 상태 → 재생 시작');
+      setCurrentTime(0); // 항상 0초부터 시작
+      playSong();
+    }
   };
 
   const handleVolumeChange = (newVolume: number) => {
     setVolume(newVolume);
   };
 
-  // MRLyricsCard로부터 시간 업데이트를 수신
+  // MRLyricsCard로부터 실제 YouTube 시간 업데이트 수신
   const handleTimeUpdateRequest = (seconds: number, dur?: number) => {
-    setCurrentTime(Math.max(0, Math.floor(seconds)));
-    if (dur && dur > 0) setDuration(Math.floor(dur));
+    const newTime = Math.max(0, Math.floor(seconds));
+    const newDuration = dur && dur > 0 ? Math.floor(dur) : 180;
+    
+    console.log('⏰ 시간 업데이트:', {
+      currentTime: newTime,
+      duration: newDuration,
+      progress: `${Math.floor(newTime / 60)}:${(newTime % 60).toString().padStart(2, '0')} / ${Math.floor(newDuration / 60)}:${(newDuration % 60).toString().padStart(2, '0')}`
+    });
+    
+    setCurrentTime(newTime);
+    setDuration(newDuration);
   };
 
   // 사용자가 시크 요청했을 때(유튜브/로컬 공통)
@@ -343,22 +393,15 @@ const RecordPageContent: React.FC = () => {
               overflow: 'hidden'
             }}>
               <MRLyricsCard
-                currentSong={currentPlayingSong ? {
-                  id: currentPlayingSong.id.toString(),
-                  title: currentPlayingSong.title,
-                  artist: currentPlayingSong.artist,
-                  genre: currentPlayingSong.genre,
-                  duration: currentPlayingSong.duration,
-                  // youtubeId 전달 (있을 경우)
-                  // @ts-expect-error - 선택 필드를 명시적으로 넘김
-                  youtubeId: (currentPlayingSong as unknown as { youtubeId?: string }).youtubeId
-                } : {
-                  id: '1',
-                  title: 'NEURAL DANCE',
-                  artist: 'CYBER COLLECTIVE',
-                  genre: 'Cyberpunk',
-                  duration: '3:00'
-                }}
+                currentSong={selectedSong ? {
+                  id: selectedSong.id.toString(),
+                  title: selectedSong.title,
+                  artist: selectedSong.artist,
+                  genre: selectedSong.albumName,
+                  duration: selectedSong.duration,
+                  youtubeId: selectedSong.youtubeId,
+                  lyrics: selectedSong.lyrics
+                } : undefined}
                 onPlayPause={handlePlayPause}
                 isPlaying={isPlaying}
                 currentTime={currentTime}
