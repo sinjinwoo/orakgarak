@@ -348,19 +348,19 @@ const AlbumCreatePage: React.FC = () => {
 
             {/* Right Column - Stage Content */}
             <div className="relative flex flex-col min-w-[720px]">
-              {/* Mini Preview Card - Only show for non-cover stages */}
-              {currentStage !== 'cover' && (
-                <div className="absolute top-0 right-0 z-20">
-                  <MiniPreviewCard
-                    tracks={tracks}
-                    coverImageUrl={coverImage}
-                    albumTitle={title || '새 앨범'}
-                  />
-                </div>
-              )}
+              {/* Mini Preview Card - Always show, but adjust position for cover stage */}
+              <div className={`absolute top-0 right-0 z-20 transition-transform duration-300 ${
+                currentStage === 'cover' ? 'translate-y-4 scale-90' : ''
+              }`}>
+                <MiniPreviewCard
+                  tracks={tracks}
+                  coverImageUrl={coverImage}
+                  albumTitle={title || '새 앨범'}
+                />
+              </div>
 
               {/* Stage Content */}
-              <div className={`flex-1 ${currentStage !== 'cover' ? 'pr-80' : ''}`}>
+              <div className={`flex-1 ${currentStage !== 'cover' ? 'pr-80' : 'pr-72'}`}>
                 <motion.div
                   key={currentStage}
                   initial={{ opacity: 0, x: 20 }}

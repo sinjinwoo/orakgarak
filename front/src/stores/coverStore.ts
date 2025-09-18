@@ -94,16 +94,18 @@ export const useCoverStore = create<CoverStore>((set, get) => ({
     setTimeout(() => get().saveToStorage(), 300);
   },
 
-  generate: async (count = 3) => {
+  generate: async (count = 3, trackIds?: string[]) => {
     const state = get();
     if (state.generating) return;
 
     set({ generating: true });
 
     try {
-      // 실제 API 호출 대신 mock 데이터 사용
+      // 선택된 트랙 ID들 사용 (없으면 빈 배열)
+      const selectedTrackIds = trackIds || state.tracks.map(track => track.id);
+
       const { generateCovers } = await import('../api/cover');
-      const newCovers = await generateCovers(state.params, count);
+      const newCovers = await generateCovers(state.params, selectedTrackIds, count);
 
       set((state) => {
         const updatedHistory = [...newCovers, ...state.history].slice(0, MAX_HISTORY);

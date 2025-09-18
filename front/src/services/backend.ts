@@ -182,6 +182,29 @@ export const albumAPI = {
     const response = await apiClient.delete(`/albums/${albumId}/like`);
     return response;
   },
+
+  // AI 앨범 커버 생성
+  generateAICover: async (trackIds: string[], params: Record<string, unknown>, count = 3) => {
+    const response = await apiClient.post('/albums/covers/generate', {
+      trackIds,
+      params,
+      count
+    });
+    return response;
+  },
+
+  // 앨범 커버 이미지 업로드
+  uploadCoverImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await apiClient.post('/albums/covers/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response;
+  },
 };
 
 // Profile API
