@@ -149,13 +149,67 @@ public class AudioFormatConversionJob implements ProcessingJob {
 
         log.info("변환된 파일 S3 업로드: {} -> {}", convertedFilePath, newS3Key);
 
-        // S3에 변환된 파일 업로드
-        s3Helper.uploadFile(convertedFile, newS3Key, "audio/wav");
+        // 원본 파일 백업을 위한 임시 키 생성
+        String backupS3Key = originalS3Key + ".backup";
+        boolean backupCreated = false;
+        boolean newFileUploaded = false;
 
-        // 기존 S3 파일 삭제
-        s3Helper.deleteFile(originalS3Key);
+        try {
+            // 1. 원본 파일을 백업으로 복사 (롤백용)
+            s3Helper.copyFile(originalS3Key, backupS3Key);
+            backupCreated = true;
+            log.debug("원본 파일 백업 생성: {} -> {}", originalS3Key, backupS3Key);
 
-        log.info("S3 파일 교체 완료: {} -> {}", originalS3Key, newS3Key);
+            // 2. S3에 변환된 파일 업로드
+            s3Helper.uploadFile(convertedFile, newS3Key, "audio/wav");
+            newFileUploaded = true;
+            log.info("변환된 파일 S3 업로드 완료: {}", newS3Key);
+
+            // 3. 원본 파일 삭제
+            s3Helper.deleteFile(originalS3Key);
+            log.info("원본 파일 삭제 완료: {}", originalS3Key);
+
+            // 4. 백업 파일 삭제 (성공 시)
+            s3Helper.deleteFile(backupS3Key);
+            log.debug("백업 파일 삭제 완료: {}", backupS3Key);
+
+            log.info("S3 파일 교체 완료: {} -> {}", originalS3Key, newS3Key);
+
+        } catch (Exception e) {
+            log.error("S3 파일 업로드/교체 실패, 롤백 시작: {}", e.getMessage());
+
+            // 롤백 처리
+            try {
+                // 업로드된 새 파일이 있으면 삭제
+                if (newFileUploaded) {
+                    s3Helper.deleteFile(newS3Key);
+                    log.info("롤백: 업로드된 변환 파일 삭제 완료: {}", newS3Key);
+                }
+
+                // 백업 파일이 있으면 원본으로 복원
+                if (backupCreated) {
+                    // 원본 파일이 삭제되었다면 백업에서 복원
+                    if (!s3Helper.fileExists(originalS3Key)) {
+                        s3Helper.copyFile(backupS3Key, originalS3Key);
+                        log.info("롤백: 백업에서 원본 파일 복원 완료: {} -> {}", backupS3Key, originalS3Key);
+                    }
+                    // 백업 파일 삭제
+                    s3Helper.deleteFile(backupS3Key);
+                    log.info("롤백: 백업 파일 삭제 완료: {}", backupS3Key);
+                }
+
+                log.info("S3 파일 롤백 완료");
+            } catch (Exception rollbackException) {
+                log.error("S3 롤백 실패: {}", rollbackException.getMessage(), rollbackException);
+                // 롤백 실패는 원본 예외에 추가 정보로 포함
+                throw new AudioProcessingException(
+                        "S3 업로드 실패 및 롤백 실패: " + e.getMessage() +
+                        " (롤백 오류: " + rollbackException.getMessage() + ")", e);
+            }
+
+            // 원본 예외 재발생
+            throw new AudioProcessingException("S3 파일 업로드 실패: " + e.getMessage(), e);
+        }
     }
 
     private void updateUploadEntity(Upload upload) {
