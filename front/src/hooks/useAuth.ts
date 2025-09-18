@@ -108,16 +108,14 @@ export function useAuth(): UseAuthReturn {
     }
   };
 
-  // 프로필 업데이트
+  // 프로필 업데이트 (로컬 상태만 업데이트)
+  // ⚠️ 실제 프로필 업데이트는 useProfile 훅을 사용하세요
   const updateProfile = async (data: Partial<User>): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      // 실제로는 여기서 API 호출하여 서버에 저장
-      // const response = await authAPI.updateProfile(data);
-      
-      // 스토어 업데이트 (전달받은 data를 현재 user에 적용)
+      // 로컬 스토어만 업데이트 (서버 동기화 없음)
       if (user) {
         const updatedUser = { ...user, ...data };
         updateUser(updatedUser);
