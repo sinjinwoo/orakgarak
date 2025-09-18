@@ -927,6 +927,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({ onRecordingChange
             100% { background-position: 0 40px, 40px 0; }
           }
         `}
+      </style>
       </Box>
     </>
   );

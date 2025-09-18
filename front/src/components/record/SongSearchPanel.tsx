@@ -1,50 +1,134 @@
 /**
  * SongSearchPanel - 완전 순수 HTML/CSS 곡 검색 패널
- * MUI Box 자동 생성 CSS 완전 제거 버전
+ * 실제 API 엔드포인트 연동 버전
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useReservation } from '../../hooks/useReservation';
-import type { Song } from '../../types/song';
 
-const dummySongs = [
-  { id: 1, title: 'Dynamite', artist: 'BTS', genre: 'K-Pop', duration: '3:19' },
-  { id: 2, title: 'Butter', artist: 'BTS', genre: 'K-Pop', duration: '2:42' },
-  { id: 3, title: 'Permission to Dance', artist: 'BTS', genre: 'K-Pop', duration: '3:07' },
-  { id: 4, title: 'Spring Day', artist: 'BTS', genre: 'K-Pop', duration: '4:34' },
-  { id: 5, title: 'Boy With Luv', artist: 'BTS', genre: 'K-Pop', duration: '3:49' },
-  { id: 6, title: 'How You Like That', artist: 'BLACKPINK', genre: 'K-Pop', duration: '3:00' },
-  { id: 7, title: 'Lovesick Girls', artist: 'BLACKPINK', genre: 'K-Pop', duration: '3:12' },
-  { id: 8, title: 'Kill This Love', artist: 'BLACKPINK', genre: 'K-Pop', duration: '3:11' },
-  { id: 9, title: 'DDU-DU DDU-DU', artist: 'BLACKPINK', genre: 'K-Pop', duration: '3:29' },
-  { id: 10, title: 'Love Scenario', artist: 'iKON', genre: 'K-Pop', duration: '3:29' },
-  { id: 11, title: 'Good Boy', artist: 'GD X TAEYANG', genre: 'K-Pop', duration: '3:29' },
-  { id: 12, title: 'Fantastic Baby', artist: 'BIGBANG', genre: 'K-Pop', duration: '3:50' },
-  { id: 13, title: 'Bang Bang Bang', artist: 'BIGBANG', genre: 'K-Pop', duration: '3:40' },
-  { id: 14, title: 'Gangnam Style', artist: 'PSY', genre: 'K-Pop', duration: '3:39' },
-  { id: 15, title: 'Gentleman', artist: 'PSY', genre: 'K-Pop', duration: '3:14' },
-  { id: 16, title: 'Shape of You', artist: 'Ed Sheeran', genre: 'Pop', duration: '3:53' },
-  { id: 17, title: 'Perfect', artist: 'Ed Sheeran', genre: 'Pop', duration: '4:23' },
-  { id: 18, title: 'Thinking Out Loud', artist: 'Ed Sheeran', genre: 'Pop', duration: '4:41' },
-  { id: 19, title: 'Blinding Lights', artist: 'The Weeknd', genre: 'Pop', duration: '3:20' },
-  { id: 20, title: 'Levitating', artist: 'Dua Lipa', genre: 'Pop', duration: '3:23' },
-  // 추가 더미: 브라운아이드소울 - gone (유튜브 MR 사용)
-  { id: 21, title: 'gone', artist: '브라운아이드소울', genre: 'K-Pop', duration: '4:11', youtubeId: 'yNdQjHnyy_c' },
-  // 추가 더미: 이승환 - 다만 (유튜브 MR 사용)
-  { id: 27015, title: '다만', artist: '이승환', genre: 'Ballad', duration: '3:35', youtubeId: 'NHwn7cGbciU' },
-  // 추가 더미: 이선희 - 끝사랑 (유튜브 MR 사용)
-  { id: 27071, title: '끝사랑', artist: '이선희', genre: 'Ballad', duration: '4:10', youtubeId: 'UZy29hJkWfY' },
-  // 추가 한국 가요들
-  { id: 22, title: '사랑해요', artist: '김태우', genre: 'Ballad', duration: '4:15' },
-  { id: 23, title: '겨울비', artist: '박효신', genre: 'Ballad', duration: '4:32' },
-  { id: 24, title: '벚꽃엔딩', artist: '버스커 버스커', genre: 'Indie', duration: '4:20' },
-  { id: 25, title: '너를 만나', artist: '김범수', genre: 'Ballad', duration: '4:05' },
-  { id: 26, title: '사랑이란', artist: '김동률', genre: 'Ballad', duration: '4:18' },
-  { id: 27, title: '내가 사랑한 사람', artist: '김건모', genre: 'Ballad', duration: '4:30' },
-  { id: 28, title: '너의 모든 순간', artist: '성시경', genre: 'Ballad', duration: '4:25' },
-  { id: 29, title: '사랑할 때', artist: '이승기', genre: 'Ballad', duration: '4:12' },
-  { id: 30, title: '가시', artist: '버즈', genre: 'Rock', duration: '4:05' }
-];
+// API 응답 타입 정의
+interface SongApiResponse {
+  id: number;
+  songId: number;
+  songName: string;
+  artistName: string;
+  albumName: string;
+  musicUrl: string;
+  lyrics: string;
+  albumCoverUrl: string;
+  spotifyTrackId: string;
+  durationMs: number | null;
+  popularity: number | null;
+  status: string;
+}
+
+// Song 타입 정의 (기존 타입과 호환)
+interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  albumName: string;
+  duration: string;
+  albumCoverUrl: string;
+  youtubeId?: string;
+}
+
+// API 응답을 Song 타입으로 변환하는 함수
+const convertApiResponseToSong = (apiSong: SongApiResponse): Song => {
+  // YouTube URL에서 video ID 추출
+  const extractYouTubeId = (url: string): string | undefined => {
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.hostname === 'www.youtube.com' || urlObj.hostname === 'youtube.com') {
+        return urlObj.searchParams.get('v') || undefined;
+      } else if (urlObj.hostname === 'youtu.be') {
+        return urlObj.pathname.slice(1) || undefined;
+      }
+    } catch {
+      return undefined;
+    }
+    return undefined;
+  };
+
+  // 재생시간 포맷팅 (밀리초를 mm:ss 형식으로)
+  const formatDuration = (durationMs: number | null): string => {
+    if (!durationMs) return '0:00';
+    const minutes = Math.floor(durationMs / 60000);
+    const seconds = Math.floor((durationMs % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  return {
+    id: apiSong.songId.toString(), // songId를 string으로 변환
+    title: apiSong.songName,
+    artist: apiSong.artistName,
+    albumName: apiSong.albumName,
+    duration: formatDuration(apiSong.durationMs),
+    albumCoverUrl: apiSong.albumCoverUrl,
+    youtubeId: extractYouTubeId(apiSong.musicUrl)
+  };
+};
+
+// 실시간 검색 API 호출 함수
+const searchSongs = async (keyword: string): Promise<Song[]> => {
+  if (!keyword.trim() || keyword.trim().length < 2) return [];
+  
+  try {
+    // 백엔드 서버 주소를 명시적으로 지정 (포트 번호를 실제 백엔드 포트로 변경하세요)
+    // 예: 8080, 8000, 3001 등 백엔드가 실행되는 포트
+    const BACKEND_BASE_URL = 'http://localhost:8080/api'; // 백엔드 포트에 맞게 수정
+    const apiUrl = `${BACKEND_BASE_URL}/song/search/realtime?keyword=${encodeURIComponent(keyword)}`;
+    
+    console.log('API 호출:', apiUrl); // 디버깅용 로그
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // CORS 해결을 위한 헤더 (필요시 추가)
+      },
+    });
+    
+    console.log('응답 상태:', response.status); // 디버깅용 로그
+    console.log('응답 헤더:', response.headers.get('content-type')); // 디버깅용 로그
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API 오류 응답:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    // Content-Type이 JSON인지 확인
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const responseText = await response.text();
+      console.error('JSON이 아닌 응답:', responseText.substring(0, 200));
+      throw new Error(`Expected JSON but received: ${contentType || 'unknown'}`);
+    }
+    
+    const apiResults: SongApiResponse[] = await response.json();
+    console.log('API 응답 결과:', apiResults); // 디버깅용 로그
+    
+    // 백엔드에서 리스트 형식으로 보낸다고 했으므로 바로 처리
+    if (!Array.isArray(apiResults)) {
+      console.error('응답이 배열이 아닙니다:', apiResults);
+      return [];
+    }
+    
+    return apiResults
+      .filter(song => song.status === 'success') // 성공한 결과만 필터링
+      .map(convertApiResponseToSong);
+  } catch (error) {
+    console.error('노래 검색 중 오류 발생:', error);
+    
+    // 더 자세한 오류 정보 제공
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('네트워크 오류: 백엔드 서버 연결 실패 - CORS 또는 서버 상태를 확인하세요');
+    }
+    
+    return [];
+  }
+};
 
 const SongSearchPanel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,25 +137,41 @@ const SongSearchPanel: React.FC = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<'success' | 'info'>('success');
+  const [isLoading, setIsLoading] = useState(false);
   
   const { addToQueue, reservationQueue } = useReservation();
 
-  useEffect(() => {
-    if (searchTerm.trim() === '') {
+  // 검색 함수
+  const performSearch = useCallback(async (keyword: string) => {
+    if (keyword.trim() === '' || keyword.trim().length < 2) {
       setSearchResults([]);
       setShowResults(false);
+      setIsLoading(false);
       return;
     }
 
-    const filtered = dummySongs.filter(song => 
-      song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      song.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      song.genre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    setIsLoading(true);
+    try {
+      const results = await searchSongs(keyword);
+      setSearchResults(results.slice(0, 8)); // 최대 8개 결과만 표시
+      setShowResults(true);
+    } catch (error) {
+      console.error('검색 중 오류:', error);
+      setSearchResults([]);
+      setShowResults(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    setSearchResults(filtered.slice(0, 8));
-    setShowResults(true);
-  }, [searchTerm]);
+  // 디바운스된 검색 useEffect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      performSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, performSearch]);
 
   const handleSongSelect = (song: Song) => {
     const isAlreadyInQueue = reservationQueue.some(item => item.id === song.id);
@@ -92,17 +192,27 @@ const SongSearchPanel: React.FC = () => {
     setTimeout(() => setShowNotification(false), 3000);
   };
 
-  const handleSearchSubmit = () => {
-    if (searchTerm.trim() === '') return;
+  const handleSearchSubmit = async () => {
+    if (searchTerm.trim() === '' || searchTerm.trim().length < 2) {
+      setNotificationMessage('2글자 이상 입력해주세요.');
+      setNotificationType('info');
+      setShowNotification(true);
+      setTimeout(() => setShowNotification(false), 3000);
+      return;
+    }
     
-    const filtered = dummySongs.filter(song => 
-      song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      song.artist.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      song.genre.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    setSearchResults(filtered);
-    setShowResults(true);
+    setIsLoading(true);
+    try {
+      const results = await searchSongs(searchTerm);
+      setSearchResults(results);
+      setShowResults(true);
+    } catch (error) {
+      console.error('검색 중 오류:', error);
+      setSearchResults([]);
+      setShowResults(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -175,7 +285,7 @@ const SongSearchPanel: React.FC = () => {
       }}>
         <input
           type="text"
-          placeholder="곡명, 아티스트, 장르로 검색하세요"
+          placeholder="곡명, 아티스트로 검색하세요 (2글자 이상)"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit()}
@@ -183,7 +293,9 @@ const SongSearchPanel: React.FC = () => {
             width: '100%',
             padding: '12px 16px 12px 40px',
             background: 'rgba(0, 0, 0, 0.4)',
-            border: '1px solid rgba(0, 255, 255, 0.3)',
+            border: searchTerm.length > 0 && searchTerm.length < 2 
+              ? '1px solid rgba(255, 165, 0, 0.6)' 
+              : '1px solid rgba(0, 255, 255, 0.3)',
             borderRadius: '8px',
             color: '#00ffff',
             fontSize: '0.9rem',
@@ -191,11 +303,17 @@ const SongSearchPanel: React.FC = () => {
             boxSizing: 'border-box'
           }}
           onFocus={(e) => {
-            e.target.style.border = '1px solid #00ffff';
-            e.target.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
+            if (searchTerm.length >= 2 || searchTerm.length === 0) {
+              e.target.style.border = '1px solid #00ffff';
+              e.target.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
+            }
           }}
           onBlur={(e) => {
-            e.target.style.border = '1px solid rgba(0, 255, 255, 0.3)';
+            if (searchTerm.length > 0 && searchTerm.length < 2) {
+              e.target.style.border = '1px solid rgba(255, 165, 0, 0.6)';
+            } else {
+              e.target.style.border = '1px solid rgba(0, 255, 255, 0.3)';
+            }
             e.target.style.boxShadow = 'none';
           }}
         />
@@ -205,13 +323,13 @@ const SongSearchPanel: React.FC = () => {
           left: '12px',
           top: '50%',
           transform: 'translateY(-50%)',
-          color: '#00ffff',
+          color: searchTerm.length > 0 && searchTerm.length < 2 ? '#ffa500' : '#00ffff',
           fontSize: '16px'
         }}>
-          🔍
+          {isLoading ? '⏳' : '🔍'}
         </span>
         
-        {searchTerm && (
+        {searchTerm && searchTerm.length >= 2 && (
           <button
             onClick={handleSearchSubmit}
             style={{
@@ -232,6 +350,22 @@ const SongSearchPanel: React.FC = () => {
         )}
       </div>
 
+      {/* 최소 글자 수 안내 */}
+      {searchTerm.length > 0 && searchTerm.length < 2 && (
+        <div style={{
+          background: 'rgba(255, 165, 0, 0.1)',
+          border: '1px solid rgba(255, 165, 0, 0.3)',
+          borderRadius: '6px',
+          padding: '8px 12px',
+          marginBottom: '15px',
+          color: '#ffa500',
+          fontSize: '0.8rem',
+          textAlign: 'center'
+        }}>
+          ⚠️ 검색어를 2글자 이상 입력해주세요
+        </div>
+      )}
+
       {/* 검색 결과 영역 - 컴포넌트 내부에서 스크롤 */}
       <div style={{ 
         flex: 1,
@@ -248,8 +382,30 @@ const SongSearchPanel: React.FC = () => {
             borderRadius: '8px',
             marginBottom: '10px'
           }}>
-            {searchResults.length > 0 ? (
+            {isLoading ? (
+              <div style={{ 
+                padding: '40px 20px', 
+                textAlign: 'center', 
+                color: '#00ffff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <div style={{ fontSize: '2rem' }}>⏳</div>
+                <p style={{ margin: '0', fontSize: '0.9rem' }}>검색 중...</p>
+              </div>
+            ) : searchResults.length > 0 ? (
               <div>
+                <div style={{
+                  padding: '12px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#00ffff',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold'
+                }}>
+                  검색 결과 ({searchResults.length}곡)
+                </div>
                 {searchResults.map((song, index) => (
                   <div
                     key={song.id}
@@ -257,7 +413,7 @@ const SongSearchPanel: React.FC = () => {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px',
+                      gap: '15px',
                       padding: '12px',
                       cursor: 'pointer',
                       borderBottom: index < searchResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
@@ -271,47 +427,82 @@ const SongSearchPanel: React.FC = () => {
                     }}
                   >
                     <div style={{
-                      width: '35px',
-                      height: '35px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+                      width: '50px',
+                      height: '50px',
+                      borderRadius: '8px',
+                      background: song.albumCoverUrl 
+                        ? `url(${song.albumCoverUrl})` 
+                        : 'linear-gradient(45deg, #00ffff, #ff0080)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '16px',
-                      flexShrink: 0
+                      flexShrink: 0,
+                      border: '1px solid rgba(0, 255, 255, 0.3)'
                     }}>
-                      🎵
+                      {!song.albumCoverUrl && '🎵'}
                     </div>
                     
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h4 style={{
                         color: '#fff',
-                        fontSize: '0.9rem',
+                        fontSize: '1rem',
                         fontWeight: 'bold',
-                        margin: '0 0 4px 0',
+                        margin: '0 0 6px 0',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
                       }}>
                         {song.title}
                       </h4>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ color: '#00ffff', fontSize: '0.8rem' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '8px', 
+                        flexWrap: 'wrap',
+                        marginBottom: '4px'
+                      }}>
+                        <span style={{ 
+                          color: '#00ffff', 
+                          fontSize: '0.85rem',
+                          fontWeight: '500'
+                        }}>
                           {song.artist}
                         </span>
-                        <span style={{
-                          background: 'rgba(255, 0, 128, 0.2)',
-                          color: '#ff0080',
-                          padding: '2px 6px',
-                          borderRadius: '6px',
-                          fontSize: '0.7rem'
-                        }}>
-                          {song.genre}
-                        </span>
-                        <span style={{ color: '#888', fontSize: '0.7rem' }}>
+                        <span style={{ color: '#666', fontSize: '0.8rem' }}>•</span>
+                        <span style={{ color: '#888', fontSize: '0.8rem' }}>
                           {song.duration}
                         </span>
+                        {song.youtubeId && (
+                          <>
+                            <span style={{ color: '#666', fontSize: '0.8rem' }}>•</span>
+                            <span style={{ 
+                              color: '#ff0080', 
+                              fontSize: '0.7rem',
+                              background: 'rgba(255, 0, 128, 0.1)',
+                              padding: '2px 6px',
+                              borderRadius: '8px'
+                            }}>
+                              MR
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <div style={{
+                        background: 'rgba(255, 0, 128, 0.15)',
+                        color: '#ff0080',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        fontSize: '0.7rem',
+                        display: 'inline-block',
+                        maxWidth: '200px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {song.albumName}
                       </div>
                     </div>
                     
@@ -333,15 +524,23 @@ const SongSearchPanel: React.FC = () => {
               </div>
             ) : (
               <div style={{ 
-                padding: '20px', 
+                padding: '40px 20px', 
                 textAlign: 'center', 
                 color: '#888',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexDirection: 'column',
+                gap: '10px',
                 height: '100%'
               }}>
-                <p style={{ margin: '0' }}>검색 결과가 없습니다.</p>
+                <div style={{ fontSize: '2rem', opacity: 0.5 }}>🚫</div>
+                <p style={{ margin: '0', fontSize: '0.9rem' }}>
+                  "{searchTerm}"에 대한 검색 결과가 없습니다.
+                </p>
+                <p style={{ margin: '0', fontSize: '0.8rem', color: '#666' }}>
+                  다른 검색어를 입력해보세요.
+                </p>
               </div>
             )}
           </div>
@@ -363,15 +562,26 @@ const SongSearchPanel: React.FC = () => {
               margin: '0',
               color: '#666'
             }}>
-              곡명, 아티스트, 장르로 검색하세요
+              곡명, 아티스트로 검색하세요
             </p>
             <p style={{
               fontSize: '0.75rem',
               margin: '0',
               color: '#888'
             }}>
-              💡 팁: "BTS", "K-Pop", "Dynamite" 등으로 검색해보세요
+              💡 팁: "끝사랑", "이선희", "사랑" 등으로 검색해보세요
             </p>
+            <div style={{
+              background: 'rgba(0, 255, 255, 0.1)',
+              border: '1px solid rgba(0, 255, 255, 0.3)',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              marginTop: '10px',
+              color: '#00ffff',
+              fontSize: '0.75rem'
+            }}>
+              ⚡ 2글자 이상 입력하면 자동으로 검색됩니다
+            </div>
           </div>
         )}
       </div>
