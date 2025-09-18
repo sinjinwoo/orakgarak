@@ -84,7 +84,6 @@ class AlbumTrackControllerTest {
         User testUser = User.builder()
                 .id(1L)
                 .email("test@example.com")
-                .nickname("testUser")
                 .build();
         
         testUserPrincipal = new CustomUserPrincipal(testUser);
@@ -346,7 +345,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getAlbumTracks(eq(albumId), anyLong())).thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(post("/albums/{albumId}/tracks/play", albumId))
+        mockMvc.perform(get("/albums/{albumId}/tracks/play", albumId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -373,7 +372,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getAlbumTracks(eq(albumId), anyLong())).thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(post("/albums/{albumId}/tracks/{trackOrder}/play", albumId, trackOrder))
+        mockMvc.perform(get("/albums/{albumId}/tracks/{trackOrder}/play", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -390,7 +389,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getAlbumTracks(eq(albumId), anyLong())).thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(post("/albums/{albumId}/tracks/shuffle", albumId))
+        mockMvc.perform(get("/albums/{albumId}/tracks/shuffle", albumId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))

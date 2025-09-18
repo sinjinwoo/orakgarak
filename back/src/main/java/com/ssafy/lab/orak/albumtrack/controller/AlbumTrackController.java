@@ -133,9 +133,9 @@ public class AlbumTrackController {
 
     // 플레이어 관련 API
 
-    @Operation(summary = "앨범 재생 시작", description = "앨범의 첫 번째 트랙부터 재생을 시작합니다")
-    @ApiResponse(responseCode = "200", description = "재생 시작 성공")
-    @PostMapping("/play")
+    @Operation(summary = "앨범 재생 정보 조회", description = "앨범의 첫 번째 트랙부터 재생 정보를 조회합니다")
+    @ApiResponse(responseCode = "200", description = "재생 정보 조회 성공")
+    @GetMapping("/play")
     public ResponseEntity<PlaybackResponseDTO> startAlbumPlayback(
             @Parameter(description = "앨범 ID") @PathVariable Long albumId,
             @AuthenticationPrincipal CustomUserPrincipal currentUser) {
@@ -156,9 +156,9 @@ public class AlbumTrackController {
         return ResponseEntity.ok(playback);
     }
 
-    @Operation(summary = "특정 트랙부터 재생", description = "앨범의 특정 트랙부터 재생을 시작합니다")
-    @ApiResponse(responseCode = "200", description = "재생 시작 성공")
-    @PostMapping("/{trackOrder}/play")
+    @Operation(summary = "특정 트랙 재생 정보 조회", description = "앨범의 특정 트랙부터 재생 정보를 조회합니다")
+    @ApiResponse(responseCode = "200", description = "재생 정보 조회 성공")
+    @GetMapping("/{trackOrder}/play")
     public ResponseEntity<PlaybackResponseDTO> startTrackPlayback(
             @Parameter(description = "앨범 ID") @PathVariable Long albumId,
             @Parameter(description = "시작할 트랙 순서") @PathVariable Integer trackOrder,
@@ -181,9 +181,9 @@ public class AlbumTrackController {
         return ResponseEntity.ok(playback);
     }
 
-    @Operation(summary = "셔플 재생", description = "앨범의 트랙들을 무작위 순서로 재생 목록을 생성합니다")
-    @ApiResponse(responseCode = "200", description = "셔플 재생 목록 생성 성공")
-    @PostMapping("/shuffle")
+    @Operation(summary = "셔플 재생 목록 조회", description = "앨범의 트랙들을 셔플 재생용으로 조회합니다")
+    @ApiResponse(responseCode = "200", description = "셔플 재생 목록 조회 성공")
+    @GetMapping("/shuffle")
     public ResponseEntity<AlbumTracksResponseDTO> getShuffledPlaylist(
             @Parameter(description = "앨범 ID") @PathVariable Long albumId,
             @AuthenticationPrincipal CustomUserPrincipal currentUser) {
