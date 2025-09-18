@@ -156,7 +156,7 @@ services:
       GF_LOG_LEVEL: warn
       # 프로비저닝 안정성 개선
       GF_PROVISIONING_RELOAD_INTERVAL: 10s
-      # Public Dashboard 비활성화
+      # Public Dashboard 비활성화 (보안)
       GF_FEATURE_TOGGLES_ENABLE: ""
       GF_PUBLIC_DASHBOARDS_ENABLED: false
     volumes:
@@ -312,7 +312,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-      - ./logs:/var/log/app:ro
+      - ./logs:/var/log/app:ro  # 로컬: ./logs -> /var/log/app로 마운트
       - /var/log:/var/log/host:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

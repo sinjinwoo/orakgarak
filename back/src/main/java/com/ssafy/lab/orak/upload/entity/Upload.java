@@ -28,16 +28,18 @@ public class Upload extends BaseEntity {
     private String uuid;
     
     @Column(nullable = false)
+    @Setter
     private String extension;
-    
+
     @Column(nullable = false)
     private Long uploaderId;
 
     @Column(name = "file_size", nullable = false)
     @Setter
     private Long fileSize;
-    
+
     @Column(nullable = false)
+    @Setter
     private String contentType;
     
     @Column(nullable = false)
@@ -95,9 +97,11 @@ public class Upload extends BaseEntity {
     private boolean isAudioExtension(String ext) {
         if (ext == null) return false;
         String lowerExt = ext.toLowerCase();
-        return lowerExt.equals("mp3") || lowerExt.equals("wav") || 
+        return lowerExt.equals("mp3") || lowerExt.equals("wav") ||
                lowerExt.equals("m4a") || lowerExt.equals("flac") ||
-               lowerExt.equals("aac") || lowerExt.equals("ogg");
+               lowerExt.equals("aac") || lowerExt.equals("ogg") ||
+               lowerExt.equals("mp4") || lowerExt.equals("3gp") ||
+               lowerExt.equals("webm") || lowerExt.equals("amr");
     }
 
 }

@@ -11,6 +11,13 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 
 import java.time.Duration;
 
@@ -115,6 +122,69 @@ public class S3Helper {
         } catch (Exception e) {
             log.error("Pre-signed PUT URL 생성 실패: {} - {}", s3Key, e.getMessage(), e);
             throw new S3UrlGenerationException(s3Key, "Pre-signed PUT URL 생성에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * S3에서 파일 다운로드
+     */
+    public String downloadFile(String s3Key, String localFilePath) throws IOException {
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(s3Key)
+                    .build();
+
+            File localFile = new File(localFilePath);
+            if (localFile.getParentFile() != null) {
+                localFile.getParentFile().mkdirs(); // 디렉토리 생성
+            }
+
+            // AWS SDK v2에서는 Path를 직접 사용
+            s3Client.getObject(getObjectRequest, localFile.toPath());
+
+            log.info("S3에서 파일 다운로드 완료: {} -> {}", s3Key, localFilePath);
+            return localFilePath;
+        } catch (Exception e) {
+            log.error("S3 파일 다운로드 실패: {} -> {}", s3Key, localFilePath, e);
+            throw new IOException("S3 파일 다운로드에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * S3에 파일 업로드
+     */
+    public void uploadFile(File file, String s3Key, String contentType) throws IOException {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(s3Key)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromFile(file));
+            log.info("S3에 파일 업로드 완료: {} -> {}", file.getPath(), s3Key);
+        } catch (Exception e) {
+            log.error("S3 파일 업로드 실패: {} -> {}", file.getPath(), s3Key, e);
+            throw new IOException("S3 파일 업로드에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * S3에서 파일 삭제
+     */
+    public void deleteFile(String s3Key) throws IOException {
+        try {
+            DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(s3Key)
+                    .build();
+
+            s3Client.deleteObject(deleteObjectRequest);
+            log.info("S3 파일 삭제 완료: {}", s3Key);
+        } catch (Exception e) {
+            log.error("S3 파일 삭제 실패: {}", s3Key, e);
+            throw new IOException("S3 파일 삭제에 실패했습니다: " + e.getMessage(), e);
         }
     }
 }
