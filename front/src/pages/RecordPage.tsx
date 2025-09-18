@@ -21,7 +21,7 @@ const RecordPageContent: React.FC = () => {
   const [duration, setDuration] = useState(180);
   const [volume, setVolume] = useState(0.7);
   
-  const { currentPlayingSong, isPlaying, setPlayingState } = useReservation();
+  const { currentPlayingSong, isPlaying, setPlayingState, onSongFinished } = useReservation();
 
   // CSS 애니메이션 스타일 추가
   const cyberpunkStyles = `
@@ -367,6 +367,7 @@ const RecordPageContent: React.FC = () => {
                 onVolumeChange={handleVolumeChange}
                 onTimeUpdateRequest={handleTimeUpdateRequest}
                 onSeekRequest={handleSeekRequest}
+                onSongFinished={onSongFinished}
               />
             </div>
             

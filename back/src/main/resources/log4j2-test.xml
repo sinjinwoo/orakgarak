@@ -2,8 +2,12 @@
 <Configuration status="WARN" monitorInterval="30">
     <Properties>
         <Property name="LOG_PATTERN">
-            %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n
         </Property>
+        <Property name="JSON_PATTERN">
+            {"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%-5level","thread":"%thread","logger":"%logger{36}","message":"%msg","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","mdc":"%X"}%n
+        </Property>
+        <Property name="LOG_DIR">./logs</Property>
     </Properties>
 
     <Appenders>
@@ -11,6 +15,17 @@
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
+
+        <!-- File Appender for Loki/Promtail (JSON 형태) - 테스트용 -->
+        <RollingFile name="LokiFileAppender" fileName="${LOG_DIR}/test-orakgaraki.log"
+                     filePattern="${LOG_DIR}/test-orakgaraki-%d{yyyy-MM-dd}-%i.log.gz">
+            <JsonTemplateLayout eventTemplateUri="classpath:EcsLayout.json"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="50MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="3"/>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
@@ -87,9 +102,10 @@
             <AppenderRef ref="Console"/>
         </Logger>
 
-        <!-- 애플리케이션 패키지 로그 -->
+        <!-- 애플리케이션 패키지 로그 (테스트 환경에서도 파일 로깅) -->
         <Logger name="com.ssafy.lab.orak" level="DEBUG" additivity="false">
             <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
         </Logger>
 
         <!-- Security 로그 -->

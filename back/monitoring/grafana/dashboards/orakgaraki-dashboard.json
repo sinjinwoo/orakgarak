@@ -1,0 +1,451 @@
+{
+  "id": null,
+  "uid": "orakgaraki-main",
+  "title": "Orakgaraki File Upload System - Complete Observability",
+  "description": "통합 모니터링 대시보드: 메트릭 + 로그",
+  "tags": ["orakgaraki", "upload", "observability"],
+  "timezone": "Asia/Seoul",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "version": 1,
+  "schemaVersion": 27,
+    "panels": [
+      {
+        "id": 1,
+        "title": "📊 시스템 개요",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "up{job=\"orakgaraki-app\"}",
+            "legendFormat": "애플리케이션 상태",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "rate(http_server_requests_seconds_count{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "초당 요청 수",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "upload_active_count{job=\"orakgaraki-app\"}",
+            "legendFormat": "활성 업로드",
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "processing_queue_size{job=\"orakgaraki-app\"}",
+            "legendFormat": "처리 대기",
+            "refId": "D",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 80}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "🚀 업로드 처리 현황",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+        "targets": [
+          {
+            "expr": "rate(upload_started_total{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "업로드 시작",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "rate(upload_completed_total{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "업로드 완료",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "rate(upload_failed_total{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "업로드 실패",
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "pointSize": 5,
+              "showPoints": "never"
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "📈 API 응답 시간",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
+            "legendFormat": "99th percentile",
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "💾 시스템 리소스",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 12},
+        "targets": [
+          {
+            "expr": "(1 - (node_memory_MemAvailable_bytes{job=\"node-exporter\"} / node_memory_MemTotal_bytes{job=\"node-exporter\"})) * 100",
+            "legendFormat": "메모리 사용률 (%)",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\",job=\"node-exporter\"}[5m])) * 100)",
+            "legendFormat": "CPU 사용률 (%)",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "🗄️ 데이터베이스 연결",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
+        "targets": [
+          {
+            "expr": "hikaricp_connections_active{job=\"orakgaraki-app\"}",
+            "legendFormat": "활성 연결",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "hikaricp_connections_idle{job=\"orakgaraki-app\"}",
+            "legendFormat": "유휴 연결",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "hikaricp_connections_pending{job=\"orakgaraki-app\"}",
+            "legendFormat": "대기 중인 연결",
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "📦 Kafka 컨슈머 상태",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+        "targets": [
+          {
+            "expr": "kafka_consumer_lag_sum{job=\"kafka\"}",
+            "legendFormat": "총 컨슈머 랙",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "rate(kafka_messages_received_total{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "초당 수신된 메시지",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "📝 실시간 로그 스트림",
+        "type": "logs",
+        "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
+        "targets": [
+          {
+            "expr": "{job=\"orakgaraki-app\"} |~ \"ERROR|WARN|upload|processing\"",
+            "refId": "A",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            }
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "showCommonLabels": false,
+          "wrapLogMessage": true,
+          "prettifyLogMessage": true,
+          "enableLogDetails": true,
+          "dedupStrategy": "none",
+          "sortOrder": "Descending"
+        }
+      },
+      {
+        "id": 8,
+        "title": "🔥 에러 로그 분석",
+        "type": "logs",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "{job=\"orakgaraki-app\"} |= \"ERROR\" | json | __error__=\"\"",
+            "refId": "A",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            }
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "wrapLogMessage": true
+        }
+      },
+      {
+        "id": 9,
+        "title": "📊 업로드 파일 타입 분포",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "targets": [
+          {
+            "expr": "sum by (file_type) (upload_started_total{job=\"orakgaraki-app\"})",
+            "legendFormat": "{{file_type}}",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "pieType": "pie",
+          "tooltip": {"mode": "single"},
+          "legend": {
+            "displayMode": "visible",
+            "placement": "right"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "⚡ 처리 성능 메트릭",
+        "type": "stat",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 40},
+        "targets": [
+          {
+            "expr": "rate(upload_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(upload_duration_count{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "평균 업로드 시간 (초)",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "rate(processing_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(processing_duration_count{job=\"orakgaraki-app\"}[5m])",
+            "legendFormat": "평균 처리 시간 (초)",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "rate(upload_completed_total{job=\"orakgaraki-app\"}[5m]) / rate(upload_started_total{job=\"orakgaraki-app\"}[5m]) * 100",
+            "legendFormat": "업로드 성공률 (%)",
+            "refId": "C",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "processing_queue_size{job=\"orakgaraki-app\"}",
+            "legendFormat": "현재 큐 크기",
+            "refId": "D",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "mappings": [],
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "평균 업로드 시간 (초)"},
+              "properties": [{"id": "unit", "value": "s"}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "평균 처리 시간 (초)"},
+              "properties": [{"id": "unit", "value": "s"}]
+            },
+            {
+              "matcher": {"id": "byName", "options": "업로드 성공률 (%)"},
+              "properties": [{"id": "unit", "value": "percent"}]
+            }
+          ]
+        }
+      },
+      {
+        "id": 11,
+        "title": "🚨 시스템 알람 로그",
+        "type": "logs",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 46},
+        "targets": [
+          {
+            "expr": "{job=\"orakgaraki-app\"} |~ \"ALERT|CRITICAL|FATAL|OutOfMemory|TimeoutException|SQLException\"",
+            "refId": "A",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            }
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "wrapLogMessage": true
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "allValue": null
+        },
+        {
+          "name": "environment",
+          "type": "query",
+          "query": "label_values(upload_started_total, environment)",
+          "refresh": 1,
+          "includeAll": true,
+          "allValue": null
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "업로드 에러",
+          "enable": true,
+          "iconColor": "red",
+          "target": {
+            "expr": "changes(upload_failed_total[1m]) > 0"
+          }
+        },
+        {
+          "name": "시스템 재시작",
+          "enable": true,
+          "iconColor": "blue",
+          "target": {
+            "expr": "resets(process_start_time_seconds[1m]) > 0"
+          }
+        }
+      ]
+    }
+}
