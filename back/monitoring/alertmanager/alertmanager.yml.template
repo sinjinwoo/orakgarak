@@ -1,6 +1,4 @@
 global:
-  smtp_smarthost: 'localhost:587'
-  smtp_from: 'alertmanager@orakgaraki.com'
   resolve_timeout: 5m
 
 # 알림 그룹화 설정
