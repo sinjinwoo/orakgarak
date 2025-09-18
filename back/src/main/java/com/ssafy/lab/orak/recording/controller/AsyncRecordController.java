@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.constraints.NotBlank;
@@ -42,6 +43,9 @@ public class AsyncRecordController {
     private final FileUploadService fileUploadService;
     private final PresignedUploadService presignedUploadService;
     private final S3Helper s3Helper;
+
+    @Value("${orak.eventbridge.webhook.token}")
+    private String expectedWebhookToken;
 
     /**
      * 1단계: Presigned URL 생성 (파일 업로드용)
@@ -77,7 +81,20 @@ public class AsyncRecordController {
     public ResponseEntity<Map<String, String>> handleUploadCompleted(
             @RequestParam(value = "uploadId", required = false) Long uploadId,
             @RequestParam("s3Key") @NotBlank String s3Key,
-            @RequestParam(value = "source", required = false) String source) {
+            @RequestParam(value = "source", required = false) String source,
+            @RequestHeader(value = "X-Orak-Event-Source", required = false) String eventSource) {
+
+        // EventBridge 인증 검증
+        if ("eventbridge".equals(source)) {
+            if (eventSource == null || !expectedWebhookToken.equals(eventSource)) {
+                log.warn("EventBridge 웹훅 인증 실패: source={}, eventSource={}", source, eventSource);
+                return ResponseEntity.status(401).body(Map.of(
+                        "status", "error",
+                        "message", "Unauthorized: Invalid EventBridge token"
+                ));
+            }
+            log.info("EventBridge 웹훅 인증 성공: s3Key={}", s3Key);
+        }
 
         // EventBridge나 SQS에서 온 경우 s3Key로 uploadId 찾기
         if (uploadId == null && ("eventbridge".equals(source) || "sqs".equals(source))) {

@@ -244,7 +244,7 @@
         "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
         "targets": [
           {
-            "expr": "{job=\"orakgaraki-app\"} |~ \"ERROR|WARN|upload|processing\"",
+            "expr": "{job=\"orakgaraki\"} |~ \"ERROR|WARN|upload|processing\"",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -270,7 +270,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
         "targets": [
           {
-            "expr": "{job=\"orakgaraki-app\"} |= \"ERROR\" | json | __error__=\"\"",
+            "expr": "{job=\"orakgaraki\"} |= \"ERROR\" | json | __error__=\"\"",
             "refId": "A",
             "datasource": {
               "type": "loki",
@@ -393,7 +393,7 @@
         "gridPos": {"h": 8, "w": 24, "x": 0, "y": 46},
         "targets": [
           {
-            "expr": "{job=\"orakgaraki-app\"} |~ \"ALERT|CRITICAL|FATAL|OutOfMemory|TimeoutException|SQLException\"",
+            "expr": "{job=\"orakgaraki\"} |~ \"ALERT|CRITICAL|FATAL|OutOfMemory|TimeoutException|SQLException\"",
             "refId": "A",
             "datasource": {
               "type": "loki",

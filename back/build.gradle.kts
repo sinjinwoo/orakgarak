@@ -108,6 +108,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus")
 
+
     // Development Tools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
