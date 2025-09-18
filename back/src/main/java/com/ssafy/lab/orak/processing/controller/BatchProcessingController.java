@@ -23,22 +23,22 @@ public class BatchProcessingController {
 
     @PostMapping("/pause")
     public ResponseEntity<String> pauseProcessing() {
-        log.info("Pausing batch processing");
+        log.info("[배치] 배치 처리 일시 정지 요청");
         batchProcessingService.pauseProcessing();
-        return ResponseEntity.ok("Batch processing paused successfully");
+        return ResponseEntity.ok("배치 처리가 성공적으로 일시 정지되었습니다");
     }
 
     @PostMapping("/resume")
     public ResponseEntity<String> resumeProcessing() {
-        log.info("Resuming batch processing");
+        log.info("[배치] 배치 처리 재개 요청");
         batchProcessingService.resumeProcessing();
-        return ResponseEntity.ok("Batch processing resumed successfully");
+        return ResponseEntity.ok("배치 처리가 성공적으로 재개되었습니다");
     }
 
     @PostMapping("/trigger")
     public ResponseEntity<String> triggerProcessing() {
-        log.info("Manually triggering batch processing");
+        log.info("[배치] 수동 배치 처리 실행 요청");
         batchProcessingService.processPendingFiles();
-        return ResponseEntity.ok("Batch processing triggered successfully");
+        return ResponseEntity.ok("배치 처리가 성공적으로 실행되었습니다");
     }
 }

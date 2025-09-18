@@ -73,6 +73,7 @@ public class S3Helper {
      * 패턴: {directory}/{uuid}_{filename} → {uuid}
      * 예: recordings/abc123_audio.mp3 → abc123
      *     profiles/def456_image.jpg → def456
+     *     album-covers/xyz789_cover.jpg → xyz789
      */
     public String extractUuidFromS3Key(String s3Key) {
         if (s3Key == null || !s3Key.contains("/")) {
@@ -82,15 +83,12 @@ public class S3Helper {
         try {
             String[] parts = s3Key.split("/");
             if (parts.length >= 2) {
-                String directory = parts[0]; // recordings, profiles 등
                 String filenamePart = parts[1]; // uuid_filename 부분
 
-                // 지원하는 디렉토리인지 확인
-                if ("recordings".equals(directory) || "profiles".equals(directory)) {
-                    int underscoreIndex = filenamePart.indexOf("_");
-                    if (underscoreIndex > 0) {
-                        return filenamePart.substring(0, underscoreIndex); // UUID 부분만 반환
-                    }
+                // uuid_filename 패턴에서 UUID 추출
+                int underscoreIndex = filenamePart.indexOf("_");
+                if (underscoreIndex > 0) {
+                    return filenamePart.substring(0, underscoreIndex); // UUID 부분만 반환
                 }
             }
         } catch (Exception e) {
