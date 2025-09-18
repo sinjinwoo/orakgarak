@@ -99,12 +99,12 @@ public class AlbumCoverService {
             return Mono.error(new RuntimeException("AI 앨범 커버 생성 준비 실패: " + e.getMessage(), e));
         }
 
-        // 2. AI 서비스용 DTO 변환
+        // 2. AI 서비스용 DTO 변환 (파라미터 고정)
         VoiceImageGenerationRequestDto aiRequest = VoiceImageGenerationRequestDto.builder()
                 .records(recordDataList)
-                .aspectRatio(request.aspectRatio())
-                .safetyFilterLevel(request.safetyFilterLevel())
-                .personGeneration(request.personGeneration())
+                .aspectRatio("1:1")                    // 고정값
+                .safetyFilterLevel("block_most")       // 고정값
+                .personGeneration("dont_allow")        // 고정값
                 .build();
 
         return pythonAiService.generateVoiceImage(aiRequest)

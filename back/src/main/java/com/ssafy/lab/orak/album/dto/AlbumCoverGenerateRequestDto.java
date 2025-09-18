@@ -17,10 +17,10 @@ public record AlbumCoverGenerateRequestDto(
         @Schema(description = "안전 필터 레벨", example = "block_most", defaultValue = "block_most")
         String safetyFilterLevel,
 
-        @Schema(description = "인물 생성 설정", example = "allow_adult", defaultValue = "allow_adult")
+        @Schema(description = "인물 생성 설정", example = "allow_adult", defaultValue = "dont_allow")
         String personGeneration
 ) {
     public AlbumCoverGenerateRequestDto(List<Long> uploadIds) {
-        this(uploadIds, "1:1", "block_most", "allow_adult");
+        this(uploadIds, "1:1", "block_most", "dont_allow");
     }
 }
