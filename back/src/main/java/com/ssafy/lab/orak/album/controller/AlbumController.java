@@ -19,12 +19,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
 
 @Slf4j
 @RestController
-@RequestMapping("/api/albums")
+@RequestMapping("/albums")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class AlbumController {
@@ -133,5 +134,16 @@ public class AlbumController {
                 });
     }
 
+//    앨범 커버 이미지 삭제
+    @DeleteMapping("/{albumId}/cover")
+    @Operation(summary = "앨범 커버 이미지 삭제", description = "앨범의 커버 이미지를 삭제합니다.")
+    public ResponseEntity<AlbumResponseDto> removeCoverImage(
+            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        log.info("DELETE /api/albums/{}/cover - Removing cover image by user: {}", albumId, principal.getUserId());
+        AlbumResponseDto response = albumService.removeCoverImage(albumId, principal.getUserId());
+        return ResponseEntity.ok(response);
+    }
 
 }

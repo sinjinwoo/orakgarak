@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.time.Duration;
 
@@ -64,5 +66,57 @@ public class S3Helper {
     // 기본 24시간 유효한 Pre-signed URL 생성 (플레이리스트 고려)
     public String generatePresignedUrl(String s3Key) {
         return generatePresignedUrl(s3Key, Duration.ofHours(24));
+    }
+
+    /**
+     * S3 키에서 UUID 추출
+     * 패턴: {directory}/{uuid}_{filename} → {uuid}
+     * 예: recordings/abc123_audio.mp3 → abc123
+     *     profiles/def456_image.jpg → def456
+     */
+    public String extractUuidFromS3Key(String s3Key) {
+        if (s3Key == null || !s3Key.contains("/")) {
+            return null;
+        }
+
+        try {
+            String[] parts = s3Key.split("/");
+            if (parts.length >= 2) {
+                String directory = parts[0]; // recordings, profiles 등
+                String filenamePart = parts[1]; // uuid_filename 부분
+
+                // 지원하는 디렉토리인지 확인
+                if ("recordings".equals(directory) || "profiles".equals(directory)) {
+                    int underscoreIndex = filenamePart.indexOf("_");
+                    if (underscoreIndex > 0) {
+                        return filenamePart.substring(0, underscoreIndex); // UUID 부분만 반환
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("S3 키에서 UUID 추출 실패: {} - {}", s3Key, e.getMessage());
+        }
+
+        return null;
+    }
+    
+    // Pre-signed PUT URL 생성 (업로드용)
+    public String generatePresignedPutUrl(String s3Key, Duration expiration) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(s3Key)
+                    .build();
+
+            PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                    .signatureDuration(expiration)
+                    .putObjectRequest(putObjectRequest)
+                    .build();
+
+            return s3Presigner.presignPutObject(presignRequest).url().toString();
+        } catch (Exception e) {
+            log.error("Pre-signed PUT URL 생성 실패: {} - {}", s3Key, e.getMessage(), e);
+            throw new S3UrlGenerationException(s3Key, "Pre-signed PUT URL 생성에 실패했습니다: " + e.getMessage(), e);
+        }
     }
 }

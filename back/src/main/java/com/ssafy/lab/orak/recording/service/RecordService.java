@@ -14,6 +14,7 @@ import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
+import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -23,7 +24,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,11 +41,13 @@ public class RecordService {
     private final AudioConverter audioConverter;
     private final AudioDurationCalculator audioDurationCalculator;
     private final LocalUploader localUploader;
+    private final UploadRepository uploadRepository;
     
     @Value("${s3.upload.path}")
     private String uploadPath;
     
     public RecordResponseDTO createRecord(String title, Long songId, MultipartFile audioFile, Long userId) {
+        Upload upload = null;
         try {
             // 1. DTO 생성
             RecordRequestDTO requestDTO = RecordRequestDTO.builder()
@@ -51,51 +56,42 @@ public class RecordService {
                     .audioFile(audioFile)
                     .build();
             
-            // 2. 로컬 파일 업로드
-            String originalFilePath = localUploader.uploadLocal(audioFile);
+            // 2. 파일 처리 및 업로드 (트랜잭션 외부에서 처리)
+            upload = processAndUploadAudioFile(audioFile, userId);
+            Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(
+                uploadPath + "/" + upload.getStoredFilename()
+            );
             
-            // 3. 오디오 파일인지 확인하고 WAV 변환
-            String contentType = Files.probeContentType(java.nio.file.Paths.get(originalFilePath));
-            String fileToUpload = originalFilePath;
-            
-            if (audioConverter.isAudioFile(audioFile.getOriginalFilename(), contentType)) {
-                String wavFilePath = audioConverter.convertToWav(originalFilePath, uploadPath);
-                fileToUpload = wavFilePath;
-                log.info("오디오 파일 WAV 변환 완료: {}", audioFile.getOriginalFilename());
-            }
-            
-            // 4. 오디오 파일의 재생시간 계산
-            Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(fileToUpload);
-            
-            // 5. 변환된 파일을 S3에 업로드
-            Upload upload = fileUploadService.uploadLocalFile(fileToUpload, "recordings", userId, audioFile.getOriginalFilename());
-            
-            // 6. Record 엔티티 생성 및 저장 (MapStruct 사용)
-            Record record = recordMapper.toEntity(requestDTO, userId, upload);
-            // 계산된 재생시간 설정
-            record = record.toBuilder().durationSeconds(calculatedDuration).build();
-            Record savedRecord = recordRepository.save(record);
+            // 3. DB 저장 (트랜잭션 내부)
+            Record savedRecord = saveRecordTransaction(requestDTO, userId, upload, calculatedDuration);
             
             log.info("녹음 파일 생성 성공: userId={}, recordId={}", userId, savedRecord.getId());
             
-            // 7. S3 업로드와 DB 저장이 완료된 후 서버에 있는 임시 파일들 삭제
-            try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(originalFilePath));
-                if (!originalFilePath.equals(fileToUpload)) {
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(fileToUpload));
-                }
-                log.info("서버 임시 파일 삭제 완료");
-            } catch (Exception e) {
-                log.warn("서버 임시 파일 삭제 실패", e);
-            }
-            
-            // 8. 응답 DTO 반환
+            // 4. 응답 DTO 반환
             return convertToResponseDTOWithUrl(savedRecord);
             
         } catch (Exception e) {
             log.error("녹음 파일 생성 실패: userId={}", userId, e);
-            throw new FileUploadException("녹음 파일 생성에 실패했습니다: " + e.getMessage(), e);
+            
+            // 롤백: S3와 DB에서 업로드된 파일 정리
+            if (upload != null) {
+                try {
+                    fileUploadService.deleteFile(upload.getId());
+                    log.info("실패한 업로드 파일 정리 완료: uploadId={}", upload.getId());
+                } catch (Exception cleanupException) {
+                    log.error("업로드 파일 정리 실패: uploadId={}", upload.getId(), cleanupException);
+                }
+            }
+            
+            throw new RecordOperationException("녹음 파일 생성에 실패했습니다: " + e.getMessage(), e);
         }
+    }
+    
+    private Record saveRecordTransaction(RecordRequestDTO requestDTO, Long userId, Upload upload, Integer duration) {
+        // Record 엔티티 생성 및 저장 (MapStruct 사용)
+        Record record = recordMapper.toEntity(requestDTO, userId, upload);
+        record = record.toBuilder().durationSeconds(duration).build();
+        return recordRepository.save(record);
     }
     
     @Transactional(readOnly = true)
@@ -159,6 +155,47 @@ public class RecordService {
                 .collect(Collectors.toList());
     }
     
+    /**
+     * 오디오 파일 처리 및 업로드 공통 로직 (책임 분리)
+     */
+    private Upload processAndUploadAudioFile(MultipartFile audioFile, Long userId) {
+        try {
+            // 1. UUID 생성 (단일 UUID로 통일)
+            String uuid = UUID.randomUUID().toString();
+            
+            // 2. 로컬 파일 업로드 (UUID와 함께)
+            String originalFilePath = localUploader.uploadLocal(audioFile, uuid);
+            
+            // 3. 오디오 파일인지 확인하고 WAV 변환
+            String contentType = Files.probeContentType(Paths.get(originalFilePath));
+            String fileToUpload = originalFilePath;
+            
+            if (audioConverter.isAudioFile(audioFile.getOriginalFilename(), contentType)) {
+                String wavFilePath = audioConverter.convertToWav(originalFilePath, uploadPath, uuid, audioFile.getOriginalFilename());
+                fileToUpload = wavFilePath;
+                log.info("오디오 파일 WAV 변환 완료: {}", audioFile.getOriginalFilename());
+            }
+            
+            // 4. S3에 업로드 (UUID는 이미 파일명에서 추출됨)
+            Upload upload = fileUploadService.uploadLocalFile(fileToUpload, "recordings", userId, audioFile.getOriginalFilename());
+            
+            // 5. 올바른 UUID로 업데이트 (파일명에서 추출된 UUID가 우리가 생성한 UUID와 일치하는지 확인)
+            if (!upload.getUuid().equals(uuid)) {
+                upload = upload.toBuilder().uuid(uuid).build();
+                upload = uploadRepository.save(upload);
+            }
+            
+            // 6. 원본 임시 파일 정리 (S3 업로드 후에만 정리)
+            cleanupTemporaryFile(originalFilePath);
+            
+            return upload;
+            
+        } catch (Exception e) {
+            log.error("오디오 파일 처리 실패: {}", audioFile.getOriginalFilename(), e);
+            throw new RecordOperationException("오디오 파일 처리에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+    
     public void deleteRecord(Long recordId, Long userId) {
         try {
             Record record = recordRepository.findById(recordId)
@@ -218,36 +255,14 @@ public class RecordService {
                 // 1. 기존 파일 삭제
                 fileUploadService.deleteFile(record.getUploadId());
                 
-                // 2. 새 파일 업로드 처리 (createRecord와 동일한 로직)
-                String originalFilePath = localUploader.uploadLocal(audioFile);
-                String contentType = Files.probeContentType(java.nio.file.Paths.get(originalFilePath));
-                String fileToUpload = originalFilePath;
+                // 2. 새 파일 처리 및 업로드 (공통 로직 사용)
+                Upload newUpload = processAndUploadAudioFile(audioFile, userId);
+                Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(
+                    uploadPath + "/" + newUpload.getStoredFilename()
+                );
                 
-                if (audioConverter.isAudioFile(audioFile.getOriginalFilename(), contentType)) {
-                    String wavFilePath = audioConverter.convertToWav(originalFilePath, uploadPath);
-                    fileToUpload = wavFilePath;
-                    log.info("오디오 파일 WAV 변환 완료: {}", audioFile.getOriginalFilename());
-                }
-                
-                // 3. 새 파일의 재생시간 계산
-                Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(fileToUpload);
-                
-                // 4. 새 파일을 S3에 업로드
-                Upload newUpload = fileUploadService.uploadLocalFile(fileToUpload, "recordings", userId, audioFile.getOriginalFilename());
-                
-                // 5. Record의 uploadId와 duration 업데이트
+                // 3. Record의 uploadId와 duration 업데이트
                 recordBuilder.uploadId(newUpload.getId()).durationSeconds(calculatedDuration);
-                
-                // 6. 서버 임시 파일 삭제
-                try {
-                    java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(originalFilePath));
-                    if (!originalFilePath.equals(fileToUpload)) {
-                        java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(fileToUpload));
-                    }
-                    log.info("서버 임시 파일 삭제 완료");
-                } catch (Exception e) {
-                    log.warn("서버 임시 파일 삭제 실패", e);
-                }
             }
             
             Record updatedRecord = recordBuilder.build();
@@ -264,6 +279,24 @@ public class RecordService {
         } catch (Exception e) {
             log.error("녹음 파일 수정 실패: recordId={}, userId={}", recordId, userId, e);
             throw new RecordOperationException("녹음 파일 수정에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 임시 파일 안전한 정리 (중복 삭제 방지)
+     */
+    private void cleanupTemporaryFile(String filePath) {
+        if (filePath == null) return;
+        
+        try {
+            boolean deleted = Files.deleteIfExists(Paths.get(filePath));
+            if (deleted) {
+                log.info("임시 파일 삭제 완료: {}", filePath);
+            } else {
+                log.debug("임시 파일이 이미 존재하지 않음: {}", filePath);
+            }
+        } catch (Exception e) {
+            log.warn("임시 파일 삭제 실패: {} - {}", filePath, e.getMessage());
         }
     }
 }
