@@ -7,19 +7,17 @@ import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
+from datetime import datetime
 
 # 경로 설정
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(PROJECT_ROOT)
 
 from voice_analysis.user.user_extract_feature import process_user_audio
+from voice_analysis.features.extract_mel import extract_mel
+from voice_analysis.features.extract_features import extract_features
 from recommend.recommend_with_voice import get_recommendations
-from pydantic import BaseModel
-from typing import Optional, List
-import requests
-from datetime import datetime
-
 from ai.image_generation.imagen_client import ImagenClient
 from voice_analysis.user.voice_keyword_generator import analyze_voice
 
@@ -48,9 +46,6 @@ all_songs_df = None
 
 class VoiceRecommendationRequest(BaseModel):
     s3_url: str
-    pitch_low: Optional[float] = 100.0
-    pitch_high: Optional[float] = 320.0
-    pitch_avg: Optional[float] = 180.0
     top_n: Optional[int] = 10
 
 def load_all_songs_features():
@@ -116,7 +111,7 @@ async def health_check():
 @app.post("/ai/voice-recommendation")
 async def voice_recommendation(request: VoiceRecommendationRequest):
     """
-    S3 presigned URL과 pitch 정보를 받아서 추천 결과 반환
+    S3 URL에서 음성 파일을 받아서 추천 결과 반환
     """
     try:
         # 전체 곡 데이터 확인
@@ -125,8 +120,6 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
                 status_code=500,
                 detail="전체 곡 데이터가 로드되지 않았습니다."
             )
-
-        logging.info(f"음성 추천 요청: URL={request.s3_url[:50]}..., pitch=({request.pitch_low}, {request.pitch_high}, {request.pitch_avg})")
 
         # S3에서 파일 다운로드
         temp_audio_path = None
@@ -139,18 +132,36 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
                 temp_audio_path = tmp_file.name
                 logging.info(f"음성 파일 다운로드 완료: {len(response.content)} bytes")
 
-            # 음성 분석
+            # 음성에서 pitch 자동 추출 및 분석
             logging.info("음성 특성 추출 중...")
-            with tempfile.NamedTemporaryFile(suffix='.csv', delete=False) as csv_file:
-                user_df = process_user_audio(
-                    audio_path=temp_audio_path,
-                    pitch_low=request.pitch_low,
-                    pitch_high=request.pitch_high,
-                    pitch_avg=request.pitch_avg,
-                    output_csv=csv_file.name
+
+            # 1. 멜 스펙트로그램 추출
+            mel = extract_mel(temp_audio_path)
+            if mel is None:
+                raise HTTPException(
+                    status_code=500,
+                    detail="멜 스펙트로그램 추출에 실패했습니다."
                 )
 
-            if user_df is None:
+            # 2. 특성 추출 (pitch 자동 계산 포함)
+            features = extract_features(mel)
+
+            # 3. DataFrame 생성
+            feature_dict = {
+                "song_id": ["user_audio"],
+            }
+            for i, val in enumerate(features['mfcc']):
+                feature_dict[f"mfcc_{i}"] = [val]
+
+            feature_dict["pitch_low"] = [features['pitch_low']]
+            feature_dict["pitch_high"] = [features['pitch_high']]
+            feature_dict["pitch_avg"] = [features['pitch_avg']]
+            feature_dict["popularity"] = [0.0]
+
+            user_df = pd.DataFrame(feature_dict)
+            logging.info(f"자동 추출된 pitch: low={features['pitch_low']:.2f}, high={features['pitch_high']:.2f}, avg={features['pitch_avg']:.2f}")
+
+            if user_df is None or user_df.empty:
                 raise HTTPException(
                     status_code=500,
                     detail="음성 특성 추출에 실패했습니다."
