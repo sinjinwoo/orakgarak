@@ -11,6 +11,7 @@ export interface Song {
   duration: string;  // 재생 시간 (mm:ss 형식)
   albumCoverUrl?: string; // 앨범 커버 URL
   youtubeId?: string; // 유튜브 MR 영상 ID (선택)
+  lyrics?: string;   // 가사 정보 (JSON 문자열)
 }
 
 // API 응답 타입 정의

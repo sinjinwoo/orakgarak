@@ -24,7 +24,7 @@ interface SongApiResponse {
 
 // Song 타입 정의 (기존 타입과 호환)
 interface Song {
-  id: string;
+  id: number;
   title: string;
   artist: string;
   albumName: string;
@@ -59,7 +59,7 @@ const convertApiResponseToSong = (apiSong: SongApiResponse): Song => {
   };
 
   return {
-    id: apiSong.songId.toString(), // songId를 string으로 변환
+    id: apiSong.songId, // songId를 number로 사용
     title: apiSong.songName,
     artist: apiSong.artistName,
     albumName: apiSong.albumName,
@@ -77,15 +77,20 @@ const searchSongs = async (keyword: string): Promise<Song[]> => {
     // 백엔드 서버 주소를 명시적으로 지정 (포트 번호를 실제 백엔드 포트로 변경하세요)
     // 예: 8080, 8000, 3001 등 백엔드가 실행되는 포트
     const BACKEND_BASE_URL = 'http://localhost:8080/api'; // 백엔드 포트에 맞게 수정
-    const apiUrl = `${BACKEND_BASE_URL}/song/search/realtime?keyword=${encodeURIComponent(keyword)}`;
+    const apiUrl = `${BACKEND_BASE_URL}/songs/search/realtime?keyword=${encodeURIComponent(keyword)}`;
     
     console.log('API 호출:', apiUrl); // 디버깅용 로그
+    
+    // JWT 토큰 가져오기
+    const authToken = localStorage.getItem('auth-token');
+    console.log('토큰 상태:', authToken ? '토큰 존재' : '토큰 없음'); // 디버깅용 로그
     
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        // CORS 해결을 위한 헤더 (필요시 추가)
+        // JWT 토큰을 Authorization 헤더에 추가
+        ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
       },
     });
     
@@ -140,6 +145,26 @@ const SongSearchPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   
   const { addToQueue, reservationQueue } = useReservation();
+
+  // 사이버펑크 스크롤바 스타일
+  const cyberScrollbarStyle = `
+    .cyber-scrollbar::-webkit-scrollbar {
+      width: 8px;
+    }
+    .cyber-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+    .cyber-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(45deg, #00ffff, #ff0080);
+      border-radius: 4px;
+      border: 1px solid rgba(0, 255, 255, 0.3);
+    }
+    .cyber-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(45deg, #00cccc, #cc0066);
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+  `;
 
   // 검색 함수
   const performSearch = useCallback(async (keyword: string) => {
@@ -205,7 +230,7 @@ const SongSearchPanel: React.FC = () => {
     try {
       const results = await searchSongs(searchTerm);
       setSearchResults(results);
-      setShowResults(true);
+    setShowResults(true);
     } catch (error) {
       console.error('검색 중 오류:', error);
       setSearchResults([]);
@@ -222,6 +247,8 @@ const SongSearchPanel: React.FC = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
+      {/* 사이버펑크 스크롤바 스타일 */}
+      <style dangerouslySetInnerHTML={{ __html: cyberScrollbarStyle }} />
       {/* 헤더 */}
       <div style={{
         display: 'flex',
@@ -304,15 +331,15 @@ const SongSearchPanel: React.FC = () => {
           }}
           onFocus={(e) => {
             if (searchTerm.length >= 2 || searchTerm.length === 0) {
-              e.target.style.border = '1px solid #00ffff';
-              e.target.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
+            e.target.style.border = '1px solid #00ffff';
+            e.target.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
             }
           }}
           onBlur={(e) => {
             if (searchTerm.length > 0 && searchTerm.length < 2) {
               e.target.style.border = '1px solid rgba(255, 165, 0, 0.6)';
             } else {
-              e.target.style.border = '1px solid rgba(0, 255, 255, 0.3)';
+            e.target.style.border = '1px solid rgba(0, 255, 255, 0.3)';
             }
             e.target.style.boxShadow = 'none';
           }}
@@ -374,14 +401,17 @@ const SongSearchPanel: React.FC = () => {
         minHeight: 0
       }}>
         {showResults ? (
-          <div style={{
+          <div 
+            className="cyber-scrollbar"
+            style={{
             flex: 1,
             overflow: 'auto',
             background: 'rgba(0, 0, 0, 0.3)',
             border: '1px solid rgba(0, 255, 255, 0.3)',
             borderRadius: '8px',
             marginBottom: '10px'
-          }}>
+            }}
+          >
             {isLoading ? (
               <div style={{ 
                 padding: '40px 20px', 
@@ -417,7 +447,8 @@ const SongSearchPanel: React.FC = () => {
                       padding: '12px',
                       cursor: 'pointer',
                       borderBottom: index < searchResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                      transition: 'background 0.2s ease'
+                      transition: 'background 0.2s ease',
+                      minHeight: '80px' // 최소 높이 보장
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
@@ -478,15 +509,15 @@ const SongSearchPanel: React.FC = () => {
                         {song.youtubeId && (
                           <>
                             <span style={{ color: '#666', fontSize: '0.8rem' }}>•</span>
-                            <span style={{ 
-                              color: '#ff0080', 
+                        <span style={{
+                          color: '#ff0080',
                               fontSize: '0.7rem',
                               background: 'rgba(255, 0, 128, 0.1)',
-                              padding: '2px 6px',
+                          padding: '2px 6px',
                               borderRadius: '8px'
-                            }}>
+                        }}>
                               MR
-                            </span>
+                        </span>
                           </>
                         )}
                       </div>
@@ -497,10 +528,11 @@ const SongSearchPanel: React.FC = () => {
                         borderRadius: '12px',
                         fontSize: '0.7rem',
                         display: 'inline-block',
-                        maxWidth: '200px',
+                        maxWidth: '180px',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        textOverflow: 'ellipsis',
+                        boxSizing: 'border-box'
                       }}>
                         {song.albumName}
                       </div>

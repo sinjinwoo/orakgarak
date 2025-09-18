@@ -29,10 +29,9 @@ const SortableReservationItem: React.FC<{
   song: Song; 
   index: number; 
   onDelete: (songId: string) => void; 
-  onPlay: (song: Song) => void;
-  isCurrentlyPlaying?: boolean;
-  isPlaying?: boolean;
-}> = ({ song, index, onDelete, onPlay, isCurrentlyPlaying = false, isPlaying = false }) => {
+  onSelect: (song: Song) => void;
+  isSelected?: boolean;
+}> = ({ song, index, onDelete, onSelect, isSelected = false }) => {
   const {
     attributes,
     listeners,
@@ -58,22 +57,27 @@ const SortableReservationItem: React.FC<{
         gap: '12px',
         padding: '12px',
         marginBottom: '8px',
-        background: isCurrentlyPlaying ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 128, 0.1)',
-        border: isCurrentlyPlaying ? '1px solid rgba(0, 255, 0, 0.5)' : '1px solid rgba(255, 0, 128, 0.3)',
+        background: isSelected ? 'rgba(0, 255, 255, 0.2)' : 'rgba(255, 0, 128, 0.1)',
+        border: isSelected ? '1px solid rgba(0, 255, 255, 0.5)' : '1px solid rgba(255, 0, 128, 0.3)',
         borderRadius: '10px',
         cursor: 'pointer',
         transition: 'all 0.3s ease',
-        boxShadow: isCurrentlyPlaying ? '0 0 15px rgba(0, 255, 0, 0.3)' : 'none'
+        boxShadow: isSelected ? '0 0 15px rgba(0, 255, 255, 0.3)' : 'none'
       }}
+      onClick={() => onSelect(song)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255, 0, 128, 0.15)';
-        e.currentTarget.style.border = '1px solid rgba(255, 0, 128, 0.5)';
-        e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.2)';
+        if (!isSelected) {
+          e.currentTarget.style.background = 'rgba(255, 0, 128, 0.15)';
+          e.currentTarget.style.border = '1px solid rgba(255, 0, 128, 0.5)';
+          e.currentTarget.style.boxShadow = '0 0 15px rgba(255, 0, 128, 0.2)';
+        }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255, 0, 128, 0.1)';
-        e.currentTarget.style.border = '1px solid rgba(255, 0, 128, 0.3)';
-        e.currentTarget.style.boxShadow = 'none';
+        if (!isSelected) {
+          e.currentTarget.style.background = 'rgba(255, 0, 128, 0.1)';
+          e.currentTarget.style.border = '1px solid rgba(255, 0, 128, 0.3)';
+          e.currentTarget.style.boxShadow = 'none';
+        }
       }}
     >
       {/* 드래그 핸들 */}
@@ -155,9 +159,14 @@ const SortableReservationItem: React.FC<{
             color: '#00ffff',
             padding: '2px 6px',
             borderRadius: '6px',
-            fontSize: '0.7rem'
+            fontSize: '0.7rem',
+            maxWidth: '120px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: 'inline-block'
           }}>
-            {song.genre}
+            {song.albumName}
           </span>
           <span style={{ color: '#888', fontSize: '0.7rem' }}>
             {song.duration}
@@ -165,34 +174,13 @@ const SortableReservationItem: React.FC<{
         </div>
       </div>
 
-      {/* 액션 버튼들 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+      {/* 삭제 버튼 */}
+      <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         <button
-          onClick={() => onPlay(song)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: isCurrentlyPlaying ? '#00ff00' : '#00ffff',
-            cursor: 'pointer',
-            padding: '6px',
-            fontSize: '16px',
-            borderRadius: '4px',
-            transition: 'all 0.2s ease'
+          onClick={(e) => {
+            e.stopPropagation(); // 카드 클릭 이벤트 방지
+            onDelete(song.id.toString());
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
-            e.currentTarget.style.transform = 'scale(1.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'none';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-        >
-          {isCurrentlyPlaying && isPlaying ? '⏸️' : '▶️'}
-        </button>
-
-        <button
-          onClick={() => onDelete(song.id.toString())}
           style={{
             background: 'none',
             border: 'none',
@@ -219,15 +207,15 @@ const SortableReservationItem: React.FC<{
   );
 };
 
+
 const ReservationQueue: React.FC = () => {
   const { 
     reservationQueue, 
+    selectedSong,
     removeFromQueue, 
     clearQueue, 
     reorderQueue,
-    playSong,
-    currentPlayingSong,
-    isPlaying
+    selectSong
   } = useReservation();
 
   const sensors = useSensors(
@@ -252,8 +240,8 @@ const ReservationQueue: React.FC = () => {
     removeFromQueue(parseInt(songId));
   };
 
-  const handlePlaySong = (song: Song) => {
-    playSong(song);
+  const handleSelectSong = (song: Song) => {
+    selectSong(song);
   };
 
   const handleClearAll = () => {
@@ -264,6 +252,27 @@ const ReservationQueue: React.FC = () => {
 
   return (
     <div style={{ height: '100%' }}>
+      {/* 사이버펑크 스크롤바 스타일 */}
+      <style dangerouslySetInnerHTML={{ 
+        __html: `
+          .queue-scrollbar::-webkit-scrollbar {
+            width: 8px;
+          }
+          .queue-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+          }
+          .queue-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #ff0080, #00ffff);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 0, 128, 0.3);
+          }
+          .queue-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #cc0066, #00cccc);
+            box-shadow: 0 0 10px rgba(255, 0, 128, 0.5);
+          }
+        `
+      }} />
       {/* 헤더 */}
       <div style={{
         display: 'flex',
@@ -344,6 +353,7 @@ const ReservationQueue: React.FC = () => {
               CLEAR ALL
             </button>
           )}
+          
         </div>
       </div>
 
@@ -355,16 +365,22 @@ const ReservationQueue: React.FC = () => {
           onDragEnd={handleDragEnd}
         >
           <SortableContext items={reservationQueue.map(song => song.id)} strategy={verticalListSortingStrategy}>
-            <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+            <div 
+              className="queue-scrollbar"
+              style={{ 
+                maxHeight: '400px', 
+                overflow: 'auto',
+                paddingRight: '4px' // 스크롤바 공간 확보
+              }}
+            >
               {reservationQueue.map((song, index) => (
                 <SortableReservationItem
                   key={song.id}
                   song={song}
                   index={index}
                   onDelete={handleDeleteSong}
-                  onPlay={handlePlaySong}
-                  isCurrentlyPlaying={currentPlayingSong?.id === song.id}
-                  isPlaying={isPlaying}
+                  onSelect={handleSelectSong}
+                  isSelected={selectedSong?.id === song.id}
                 />
               ))}
             </div>

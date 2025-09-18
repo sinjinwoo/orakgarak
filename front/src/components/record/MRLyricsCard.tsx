@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import YouTubeMRPlayer, { YouTubeMRPlayerHandle } from './YouTubeMRPlayer.tsx';
+import LyricsPanel from './LyricsPanel';
 
 interface MRLyricsCardProps {
   currentSong?: {
@@ -14,6 +15,7 @@ interface MRLyricsCardProps {
     genre: string;
     duration: string;
     youtubeId?: string; // YouTube MR 비디오 ID (예: 'szCnpElg-4k')
+    lyrics?: string; // 가사 정보 (JSON 문자열)
   };
   onPlayPause?: () => void;
   onDelete?: () => void; // 곡 삭제 콜백
@@ -27,118 +29,9 @@ interface MRLyricsCardProps {
   onSongFinished?: () => void; // 곡이 끝났을 때 호출할 콜백
 }
 
-// Musixmatch 스타일 가사 → 내부 포맷으로 변환 (1초 늦게 표시 적용)
-function parseMusixmatchLines(lines: { startTimeMs: string; words: string }[]): { time: number; text: string }[] {
-  return lines
-    .filter(l => typeof l.words === 'string' && l.words.trim().length > 0)
-    .map(l => {
-      const ms = parseInt(l.startTimeMs || '0', 10);
-      // 가사 싱크를 위해 1초(1000ms) 늦게 표시
-      const adjustedMs = ms + 1000;
-      const time = isNaN(ms) ? 0 : Math.max(0, Math.floor(adjustedMs / 1000));
-      return { time, text: l.words };
-    })
-    .sort((a, b) => a.time - b.time);
-}
-
-// 백엔드 API 응답 형식의 가사 데이터 파싱 함수
-function parseBackendLyrics(lyricsData: { lyrics: { lines: { startTimeMs: string; words: string }[] } }): { time: number; text: string }[] {
-  if (!lyricsData?.lyrics?.lines) return [];
-  
-  return parseMusixmatchLines(lyricsData.lyrics.lines);
-}
-
-// 곡별 가사 데이터베이스
-const lyricsDatabase: { [key: string]: { time: number; text: string }[] } = {
-  '1': [
-    { time: 0, text: "Welcome to the cyber world" },
-    { time: 5, text: "Where neon lights shine bright" },
-    { time: 10, text: "Digital dreams come alive" },
-    { time: 15, text: "In this electric night" },
-    { time: 20, text: "Neural pathways connect" },
-    { time: 25, text: "Through the matrix we flow" },
-    { time: 30, text: "Cyberpunk reality" },
-    { time: 35, text: "Where the future glows" }
-  ],
-  '21': parseMusixmatchLines([
-    { startTimeMs: '22770', words: '또렷해져 모두 잊어버리려' },
-    { startTimeMs: '27470', words: '지워버리려 할수록' },
-    { startTimeMs: '32040', words: '가득해져 가는 너의 빈자리' },
-    { startTimeMs: '36770', words: '지나온 날들 너 아니면' },
-    { startTimeMs: '42470', words: '아무것도 아니었다는 걸' },
-    { startTimeMs: '47080', words: '바보처럼 나만 몰랐나봐' },
-    { startTimeMs: '58630', words: '허전해져 많이 보고 싶어' },
-    { startTimeMs: '63740', words: '니 얼굴을 떠올려 봐도' },
-    { startTimeMs: '68880', words: '흐릿해져 가는 너의 모습에' },
-    { startTimeMs: '73260', words: '사랑을 몰라 눈 가린 듯' },
-    { startTimeMs: '79030', words: '모르는 척 니 맘을 버린 뒤' },
-    { startTimeMs: '83370', words: '바보 같은 내 맘은' }
-  ]),
-  '27015': parseMusixmatchLines([
-    { startTimeMs: '8130', words: '너에게로 다가가면' },
-    { startTimeMs: '13720', words: '언제나 많은 사람들 중에 하날 뿐이지' },
-    { startTimeMs: '22780', words: '때론 내게 말을 하지' },
-    { startTimeMs: '28170', words: '사랑이라는 건 우정보다 유치하다고' },
-    { startTimeMs: '35340', words: '너에게 이런 내가 부담인줄 알지만' },
-    { startTimeMs: '43360', words: '너무 많은 이해심은 무관심일수도 있지' },
-    { startTimeMs: '50550', words: '넌 내 곁에서 한발 물러서 있지만' },
-    { startTimeMs: '56540', words: '너의 마음 깊은 곳에서 날 찾고 싶었던 거야' },
-    { startTimeMs: '71910', words: '널 사랑한다 말을 한다면' },
-    { startTimeMs: '77560', words: '넌 내게 구속이라 말을 하겠지만' },
-    { startTimeMs: '84710', words: '너에게 나만의 널 원하는 건 아냐' },
-    { startTimeMs: '91670', words: '다만 내게 조금만 더 널 보여줘' },
-    { startTimeMs: '97030', words: '있는 그대로의 네 모습을' },
-    { startTimeMs: '114980', words: '너에게 이런 내가 부담인줄 알지만' },
-    { startTimeMs: '122810', words: '너무 많은 이해심은 무관심일수도 있지' },
-    { startTimeMs: '130040', words: '넌 내 곁에서 한발 물러서 있지만' },
-    { startTimeMs: '135820', words: '너의 마음 깊은 곳에서 날 찾고 싶었던 거야' },
-    { startTimeMs: '151410', words: '널 사랑한다 말을 한다면' },
-    { startTimeMs: '156960', words: '넌 내게 구속이라 말을 하겠지만' },
-    { startTimeMs: '164160', words: '너에게 나만의 널 원하는 건 아냐' },
-    { startTimeMs: '170950', words: '다만 내게 조금만 더 널 보여줘' },
-    { startTimeMs: '176310', words: '있는 그대로의 네 모습을' },
-    { startTimeMs: '180170', words: '널 사랑한다 말을 한다면' },
-    { startTimeMs: '185920', words: '넌 내게 구속이라 말을 하겠지만' },
-    { startTimeMs: '193090', words: '너에게 나만의 널 원하는 건 아냐' },
-    { startTimeMs: '199830', words: '다만 내게 조금만 더 널 보여줘' },
-    { startTimeMs: '205320', words: '있는 그대로의 네 모습을' }
-  ]),
-  '27071': parseMusixmatchLines([
-    { startTimeMs: '20490', words: '내가 이렇게 아픈데 그댄 어떨까요' },
-    { startTimeMs: '33680', words: '원래 떠나는 사람이 더 힘든 법인데' },
-    { startTimeMs: '48370', words: '아무 말 하지 말아요 그대 마음 알아요' },
-    { startTimeMs: '62450', words: '간신히 참고 있는 날 울게 하지 마요' },
-    { startTimeMs: '76810', words: '이별은 시간을 멈추게 하니까' },
-    { startTimeMs: '83530', words: '모든 걸 빼앗고 추억만 주니까' },
-    { startTimeMs: '89840', words: '아무리 웃어 보려고 안간힘 써 봐도' },
-    { startTimeMs: '96960', words: '밥 먹다가도 울겠지만' },
-    { startTimeMs: '103490', words: '그대 오직 그대만이' },
-    { startTimeMs: '110180', words: '내 첫사랑 내 끝사랑' },
-    { startTimeMs: '117000', words: '지금부터 달라질 수 없는 한 가지' },
-    { startTimeMs: '124790', words: '그대만이 영원한 내 사랑' },
-    { startTimeMs: '146660', words: '그대도 나처럼 잘못했었다면' },
-    { startTimeMs: '155750', words: '그 곁에 머물기 수월했을까요' },
-    { startTimeMs: '162990', words: '사랑해 떠난다는 말' },
-    { startTimeMs: '166290', words: '과분하다는 말' },
-    { startTimeMs: '169730', words: '코웃음치던 나였지만' },
-    { startTimeMs: '176500', words: '그대 오직 그대만이' },
-    { startTimeMs: '183260', words: '내 첫사랑 내 끝사랑' },
-    { startTimeMs: '190390', words: '지금부터 그대 나를 잊고 살아도' },
-    { startTimeMs: '198070', words: '그대만이 영원한 내 사랑' },
-    { startTimeMs: '219790', words: '나는 다시는 사랑을' },
-    { startTimeMs: '227350', words: '못 할 것 같아요 그대가 아니면' }
-  ])
-};
 
 const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
-  currentSong = {
-    id: '1',
-    title: 'NEURAL DANCE',
-    artist: 'CYBER COLLECTIVE',
-    genre: 'Cyberpunk',
-    duration: '3:00',
-    youtubeId: undefined // 기본값은 YouTube MR 없음
-  },
+  currentSong,
   onPlayPause,
   onDelete,
   isPlaying = false,
@@ -151,117 +44,86 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
   onSongFinished
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
-  const currentLyrics = lyricsDatabase[currentSong.id] || lyricsDatabase['1'];
   
-  // 유튜브 MR 제어 - 특정 곡들에 대해 YouTube MR 재생
-  const currentSongYoutubeId: string | undefined = (currentSong as { youtubeId?: string }).youtubeId;
-  // 곡 ID '21', '27015', '27071' 또는 youtubeId가 있는 경우 YouTube MR 사용
-  const isYouTubeMR = Boolean(currentSong.id === '21' || currentSong.id === '27015' || currentSong.id === '27071' || currentSongYoutubeId);
-  // 곡별 YouTube MR 비디오 ID 설정
-  const getYouTubeVideoId = () => {
-    if (currentSongYoutubeId) return currentSongYoutubeId;
-    if (currentSong.id === '21') return 'szCnpElg-4k'; // https://www.youtube.com/watch?v=szCnpElg-4k
-    if (currentSong.id === '27015') return 'NHwn7cGbciU'; // https://www.youtube.com/watch?v=NHwn7cGbciU
-    if (currentSong.id === '27071') return 'UZy29hJkWfY'; // https://www.youtube.com/watch?v=UZy29hJkWfY
-    return 'szCnpElg-4k'; // 기본값
-  };
-  const youTubeVideoId = getYouTubeVideoId();
+  // 모든 Hook을 먼저 호출
   const playerRef = useRef<YouTubeMRPlayerHandle | null>(null);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [isPlayerLoading, setIsPlayerLoading] = useState(false);
 
-  // YouTube 플레이어 재시작 함수
+  // 유튜브 MR 제어 관련 변수들
+  const currentSongYoutubeId: string | undefined = currentSong ? (currentSong as { youtubeId?: string }).youtubeId : undefined;
+  const isYouTubeMR = currentSong ? Boolean(currentSong.id === '21' || currentSong.id === '27015' || currentSong.id === '27071' || currentSongYoutubeId) : false;
+  
+  const getYouTubeVideoId = () => {
+    if (!currentSong) return 'szCnpElg-4k';
+    if (currentSongYoutubeId) return currentSongYoutubeId;
+    if (currentSong.id === '21') return 'szCnpElg-4k';
+    if (currentSong.id === '27015') return 'NHwn7cGbciU';
+    if (currentSong.id === '27071') return 'UZy29hJkWfY';
+    return 'szCnpElg-4k';
+  };
+  const youTubeVideoId = getYouTubeVideoId();
+
+  // YouTube 재생 함수 - 단순화
   const resetAndPlayYouTube = async () => {
-    if (!isYouTubeMR || !playerRef.current || !isPlayerReady || isPlayerLoading) {
-      console.log('Cannot play YouTube: MR:', isYouTubeMR, 'Player:', !!playerRef.current, 'Ready:', isPlayerReady, 'Loading:', isPlayerLoading);
-      return;
-    }
+    console.log('🎬 YouTube 재생 시작:', youTubeVideoId);
 
-    setIsPlayerLoading(true);
-    console.log('Resetting and playing YouTube from start');
-    
-    try {
-      const player = playerRef.current;
-      
-      // 1. 먼저 일시정지
-      player.pause();
-      
-      // 2. 잠시 대기 후 0초로 이동
-      await new Promise(resolve => setTimeout(resolve, 200));
-      player.seekTo(0);
-      
-      // 3. 다시 잠시 대기 후 한 번 더 0초로 이동 (확실히 하기 위해)
-      await new Promise(resolve => setTimeout(resolve, 300));
-      player.seekTo(0);
-      
-      // 4. 볼륨 설정
-      const targetVolume = Math.round((volume ?? 0.7) * 100);
-      player.setVolume(targetVolume);
-      
-      // 5. 재생 시작
-      await new Promise(resolve => setTimeout(resolve, 500));
-      player.play();
-      
-      console.log('YouTube play started successfully from beginning');
-      
-      // 6. 재생 시작 후 위치 확인 및 보정
-      setTimeout(() => {
-        if (player && isPlayerReady) {
-          const currentTime = player.getCurrentTime();
-          if (currentTime > 3) { // 3초 이상이면 다시 0초로
-            console.log('Correcting playback position to start, current was:', currentTime);
-            player.seekTo(0);
-          }
-        }
-        setIsPlayerLoading(false);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('YouTube play error:', error);
-      setIsPlayerLoading(false);
-    }
-  };
-
-  // YouTube 플레이어 정지 함수
-  const stopYouTube = async () => {
     if (!isYouTubeMR || !playerRef.current || !isPlayerReady) {
+      console.log('❌ 재생 불가:', { isYouTubeMR, hasPlayer: !!playerRef.current, isPlayerReady });
       return;
     }
 
-    console.log('Stopping YouTube and resetting to start');
-    
     try {
       const player = playerRef.current;
-      
-      // 1. 일시정지
-      player.pause();
-      
-      // 2. 잠시 대기 후 0초로 이동
-      await new Promise(resolve => setTimeout(resolve, 200));
-      player.seekTo(0);
-      
-      // 3. 한 번 더 확인
-      setTimeout(() => {
-        if (player && isPlayerReady) {
-          player.seekTo(0);
-          console.log('YouTube stopped and reset to beginning');
-        }
-      }, 300);
-      
+      await player.seekTo(0);
+      await player.play();
+      console.log('✅ YouTube 재생 성공');
     } catch (error) {
-      console.error('YouTube stop error:', error);
+      console.error('❌ YouTube 재생 실패:', error);
     }
   };
 
-  // isPlaying 상태 변화 감지
+  // YouTube 정지 함수 - 단순화
+  const stopYouTube = async () => {
+    console.log('🛑 YouTube 정지:', youTubeVideoId);
+
+    if (!isYouTubeMR || !playerRef.current || !isPlayerReady) {
+      console.log('❌ 정지 불가:', { isYouTubeMR, hasPlayer: !!playerRef.current, isPlayerReady });
+      return;
+    }
+
+    try {
+      const player = playerRef.current;
+      await player.pause();
+      await player.seekTo(0);
+      console.log('✅ YouTube 정지 성공');
+    } catch (error) {
+      console.error('❌ YouTube 정지 실패:', error);
+    }
+  };
+
+  // 재생 상태 변화 감지 - 단순화
   useEffect(() => {
-    if (!isYouTubeMR || !isPlayerReady) return;
+    console.log('🎮 재생 상태 변화:', {
+      isPlaying,
+      isYouTubeMR,
+      isPlayerReady,
+      currentSong: currentSong?.title
+    });
+
+    if (!isYouTubeMR || !isPlayerReady) {
+      console.log('⏸️ 재생 조건 미충족, 스킵');
+      return;
+    }
     
     if (isPlaying) {
+      console.log('▶️ 재생 시작');
       resetAndPlayYouTube();
     } else {
+      console.log('⏹️ 재생 정지');
       stopYouTube();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, isYouTubeMR, isPlayerReady]);
 
   // 볼륨 변화 감지
@@ -274,24 +136,137 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
     }
   }, [volume, isYouTubeMR, isPlayerReady]);
 
-  // 유튜브 현재 시간 폴링하여 상위 업데이트
+  // YouTube 시간 추적 - 고정밀 가사 싱크용
   useEffect(() => {
-    if (!isYouTubeMR || !playerRef.current || !isPlayerReady) return;
+    if (!isYouTubeMR || !isPlayerReady || !isPlaying || !playerRef.current) {
+      return;
+    }
     
-    const interval = window.setInterval(() => {
+    console.log('⏰ 고정밀 시간 추적 시작 (가사 싱크용)');
+    
+    const interval = setInterval(() => {
       try {
-        const ct = playerRef.current?.getCurrentTime() ?? currentTime;
-        const du = playerRef.current?.getDuration() ?? duration;
-        if (typeof onTimeUpdateRequest === 'function') {
-          onTimeUpdateRequest(ct, du || undefined);
+        const player = playerRef.current;
+        if (player && onTimeUpdateRequest) {
+          const currentSeconds = player.getCurrentTime();
+          const totalDuration = player.getDuration();
+          
+          // 정밀한 시간 전달 (가사 싱크를 위해)
+          if (currentSeconds > 0 && totalDuration > 0) {
+            onTimeUpdateRequest(currentSeconds, totalDuration);
+            
+            console.log('🎵 시간 동기화:', {
+              current: currentSeconds.toFixed(2),
+              duration: totalDuration.toFixed(2),
+              progress: `${((currentSeconds / totalDuration) * 100).toFixed(1)}%`
+            });
+          }
+          
+          // 곡 종료 확인 (더 정확한 타이밍)
+          if (currentSeconds >= totalDuration - 0.5) {
+            console.log('🏁 곡 종료 감지');
+            onSongFinished?.();
+          }
         }
       } catch (error) {
-        // 에러는 조용히 무시 (플레이어가 준비되지 않았을 수 있음)
+        console.error('❌ 시간 추적 오류:', error);
       }
-    }, 500);
+    }, 200); // 0.2초마다 업데이트로 더 정밀한 가사 싱크
     
-    return () => window.clearInterval(interval);
-  }, [isYouTubeMR, onTimeUpdateRequest, isPlayerReady]);
+    return () => {
+      console.log('⏰ 시간 추적 정리');
+      clearInterval(interval);
+    };
+  }, [isYouTubeMR, isPlayerReady, isPlaying, onTimeUpdateRequest, onSongFinished]);
+
+  // 노래 변경 감지 - 플레이어 완전 재설정
+  useEffect(() => {
+    console.log('🔄 노래 변경 감지:', {
+      currentSong: currentSong?.title,
+      youTubeVideoId,
+      isYouTubeMR
+    });
+    
+    if (!currentSong) {
+      console.log('🚫 노래 없음 - 플레이어 리셋');
+      setIsPlayerReady(false);
+      setIsPlayerLoading(false);
+      return;
+    }
+    
+    if (isYouTubeMR) {
+      console.log('🎬 YouTube MR 노래 - 플레이어 대기');
+      setIsPlayerReady(false); // 새 노래이므로 준비 상태 리셋
+      setIsPlayerLoading(true);
+      
+      // YouTube 플레이어가 새 비디오로 로드될 때까지 대기
+      // onPlayerReady 콜백에서 setIsPlayerReady(true)가 호출됨
+    } else {
+      console.log('🎤 일반 노래 - YouTube 플레이어 불필요');
+      setIsPlayerReady(false);
+      setIsPlayerLoading(false);
+    }
+  }, [currentSong?.id, youTubeVideoId, isYouTubeMR]);
+
+  // 노래가 선택되지 않은 경우 초기 상태 가이드 표시
+  if (!currentSong) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        textAlign: 'center',
+        color: '#888',
+        padding: '40px 20px',
+        background: 'linear-gradient(135deg, rgba(0, 255, 255, 0.05), rgba(255, 0, 128, 0.05))',
+        borderRadius: '20px',
+        border: '2px solid rgba(0, 255, 255, 0.2)',
+        animation: 'fadeIn 0.5s ease-in-out'
+      }}>
+        <div style={{
+          fontSize: '4rem',
+          marginBottom: '20px',
+          opacity: 0.7,
+          animation: 'pulse 2s infinite'
+        }}>
+          🎵
+        </div>
+        <h3 style={{
+          color: '#00ffff',
+          fontSize: '1.4rem',
+          fontWeight: 'bold',
+          margin: '0 0 12px 0',
+          textShadow: '0 0 15px rgba(0, 255, 255, 0.8)',
+          animation: 'glow 2s ease-in-out infinite alternate'
+        }}>
+          노래를 선택해주세요
+        </h3>
+        <p style={{
+          color: '#888',
+          fontSize: '1rem',
+          margin: '0 0 20px 0',
+          lineHeight: 1.5
+        }}>
+          예약 큐에서 노래를 클릭하면<br/>
+          <span style={{ color: '#00ffff' }}>새로고침 효과</span>와 함께<br/>
+          완벽하게 재생됩니다
+        </p>
+        <div style={{
+          padding: '12px 20px',
+          background: 'rgba(0, 255, 255, 0.1)',
+          border: '1px solid rgba(0, 255, 255, 0.3)',
+          borderRadius: '20px',
+          fontSize: '0.9rem',
+          color: '#00ffff',
+          textShadow: '0 0 8px rgba(0, 255, 255, 0.6)'
+        }}>
+          🎵 노래 클릭 = 새로고침 + 완벽 재생 ✨
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ 
@@ -299,6 +274,16 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
       width: '100%',
       height: '100%'
     }}>
+      {/* 로딩 애니메이션 CSS */}
+      <style dangerouslySetInnerHTML={{ 
+        __html: `
+          @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+        `
+      }} />
       <div style={{
         position: 'relative',
         width: '100%',
@@ -336,10 +321,38 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
                 volumePercent={Math.round((volume ?? 0.7) * 100)}
                 playing={false} // 수동 제어로 변경
                 onSongFinished={onSongFinished}
-                onPlayerReady={() => {
-                  console.log('YouTube player ready callback received');
-                  setIsPlayerReady(true);
-                  setIsPlayerLoading(false);
+                onPlayerReady={(player) => {
+                  console.log('🎬 YouTube player ready:', youTubeVideoId);
+                  console.log('🎬 플레이어 객체 직접 전달받음:', !!player);
+                  
+                  // 플레이어 객체를 직접 playerRef에 할당
+                  if (player) {
+                    playerRef.current = player;
+                    console.log('🔧 플레이어 ref 직접 할당 완료');
+                    
+                    // 즉시 함수 확인
+                    const hasAllMethods = 
+                      typeof player.playVideo === 'function' &&
+                      typeof player.pauseVideo === 'function' &&
+                      typeof player.seekTo === 'function' &&
+                      typeof player.setVolume === 'function' &&
+                      typeof player.getCurrentTime === 'function' &&
+                      typeof player.getDuration === 'function';
+                    
+                    console.log('✅ 플레이어 함수 확인:', hasAllMethods);
+                    
+                    if (hasAllMethods) {
+                      try {
+                        player.seekTo(0);
+                        player.setVolume(Math.round((volume ?? 0.7) * 100));
+                        setIsPlayerReady(true);
+                        setIsPlayerLoading(false);
+                        console.log('✅ 플레이어 완전 준비 완료');
+                      } catch (error) {
+                        console.error('❌ 초기 설정 실패:', error);
+                      }
+                    }
+                  }
                 }}
               />
             </div>
@@ -385,7 +398,8 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               {currentSong.artist}
             </h4>
             
-            {/* 컨트롤 가이드 */}
+            
+            {/* 상태 표시 */}
             <div style={{
               color: 'rgba(255, 255, 255, 0.7)',
               fontSize: '0.75rem',
@@ -396,13 +410,24 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               {isYouTubeMR ? (
                 <>
                   <span style={{ color: '#00ffff' }}>🎵 YouTube MR</span><br />
-                  {isPlaying ? '정지하면 처음부터 다시 시작됩니다' : '▶️ 재생 | 🗑️ 삭제'}
-                  {isPlayerLoading && <><br /><span style={{ color: '#ff0080' }}>로딩 중...</span></>}
+                  {isPlayerLoading ? (
+                    <span style={{ color: '#ffa500' }}>⏳ 플레이어 준비 중...</span>
+                  ) : !isPlayerReady ? (
+                    <span style={{ color: '#ff4444' }}>❌ 플레이어 로딩 중</span>
+                  ) : isPlaying ? (
+                    <span style={{ color: '#00ff00' }}>🎵 재생 중 - 정지하면 초기화</span>
+                  ) : (
+                    <span style={{ color: '#888' }}>⏹️ 정지 상태 - 버튼을 눌러 재생</span>
+                  )}
                 </>
               ) : (
                 <>
                   <span style={{ color: '#ff0080' }}>🎤 일반 모드</span><br />
-                  {isPlaying ? '정지하면 처음부터 다시 시작됩니다' : '▶️ 재생 | 🗑️ 삭제'}
+                  {isPlaying ? (
+                    <span style={{ color: '#00ff00' }}>🎵 재생 중 - 정지하면 초기화</span>
+                  ) : (
+                    <span style={{ color: '#888' }}>⏹️ 정지 상태 - 버튼을 눌러 재생</span>
+                  )}
                 </>
               )}
             </div>
@@ -420,45 +445,50 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
             {/* 재생/정지 버튼 */}
             <button
               onClick={() => {
-                console.log('Play/Stop button clicked, isYouTubeMR:', isYouTubeMR, 'isPlaying:', isPlaying, 'isPlayerReady:', isPlayerReady);
+                console.log('🎮 재생 버튼 클릭:', {
+                  isPlaying,
+                  isYouTubeMR,
+                  isPlayerReady,
+                  songTitle: currentSong.title
+                });
                 
-                // 로딩 중이면 무시
-                if (isPlayerLoading) {
-                  console.log('Player is loading, ignoring button click');
-                  return;
-                }
-                
-                // YouTube MR이 있는 경우 플레이어 준비 상태 확인
+                // YouTube MR인 경우 플레이어 준비 확인
                 if (isYouTubeMR && !isPlayerReady) {
-                  console.warn('YouTube player not ready, ignoring button click');
+                  console.log('⚠️ 플레이어 준비되지 않음');
                   return;
                 }
                 
-                // 상위 컴포넌트에 상태 변경 알림 (YouTube 제어는 useEffect에서 처리)
                 onPlayPause?.();
               }}
-              disabled={isPlayerLoading}
+              disabled={isPlayerLoading || (isYouTubeMR && !isPlayerReady)}
               style={{
-                background: isPlaying 
-                  ? 'linear-gradient(45deg, #ff4444, #cc0000)' // 정지 - 빨간색
-                  : 'linear-gradient(45deg, #00ffff, #ff0080)', // 재생 - 기존 컬러
+                background: isPlayerLoading
+                  ? 'linear-gradient(45deg, #ffa500, #ff8c00)' // 로딩 - 주황색
+                  : isPlaying 
+                    ? 'linear-gradient(45deg, #ff4444, #cc0000)' // 정지 - 빨간색
+                    : 'linear-gradient(45deg, #00ff00, #00cc00)', // 재생 - 초록색
                 color: '#fff',
                 width: '48px',
                 height: '48px',
                 border: 'none',
                 borderRadius: '50%',
-                cursor: isPlayerLoading ? 'not-allowed' : 'pointer',
+                cursor: (isPlayerLoading || (isYouTubeMR && !isPlayerReady)) ? 'not-allowed' : 'pointer',
                 fontSize: '20px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                boxShadow: isPlayerLoading 
+                  ? '0 0 20px rgba(255, 165, 0, 0.6)' 
+                  : isPlaying
+                    ? '0 0 20px rgba(255, 68, 68, 0.6)'
+                    : '0 0 20px rgba(0, 255, 0, 0.6)',
                 transition: 'all 0.3s ease',
                 transform: 'scale(1)',
-                opacity: isPlayerLoading ? 0.6 : 1
+                opacity: (isPlayerLoading || (isYouTubeMR && !isPlayerReady)) ? 0.6 : 1,
+                animation: isPlayerLoading ? 'pulse 1.5s infinite' : 'none'
               }}
               onMouseEnter={(e) => {
-                if (!isPlayerLoading) {
+                if (!isPlayerLoading && (isPlayerReady || !isYouTubeMR)) {
                   e.currentTarget.style.transform = 'scale(1.1)';
                 }
               }}
@@ -579,11 +609,11 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               marginTop: '8px'
             }}
           >
-            🔄 FLIP
+            🔄 가사 보기
           </button>
         </div>
 
-        {/* 가사 면 (뒤면) */}
+        {/* 가사 면 (뒤면) - LyricsPanel 사용 */}
         <div style={{
           position: 'absolute',
           width: '100%',
@@ -593,59 +623,24 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           background: 'rgba(0, 0, 0, 0.3)',
           border: '1px solid rgba(255, 0, 128, 0.3)',
           borderRadius: '15px',
-          padding: '16px',
+          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           boxSizing: 'border-box'
         }}>
           
-          <h4 style={{ 
-            color: '#ff0080',
-            fontSize: '0.9rem',
-            fontWeight: 'bold',
-            margin: '0 0 12px 0'
-          }}>
-            NEURAL LYRICS
-          </h4>
-
-          {/* 가사 목록 */}
-          <div style={{ 
-            flex: 1,
-            overflow: 'auto',
-            paddingRight: '4px',
-            minHeight: 0
-          }}>
-            {currentLyrics.map((lyric, index) => {
-              const isActive = Math.floor(currentTime) >= lyric.time && 
-                             Math.floor(currentTime) < (currentLyrics[index + 1]?.time || duration);
-              
-              return (
-                <div
-                  key={index}
-                  style={{
-                    padding: '4px 0',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <p style={{ 
-                    color: isActive ? '#ff0080' : '#fff',
-                    fontWeight: isActive ? 'bold' : 'normal',
-                    fontSize: '0.75rem',
-                    lineHeight: 1.3,
-                    margin: '0 0 2px 0'
-                  }}>
-                    {lyric.text}
-                  </p>
-                  <span style={{ 
-                    color: '#888',
-                    fontSize: '0.6rem'
-                  }}>
-                    {Math.floor(lyric.time / 60)}:{(lyric.time % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          {/* LyricsPanel 컴포넌트 사용 */}
+          <LyricsPanel 
+            selectedSong={{
+              id: currentSong?.id || '',
+              title: currentSong?.title || '',
+              artist: currentSong?.artist || '',
+              lyrics: currentSong?.lyrics
+            }}
+            currentTime={currentTime}
+            isPlaying={isPlaying}
+            onFlip={() => setIsFlipped(false)}
+          />
 
           {/* 뒤집기 버튼 */}
           <button
@@ -659,13 +654,15 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               borderRadius: '12px',
               fontSize: '0.7rem',
               fontWeight: 'bold',
-              marginTop: '8px'
+              margin: '8px',
+              alignSelf: 'center'
             }}
           >
             🔄 FLIP
           </button>
         </div>
       </div>
+
     </div>
   );
 };
