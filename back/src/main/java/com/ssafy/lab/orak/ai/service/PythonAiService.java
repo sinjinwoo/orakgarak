@@ -40,20 +40,43 @@ public class PythonAiService {
     }
 
     public Mono<VoiceImageGenerationResponseDto> generateVoiceImage(VoiceImageGenerationRequestDto request) {
-        log.info("Requesting voice image generation for {} records", request.records().size());
+        log.info("Requesting voice image generation for {} records to URL: {}", request.records().size(), pythonServiceUrl + "/ai/generate-voice-image");
+
+        // 각 레코드의 URL 로깅 (첫 50자만)
+        request.records().forEach(record ->
+            log.info("Record {}: title='{}', url='{}'", record.id(), record.title(),
+                record.url() != null && record.url().length() > 50 ? record.url().substring(0, 50) + "..." : record.url())
+        );
 
         return webClient.post()
                 .uri("/ai/generate-voice-image")
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(status -> status.is4xxClientError(),
+                    clientResponse -> {
+                        log.error("Client error when calling Python AI service: {}",
+                            clientResponse.statusCode());
+                        return clientResponse.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("Error response body: {}", errorBody);
+                                    return Mono.error(new RuntimeException("Python AI service client error: " + errorBody));
+                                });
+                    })
+                .onStatus(status -> status.is5xxServerError(),
+                    clientResponse -> {
+                        log.error("Server error when calling Python AI service: {}",
+                            clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("Python AI service server error"));
+                    })
                 .bodyToMono(VoiceImageGenerationResponseDto.class)
                 .doOnNext(response -> {
                     if (response.success()) {
-                        log.info("Voice image generation successful");
+                        log.info("Voice image generation successful, image data length: {}",
+                            response.imageBase64() != null ? response.imageBase64().length() : 0);
                     } else {
                         log.warn("Voice image generation failed: {}", response.error());
                     }
                 })
-                .doOnError(error -> log.error("Error calling Python AI service", error));
+                .doOnError(error -> log.error("Error calling Python AI service at {}: {}", pythonServiceUrl, error.getMessage(), error));
     }
 }
