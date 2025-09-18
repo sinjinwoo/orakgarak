@@ -26,6 +26,20 @@ public interface UploadRepository extends JpaRepository<Upload, Long> {
            " LOWER(u.extension) IN ('mp3', 'wav', 'm4a', 'flac', 'aac', 'ogg')) " +
            "ORDER BY u.createdAt ASC")
     List<Upload> findPendingAudioProcessing(@Param("limit") int limit);
+
+    // 재시도 로직을 포함한 오디오 파일 처리 대기 조회
+    @Query("SELECT u FROM Upload u WHERE " +
+           "(u.processingStatus = 'UPLOADED' OR " +
+           " (u.processingStatus = 'PENDING' AND " +
+           "  (u.retryCount IS NULL OR u.retryCount < :maxRetries) AND " +
+           "  (u.lastFailedAt IS NULL OR u.lastFailedAt < :retryAfterTime))) AND " +
+           "(u.contentType LIKE 'audio/%' OR " +
+           " LOWER(u.extension) IN ('mp3', 'wav', 'm4a', 'flac', 'aac', 'ogg')) " +
+           "ORDER BY u.createdAt ASC")
+    List<Upload> findPendingAudioProcessingWithRetry(
+            @Param("limit") int limit,
+            @Param("maxRetries") int maxRetries,
+            @Param("retryAfterTime") LocalDateTime retryAfterTime);
     
     // 특정 사용자의 처리 상태별 업로드 조회
     List<Upload> findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(Long uploaderId, ProcessingStatus status);

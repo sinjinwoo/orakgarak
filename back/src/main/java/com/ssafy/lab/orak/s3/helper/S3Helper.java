@@ -12,6 +12,9 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 
@@ -185,6 +188,47 @@ public class S3Helper {
         } catch (Exception e) {
             log.error("S3 파일 삭제 실패: {}", s3Key, e);
             throw new IOException("S3 파일 삭제에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * S3 파일 복사 (같은 버킷 내)
+     */
+    public void copyFile(String sourceS3Key, String destinationS3Key) throws IOException {
+        try {
+            CopyObjectRequest copyObjectRequest = CopyObjectRequest.builder()
+                    .sourceBucket(bucket)
+                    .sourceKey(sourceS3Key)
+                    .destinationBucket(bucket)
+                    .destinationKey(destinationS3Key)
+                    .build();
+
+            s3Client.copyObject(copyObjectRequest);
+            log.info("S3 파일 복사 완료: {} -> {}", sourceS3Key, destinationS3Key);
+        } catch (Exception e) {
+            log.error("S3 파일 복사 실패: {} -> {}", sourceS3Key, destinationS3Key, e);
+            throw new IOException("S3 파일 복사에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * S3 파일 존재 여부 확인
+     */
+    public boolean fileExists(String s3Key) {
+        try {
+            HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(s3Key)
+                    .build();
+
+            s3Client.headObject(headObjectRequest);
+            return true;
+        } catch (NoSuchKeyException e) {
+            log.debug("S3 파일이 존재하지 않음: {}", s3Key);
+            return false;
+        } catch (Exception e) {
+            log.warn("S3 파일 존재 여부 확인 실패: {} - {}", s3Key, e.getMessage());
+            return false;
         }
     }
 }
