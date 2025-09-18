@@ -10,6 +10,7 @@ import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.exception.RecordOperationException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
+import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadRequest;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadResponse;
 import com.ssafy.lab.orak.upload.entity.Upload;
@@ -18,6 +19,7 @@ import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,13 +43,14 @@ public class AsyncRecordService {
     private final FileUploadService fileUploadService;
     private final EventBridgeService eventBridgeService;
     private final RecordMapper recordMapper;
+    private final AudioDurationCalculator audioDurationCalculator;
 
     /**
      * 1단계: Presigned URL 생성 (클라이언트가 직접 S3에 업로드)
      */
     public PresignedUploadResponse generatePresignedUrlForRecord(
             String title, Long songId, String originalFilename,
-            Long fileSize, String contentType, Long userId) {
+            Long fileSize, String contentType, Integer durationSeconds, Long userId) {
 
         try {
             // Presigned URL 요청 생성
@@ -68,12 +71,13 @@ public class AsyncRecordService {
                     .songId(songId)
                     .title(title)
                     .uploadId(response.getUploadId())
+                    .durationSeconds(durationSeconds)
                     .build();
 
             recordRepository.save(record);
 
-            log.info("레코딩 Presigned URL 생성 완료: userId={}, uploadId={}",
-                    userId, response.getUploadId());
+            log.info("레코딩 Presigned URL 생성 완료: userId={}, uploadId={}, duration={}초",
+                    userId, response.getUploadId(), durationSeconds);
 
             return response;
 

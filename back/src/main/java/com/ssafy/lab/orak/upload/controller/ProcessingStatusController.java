@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/processing")
+@RequestMapping("/processing")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Processing Status", description = "파일 처리 상태 관리 API")

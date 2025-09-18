@@ -122,7 +122,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getAlbumTracks(eq(albumId), anyLong())).thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(get("/api/albums/{albumId}/tracks", albumId))
+        mockMvc.perform(get("/albums/{albumId}/tracks", albumId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -141,7 +141,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getTrack(eq(albumId), eq(trackOrder), anyLong())).thenReturn(testTrackResponse);
 
         // When & Then
-        mockMvc.perform(get("/api/albums/{albumId}/tracks/{trackOrder}", albumId, trackOrder))
+        mockMvc.perform(get("/albums/{albumId}/tracks/{trackOrder}", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -164,7 +164,7 @@ class AlbumTrackControllerTest {
                 .thenReturn(testTrackResponse);
 
         // When & Then
-        mockMvc.perform(post("/api/albums/{albumId}/tracks", albumId)
+        mockMvc.perform(post("/albums/{albumId}/tracks", albumId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
@@ -185,7 +185,7 @@ class AlbumTrackControllerTest {
                 .build();
 
         // When & Then
-        mockMvc.perform(post("/api/albums/{albumId}/tracks", albumId)
+        mockMvc.perform(post("/albums/{albumId}/tracks", albumId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andDo(print())
@@ -211,7 +211,7 @@ class AlbumTrackControllerTest {
                 .thenReturn(responses);
 
         // When & Then
-        mockMvc.perform(post("/api/albums/{albumId}/tracks/bulk", albumId)
+        mockMvc.perform(post("/albums/{albumId}/tracks/bulk", albumId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
@@ -229,7 +229,7 @@ class AlbumTrackControllerTest {
         doNothing().when(albumTrackService).removeTrack(eq(albumId), eq(trackOrder), anyLong());
 
         // When & Then
-        mockMvc.perform(delete("/api/albums/{albumId}/tracks/{trackOrder}", albumId, trackOrder))
+        mockMvc.perform(delete("/albums/{albumId}/tracks/{trackOrder}", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isNoContent());
     }
@@ -248,7 +248,7 @@ class AlbumTrackControllerTest {
                 .thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(put("/api/albums/{albumId}/tracks/reorder", albumId)
+        mockMvc.perform(put("/albums/{albumId}/tracks/reorder", albumId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
@@ -267,7 +267,7 @@ class AlbumTrackControllerTest {
                 .thenReturn(testTrackResponse);
 
         // When & Then
-        mockMvc.perform(get("/api/albums/{albumId}/tracks/{trackOrder}/next", albumId, trackOrder))
+        mockMvc.perform(get("/albums/{albumId}/tracks/{trackOrder}/next", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -284,7 +284,7 @@ class AlbumTrackControllerTest {
                 .thenReturn(null);
 
         // When & Then
-        mockMvc.perform(get("/api/albums/{albumId}/tracks/{trackOrder}/next", albumId, trackOrder))
+        mockMvc.perform(get("/albums/{albumId}/tracks/{trackOrder}/next", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isNoContent());
     }
@@ -299,7 +299,7 @@ class AlbumTrackControllerTest {
                 .thenReturn(testTrackResponse);
 
         // When & Then
-        mockMvc.perform(get("/api/albums/{albumId}/tracks/{trackOrder}/previous", albumId, trackOrder))
+        mockMvc.perform(get("/albums/{albumId}/tracks/{trackOrder}/previous", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -316,7 +316,7 @@ class AlbumTrackControllerTest {
                 .thenReturn(null);
 
         // When & Then
-        mockMvc.perform(get("/api/albums/{albumId}/tracks/{trackOrder}/previous", albumId, trackOrder))
+        mockMvc.perform(get("/albums/{albumId}/tracks/{trackOrder}/previous", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isNoContent());
     }
@@ -346,7 +346,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getAlbumTracks(eq(albumId), anyLong())).thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(post("/api/albums/{albumId}/tracks/play", albumId))
+        mockMvc.perform(post("/albums/{albumId}/tracks/play", albumId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -373,7 +373,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getAlbumTracks(eq(albumId), anyLong())).thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(post("/api/albums/{albumId}/tracks/{trackOrder}/play", albumId, trackOrder))
+        mockMvc.perform(post("/albums/{albumId}/tracks/{trackOrder}/play", albumId, trackOrder))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -390,7 +390,7 @@ class AlbumTrackControllerTest {
         when(albumTrackService.getAlbumTracks(eq(albumId), anyLong())).thenReturn(testTracksResponse);
 
         // When & Then
-        mockMvc.perform(post("/api/albums/{albumId}/tracks/shuffle", albumId))
+        mockMvc.perform(post("/albums/{albumId}/tracks/shuffle", albumId))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -407,7 +407,7 @@ class AlbumTrackControllerTest {
                 .thenThrow(new AlbumTrackException("앨범에 접근할 권한이 없습니다"));
 
         // When & Then
-        mockMvc.perform(get("/api/albums/{albumId}/tracks", albumId))
+        mockMvc.perform(get("/albums/{albumId}/tracks", albumId))
                 .andDo(print())
                 .andExpect(status().isInternalServerError());
     }

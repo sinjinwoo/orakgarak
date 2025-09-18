@@ -147,7 +147,7 @@ class RecordControllerTest {
             .thenReturn(testResponseDTO);
 
         // when & then
-        mockMvc.perform(multipart("/api/records")
+        mockMvc.perform(multipart("/records")
                 .file(testAudioFile)
                 .param("title", "테스트 녹음")
                 .param("songId", "100")
@@ -167,7 +167,7 @@ class RecordControllerTest {
     @DisplayName("필수 파라미터 없이 녹음 생성 시 실패")
     void createRecord_MissingRequiredParams_BadRequest() throws Exception {
         // when & then - title 없음
-        mockMvc.perform(multipart("/api/records")
+        mockMvc.perform(multipart("/records")
                 .file(testAudioFile)
                 .param("songId", "100")
                 .contentType(MediaType.MULTIPART_FORM_DATA))
@@ -184,7 +184,7 @@ class RecordControllerTest {
             .thenThrow(new FileUploadException("파일 업로드 실패"));
 
         // when & then
-        mockMvc.perform(multipart("/api/records")
+        mockMvc.perform(multipart("/records")
                 .file(testAudioFile)
                 .param("title", "테스트 녹음")
                 .param("songId", "100")
@@ -202,7 +202,7 @@ class RecordControllerTest {
         when(recordService.getRecord(recordId)).thenReturn(testResponseDTO);
 
         // when & then
-        mockMvc.perform(get("/api/records/{recordId}", recordId))
+        mockMvc.perform(get("/records/{recordId}", recordId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(1L))
             .andExpect(jsonPath("$.title").value("테스트 녹음"))
@@ -219,7 +219,7 @@ class RecordControllerTest {
         when(recordService.getRecord(recordId)).thenThrow(new RecordNotFoundException(recordId));
 
         // when & then
-        mockMvc.perform(get("/api/records/{recordId}", recordId))
+        mockMvc.perform(get("/records/{recordId}", recordId))
             .andExpect(status().isNotFound());
 
         verify(recordService).getRecord(recordId);
@@ -233,7 +233,7 @@ class RecordControllerTest {
         when(recordService.getRecordsByUser(1L)).thenReturn(records);
 
         // when & then
-        mockMvc.perform(get("/api/records/me"))
+        mockMvc.perform(get("/records/me"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(1L))
             .andExpect(jsonPath("$[0].userId").value(1L))
@@ -251,7 +251,7 @@ class RecordControllerTest {
         when(recordService.getRecordsBySong(songId)).thenReturn(records);
 
         // when & then
-        mockMvc.perform(get("/api/records/song/{songId}", songId))
+        mockMvc.perform(get("/records/song/{songId}", songId))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].songId").value(100L))
             .andExpect(jsonPath("$.length()").value(1));
@@ -270,7 +270,7 @@ class RecordControllerTest {
         when(recordService.updateRecord(recordId, newTitle, null, 1L)).thenReturn(updatedResponse);
 
         // when & then
-        mockMvc.perform(put("/api/records/{recordId}", recordId)
+        mockMvc.perform(put("/records/{recordId}", recordId)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .param("title", newTitle))
             .andExpect(status().isOk())
@@ -299,7 +299,7 @@ class RecordControllerTest {
             .thenThrow(new RecordPermissionDeniedException(recordId, 2L));
 
         // when & then
-        mockMvcWithUser2.perform(put("/api/records/{recordId}", recordId)
+        mockMvcWithUser2.perform(put("/records/{recordId}", recordId)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .param("title", newTitle))
             .andExpect(status().isForbidden());
@@ -316,7 +316,7 @@ class RecordControllerTest {
         doNothing().when(recordService).deleteRecord(recordId, 1L);
 
         // when & then
-        mockMvc.perform(delete("/api/records/{recordId}", recordId))
+        mockMvc.perform(delete("/records/{recordId}", recordId))
             .andExpect(status().isNoContent());
 
         verify(recordService).deleteRecord(recordId, 1L);
@@ -332,7 +332,7 @@ class RecordControllerTest {
             .when(recordService).deleteRecord(recordId, 1L);
 
         // when & then
-        mockMvc.perform(delete("/api/records/{recordId}", recordId))
+        mockMvc.perform(delete("/records/{recordId}", recordId))
             .andExpect(status().isNotFound());
 
         verify(recordService).deleteRecord(recordId, 1L);
@@ -356,7 +356,7 @@ class RecordControllerTest {
             .when(recordService).deleteRecord(recordId, 2L);
 
         // when & then
-        mockMvcWithUser2.perform(delete("/api/records/{recordId}", recordId))
+        mockMvcWithUser2.perform(delete("/records/{recordId}", recordId))
             .andExpect(status().isForbidden());
 
         verify(recordService).deleteRecord(recordId, 2L);

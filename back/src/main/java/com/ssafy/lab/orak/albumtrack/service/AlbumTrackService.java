@@ -231,7 +231,8 @@ public class AlbumTrackService {
         // 모든 트랙의 총 재생시간 계산
         List<AlbumTrack> tracks = albumTrackRepository.findByAlbumIdOrderByTrackOrder(albumId);
         Integer totalDuration = tracks.stream()
-                .mapToInt(track -> track.getRecord().getDurationSeconds())
+                .mapToInt(track -> track.getRecord().getDurationSeconds() != null ?
+                    track.getRecord().getDurationSeconds() : 0)
                 .sum();
         
         Album album = albumRepository.findById(albumId)

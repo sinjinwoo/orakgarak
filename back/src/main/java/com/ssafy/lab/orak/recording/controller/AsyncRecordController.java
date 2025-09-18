@@ -28,7 +28,7 @@ import java.util.Map;
  * - 테스트 엔드포인트
  */
 @RestController
-@RequestMapping("/api/records/async")
+@RequestMapping("/records/async")
 @RequiredArgsConstructor
 @Slf4j
 @Validated
@@ -49,10 +49,11 @@ public class AsyncRecordController {
             @RequestParam("originalFilename") @NotBlank String originalFilename,
             @RequestParam("fileSize") @Positive Long fileSize,
             @RequestParam("contentType") @NotBlank String contentType,
+            @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         PresignedUploadResponse response = asyncRecordService.generatePresignedUrlForRecord(
-                title, songId, originalFilename, fileSize, contentType, principal.getUserId());
+                title, songId, originalFilename, fileSize, contentType, durationSeconds, principal.getUserId());
 
         return ResponseEntity.ok(response);
     }

@@ -49,7 +49,7 @@ public class AwsConfig {
     @Bean
     public EventBridgeClient eventBridgeClient() {
         AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
-        
+
         return EventBridgeClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))

@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/processing/batch")
+@RequestMapping("/processing/batch")
 @RequiredArgsConstructor
 @Slf4j
 public class BatchProcessingController {

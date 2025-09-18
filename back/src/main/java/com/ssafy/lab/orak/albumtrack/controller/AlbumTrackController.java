@@ -23,7 +23,7 @@ import java.util.List;
 
 @Tag(name = "Album Track API", description = "앨범 트랙 관리 API")
 @RestController
-@RequestMapping("/api/albums/{albumId}/tracks")
+@RequestMapping("/albums/{albumId}/tracks")
 @RequiredArgsConstructor
 @Log4j2
 public class AlbumTrackController {

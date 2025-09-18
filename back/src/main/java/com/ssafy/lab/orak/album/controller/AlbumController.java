@@ -22,7 +22,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/albums")
+@RequestMapping("/albums")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @Tag(name = "Album", description = "앨범 관리 API")

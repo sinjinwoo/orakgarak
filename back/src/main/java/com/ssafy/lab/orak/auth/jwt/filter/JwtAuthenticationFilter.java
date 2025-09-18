@@ -44,7 +44,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             path.startsWith("/v3/api-docs") ||
             path.startsWith("/api-docs") ||
             path.startsWith("/api/api-docs") ||
-            path.startsWith("/api/actuator")) {
+            path.startsWith("/actuator")) {
             log.info("JWT Filter - Bypassing authentication for path: {}", path);
             filterChain.doFilter(request, response);
             return;
