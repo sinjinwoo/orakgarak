@@ -42,6 +42,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
 import { useAuth } from '../hooks/useAuth';
+import { useMyProfile } from '../hooks/useProfile';
 import { motion } from 'framer-motion';
 import AlbumCoverflow from '../components/AlbumCoverflow';
 
@@ -174,6 +175,13 @@ const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useUIStore();
   const { user, updateProfile } = useAuth();
+  const { 
+    updateMyProfile, 
+    updateMyProfileWithImage, 
+    checkNicknameDuplicate,
+    isLoading: profileLoading,
+    error: profileError 
+  } = useMyProfile();
   const [tabValue, setTabValue] = useState(0);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [followModalOpen, setFollowModalOpen] = useState(false);
@@ -314,7 +322,7 @@ const MyPage: React.FC = () => {
     }));
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // 파일 크기 체크 (5MB 제한)
@@ -329,63 +337,90 @@ const MyPage: React.FC = () => {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
+      try {
+        // 실제 백엔드 API 호출
+        const updatedProfile = await updateMyProfileWithImage({
+          image: file,
+          nickname: profileData.nickname,
+          gender: 'male', // TODO: 성별 선택 UI 추가 후 실제 값 사용
+          description: profileData.introduction
+        });
+
+        if (updatedProfile) {
+          // 로컬 상태 업데이트
+          const updatedProfileData = {
+            ...profileData,
+            profileImage: file,
+            profileImageUrl: updatedProfile.profileImageUrl
+          };
+          
+          setProfileData(updatedProfileData);
+          
+          // localStorage에 프로필 데이터 저장
+          localStorage.setItem('userProfile', JSON.stringify({
+            nickname: updatedProfile.nickname,
+            introduction: updatedProfile.description,
+            profileImageUrl: updatedProfile.profileImageUrl
+          }));
+          
+          // authStore 업데이트 (Header 동기화를 위해)
+          if (user) {
+            updateProfile({
+              nickname: updatedProfile.nickname,
+              profileImage: updatedProfile.profileImageUrl
+            });
+          }
+          
+          showToast('프로필 사진이 업로드되었습니다.', 'success');
+        }
+      } catch (error) {
+        console.error('프로필 이미지 업로드 실패:', error);
+        showToast('프로필 사진 업로드에 실패했습니다.', 'error');
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      // 실제 백엔드 API 호출
+      const updatedProfile = await updateMyProfile({
+        nickname: editForm.nickname,
+        gender: 'male', // TODO: 성별 선택 UI 추가 후 실제 값 사용
+        description: editForm.introduction
+      });
+
+      if (updatedProfile) {
+        // 로컬 상태 업데이트
         const updatedProfileData = {
           ...profileData,
-          profileImage: file,
-          profileImageUrl: e.target?.result as string
+          nickname: updatedProfile.nickname,
+          introduction: updatedProfile.description
         };
         
         setProfileData(updatedProfileData);
         
         // localStorage에 프로필 데이터 저장
         localStorage.setItem('userProfile', JSON.stringify({
-          nickname: profileData.nickname,
-          introduction: profileData.introduction,
-          profileImageUrl: e.target?.result as string
+          nickname: updatedProfile.nickname,
+          introduction: updatedProfile.description,
+          profileImageUrl: profileData.profileImageUrl
         }));
         
         // authStore 업데이트 (Header 동기화를 위해)
         if (user) {
           updateProfile({
-            profileImage: e.target?.result as string
+            nickname: updatedProfile.nickname,
+            profileImage: profileData.profileImageUrl
           });
         }
         
-        showToast('프로필 사진이 업로드되었습니다.', 'success');
-      };
-      reader.readAsDataURL(file);
+        setProfileEditOpen(false);
+        showToast('프로필이 성공적으로 저장되었습니다.', 'success');
+      }
+    } catch (error) {
+      console.error('프로필 저장 실패:', error);
+      showToast('프로필 저장에 실패했습니다.', 'error');
     }
-  };
-
-  const handleSaveProfile = () => {
-    // 실제로는 여기서 API 호출하여 서버에 저장
-    const updatedProfileData = {
-      ...profileData,
-      nickname: editForm.nickname,
-      introduction: editForm.introduction
-    };
-    
-    setProfileData(updatedProfileData);
-    
-    // localStorage에 프로필 데이터 저장
-    localStorage.setItem('userProfile', JSON.stringify({
-      nickname: editForm.nickname,
-      introduction: editForm.introduction,
-      profileImageUrl: profileData.profileImageUrl
-    }));
-    
-    // authStore 업데이트 (Header 동기화를 위해)
-    if (user) {
-      updateProfile({
-        nickname: editForm.nickname,
-        profileImage: profileData.profileImageUrl
-      });
-    }
-    
-    setProfileEditOpen(false);
-    showToast('프로필이 성공적으로 저장되었습니다.', 'success');
   };
 
   const handleResetProfileImage = () => {

@@ -1,6 +1,6 @@
 // 실제 백엔드 API 클라이언트
 import apiClient from './apiClient';
-import type { User } from '../types/user';
+import type { User, Profile, ProfileUpdateRequest, ProfileImageUpdateRequest } from '../types/user';
 
 // Auth API
 export const authAPI = {
@@ -50,30 +50,6 @@ export const authAPI = {
 
 // User API
 export const userAPI = {
-  // 사용자 프로필 조회
-  getProfile: async (userId?: string) => {
-    const endpoint = userId ? `/users/${userId}` : '/auth/me';
-    const response = await apiClient.get(endpoint);
-    return response;
-  },
-  
-  // 프로필 업데이트
-  updateProfile: async (data: Partial<User>) => {
-    const response = await apiClient.put('/auth/me', data);
-    return response;
-  },
-  
-  // 프로필 이미지 업로드
-  uploadProfileImage: async (file: File) => {
-    const formData = new FormData();
-    formData.append('image', file);
-    const response = await apiClient.post('/auth/me/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response;
-  },
 
   // 팔로우
   follow: async (userId: string) => {
@@ -205,5 +181,58 @@ export const albumAPI = {
   unlikeAlbum: async (albumId: string) => {
     const response = await apiClient.delete(`/albums/${albumId}/like`);
     return response;
+  },
+};
+
+// Profile API
+export const profileAPI = {
+  // 내 프로필 보기 - GET /profiles/me
+  getMyProfile: async (): Promise<Profile> => {
+    const response = await apiClient.get('/profiles/me');
+    return response.data;
+  },
+
+  // 내 프로필 수정 (사진 제외) - PUT /profiles/me
+  updateMyProfile: async (data: ProfileUpdateRequest): Promise<Profile> => {
+    const response = await apiClient.put('/profiles/me', data);
+    return response.data;
+  },
+
+  // 특정 유저 프로필 보기 - GET /profiles/{userId}
+  getUserProfile: async (userId: number): Promise<Profile> => {
+    const response = await apiClient.get(`/profiles/${userId}`);
+    return response.data;
+  },
+
+  // 사진 포함 프로필 수정 - POST /profiles/me/image
+  updateMyProfileWithImage: async (data: ProfileImageUpdateRequest): Promise<Profile> => {
+    const formData = new FormData();
+    formData.append('image', data.image);
+    
+    // 선택적 필드들 추가
+    if (data.nickname) {
+      formData.append('nickname', data.nickname);
+    }
+    if (data.gender) {
+      formData.append('gender', data.gender);
+    }
+    if (data.description) {
+      formData.append('description', data.description);
+    }
+
+    const response = await apiClient.post('/profiles/me/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // 닉네임 중복 체크 - GET /profiles/nickname/check
+  checkNicknameDuplicate: async (nickname: string): Promise<boolean> => {
+    const response = await apiClient.get('/profiles/nickname/check', {
+      params: { nickname }
+    });
+    return response.data; // true: 사용 가능, false: 중복됨
   },
 };

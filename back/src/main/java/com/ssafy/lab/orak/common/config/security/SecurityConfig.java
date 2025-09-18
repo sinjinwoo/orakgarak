@@ -1,11 +1,7 @@
 package com.ssafy.lab.orak.common.config.security;
 
-import com.ssafy.lab.orak.auth.handler.OAuth2AuthenticationSuccessHandler;
-import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
-import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +15,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.ssafy.lab.orak.auth.handler.OAuth2AuthenticationSuccessHandler;
+import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
+import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
+
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 
 @EnableWebSecurity
