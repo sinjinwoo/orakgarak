@@ -31,7 +31,7 @@ public class AlbumCoverService {
     private static final String ALBUM_COVER_DIRECTORY = "album-covers";
     private static final Duration PRESIGNED_URL_DURATION = Duration.ofHours(1);
 
-    public AlbumCoverUploadResponseDto uploadAlbumCover(Long albumId, Long userId, MultipartFile file) {
+    public AlbumCoverUploadResponseDto uploadAlbumCover(Long userId, MultipartFile file) {
         validateImageFile(file);
 
         try {
@@ -55,9 +55,9 @@ public class AlbumCoverService {
             String s3Key = String.format("%s/%s_%s", ALBUM_COVER_DIRECTORY, uuid, originalFileName);
 
             // TODO: Upload 엔티티에 저장하고 uploadId 반환
-            Long uploadId = saveUploadRecord(albumId, userId, s3Key, originalFileName);
+            Long uploadId = saveUploadRecord(userId, s3Key, originalFileName);
 
-            log.info("Album cover uploaded successfully for album: {}, user: {}", albumId, userId);
+            log.info("Album cover uploaded successfully for user: {}", userId);
 
             return AlbumCoverUploadResponseDto.builder()
                     .uploadId(uploadId)
@@ -67,13 +67,13 @@ public class AlbumCoverService {
                     .build();
 
         } catch (Exception e) {
-            log.error("Failed to upload album cover for album: {}, user: {}", albumId, userId, e);
+            log.error("Failed to upload album cover for user: {}", userId, e);
             throw new RuntimeException("앨범 커버 업로드 실패: " + e.getMessage(), e);
         }
     }
 
-    public Mono<AlbumCoverUploadResponseDto> generateAlbumCover(Long albumId, Long userId, AlbumCoverGenerateRequestDto request) {
-        log.info("Generating AI album cover for album: {}, user: {}", albumId, userId);
+    public Mono<AlbumCoverUploadResponseDto> generateAlbumCover(Long userId, AlbumCoverGenerateRequestDto request) {
+        log.info("Generating AI album cover for user: {}", userId);
 
         // DTO 변환
         VoiceImageGenerationRequestDto aiRequest = VoiceImageGenerationRequestDto.builder()
@@ -110,9 +110,9 @@ public class AlbumCoverService {
                         String s3Key = String.format("%s/%s_%s", ALBUM_COVER_DIRECTORY, uuid, fileName);
 
                         // TODO: Upload 엔티티에 저장하고 uploadId 반환
-                        Long uploadId = saveUploadRecord(albumId, userId, s3Key, fileName);
+                        Long uploadId = saveUploadRecord(userId, s3Key, fileName);
 
-                        log.info("AI album cover generated successfully for album: {}, user: {}", albumId, userId);
+                        log.info("AI album cover generated successfully for user: {}", userId);
 
                         return Mono.just(AlbumCoverUploadResponseDto.builder()
                                 .uploadId(uploadId)
@@ -122,7 +122,7 @@ public class AlbumCoverService {
                                 .build());
 
                     } catch (Exception e) {
-                        log.error("Failed to process AI generated album cover for album: {}, user: {}", albumId, userId, e);
+                        log.error("Failed to process AI generated album cover for user: {}", userId, e);
                         return Mono.error(new RuntimeException("AI 앨범 커버 처리 실패: " + e.getMessage(), e));
                     }
                 });
@@ -166,7 +166,7 @@ public class AlbumCoverService {
         return tempFilePath.toString();
     }
 
-    private Long saveUploadRecord(Long albumId, Long userId, String s3Key, String fileName) {
+    private Long saveUploadRecord(Long userId, String s3Key, String fileName) {
         // TODO: Upload 엔티티 구현 후 실제 DB 저장 로직 구현
         // 현재는 임시로 랜덤 ID 반환
         return Math.abs(UUID.randomUUID().hashCode()) % 1000000L;
