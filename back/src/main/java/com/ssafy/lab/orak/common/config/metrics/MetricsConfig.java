@@ -38,7 +38,7 @@ public class MetricsConfig {
                 .register(meterRegistry);
     }
 
-    @Bean
+    @Bean("uploadDurationTimer")
     public Timer uploadDurationTimer() {
         return Timer.builder("upload_duration")
                 .description("업로드 처리 소요 시간")
@@ -47,7 +47,7 @@ public class MetricsConfig {
     }
 
     // 처리 관련 메트릭
-    @Bean
+    @Bean("processingDurationTimer")
     public Timer processingDurationTimer() {
         return Timer.builder("processing_duration")
                 .description("파일 처리 소요 시간")
@@ -76,7 +76,7 @@ public class MetricsConfig {
     }
 
     // 카프카 관련 메트릭 (기본 kafka 메트릭 외 추가)
-    @Bean
+    @Bean("kafkaMessagesSentCounter")
     public Counter kafkaMessagesSentCounter() {
         return Counter.builder("kafka_messages_sent_total")
                 .description("카프카로 전송된 메시지 총 수")
@@ -84,7 +84,7 @@ public class MetricsConfig {
                 .register(meterRegistry);
     }
 
-    @Bean
+    @Bean("kafkaMessagesReceivedCounter")
     public Counter kafkaMessagesReceivedCounter() {
         return Counter.builder("kafka_messages_received_total")
                 .description("카프카로부터 수신된 메시지 총 수")

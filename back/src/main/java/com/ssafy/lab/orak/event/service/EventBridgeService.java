@@ -6,8 +6,8 @@ import com.ssafy.lab.orak.event.exception.EventBridgeSendException;
 import com.ssafy.lab.orak.event.exception.EventProcessingException;
 import com.ssafy.lab.orak.event.exception.KafkaSendException;
 import io.micrometer.core.instrument.Counter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
@@ -20,6 +20,7 @@ import java.util.Map;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class EventBridgeService {
 
     private final EventBridgeClient eventBridgeClient;
@@ -27,19 +28,6 @@ public class EventBridgeService {
     private final KafkaEventProducer kafkaEventProducer;
     private final Counter kafkaMessagesSentCounter;
     private final Counter kafkaMessagesReceivedCounter;
-
-    public EventBridgeService(
-            EventBridgeClient eventBridgeClient,
-            ObjectMapper objectMapper,
-            KafkaEventProducer kafkaEventProducer,
-            @Qualifier("kafkaMessagesSentCounter") Counter kafkaMessagesSentCounter,
-            @Qualifier("kafkaMessagesReceivedCounter") Counter kafkaMessagesReceivedCounter) {
-        this.eventBridgeClient = eventBridgeClient;
-        this.objectMapper = objectMapper;
-        this.kafkaEventProducer = kafkaEventProducer;
-        this.kafkaMessagesSentCounter = kafkaMessagesSentCounter;
-        this.kafkaMessagesReceivedCounter = kafkaMessagesReceivedCounter;
-    }
 
     @Value("${aws.eventbridge.bus-name}")
     private String eventBusName;
