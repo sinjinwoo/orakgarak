@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Container, Typography, Paper } from '@mui/material';
+/**
+ * Album Create Page - Refactored with vertical timeline stepper & 2-column layout
+ * 앨범 생성 페이지 - 세로 타임라인 스테퍼와 2컬럼 레이아웃으로 리팩토링
+ */
+
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAlbumStore } from '../stores/albumStore';
 import type { Recording } from '../types/recording';
-import AlbumCreateStepper from '../components/album/AlbumCreateStepper';
-import { theme } from '../styles/theme';
-import RecordingSelectionStep from '../components/album/RecordingSelectionStep';
-import CoverSelectionStep from '../components/album/CoverSelectionStep';
+import NewRecordingSelectionStep from '../components/album/NewRecordingSelectionStep';
+import NewCoverSelectionStep from '../components/album/NewCoverSelectionStep';
 import AlbumInfoStep from '../components/album/AlbumInfoStep';
 import AlbumPreviewStep from '../components/album/AlbumPreviewStep';
 
@@ -100,6 +102,17 @@ const dummyRecordings: Recording[] = [
   },
 ];
 
+// New imports for the refactored components
+import StepperTimeline, { type StageId } from '../components/album/StepperTimeline';
+import MiniPreviewCard from '../components/album/MiniPreviewCard';
+import ActionBar from '../components/album/ActionBar';
+import ToastContainer, { type Toast } from '../components/album/Toast';
+
+// Track type for the new layout
+interface Track extends Recording {
+  order: number;
+}
+
 const AlbumCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -118,41 +131,139 @@ const AlbumCreatePage: React.FC = () => {
     setSelectedRecordings,
     nextStep,
     prevStep,
+    goToStep,
     resetAlbum,
     createAlbum,
     getAlbumData,
+    saveDraft,
   } = useAlbumStore();
 
   const [recordings] = useState<Recording[]>(dummyRecordings);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 단계별 컴포넌트 렌더링
-  const renderCurrentStep = () => {
-    switch (currentStep) {
+  // Convert currentStep to StageId
+  const currentStage: StageId = currentStep === 'recordings' ? 'recordings' :
+                                currentStep === 'cover' ? 'cover' :
+                                currentStep === 'metadata' ? 'metadata' : 'preview';
+
+  // Track completed stages
+  const completedStages: StageId[] = [];
+  if (selectedRecordings.length > 0) completedStages.push('recordings');
+  if (coverImage) completedStages.push('cover');
+  if (title && description) completedStages.push('metadata');
+
+  // Toast management
+  const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { ...toast, id, duration: toast.duration || 4000 }]);
+  }, []);
+
+  const removeToast = useCallback((toastId: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== toastId));
+  }, []);
+
+  // Stage navigation
+  const handleStageChange = useCallback((stage: StageId) => {
+    goToStep(stage);
+  }, [goToStep]);
+
+  // Action bar handlers
+  const handleNext = useCallback(() => {
+    if (currentStage === 'recordings' && selectedRecordings.length === 0) {
+      addToast({
+        type: 'warning',
+        message: '최소 1곡 이상 선택해주세요.',
+      });
+      return;
+    }
+    nextStep();
+  }, [currentStage, selectedRecordings.length, nextStep, addToast]);
+
+  const handlePrev = useCallback(() => {
+    prevStep();
+  }, [prevStep]);
+
+  const handleSaveDraft = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      saveDraft();
+      addToast({
+        type: 'success',
+        message: '임시저장이 완료되었습니다.',
+      });
+    } catch (error) {
+      addToast({
+        type: 'error',
+        message: '임시저장에 실패했습니다.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [saveDraft, addToast]);
+
+  // Convert selected recordings to tracks
+  useEffect(() => {
+    const newTracks = recordings
+      .filter(recording => selectedRecordings.includes(recording.id))
+      .map((recording, index) => ({
+        ...recording,
+        order: index + 1,
+        durationSec: recording.duration || 0,
+      }));
+    setTracks(newTracks);
+  }, [recordings, selectedRecordings]);
+
+  // Navigation guards
+  const canGoNext = useMemo(() => {
+    switch (currentStage) {
+      case 'recordings':
+        return selectedRecordings.length > 0;
+      case 'cover':
+        return true; // Cover is optional
+      case 'metadata':
+        return title.trim().length > 0;
+      case 'preview':
+        return true;
+      default:
+        return false;
+    }
+  }, [currentStage, selectedRecordings.length, title]);
+
+  const canGoPrev = useMemo(() => {
+    return currentStage !== 'recordings';
+  }, [currentStage]);
+
+  // Single stage component renderer
+  const renderCurrentStage = () => {
+    switch (currentStage) {
       case 'recordings':
         return (
-          <RecordingSelectionStep
+          <NewRecordingSelectionStep
             recordings={recordings}
             selectedRecordings={selectedRecordings}
             onToggleRecording={(recordingId) => {
               if (selectedRecordings.includes(recordingId)) {
                 removeRecording(recordingId);
               } else {
+                if (selectedRecordings.length >= 10) {
+                  addToast({
+                    type: 'warning',
+                    message: '최대 10곡까지만 선택할 수 있습니다.',
+                  });
+                  return;
+                }
                 addRecording(recordingId);
               }
             }}
-            onSelectAll={() => {
-              setSelectedRecordings(recordings.map(r => r.id));
-            }}
-            onNext={nextStep}
+            onAddToast={addToast}
           />
         );
       case 'cover':
         return (
-          <CoverSelectionStep
+          <NewCoverSelectionStep
             selectedRecordings={selectedRecordings}
-            onNext={nextStep}
-            onPrev={prevStep}
-            onCoverSelect={setCoverImage}
           />
         );
       case 'metadata':
@@ -164,8 +275,8 @@ const AlbumCreatePage: React.FC = () => {
             onTitleChange={setTitle}
             onDescriptionChange={setDescription}
             onIsPublicChange={setIsPublic}
-            onNext={nextStep}
-            onPrev={prevStep}
+            onNext={handleNext}
+            onPrev={handlePrev}
           />
         );
       case 'preview':
@@ -177,7 +288,7 @@ const AlbumCreatePage: React.FC = () => {
             isPublic={isPublic}
             selectedRecordings={selectedRecordings}
             onPublish={handlePublish}
-            onPrev={prevStep}
+            onPrev={handlePrev}
           />
         );
       default:
@@ -187,123 +298,99 @@ const AlbumCreatePage: React.FC = () => {
 
   const handlePublish = async () => {
     try {
-      // 앨범 생성
       const albumData = getAlbumData();
       const albumId = createAlbum(albumData, recordings);
-      
-      console.log('Album created successfully:', albumId);
-      
-      // 성공 시 마이페이지의 내 앨범 섹션으로 이동
-      navigate('/me/albums');
-      
-      // 스토어 초기화
-      resetAlbum();
+
+      addToast({
+        type: 'success',
+        message: '앨범이 성공적으로 발행되었습니다!',
+      });
+
+      // 짧은 지연 후 페이지 이동
+      setTimeout(() => {
+        navigate('/me/albums');
+        resetAlbum();
+      }, 1500);
     } catch (error) {
       console.error('Failed to publish album:', error);
+      addToast({
+        type: 'error',
+        message: '앨범 발행에 실패했습니다.',
+      });
     }
   };
 
-  // 컴포넌트 언마운트 시 초기화
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // 페이지를 벗어날 때만 초기화 (미리보기에서 뒤로가기 등은 제외)
       if (currentStep === 'completed') {
         resetAlbum();
       }
     };
   }, [currentStep, resetAlbum]);
 
-  const getCurrentStepNumber = () => {
-    const steps = ['recordings', 'cover', 'metadata', 'preview'];
-    return steps.indexOf(currentStep);
-  };
-
   return (
-    <Box sx={{
-      flex: 1,
-      background: theme.colors.background.main,
-      minHeight: '100vh',
-      pt: { xs: 16, sm: 20 },
-      position: 'relative',
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: `
-          radial-gradient(circle at 30% 30%, rgba(255, 107, 157, 0.15) 0%, transparent 40%),
-          radial-gradient(circle at 70% 70%, rgba(196, 71, 233, 0.2) 0%, transparent 40%),
-          radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 30%)
-        `,
-        pointerEvents: 'none',
-        zIndex: 1
-      },
-      '&::after': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: `
-          radial-gradient(circle at 80% 20%, rgba(255, 107, 157, 0.1) 0%, transparent 30%),
-          radial-gradient(circle at 20% 80%, rgba(196, 71, 233, 0.15) 0%, transparent 30%)
-        `,
-        pointerEvents: 'none',
-        zIndex: 1
-      }
-    }}>
-      <Container maxWidth="lg" sx={{ py: 4, position: 'relative', zIndex: 1 }}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Paper sx={{ 
-            p: 4, 
-            mb: 4, 
-            borderRadius: 3,
-            background: 'transparent',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 0 20px rgba(196, 71, 233, 0.3)'
-          }}>
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Typography variant="h4" component="h1" sx={{ 
-                fontWeight: 700, 
-                mb: 1,
-                color: '#FFFFFF',
-                background: 'linear-gradient(135deg,rgb(249, 248, 248) 0%, #C147E9 50%, #8B5CF6 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textShadow: '0 0 20px rgba(210, 151, 228, 0.5)'
-              }}>
-                🎵 앨범 생성 페이지가 업데이트되었습니다!
-              </Typography>
-              <Typography variant="body1" sx={{ 
-                color: 'rgba(255, 255, 255, 0.8)',
-                fontSize: '1.1rem'
-              }}>
-                새로운 4단계 앨범 생성 프로세스를 확인해보세요.
-              </Typography>
-            </Box>
-            
-            <AlbumCreateStepper currentStep={getCurrentStepNumber()} />
-          </Paper>
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          {renderCurrentStep()}
-        </motion.div>
-      </Container>
-    </Box>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 relative">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(255,107,157,0.15)_0%,transparent_40%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(196,71,233,0.2)_0%,transparent_40%)] pointer-events-none" />
+
+      {/* Main container with 2-column grid */}
+      <div className="relative z-10 pt-20 pb-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-[280px_1fr] gap-6 min-h-[calc(100vh-8rem)]">
+            {/* Left Column - Stepper Timeline */}
+            <StepperTimeline
+              currentStage={currentStage}
+              onStageChange={handleStageChange}
+              completedStages={completedStages}
+            />
+
+            {/* Right Column - Stage Content */}
+            <div className="relative flex flex-col min-w-[720px]">
+              {/* Mini Preview Card - Only show for non-cover stages */}
+              {currentStage !== 'cover' && (
+                <div className="absolute top-0 right-0 z-20">
+                  <MiniPreviewCard
+                    tracks={tracks}
+                    coverImageUrl={coverImage}
+                    albumTitle={title || '새 앨범'}
+                  />
+                </div>
+              )}
+
+              {/* Stage Content */}
+              <div className={`flex-1 ${currentStage !== 'cover' ? 'pr-80' : ''}`}>
+                <motion.div
+                  key={currentStage}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="h-full"
+                >
+                  {renderCurrentStage()}
+                </motion.div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Bar - Fixed at bottom */}
+      <ActionBar
+        currentStage={currentStage}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onSaveDraft={handleSaveDraft}
+        canGoNext={canGoNext}
+        canGoPrev={canGoPrev}
+        isSaving={isSaving}
+      />
+
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </div>
   );
 };
 
