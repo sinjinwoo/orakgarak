@@ -1,12 +1,10 @@
 package com.ssafy.lab.orak.recording.exception;
 
-public class AudioConversionException extends RuntimeException {
-    
-    public AudioConversionException(String message) {
-        super(message);
-    }
-    
-    public AudioConversionException(String message, Throwable cause) {
-        super(message, cause);
+import com.ssafy.lab.orak.common.exception.BaseException;
+import com.ssafy.lab.orak.common.exception.ErrorCode;
+
+public class AudioConversionException extends BaseException {
+    public AudioConversionException(String customMessage, Throwable cause) {
+        super(ErrorCode.AUDIO_CONVERSION_FAILED, customMessage, cause);
     }
 }

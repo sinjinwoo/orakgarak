@@ -18,7 +18,7 @@ import org.springframework.validation.annotation.Validated;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/records")
+@RequestMapping("/records")
 @RequiredArgsConstructor
 @Log4j2
 @Validated

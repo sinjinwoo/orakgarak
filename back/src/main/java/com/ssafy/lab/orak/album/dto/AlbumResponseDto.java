@@ -22,6 +22,8 @@ public class AlbumResponseDto {
     private String description;
 
     private Long uploadId;
+    
+    private String coverImageUrl;
 
     private Boolean isPublic;
 

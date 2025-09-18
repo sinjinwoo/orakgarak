@@ -44,6 +44,23 @@ public class LocalUploader {
     }
     
     
+    //서버에 파일 업로드 (UUID 외부에서 제공)
+    //이름 바꿈 uuid_원본파일명
+    public String uploadLocal(MultipartFile multipartFile, String uuid) {
+        if(multipartFile == null || multipartFile.isEmpty()){
+            return null;
+        }
+        String saveFileName = uuid + "_" + multipartFile.getOriginalFilename();
+        Path savePath = Paths.get(uploadPath, saveFileName);
+        
+        try {
+            multipartFile.transferTo(savePath);
+            log.info("파일 업로드 완료: {}", saveFileName);
+            return savePath.toFile().getAbsolutePath();
+        } catch (Exception e) {
+            throw new S3UploadException("파일 업로드 실패: " + saveFileName, e);
+        }
+    }
     //서버에 파일 업로드
     //이름 바꿈 uuid_원본파일명
     public String uploadLocal(MultipartFile multipartFile) {
@@ -53,7 +70,7 @@ public class LocalUploader {
         String uuid = UUID.randomUUID().toString();
         String saveFileName = uuid + "_" + multipartFile.getOriginalFilename();
         Path savePath = Paths.get(uploadPath, saveFileName);
-        
+
         try {
             multipartFile.transferTo(savePath);
             log.info("파일 업로드 완료: {}", saveFileName);

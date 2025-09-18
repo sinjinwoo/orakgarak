@@ -24,7 +24,7 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/albums")
+@RequestMapping("/albums")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class AlbumController {
@@ -107,7 +107,7 @@ public class AlbumController {
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("POST /api/albums/covers/upload - Uploading album cover by user: {}", userId);
+        log.info("POST /api/albums/cover/upload - Uploading album cover by user: {}", userId);
 
         AlbumCoverUploadResponseDto response = albumCoverService.uploadAlbumCover(userId, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

@@ -7,6 +7,8 @@ import com.ssafy.lab.orak.album.entity.Album;
 import com.ssafy.lab.orak.album.exception.AlbumAccessDeniedException;
 import com.ssafy.lab.orak.album.exception.AlbumNotFoundException;
 import com.ssafy.lab.orak.album.repository.AlbumRepository;
+import com.ssafy.lab.orak.upload.entity.Upload;
+import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -14,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AlbumService {
     
     private final AlbumRepository albumRepository;
+    private final FileUploadService fileUploadService;
 
 //    앨범 생성
 
@@ -39,7 +43,7 @@ public class AlbumService {
         Album savedAlbum = albumRepository.save(album);
         log.info("Album created successfully with ID: {}", savedAlbum.getId());
 
-        return AlbumResponseDto.from(savedAlbum);
+        return convertToResponseDto(savedAlbum);
     }
 
 //    전체 앨범 목록 조회
@@ -48,7 +52,7 @@ public class AlbumService {
         log.info("getAllAlbums - page: {}, size: {}", page, size);
 
         Pageable pageable = PageRequest.of(page, size);
-        return albumRepository.findAllByOrderByCreatedAtDesc(pageable).map(AlbumResponseDto::from);
+        return albumRepository.findAllByOrderByCreatedAtDesc(pageable).map(this::convertToResponseDto);
     }
 
 //    앨범 상세 목록 조회 (페이징)
@@ -62,7 +66,7 @@ public class AlbumService {
             throw new AlbumAccessDeniedException("앨범에 접근할 권한이 없습니다.");
         }
 
-        return AlbumResponseDto.from(album);
+        return convertToResponseDto(album);
     }
 
 //    앨범 수정
@@ -88,7 +92,7 @@ public class AlbumService {
         Album updatedAlbum = albumRepository.save(album);
         log.info("Album updated successfully with ID: {}", albumId);
 
-        return AlbumResponseDto.from(updatedAlbum);
+        return convertToResponseDto(updatedAlbum);
     }
 
 //    앨범 삭제
@@ -105,6 +109,91 @@ public class AlbumService {
         log.info("Album deleted successfully: {}", albumId);
     }
 
+//    앨범 커버 이미지 업로드
+    public AlbumResponseDto uploadCoverImage(Long albumId, MultipartFile imageFile, Long userId) {
+        log.info("uploadCoverImage - albumId: {}, by user: {}", albumId, userId);
+        
+        Album album = findAlbumByIdAndUserId(albumId, userId);
+        
+        // 이전 커버 이미지가 있으면 삭제
+        if (album.getUploadId() != null) {
+            try {
+                fileUploadService.deleteFile(album.getUploadId());
+                log.info("Previous cover image deleted: uploadId = {}", album.getUploadId());
+            } catch (Exception e) {
+                log.warn("Failed to delete previous cover image: uploadId = {}", album.getUploadId(), e);
+            }
+        }
+        
+        // 새 커버 이미지 업로드
+        Upload upload = fileUploadService.uploadSingleFile(imageFile, "album-covers", userId);
+        
+        // 앨범 업데이트
+        album.setUploadId(upload.getId());
+        Album updatedAlbum = albumRepository.save(album);
+        
+        log.info("Cover image uploaded successfully: albumId = {}, uploadId = {}", albumId, upload.getId());
+        return convertToResponseDto(updatedAlbum);
+    }
+
+//    앨범 커버 이미지 삭제
+    public AlbumResponseDto removeCoverImage(Long albumId, Long userId) {
+        log.info("removeCoverImage - albumId: {}, by user: {}", albumId, userId);
+        
+        Album album = findAlbumByIdAndUserId(albumId, userId);
+        
+        if (album.getUploadId() != null) {
+            try {
+                fileUploadService.deleteFile(album.getUploadId());
+                log.info("Cover image deleted: uploadId = {}", album.getUploadId());
+            } catch (Exception e) {
+                log.warn("Failed to delete cover image: uploadId = {}", album.getUploadId(), e);
+            }
+            
+            album.setUploadId(null);
+            Album updatedAlbum = albumRepository.save(album);
+            
+            log.info("Cover image removed successfully: albumId = {}", albumId);
+            return convertToResponseDto(updatedAlbum);
+        }
+        
+        return convertToResponseDto(album);
+    }
+
+//    Album을 AlbumResponseDto로 변환 (커버 이미지 URL 포함)
+    private AlbumResponseDto convertToResponseDto(Album album) {
+        String coverImageUrl;
+        if (album.getUploadId() != null) {
+            try {
+                coverImageUrl = fileUploadService.getFileUrl(album.getUploadId());
+            } catch (Exception e) {
+                log.warn("Failed to generate cover image URL for uploadId: {}", album.getUploadId(), e);
+                coverImageUrl = getDefaultCoverImageUrl();
+            }
+        } else {
+            coverImageUrl = getDefaultCoverImageUrl();
+        }
+        
+        return AlbumResponseDto.builder()
+                .id(album.getId())
+                .userId(album.getUserId())
+                .title(album.getTitle())
+                .description(album.getDescription())
+                .uploadId(album.getUploadId())
+                .coverImageUrl(coverImageUrl)
+                .isPublic(album.getIsPublic())
+                .trackCount(album.getTrackCount())
+                .totalDuration(album.getTotalDuration())
+                .likeCount(album.getLikeCount())
+                .createdAt(album.getCreatedAt())
+                .updatedAt(album.getUpdatedAt())
+                .build();
+    }
+
+//    기본 커버 이미지 URL 반환
+    private String getDefaultCoverImageUrl() {
+        return "/image/albumCoverImage.png";
+    }
 
     private Album findAlbumById(Long albumId) {
         return albumRepository.findById(albumId)
@@ -117,6 +206,37 @@ public class AlbumService {
             throw new AlbumAccessDeniedException("앨범에 접근할 권한이 없거나 앨범을 찾을 수 없습니다.");
         }
         return album;
+    }
+
+//    공개 앨범 목록 조회 (검색 포함)
+    @Transactional(readOnly = true)
+    public Page<AlbumResponseDto> getPublicAlbums(int page, int size, String keyword) {
+        log.info("getPublicAlbums - page: {}, size: {}, keyword: {}", page, size, keyword);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Album> albums;
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            albums = albumRepository.findPublicAlbumsByKeyword(keyword.trim(), pageable);
+        } else {
+            albums = albumRepository.findByIsPublicTrueOrderByCreatedAtDesc(pageable);
+        }
+
+        return albums.map(AlbumResponseDto::from);
+    }
+
+//    공개 앨범 상세 조회
+    @Transactional(readOnly = true)
+    public AlbumResponseDto getPublicAlbum(Long albumId) {
+        log.info("getPublicAlbum: {}", albumId);
+
+        Album album = findAlbumById(albumId);
+
+        if (!album.getIsPublic()) {
+            throw new AlbumAccessDeniedException("비공개 앨범입니다.");
+        }
+
+        return AlbumResponseDto.from(album);
     }
 }
 
