@@ -19,7 +19,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
 
@@ -100,84 +99,37 @@ public class AlbumController {
         return ResponseEntity.noContent().build();
     }
 
-
-    // 앨범 커버 직접 업로드
-    @PostMapping("/{albumId}/cover/upload")
-    @Operation(summary = "앨범 커버 업로드", description = "사용자가 직접 앨범 커버 이미지를 업로드합니다.")
+    // 앨범 커버 직접 업로드 (앨범 생성 전)
+    @PostMapping("/covers/upload")
+    @Operation(summary = "앨범 커버 업로드", description = "사용자가 직접 앨범 커버 이미지를 업로드합니다. (앨범 생성 전)")
     public ResponseEntity<AlbumCoverUploadResponseDto> uploadAlbumCover(
-            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
             @RequestParam("file") @Parameter(description = "업로드할 이미지 파일") MultipartFile file,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("POST /api/albums/{}/cover/upload - Uploading album cover by user: {}", albumId, userId);
+        log.info("POST /api/albums/cover/upload - Uploading album cover by user: {}", userId);
 
-        AlbumCoverUploadResponseDto response = albumCoverService.uploadAlbumCover(albumId, userId, file);
+        AlbumCoverUploadResponseDto response = albumCoverService.uploadAlbumCover(userId, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    // AI 앨범 커버 생성
-    @PostMapping("/{albumId}/cover/generate")
-    @Operation(summary = "AI 앨범 커버 생성", description = "녹음 데이터를 기반으로 AI가 앨범 커버를 생성합니다.")
+    // AI 앨범 커버 생성 (앨범 생성 전)
+    @PostMapping("/covers/generate")
+    @Operation(summary = "AI 앨범 커버 생성", description = "녹음 데이터를 기반으로 AI가 앨범 커버를 생성합니다. (앨범 생성 전)")
     public Mono<ResponseEntity<AlbumCoverUploadResponseDto>> generateAlbumCover(
-            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
             @RequestBody @Valid AlbumCoverGenerateRequestDto request,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("POST /api/albums/{}/cover/generate - Generating AI album cover by user: {}", albumId, userId);
+        log.info("POST /api/albums/covers/generate - Generating AI album cover by user: {}", userId);
 
-        return albumCoverService.generateAlbumCover(albumId, userId, request)
+        return albumCoverService.generateAlbumCover(userId, request)
                 .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
                 .onErrorResume(error -> {
-                    log.error("Error generating AI album cover for album {}", albumId, error);
+                    log.error("Error generating AI album cover for user {}", userId, error);
                     return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
                 });
     }
 
-//    앨범 커버 이미지 삭제
-    @DeleteMapping("/{albumId}/cover")
-    @Operation(summary = "앨범 커버 이미지 삭제", description = "앨범의 커버 이미지를 삭제합니다.")
-    public ResponseEntity<AlbumResponseDto> removeCoverImage(
-            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
-            @AuthenticationPrincipal CustomUserPrincipal principal) {
-
-        log.info("DELETE /api/albums/{}/cover - Removing cover image by user: {}", albumId, principal.getUserId());
-        AlbumResponseDto response = albumService.removeCoverImage(albumId, principal.getUserId());
-        return ResponseEntity.ok(response);
-    }
-
-}
-
-@Slf4j
-@RestController
-@RequestMapping("/api/social")
-@RequiredArgsConstructor
-@CrossOrigin(origins = "*")
-class SocialAlbumController {
-
-    private final AlbumService albumService;
-
-    @GetMapping("/albums")
-    @Operation(summary = "공개 앨범 검색 및 목록 조회", description = "공개 앨범을 검색하고 목록을 조회합니다.")
-    public ResponseEntity<Page<AlbumResponseDto>> getPublicAlbums(
-            @RequestParam(defaultValue = "0") @Parameter(description = "페이지 번호") int page,
-            @RequestParam(defaultValue = "20") @Parameter(description = "페이지 크기") int size,
-            @RequestParam(required = false) @Parameter(description = "검색어") String keyword) {
-
-        log.info("GET /api/social/albums - Getting public albums - page: {}, size: {}, keyword: {}", page, size, keyword);
-        Page<AlbumResponseDto> albums = albumService.getPublicAlbums(page, size, keyword);
-        return ResponseEntity.ok(albums);
-    }
-
-    @GetMapping("/albums/{albumId}")
-    @Operation(summary = "공개 앨범 상세 조회", description = "공개 앨범의 상세 정보를 조회합니다.")
-    public ResponseEntity<AlbumResponseDto> getPublicAlbum(
-            @PathVariable @Parameter(description = "앨범 ID") Long albumId) {
-
-        log.info("GET /api/social/albums/{} - Getting public album", albumId);
-        AlbumResponseDto album = albumService.getPublicAlbum(albumId);
-        return ResponseEntity.ok(album);
-    }
 
 }
