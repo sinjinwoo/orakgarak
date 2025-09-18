@@ -33,6 +33,9 @@ public class SecurityConfig {
     @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
     private String[] allowedOrigins;
 
+    @Value("${python.service.url:http://localhost:8000}")
+    private String pythonServiceUrl;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
@@ -90,7 +93,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOriginPatterns(List.of(allowedOrigins)); // 설정된 도메인들 허용
+
+        // Frontend origins과 Python service origin 추가
+        List<String> allAllowedOrigins = new java.util.ArrayList<>(List.of(allowedOrigins));
+        allAllowedOrigins.add(pythonServiceUrl);
+
+        configuration.setAllowedOriginPatterns(allAllowedOrigins);
         configuration.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
