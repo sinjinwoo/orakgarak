@@ -3,7 +3,10 @@ package com.ssafy.lab.orak.album.controller;
 import com.ssafy.lab.orak.album.dto.AlbumCreateRequestDto;
 import com.ssafy.lab.orak.album.dto.AlbumResponseDto;
 import com.ssafy.lab.orak.album.dto.AlbumUpdateRequestDto;
+import com.ssafy.lab.orak.album.dto.AlbumCoverUploadResponseDto;
+import com.ssafy.lab.orak.album.dto.AlbumCoverGenerateRequestDto;
 import com.ssafy.lab.orak.album.service.AlbumService;
+import com.ssafy.lab.orak.album.service.AlbumCoverService;
 import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
 
 
 @Slf4j
@@ -25,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class AlbumController {
 
     private final AlbumService albumService;
+    private final AlbumCoverService albumCoverService;
 
     //    앨범 생성
     @PostMapping
@@ -92,5 +98,40 @@ public class AlbumController {
         albumService.deleteAlbum(albumId, userId);
         return ResponseEntity.noContent().build();
     }
+
+    // 앨범 커버 직접 업로드
+    @PostMapping("/{albumId}/cover/upload")
+    @Operation(summary = "앨범 커버 업로드", description = "사용자가 직접 앨범 커버 이미지를 업로드합니다.")
+    public ResponseEntity<AlbumCoverUploadResponseDto> uploadAlbumCover(
+            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
+            @RequestParam("file") @Parameter(description = "업로드할 이미지 파일") MultipartFile file,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        Long userId = principal.getUserId();
+        log.info("POST /api/albums/{}/cover/upload - Uploading album cover by user: {}", albumId, userId);
+
+        AlbumCoverUploadResponseDto response = albumCoverService.uploadAlbumCover(albumId, userId, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // AI 앨범 커버 생성
+    @PostMapping("/{albumId}/cover/generate")
+    @Operation(summary = "AI 앨범 커버 생성", description = "녹음 데이터를 기반으로 AI가 앨범 커버를 생성합니다.")
+    public Mono<ResponseEntity<AlbumCoverUploadResponseDto>> generateAlbumCover(
+            @PathVariable @Parameter(description = "앨범 ID") Long albumId,
+            @RequestBody @Valid AlbumCoverGenerateRequestDto request,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        Long userId = principal.getUserId();
+        log.info("POST /api/albums/{}/cover/generate - Generating AI album cover by user: {}", albumId, userId);
+
+        return albumCoverService.generateAlbumCover(albumId, userId, request)
+                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
+                .onErrorResume(error -> {
+                    log.error("Error generating AI album cover for album {}", albumId, error);
+                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null));
+                });
+    }
+
 
 }
