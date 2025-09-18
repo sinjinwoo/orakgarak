@@ -15,6 +15,7 @@ export interface RecommendedSong {
     min: number; // 최저 음 (Hz)
     max: number; // 최고 음 (Hz)
   };
+  mood?: string[]; // 감정/분위기
 }
 
 export interface UserVocalRange {

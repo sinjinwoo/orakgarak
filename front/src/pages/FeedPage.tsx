@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
+import { theme } from '../styles/theme';
 import { motion } from 'framer-motion';
-import { GlassmorphismCard } from '../components/GlassmorphismCard';
 import { 
   Container, 
   Typography, 
   Box, 
   Paper, 
-  Card, 
-  CardContent, 
   CardMedia,
   Avatar,
   Chip,
-  IconButton,
   Button,
   TextField,
-  InputAdornment,
   Tabs,
   Tab,
   Select,
@@ -31,15 +27,9 @@ import {
   FormControlLabel
 } from '@mui/material';
 import {
-  Search,
-  Favorite,
-  ChatBubbleOutline,
-  Share,
-  PlayArrow,
   FilterList,
   Add,
-  MusicNote,
-  MoreVert
+  MusicNote
 } from '@mui/icons-material';
 
 // 타입 정의
@@ -71,77 +61,7 @@ interface MyAlbum {
   tags: string[];
 }
 
-// 더미 피드 데이터
-const dummyFeedAlbums: FeedAlbum[] = [
-  {
-    id: '1',
-    albumId: 'dummy1', // 더미 앨범 ID
-    user: {
-      nickname: '음악러버',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-    },
-    createdAt: '2025. 1. 15.',
-    coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
-    title: 'My Favorite Songs',
-    description: '내가 좋아하는 노래들을 모아서 만든 첫 번째 앨범',
-    trackCount: 3,
-    playCount: 156,
-    tags: ['K-POP', '발라드', '감성'],
-    likeCount: 42,
-    commentCount: 12,
-  },
-  {
-    id: '2',
-    albumId: 'dummy2',
-    user: {
-      nickname: '레인보우',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    },
-    createdAt: '2025. 1. 14.',
-    coverImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
-    title: 'Rainy Day Playlist',
-    description: '비오는 날 듣기 좋은 감성적인 곡들',
-    trackCount: 5,
-    playCount: 93,
-    tags: ['인디', '감성', '비'],
-    likeCount: 28,
-    commentCount: 8,
-  },
-  {
-    id: '3',
-    albumId: 'dummy3',
-    user: {
-      nickname: '해피송',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-    },
-    createdAt: '2025. 1. 13.',
-    coverImage: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&h=300&fit=crop',
-    title: 'Happy Vibes',
-    description: '기분 좋아지는 신나는 곡들만 모았어요!',
-    trackCount: 4,
-    playCount: 234,
-    tags: ['댄스', '신나는', '행복'],
-    likeCount: 67,
-    commentCount: 15,
-  },
-  {
-    id: '4',
-    albumId: 'dummy4',
-    user: {
-      nickname: '락매니아',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    },
-    createdAt: '2025. 1. 12.',
-    coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
-    title: 'Rock Collection',
-    description: '락 음악 명곡들만 모은 컬렉션',
-    trackCount: 6,
-    playCount: 89,
-    tags: ['락', '헤비메탈', '클래식'],
-    likeCount: 35,
-    commentCount: 7,
-  },
-];
+// 더미 피드 데이터 제거 - 실제 데이터만 사용
 
 // 내 앨범 데이터를 localStorage에서 가져오는 함수
 const getMyAlbums = (): MyAlbum[] => {
@@ -152,25 +72,63 @@ const getMyAlbums = (): MyAlbum[] => {
   return [];
 };
 
+// 팔로잉 데이터를 localStorage에서 가져오는 함수
+const getFollowingUsers = (): string[] => {
+  const savedFollowing = localStorage.getItem('followingUsers');
+  return savedFollowing ? JSON.parse(savedFollowing) : [];
+};
+
+// 팔로잉 데이터를 localStorage에 저장하는 함수
+const saveFollowingUsers = (followingUsers: string[]) => {
+  localStorage.setItem('followingUsers', JSON.stringify(followingUsers));
+};
+
+// 테스트용 더미 팔로잉 데이터 초기화 함수
+const initializeDummyFollowing = () => {
+  const existingFollowing = getFollowingUsers();
+  if (existingFollowing.length === 0) {
+    // 테스트용으로 몇 명의 사용자를 팔로잉 목록에 추가
+    const dummyFollowing = ['음악마스터', '멜로디킹', '비트메이커'];
+    saveFollowingUsers(dummyFollowing);
+    return dummyFollowing;
+  }
+  return existingFollowing;
+};
+
 // 피드 데이터를 localStorage에서 가져오는 함수
 const getFeedAlbums = (): FeedAlbum[] => {
   const savedFeedAlbums = localStorage.getItem('feedAlbums');
   if (savedFeedAlbums) {
-    return JSON.parse(savedFeedAlbums);
+    const feedAlbums = JSON.parse(savedFeedAlbums);
+    
+    // 존재하는 앨범만 필터링
+    const myAlbums = getMyAlbums();
+    const validFeedAlbums = feedAlbums.filter((feed: FeedAlbum) => {
+      // 해당 앨범이 실제로 존재하는지 확인
+      return myAlbums.some(album => album.id === feed.albumId);
+    });
+    
+    // 유효하지 않은 피드 데이터가 있으면 localStorage 업데이트
+    if (validFeedAlbums.length !== feedAlbums.length) {
+      localStorage.setItem('feedAlbums', JSON.stringify(validFeedAlbums));
+    }
+    
+    return validFeedAlbums;
   }
-  return dummyFeedAlbums;
+  return []; // 더미 데이터 대신 빈 배열 반환
 };
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useUIStore();
   const [tabValue, setTabValue] = useState(0);
   const [sortBy, setSortBy] = useState('latest');
-  const [searchQuery, setSearchQuery] = useState('');
   
   // 피드 데이터 상태
   const [feedAlbums, setFeedAlbums] = useState(getFeedAlbums());
   const [myAlbums, setMyAlbums] = useState(getMyAlbums());
+  const [followingUsers, setFollowingUsers] = useState(initializeDummyFollowing());
   
   // 피드 생성 모달 관련 상태
   const [createFeedModalOpen, setCreateFeedModalOpen] = useState(false);
@@ -183,39 +141,41 @@ const FeedPage: React.FC = () => {
     setMyAlbums(getMyAlbums());
   }, []);
 
+  // 페이지 이동 시 데이터 새로고침 (앨범 삭제 후 피드 업데이트)
+  useEffect(() => {
+    setFeedAlbums(getFeedAlbums());
+    setMyAlbums(getMyAlbums());
+    setFollowingUsers(getFollowingUsers());
+  }, [location.pathname]);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
+  // 현재 탭에 따라 필터링된 피드 데이터
+  const getFilteredFeedAlbums = (): FeedAlbum[] => {
+    if (tabValue === 0) {
+      // 전체 피드
+      return feedAlbums;
+    } else {
+      // 팔로잉 피드 - 팔로잉하는 사용자들의 앨범만 표시
+      return feedAlbums.filter(album => followingUsers.includes(album.user.nickname));
+    }
+  };
+
+  const filteredFeedAlbums = getFilteredFeedAlbums();
+
   const handleSortChange = (event: any) => {
-    setSortBy(event.target.value);
-  };
-
-  const handleLike = (albumId: string) => {
-    // 좋아요 기능 구현
-    console.log('Like album:', albumId);
-  };
-
-  const handleComment = (albumId: string) => {
-    // 댓글 기능 구현
-    console.log('Comment on album:', albumId);
-  };
-
-  const handleShare = (albumId: string) => {
-    // 공유 기능 구현
-    console.log('Share album:', albumId);
-  };
-
-  const handlePlay = (albumId: string) => {
-    // 재생 기능 구현
-    console.log('Play album:', albumId);
+    setSortBy(event.target.value as string);
   };
 
   const handleAlbumClick = (feed: FeedAlbum) => {
     // 피드에 albumId가 있으면 그것을 사용, 없으면 피드 ID 사용
     const albumId = feed.albumId || feed.id;
-    // 앨범 상세 페이지로 이동
-    navigate(`/albums/${albumId}`);
+    // 앨범 상세 페이지로 이동 (이전 페이지 정보 전달)
+    navigate(`/albums/${albumId}`, { 
+      state: { from: '/feed' } 
+    });
   };
 
   const handleCreateFeed = () => {
@@ -298,144 +258,78 @@ const FeedPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ flex: 1, backgroundColor: '#fafafa', minHeight: '100vh' }}>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
         <Box sx={{ 
-          display: 'grid',
-          gridTemplateColumns: '25% 1fr',
-          gap: 3
-        }}>
-          {/* 왼쪽 사이드바 */}
-          <Box sx={{ 
-            position: 'sticky',
-            top: 20,
-            height: 'fit-content'
-          }}>
-            {/* 검색 섹션 */}
-            <Paper sx={{ 
-              p: 3, 
-              mb: 3, 
-              borderRadius: 2,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              backgroundColor: 'white'
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, mr: 1, color: '#333' }}>
-                  Q
-                </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#333' }}>
-                  검색
-                </Typography>
-              </Box>
-              <TextField
-                fullWidth
-                placeholder="앨범, 사용자 검색..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ color: '#666' }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    backgroundColor: '#f8f9fa',
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#ddd',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#333',
-                    },
-                  }
-                }}
-              />
-            </Paper>
-
-            {/* 정렬 섹션 */}
-            <Paper sx={{ 
-              p: 3, 
-              borderRadius: 2,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              backgroundColor: 'white'
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <FilterList sx={{ mr: 1, color: '#333' }} />
-                <Typography variant="h6" sx={{ fontWeight: 600, color: '#333' }}>
-                  정렬
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Button
-                  variant={sortBy === 'latest' ? 'contained' : 'outlined'}
-                  onClick={() => setSortBy('latest')}
-                  sx={{ 
-                    justifyContent: 'flex-start', 
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    py: 1.5,
-                    backgroundColor: sortBy === 'latest' ? '#333' : 'transparent',
-                    color: sortBy === 'latest' ? 'white' : '#333',
-                    borderColor: '#ddd',
-                    '&:hover': {
-                      backgroundColor: sortBy === 'latest' ? '#1a1a1a' : '#f5f5f5',
-                      borderColor: '#333',
-                    }
-                  }}
-                >
-                  최신순
-                </Button>
-                <Button
-                  variant={sortBy === 'popular' ? 'contained' : 'outlined'}
-                  onClick={() => setSortBy('popular')}
-                  sx={{ 
-                    justifyContent: 'flex-start', 
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    py: 1.5,
-                    backgroundColor: sortBy === 'popular' ? '#333' : 'transparent',
-                    color: sortBy === 'popular' ? 'white' : '#333',
-                    borderColor: '#ddd',
-                    '&:hover': {
-                      backgroundColor: sortBy === 'popular' ? '#1a1a1a' : '#f5f5f5',
-                      borderColor: '#333',
-                    }
-                  }}
-                >
-                  인기순
-                </Button>
-                <Button
-                  variant={sortBy === 'trending' ? 'contained' : 'outlined'}
-                  onClick={() => setSortBy('trending')}
-          sx={{ 
-                    justifyContent: 'flex-start', 
-                    textTransform: 'none',
-                    borderRadius: 2,
-                    py: 1.5,
-                    backgroundColor: sortBy === 'trending' ? '#333' : 'transparent',
-                    color: sortBy === 'trending' ? 'white' : '#333',
-                    borderColor: '#ddd',
-                    '&:hover': {
-                      backgroundColor: sortBy === 'trending' ? '#1a1a1a' : '#f5f5f5',
-                      borderColor: '#333',
-                    }
-                  }}
-                >
-                  트렌딩
-                </Button>
-              </Box>
-            </Paper>
-          </Box>
-
+      flex: 1, 
+      background: theme.colors.background.main,
+      minHeight: '100vh',
+      pt: { xs: 16, sm: 20 },
+      position: 'relative',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 30% 30%, rgba(255, 107, 157, 0.15) 0%, transparent 40%),
+          radial-gradient(circle at 70% 70%, rgba(196, 71, 233, 0.2) 0%, transparent 40%),
+          radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 30%)
+        `,
+        pointerEvents: 'none',
+        animation: 'pulse 4s ease-in-out infinite alternate'
+      },
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: `
+          radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.3), transparent),
+          radial-gradient(2px 2px at 40px 70px, rgba(196, 71, 233, 0.4), transparent),
+          radial-gradient(1px 1px at 90px 40px, rgba(255, 107, 157, 0.5), transparent),
+          radial-gradient(1px 1px at 130px 80px, rgba(255, 255, 255, 0.2), transparent),
+          radial-gradient(2px 2px at 160px 30px, rgba(139, 92, 246, 0.3), transparent)
+        `,
+        backgroundRepeat: 'repeat',
+        backgroundSize: '200px 100px',
+        pointerEvents: 'none',
+        animation: 'sparkle 8s linear infinite'
+      },
+      '@keyframes pulse': {
+        '0%': {
+          opacity: 0.8
+        },
+        '100%': {
+          opacity: 1
+        }
+      },
+      '@keyframes sparkle': {
+        '0%': {
+          transform: 'translateY(0px)'
+        },
+        '100%': {
+          transform: 'translateY(-100px)'
+        }
+      }
+    }}>
+      <Container maxWidth="lg" sx={{ py: 3, position: 'relative', zIndex: 1 }}>
           {/* 메인 콘텐츠 */}
-          <Box>
+        <Box sx={{ maxWidth: '1200px', mx: 'auto' }}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
             <Paper sx={{ 
               p: 4, 
-              borderRadius: 2,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              backgroundColor: 'white'
+                borderRadius: 3,
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 0 20px rgba(196, 71, 233, 0.3)'
             }}>
               {/* 페이지 헤더 */}
               <Box sx={{ mb: 4 }}>
@@ -443,14 +337,20 @@ const FeedPage: React.FC = () => {
                   fontWeight: 700, 
                   mb: 1, 
                   textAlign: 'center',
-                  color: '#333'
+                  color: '#FFFFFF',
+                  background: theme.colors.primary.gradient,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  textShadow: '0 0 20px rgba(196, 71, 233, 0.5)'
                 }}>
-                  커뮤니티 피드
+                  ORAK GRAK
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ 
+                <Typography variant="body1" sx={{ 
                   mb: 4, 
                   textAlign: 'center',
-                  fontSize: '1.1rem'
+                  fontSize: '1.1rem',
+                  color: '#B3B3B3'
                 }}>
                   다른 사용자들의 멋진 앨범을 둘러보고 소통해보세요
                 </Typography>
@@ -458,12 +358,13 @@ const FeedPage: React.FC = () => {
                 {/* 피드 필터 탭 */}
                 <Box sx={{ 
                   borderBottom: 1, 
-                  borderColor: 'divider', 
+                  borderColor: 'rgba(255, 255, 255, 0.1)', 
                   mb: 4,
                   '& .MuiTabs-indicator': {
-                    backgroundColor: '#333',
+                    background: theme.colors.primary.gradient,
                     height: 3,
-                    borderRadius: '3px 3px 0 0'
+                    borderRadius: '3px 3px 0 0',
+                    boxShadow: '0 0 10px rgba(196, 71, 233, 0.5)'
                   }
                 }}>
                   <Tabs 
@@ -475,9 +376,12 @@ const FeedPage: React.FC = () => {
                         textTransform: 'none',
                         fontSize: '1rem',
                         fontWeight: 600,
-                        color: '#666',
+                        color: '#737373',
                         '&.Mui-selected': {
-                          color: '#333',
+                          color: '#FFFFFF',
+                        },
+                        '&:hover': {
+                          color: '#B3B3B3'
                         }
                       }
                     }}
@@ -496,12 +400,16 @@ const FeedPage: React.FC = () => {
                   flexWrap: 'wrap',
                   gap: 2
                 }}>
-                  <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1rem' }}>
-                    {feedAlbums.length}개 앨범
+                  <Typography variant="body1" sx={{ 
+                    fontSize: '1rem',
+                    color: '#B3B3B3',
+                    fontWeight: 500
+                  }}>
+                    {filteredFeedAlbums.length}개 앨범
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <FilterList sx={{ color: '#666' }} />
+                      <FilterList sx={{ color: '#B3B3B3' }} />
                       <FormControl size="small" sx={{ minWidth: 120 }}>
                         <Select
                           value={sortBy}
@@ -509,20 +417,29 @@ const FeedPage: React.FC = () => {
                           displayEmpty
                           sx={{
                             borderRadius: 2,
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            color: '#FFFFFF',
                             '& .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#ddd',
+                              borderColor: 'rgba(255, 255, 255, 0.2)',
                             },
                             '&:hover .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#333',
+                              borderColor: 'rgba(196, 71, 233, 0.3)',
                             },
                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                              borderColor: '#333',
+                              borderColor: 'rgba(196, 71, 233, 0.5)',
+                              boxShadow: '0 0 10px rgba(196, 71, 233, 0.3)'
+                            },
+                            '& .MuiSelect-select': {
+                              color: '#FFFFFF'
+                            },
+                            '& .MuiSvgIcon-root': {
+                              color: '#B3B3B3'
                             }
                           }}
                         >
-                          <MenuItem value="latest">최신순</MenuItem>
-                          <MenuItem value="popular">인기순</MenuItem>
-                          <MenuItem value="trending">트렌딩</MenuItem>
+                          <MenuItem value="latest" sx={{ color: '#FFFFFF' }}>최신순</MenuItem>
+                          <MenuItem value="popular" sx={{ color: '#FFFFFF' }}>인기순</MenuItem>
+                          <MenuItem value="trending" sx={{ color: '#FFFFFF' }}>트렌딩</MenuItem>
                         </Select>
                       </FormControl>
                     </Box>
@@ -531,15 +448,18 @@ const FeedPage: React.FC = () => {
                       startIcon={<Add />}
                       onClick={handleCreateFeed}
                       sx={{
-                        backgroundColor: '#333',
-                        color: 'white',
+                        background: theme.colors.primary.gradient,
+                        color: '#FFFFFF',
             borderRadius: 2,
                         px: 3,
                         py: 1.5,
                         textTransform: 'none',
                         fontWeight: 600,
+                        boxShadow: '0 4px 15px rgba(196, 71, 233, 0.4)',
                         '&:hover': {
-                          backgroundColor: '#1a1a1a',
+                          background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
+                          boxShadow: '0 6px 20px rgba(196, 71, 233, 0.6)',
+                          transform: 'translateY(-2px)'
                         },
                       }}
                     >
@@ -550,232 +470,209 @@ const FeedPage: React.FC = () => {
               </Box>
 
               {/* 앨범 카드 목록 */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {feedAlbums.map((album: FeedAlbum) => (
-                  <Card 
-                    key={album.id} 
-                    sx={{ 
-                      borderRadius: 3, 
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      border: '1px solid #f0f0f0',
-                      transition: 'all 0.2s ease-in-out',
-                      '&:hover': {
-                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
-                        transform: 'translateY(-2px)',
-                        borderColor: '#ddd',
-                      }
-                    }}
-                    onClick={() => handleAlbumClick(album)}
-                  >
-                    <CardContent sx={{ p: 4 }}>
-                       {/* 사용자 정보 */}
-                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                         <Avatar 
-                           src={album.user.avatar} 
-                           sx={{ 
-                             width: 48, 
-                             height: 48, 
-                             mr: 2,
-                             border: '2px solid #f0f0f0'
-                           }}
-                         />
-                         <Box sx={{ flex: 1 }}>
-                           <Typography variant="subtitle1" sx={{ 
-                             fontWeight: 600, 
-                             fontSize: '1.1rem',
-                             color: '#333'
-                           }}>
-                             {album.user.nickname}
-                           </Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-                             {album.createdAt}
-                           </Typography>
+              {filteredFeedAlbums.length === 0 ? (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 8,
+                  color: '#B3B3B3'
+                }}>
+                  <Typography variant="h5" sx={{ mb: 2, color: '#FFFFFF' }}>
+                    {tabValue === 0 ? '아직 피드에 올라온 앨범이 없습니다' : '팔로잉한 사용자의 피드가 없습니다'}
+                  </Typography>
+                  <Typography variant="body1" sx={{ mb: 4 }}>
+                    {tabValue === 0 
+                      ? '첫 번째 앨범을 피드에 올려보세요!'
+                      : '다른 사용자를 팔로우하거나 앨범을 만들어보세요'
+                    }
+                  </Typography>
+                  {tabValue === 0 && (
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={handleCreateFeed}
+                      sx={{ 
+                        background: theme.colors.primary.gradient,
+                        color: '#FFFFFF',
+                        borderRadius: 2,
+                        px: 3,
+                        py: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 15px rgba(196, 71, 233, 0.4)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
+                          boxShadow: '0 6px 20px rgba(196, 71, 233, 0.6)',
+                          transform: 'translateY(-2px)'
+                        },
+                      }}
+                    >
+                      앨범 피드 올리기
+                    </Button>
+                  )}
                          </Box>
-                         {/* MoreVert 버튼 */}
-                         <IconButton
-                           size="small"
-                           onClick={(e) => {
-                             e.stopPropagation();
-                             // 추후 메뉴 기능 구현
-                           }}
-                           sx={{
-                             color: '#666',
-                             '&:hover': {
-                               backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                               color: '#333'
-                             }
-                           }}
-                         >
-                           <MoreVert />
-                         </IconButton>
-                       </Box>
-
-                      {/* 앨범 정보 */}
-                      <Box sx={{ display: 'flex', gap: 4, mb: 3 }}>
+              ) : (
+                <Box sx={{ 
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' },
+                  gap: 3,
+                  '@media (min-width: 1200px)': {
+                    gap: 4
+                  }
+                }}>
+                  {filteredFeedAlbums.map((album: FeedAlbum, index: number) => (
+                  <motion.div
+                    key={album.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Box 
+                      sx={{
+                        position: 'relative',
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                        borderRadius: 2,
+                        p: 2,
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                        }
+                      }}
+                      onClick={() => handleAlbumClick(album)}
+                    >
+                      {/* 앨범 커버 이미지 */}
+                      <Box sx={{ 
+                        position: 'relative', 
+                        mb: 2,
+                        width: '100%',
+                        aspectRatio: '1',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.02)',
+                          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
+                        }
+                      }}>
                         <CardMedia
                           component="img"
                           sx={{ 
-                            width: 140, 
-                            height: 140, 
-                            borderRadius: 2,
+                            width: '100%',
+                            height: '100%',
                             objectFit: 'cover',
-                            border: '1px solid #f0f0f0'
+                            transition: 'all 0.3s ease',
                           }}
                           image={album.coverImage}
                           alt={album.title}
                         />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h5" sx={{ 
-                            fontWeight: 700, 
-                            mb: 1.5,
-                            color: '#333',
-                            fontSize: '1.4rem'
-                          }}>
-                            {album.title}
-                          </Typography>
-                          <Typography variant="body1" color="text.secondary" sx={{ 
-                            mb: 2.5,
-                            fontSize: '1rem',
-                            lineHeight: 1.5
-                          }}>
-                            {album.description}
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <MusicNote sx={{ fontSize: 18, color: '#666' }} />
-                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-                                {album.trackCount}곡
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <PlayArrow sx={{ fontSize: 18, color: '#666' }} />
-                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.9rem' }}>
-                                {album.playCount}
-                              </Typography>
-                            </Box>
-                          </Box>
-                          
-                          {/* 태그 */}
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                             {(album.tags || []).map((tag: string) => (
-                              <Chip
-                                key={tag}
-                                label={`#${tag}`}
-                                size="small"
-                                sx={{
-                                  backgroundColor: '#f8f9fa',
-                                  color: '#666',
-                                  fontSize: '0.8rem',
-                                  height: 28,
-                                  borderRadius: 2,
-                                  border: '1px solid #e0e0e0',
-                                  '&:hover': {
-                                    backgroundColor: '#f0f0f0'
-                                  }
-                                }}
-                              />
-                            ))}
-                          </Box>
-                        </Box>
                       </Box>
 
-                      {/* 상호작용 버튼들 */}
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        pt: 3,
-                        borderTop: '1px solid #f0f0f0'
-                      }}>
-                        <Box sx={{ display: 'flex', gap: 3 }}>
-                          <IconButton 
-                            size="medium"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleLike(album.id);
-                            }}
-            sx={{ 
-                              color: '#f44336',
-                              '&:hover': {
-                                backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                color: '#f44336'
-                              }
-                            }}
-                          >
-                            <Favorite sx={{ fontSize: 22 }} />
-                            <Typography variant="body2" sx={{ ml: 1, fontWeight: 600 }}>
-                              {album.likeCount}
-          </Typography>
-                          </IconButton>
-                          <IconButton 
-                            size="medium"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleComment(album.id);
-                            }}
+                      {/* 앨범 제목과 정보 */}
+                      <Box sx={{ px: 0 }}>
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 600,
+                          mb: 1,
+                          color: '#FFFFFF',
+                          fontSize: '1.1rem',
+                          lineHeight: 1.3,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}>
+                          {album.title}
+                        </Typography>
+                        
+                        <Typography variant="body2" sx={{ 
+                          fontSize: '0.85rem',
+                          fontWeight: 400,
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          mb: 1
+                        }}>
+                          ({album.createdAt.split('.')[0]}년)
+                        </Typography>
+
+                        {/* 사용자 정보 */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Avatar 
+                            src={album.user.avatar} 
                             sx={{ 
-                              color: '#666',
-                              '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                                color: '#333'
-                              }
+                              width: 20, 
+                              height: 20, 
+                              mr: 1,
+                              border: '1px solid rgba(255, 255, 255, 0.2)'
                             }}
-                          >
-                            <ChatBubbleOutline sx={{ fontSize: 22 }} />
-                            <Typography variant="body2" sx={{ ml: 1, fontWeight: 600 }}>
-                              {album.commentCount}
-          </Typography>
-                          </IconButton>
-                          <IconButton 
-                            size="medium"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleShare(album.id);
-                            }}
-                            sx={{ 
-                              color: '#666',
-                              '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                                color: '#333'
-                              }
-                            }}
-                          >
-                            <Share sx={{ fontSize: 22 }} />
-                          </IconButton>
+                          />
+                          <Typography variant="body2" sx={{ 
+                            fontSize: '0.8rem',
+                            color: 'rgba(255, 255, 255, 0.7)'
+                          }}>
+                            {album.user.nickname}
+                          </Typography>
                         </Box>
-                        <Button
-                          variant="contained"
-                          startIcon={<PlayArrow />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePlay(album.id);
-                          }}
-                          sx={{
-                            backgroundColor: '#333',
-                            color: 'white',
-                            borderRadius: 3,
-                            px: 3,
-                            py: 1.5,
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            fontSize: '1rem',
-                            '&:hover': {
-                              backgroundColor: '#1a1a1a',
-                              transform: 'translateY(-1px)',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                            },
-                          }}
-                        >
-                          재생
-                        </Button>
+
+
+                        {/* 앨범 통계 */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                          <Typography variant="body2" sx={{ 
+                            fontSize: '0.75rem',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5
+                          }}>
+                            ♫ {album.trackCount}곡
+                          </Typography>
+                          <Typography variant="body2" sx={{ 
+                            fontSize: '0.75rem',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5
+                          }}>
+                            ▶ {album.playCount}회
+                          </Typography>
+                        </Box>
+                          
+                        {/* 태그 */}
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {(album.tags || []).slice(0, 2).map((tag: string) => (
+                            <Chip
+                              key={tag}
+                              label={tag}
+                              size="small"
+                              sx={{
+                                backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                                color: '#C147E9',
+                                fontSize: '0.65rem',
+                                height: 18,
+                                border: '1px solid rgba(196, 71, 233, 0.3)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(196, 71, 233, 0.2)',
+                                  borderColor: 'rgba(196, 71, 233, 0.5)'
+                                }
+                              }}
+                            />
+                          ))}
+                        </Box>
+
                       </Box>
-                    </CardContent>
-                  </Card>
+                    </Box>
+                  </motion.div>
                 ))}
               </Box>
+              )}
         </Paper>
-          </Box>
+            </motion.div>
          </Box>
       </Container>
 
@@ -788,7 +685,11 @@ const FeedPage: React.FC = () => {
          sx={{
            '& .MuiDialog-paper': {
              borderRadius: 3,
-             maxHeight: '90vh'
+             maxHeight: '90vh',
+             background: 'rgba(15, 15, 15, 0.95)',
+             backdropFilter: 'blur(20px)',
+             border: '1px solid rgba(196, 71, 233, 0.3)',
+             boxShadow: '0 0 40px rgba(196, 71, 233, 0.3)'
            }
          }}
        >
@@ -796,8 +697,13 @@ const FeedPage: React.FC = () => {
            textAlign: 'center', 
            fontSize: '1.5rem', 
            fontWeight: 700,
-           color: '#333',
-           pb: 2
+           color: '#FFFFFF',
+           pb: 2,
+           background: 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 50%, #8B5CF6 100%)',
+           backgroundClip: 'text',
+           WebkitBackgroundClip: 'text',
+           WebkitTextFillColor: 'transparent',
+           textShadow: '0 0 20px rgba(196, 71, 233, 0.5)'
          }}>
            내 피드 만들기
          </DialogTitle>
@@ -808,12 +714,12 @@ const FeedPage: React.FC = () => {
              <Typography variant="h6" sx={{ 
                fontWeight: 600, 
                mb: 1, 
-               color: '#333' 
+               color: '#FFFFFF' 
              }}>
                공유할 앨범 선택
              </Typography>
              <Typography variant="body2" sx={{ 
-               color: '#666', 
+               color: '#B3B3B3', 
                mb: 2,
                fontSize: '0.9rem'
              }}>
@@ -825,13 +731,13 @@ const FeedPage: React.FC = () => {
                  <Box sx={{ 
                    textAlign: 'center', 
                    py: 4,
-                   color: 'text.secondary'
+                   color: '#B3B3B3'
                  }}>
-                   <MusicNote sx={{ fontSize: 48, color: '#ddd', mb: 2 }} />
-                   <Typography variant="h6" sx={{ mb: 1, color: '#333' }}>
+                   <MusicNote sx={{ fontSize: 48, color: '#C147E9', mb: 2 }} />
+                   <Typography variant="h6" sx={{ mb: 1, color: '#FFFFFF' }}>
                      생성된 앨범이 없습니다
                    </Typography>
-                   <Typography variant="body2" sx={{ mb: 3, color: '#666' }}>
+                   <Typography variant="body2" sx={{ mb: 3, color: '#B3B3B3' }}>
                      먼저 앨범을 생성한 후 피드로 공유해보세요
                    </Typography>
                    <Button
@@ -841,15 +747,18 @@ const FeedPage: React.FC = () => {
                        navigate('/albums/create');
                      }}
                      sx={{
-                       backgroundColor: '#333',
-                       color: 'white',
+                       background: theme.colors.primary.gradient,
+                       color: '#FFFFFF',
                        px: 3,
                        py: 1.5,
                        borderRadius: 2,
                        textTransform: 'none',
                        fontWeight: 600,
+                       boxShadow: '0 4px 15px rgba(196, 71, 233, 0.4)',
                        '&:hover': {
-                         backgroundColor: '#1a1a1a',
+                         background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
+                         boxShadow: '0 6px 20px rgba(196, 71, 233, 0.6)',
+                         transform: 'translateY(-2px)'
                        },
                      }}
                    >
@@ -865,21 +774,35 @@ const FeedPage: React.FC = () => {
                    <FormControlLabel
                      key={album.id}
                      value={album.id}
-                     control={<Radio sx={{ color: '#333' }} />}
+                     control={<Radio sx={{ 
+                       color: '#C147E9',
+                       '&.Mui-checked': {
+                         color: '#C147E9'
+                       }
+                     }} />}
                      label={
                        <Box sx={{ 
                          display: 'flex', 
                          alignItems: 'center', 
                          p: 2, 
-                         border: selectedAlbumId === album.id ? '2px solid #333' : '1px solid #e0e0e0',
+                         border: selectedAlbumId === album.id 
+                           ? '2px solid rgba(196, 71, 233, 0.5)' 
+                           : '1px solid rgba(255, 255, 255, 0.2)',
                          borderRadius: 2,
                          ml: 1,
                          width: '100%',
-                         backgroundColor: selectedAlbumId === album.id ? '#f8f9fa' : 'transparent',
-                         transition: 'all 0.2s ease-in-out',
+                         backgroundColor: selectedAlbumId === album.id 
+                           ? 'rgba(196, 71, 233, 0.1)' 
+                           : 'rgba(255, 255, 255, 0.05)',
+                         backdropFilter: 'blur(10px)',
+                         transition: 'all 0.3s ease-in-out',
+                         boxShadow: selectedAlbumId === album.id 
+                           ? '0 0 20px rgba(196, 71, 233, 0.3)' 
+                           : 'none',
                          '&:hover': {
-                           backgroundColor: '#f8f9fa',
-                           borderColor: '#333'
+                           backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                           borderColor: 'rgba(196, 71, 233, 0.3)',
+                           boxShadow: '0 0 15px rgba(196, 71, 233, 0.2)'
                          }
                        }}>
                          <CardMedia
@@ -890,7 +813,8 @@ const FeedPage: React.FC = () => {
                              borderRadius: 1,
                              objectFit: 'cover',
                              mr: 2,
-                             border: '1px solid #f0f0f0'
+                             border: '2px solid rgba(196, 71, 233, 0.3)',
+                             boxShadow: '0 0 10px rgba(196, 71, 233, 0.3)'
                            }}
                            image={album.coverImage}
                            alt={album.title}
@@ -899,15 +823,15 @@ const FeedPage: React.FC = () => {
                            <Typography variant="h6" sx={{ 
                              fontWeight: 600, 
                              mb: 1,
-                             color: '#333'
+                             color: '#FFFFFF'
                            }}>
                              {album.title}
                            </Typography>
                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                             <Typography variant="body2" color="text.secondary">
+                             <Typography variant="body2" sx={{ color: '#B3B3B3' }}>
                                {album.trackCount || 0}곡
                              </Typography>
-                             <Typography variant="body2" color="text.secondary">
+                             <Typography variant="body2" sx={{ color: '#B3B3B3' }}>
                                {album.duration || '0분'}
                              </Typography>
                            </Box>
@@ -918,10 +842,11 @@ const FeedPage: React.FC = () => {
                                  label={tag}
                                  size="small"
                                  sx={{
-                                   backgroundColor: '#f0f0f0',
-                                   color: '#666',
+                                   backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                                   color: '#C147E9',
                                    fontSize: '0.75rem',
-                                   height: 24
+                                   height: 24,
+                                   border: '1px solid rgba(196, 71, 233, 0.3)'
                                  }}
                                />
                              ))}
@@ -942,12 +867,12 @@ const FeedPage: React.FC = () => {
              <Typography variant="h6" sx={{ 
                fontWeight: 600, 
                mb: 1, 
-               color: '#333' 
+               color: '#FFFFFF' 
              }}>
                피드 설명 작성
              </Typography>
              <Typography variant="body2" sx={{ 
-               color: '#666', 
+               color: '#B3B3B3', 
                mb: 2,
                fontSize: '0.9rem'
              }}>
@@ -963,11 +888,21 @@ const FeedPage: React.FC = () => {
                sx={{
                  '& .MuiOutlinedInput-root': {
                    borderRadius: 2,
+                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                   color: '#FFFFFF',
                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                     borderColor: '#333',
+                     borderColor: 'rgba(196, 71, 233, 0.3)',
                    },
                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                     borderColor: '#333',
+                     borderColor: 'rgba(196, 71, 233, 0.5)',
+                     boxShadow: '0 0 10px rgba(196, 71, 233, 0.3)'
+                   },
+                 },
+                 '& .MuiInputBase-input': {
+                   color: '#FFFFFF',
+                   '&::placeholder': {
+                     color: '#737373',
+                     opacity: 1
                    }
                  }
                }}
@@ -979,9 +914,13 @@ const FeedPage: React.FC = () => {
            <Button
              onClick={handleCloseCreateFeedModal}
              sx={{
-               color: '#666',
+               color: '#B3B3B3',
                textTransform: 'none',
-               fontWeight: 600
+               fontWeight: 600,
+               '&:hover': {
+                 color: '#FFFFFF',
+                 backgroundColor: 'rgba(255, 255, 255, 0.1)'
+               }
              }}
            >
              취소
@@ -991,19 +930,31 @@ const FeedPage: React.FC = () => {
              variant="contained"
              disabled={!selectedAlbumId || !feedDescription.trim()}
              sx={{
-               backgroundColor: selectedAlbumId && feedDescription.trim() ? '#333' : '#ccc',
-               color: 'white',
+               background: selectedAlbumId && feedDescription.trim() 
+                 ? 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 100%)' 
+                 : 'rgba(255, 255, 255, 0.1)',
+               color: '#FFFFFF',
                borderRadius: 2,
                px: 3,
                py: 1,
                textTransform: 'none',
                fontWeight: 600,
+               boxShadow: selectedAlbumId && feedDescription.trim() 
+                 ? '0 4px 15px rgba(196, 71, 233, 0.4)' 
+                 : 'none',
                '&:hover': {
-                 backgroundColor: selectedAlbumId && feedDescription.trim() ? '#1a1a1a' : '#ccc',
+                 background: selectedAlbumId && feedDescription.trim() 
+                   ? 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)' 
+                   : 'rgba(255, 255, 255, 0.1)',
+                 boxShadow: selectedAlbumId && feedDescription.trim() 
+                   ? '0 6px 20px rgba(196, 71, 233, 0.6)' 
+                   : 'none',
+                 transform: selectedAlbumId && feedDescription.trim() ? 'translateY(-2px)' : 'none'
                },
                '&:disabled': {
-                 backgroundColor: '#ccc',
-                 color: '#999',
+                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                 color: '#737373',
+                 boxShadow: 'none'
                }
              }}
            >

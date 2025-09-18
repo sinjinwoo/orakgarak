@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,7 +23,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.core.annotation.Order;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,15 +35,17 @@ import java.util.List;
 @RequiredArgsConstructor
 @EnableConfigurationProperties(ActuatorProperties.class)
 public class SecurityConfig {
+
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final ActuatorProperties actuatorProperties;
 
-    @Value("${app.front.url:http://localhost:3000}")
-    private String frontUrl;
-    @Value("${app.ai.url:http://localhost:5000}")
-    private String aiUrl;
+    @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
+    private String[] allowedOrigins;
+
+    @Value("${python.service.url:http://localhost:8000}")
+    private String pythonServiceUrl;
 
     @Bean
     @Order(0) // JWT 인증을 위한 Security FilterChain 설정
@@ -67,7 +69,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
-                                "/api/records/async/upload-completed"  // EventBridge 웹훅
+                                "/api/records/async/upload-completed",
+                                "/api/images/**",
+                                "/images/**"
                         ).permitAll()
                         // API 경로는 JWT 인증 필요
                         .requestMatchers("/api/**").authenticated()
@@ -81,20 +85,20 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint((req, res, ex) -> {
-                            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                        })
+                        .authenticationEntryPoint((req, res, ex) ->
+                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
                         .accessDeniedHandler((req, res, ex) -> {
                             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                             if (auth == null) {
-                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED); // 토큰 없음 → 401
+                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                             } else {
-                                res.sendError(HttpServletResponse.SC_FORBIDDEN);     // 권한 부족 → 403
+                                res.sendError(HttpServletResponse.SC_FORBIDDEN);
                             }
                         })
                 )
                 // JWT 인증 필터 등록
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -136,8 +140,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOriginPatterns(List.of(frontUrl, aiUrl)); // 프론트 AI 도메인 허용
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+
+        // Frontend origins과 Python service origin 추가
+        List<String> allAllowedOrigins = new java.util.ArrayList<>(List.of(allowedOrigins));
+        allAllowedOrigins.add(pythonServiceUrl);
+
+        configuration.setAllowedOriginPatterns(allAllowedOrigins);
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Set-Cookie"));
 

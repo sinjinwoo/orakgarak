@@ -8,6 +8,8 @@ import QuickRecommendation from '../components/recommendation/QuickRecommendatio
 
 // 음성 테스트 관련 컴포넌트들
 import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
+import VoiceTestSelection from '../components/voiceTest/VoiceTestSelection'; // 음성 테스트 선택
+import ExistingRecordingSelection from '../components/voiceTest/ExistingRecordingSelection'; // 기존 녹음본 선택
 
 // 데이터 및 유틸리티
 import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스
@@ -62,7 +64,6 @@ const RecommendationsPage: React.FC = () => {
   });
   
   // 음성 테스트 관련 상태
-  const [userVoiceAnalysis, setUserVoiceAnalysis] = useState<VoiceAnalysis | null>(null);
   const [showVoiceTest, setShowVoiceTest] = useState(false); // 테스트 화면 표시 여부
   
   // 추천 히스토리 관리
@@ -82,6 +83,10 @@ const RecommendationsPage: React.FC = () => {
   // 빠른 추천 관련 상태
   const [showQuickRecommendation, setShowQuickRecommendation] = useState(false);
   const [userRecordings, setUserRecordings] = useState<Recording[]>([]);
+  
+  // 음성 테스트 선택 관련 상태
+  const [showVoiceTestSelection, setShowVoiceTestSelection] = useState(false);
+  const [showExistingRecordingSelection, setShowExistingRecordingSelection] = useState(false);
 
   // ===== 추천 로직 =====
   
@@ -164,53 +169,11 @@ const RecommendationsPage: React.FC = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   }, []);
 
-  // 음성 테스트 시작 핸들러
-  const handleStartVoiceTest = useCallback(() => {
-    setCurrentStep('test');
-    setShowVoiceTest(true);
+  // 테스트 시작 핸들러 (음성 테스트 + 빠른 추천 통합)
+  const handleStartTest = useCallback(() => {
+    setShowVoiceTestSelection(true);
   }, []);
 
-  // 음성 테스트 완료 핸들러
-  const handleVoiceTestComplete = useCallback((results: { pitchRange: { minPitch: number; maxPitch: number; minNote: string; maxNote: string }; score: number; timestamp: number }[]) => {
-    const analysis: VoiceAnalysis = {
-      vocalRange: {
-        min: results[0]?.pitchRange?.minPitch || 80,
-        max: results[0]?.pitchRange?.maxPitch || 400,
-        comfortable: {
-          min: (results[0]?.pitchRange?.minPitch || 80) + 20,
-          max: (results[0]?.pitchRange?.maxPitch || 400) - 20
-        }
-      },
-      confidence: 85,
-      vocalCharacteristics: {
-        pitchVariation: 0.7,
-        vibrato: 0.5,
-        breathiness: 0.3,
-        brightness: 0.8
-      }
-    };
-    
-    setUserVoiceAnalysis(analysis);
-    setShowVoiceTest(false);
-    
-    // 새로운 추천 생성
-    generateNewRecommendation(analysis);
-    
-    setCurrentStep('recommendations');
-    setIsCoverFlowOpen(true);
-    
-    setSnackbar({ 
-      open: true, 
-      message: '음성 테스트 완료! 당신만의 맞춤 추천 곡을 생성했습니다.', 
-      severity: 'success' 
-    });
-  }, [generateNewRecommendation]);
-
-  // 음성 테스트 취소 핸들러
-  const handleVoiceTestCancel = useCallback(() => {
-    setShowVoiceTest(false);
-    setCurrentStep('welcome');
-  }, []);
 
 
   // 추천 히스토리에서 선택 핸들러
@@ -322,10 +285,6 @@ const RecommendationsPage: React.FC = () => {
     loadRecordings();
   }, [loadRecordings]);
 
-  // 빠른 추천 시작 핸들러
-  const handleStartQuickRecommendation = useCallback(() => {
-    setShowQuickRecommendation(true);
-  }, []);
 
   // 빠른 추천 완료 핸들러
   const handleQuickRecommendationComplete = useCallback((songs: RecommendedSong[], selectedRecording: Recording) => {
@@ -372,6 +331,35 @@ const RecommendationsPage: React.FC = () => {
     setShowQuickRecommendation(false);
   }, []);
 
+  // 음성 테스트 관련 핸들러들
+  const handleNewRecording = useCallback(() => {
+    setShowVoiceTestSelection(false);
+    setCurrentStep('test');
+    setShowVoiceTest(true);
+  }, []);
+
+  const handleUseExistingRecording = useCallback((recording: { id: string; title: string }) => {
+    console.log('🎵 RecommendationsPage: 기존 녹음본 사용', recording);
+    setShowVoiceTestSelection(false);
+    setShowExistingRecordingSelection(true);
+  }, []);
+
+  const handleSelectExistingRecording = useCallback((recording: Recording) => {
+    console.log('🎵 RecommendationsPage: 기존 녹음본 선택', recording);
+    setShowExistingRecordingSelection(false);
+    // 기존 녹음본으로 바로 추천 생성
+    setShowQuickRecommendation(true);
+  }, []);
+
+  const handleBackFromVoiceTestSelection = useCallback(() => {
+    setShowVoiceTestSelection(false);
+  }, []);
+
+  const handleBackFromExistingSelection = useCallback(() => {
+    setShowExistingRecordingSelection(false);
+    setShowVoiceTestSelection(true);
+  }, []);
+
   // ===== 조건부 렌더링 =====
   
   // 음성 테스트 화면
@@ -382,11 +370,29 @@ const RecommendationsPage: React.FC = () => {
         background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
         minHeight: '100vh' 
       }}>
-        <VoiceTestGame
-          onTestComplete={handleVoiceTestComplete}
-          onTestCancel={handleVoiceTestCancel}
-        />
+        <VoiceTestGame />
       </Box>
+    );
+  }
+
+  // 음성 테스트 선택 화면
+  if (showVoiceTestSelection) {
+    return (
+      <VoiceTestSelection
+        onNewRecording={handleNewRecording}
+        onUseExisting={handleUseExistingRecording}
+        onBack={handleBackFromVoiceTestSelection}
+      />
+    );
+  }
+
+  // 기존 녹음본 선택 화면
+  if (showExistingRecordingSelection) {
+    return (
+      <ExistingRecordingSelection
+        onSelectRecording={handleSelectExistingRecording}
+        onBack={handleBackFromExistingSelection}
+      />
     );
   }
 
@@ -406,12 +412,14 @@ const RecommendationsPage: React.FC = () => {
   return (
     <Box sx={{ 
       flex: 1, 
-      background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+      background: 'radial-gradient(ellipse at center, #0a0a0a 0%, #000000 100%)',
       minHeight: '100vh',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      pt: { xs: 16, sm: 20 },
+      fontFamily: 'neon, monospace' 
     }}>
-      {/* 배경 효과 */}
+      {/* 사이버펑크 배경 효과 */}
       <Box sx={{
         position: 'absolute',
         top: 0,
@@ -419,10 +427,35 @@ const RecommendationsPage: React.FC = () => {
         right: 0,
         bottom: 0,
         background: `
-          radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 40% 40%, rgba(34, 197, 94, 0.05) 0%, transparent 50%)
+          radial-gradient(circle at 20% 20%, rgba(251, 66, 212, 0.15) 0%, transparent 50%),
+          radial-gradient(circle at 80% 80%, rgba(66, 253, 235, 0.15) 0%, transparent 50%),
+          radial-gradient(circle at 50% 50%, rgba(251, 66, 212, 0.05) 0%, transparent 70%)
         `,
+        animation: 'cyberGlow 4s ease-in-out infinite alternate',
+        '@keyframes cyberGlow': {
+          '0%': { opacity: 0.3 },
+          '100%': { opacity: 0.7 }
+        },
+        zIndex: 0
+      }} />
+      
+      {/* 그리드 패턴 */}
+      <Box sx={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: `
+          linear-gradient(rgba(251, 66, 212, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(66, 253, 235, 0.03) 1px, transparent 1px)
+        `,
+        backgroundSize: '50px 50px',
+        animation: 'gridMove 20s linear infinite',
+        '@keyframes gridMove': {
+          '0%': { transform: 'translate(0, 0)' },
+          '100%': { transform: 'translate(50px, 50px)' }
+        },
         zIndex: 0
       }} />
       
@@ -439,11 +472,15 @@ const RecommendationsPage: React.FC = () => {
             component="h1" 
             sx={{ 
               fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #22c55e 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: { xs: '2rem', md: '2.5rem' }
+              color: '#FB42D4',
+              fontSize: { xs: '2rem', md: '2.5rem' },
+              textShadow: '0 0 20px #F40AD5',
+              fontFamily: 'neon, monospace',
+              animation: 'cyber 2s ease-in-out infinite alternate',
+              '@keyframes cyber': {
+                '0%': { textShadow: '0 0 20px #F40AD5' },
+                '100%': { textShadow: '0 0 40px #F40AD5, 0 0 60px #F40AD5' }
+              }
             }}
           >
             🎵 NEON RECOMMENDATIONS
@@ -455,11 +492,15 @@ const RecommendationsPage: React.FC = () => {
               variant="outlined"
               onClick={() => setCurrentStep('history')}
               sx={{
-                borderColor: 'rgba(139, 92, 246, 0.5)',
-                color: '#8b5cf6',
+                borderColor: 'rgba(66, 253, 235, 0.5)',
+                color: '#42FDEB',
+                fontFamily: 'neon, monospace',
+                textShadow: '0 0 10px #23F6EF',
                 '&:hover': {
-                  borderColor: '#8b5cf6',
-                  backgroundColor: 'rgba(139, 92, 246, 0.1)'
+                  borderColor: '#42FDEB',
+                  backgroundColor: 'rgba(66, 253, 235, 0.1)',
+                  boxShadow: '0 0 20px rgba(66, 253, 235, 0.3)',
+                  textShadow: '0 0 15px #23F6EF'
                 }
               }}
             >
@@ -478,7 +519,7 @@ const RecommendationsPage: React.FC = () => {
             justifyContent: 'center',
             overflow: 'hidden'
           }}>
-            {/* 배경 애니메이션 */}
+            {/* 사이버펑크 배경 애니메이션 */}
             <Box sx={{
               position: 'absolute',
               top: 0,
@@ -486,12 +527,12 @@ const RecommendationsPage: React.FC = () => {
               right: 0,
               bottom: 0,
               background: `
-                radial-gradient(circle at 20% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(34, 197, 94, 0.1) 0%, transparent 70%)
+                radial-gradient(circle at 20% 20%, rgba(251, 66, 212, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(66, 253, 235, 0.2) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(251, 66, 212, 0.1) 0%, transparent 70%)
               `,
-              animation: 'pulse 4s ease-in-out infinite alternate',
-              '@keyframes pulse': {
+              animation: 'cyberPulse 4s ease-in-out infinite alternate',
+              '@keyframes cyberPulse': {
                 '0%': { opacity: 0.3 },
                 '100%': { opacity: 0.7 }
               }
@@ -510,18 +551,16 @@ const RecommendationsPage: React.FC = () => {
                 <Typography 
                   variant="h2" 
                   sx={{ 
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #22c55e 100%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
+                    color: '#FB42D4',
                     fontWeight: 'bold',
                     fontSize: { xs: '3rem', md: '4rem', lg: '5rem' },
                     mb: 2,
-                    textShadow: '0 0 40px rgba(139, 92, 246, 0.3)',
-                    animation: 'glow 2s ease-in-out infinite alternate',
-                    '@keyframes glow': {
-                      '0%': { textShadow: '0 0 40px rgba(139, 92, 246, 0.3)' },
-                      '100%': { textShadow: '0 0 60px rgba(139, 92, 246, 0.6)' }
+                    textShadow: '0 0 3vw #F40AD5',
+                    fontFamily: 'neon, monospace',
+                    animation: 'cyber 2.2s ease-in infinite',
+                    '@keyframes cyber': {
+                      '0%, 100%': { textShadow: '0 0 3vw #F40AD5, 0 0 6vw #F40AD5, 0 0 9vw #F40AD5' },
+                      '50%': { textShadow: '0 0 1.5vw #F40AD5, 0 0 3vw #F40AD5, 0 0 4.5vw #F40AD5' }
                     }
                   }}
                 >
@@ -531,11 +570,13 @@ const RecommendationsPage: React.FC = () => {
                 <Typography 
                   variant="h5" 
                   sx={{ 
-                    color: '#94a3b8',
+                    color: '#42FDEB',
                     fontSize: { xs: '1.2rem', md: '1.5rem' },
                     fontWeight: 300,
                     letterSpacing: '0.5px',
-                    lineHeight: 1.6
+                    lineHeight: 1.6,
+                    textShadow: '0 0 10px #23F6EF',
+                    fontFamily: 'neon, monospace'
                   }}
                 >
                   당신만의 맞춤 추천을 받아보세요
@@ -545,27 +586,28 @@ const RecommendationsPage: React.FC = () => {
               {/* 카드형 선택 옵션 */}
               <Box sx={{ 
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
                 gap: 4,
-                maxWidth: '900px',
+                maxWidth: '800px',
                 mx: 'auto'
               }}>
-                {/* 음성 테스트 카드 */}
+                {/* 테스트 카드 (음성 테스트 + 빠른 추천 통합) */}
                 <Box
-                  onClick={handleStartVoiceTest}
+                  onClick={handleStartTest}
                   sx={{
-                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%)',
-                    border: '2px solid rgba(139, 92, 246, 0.3)',
+                    background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.1) 0%, rgba(66, 253, 235, 0.1) 100%)',
+                    border: '2px solid rgba(251, 66, 212, 0.3)',
                     borderRadius: '25px',
                     p: 4,
                     cursor: 'pointer',
                     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     position: 'relative',
                     overflow: 'hidden',
+                    fontFamily: 'neon, monospace',
                     '&:hover': {
                       transform: 'translateY(-10px) scale(1.02)',
-                      border: '2px solid rgba(139, 92, 246, 0.6)',
-                      boxShadow: '0 25px 50px rgba(139, 92, 246, 0.3)',
+                      border: '2px solid rgba(251, 66, 212, 0.6)',
+                      boxShadow: '0 25px 50px rgba(251, 66, 212, 0.3)',
                       '& .card-icon': {
                         transform: 'scale(1.2) rotate(10deg)'
                       }
@@ -578,106 +620,57 @@ const RecommendationsPage: React.FC = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, transparent 50%)',
+                    background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.05) 0%, rgba(66, 253, 235, 0.05) 50%, transparent 100%)',
                     zIndex: 1
                   }} />
                   
-                  <Box sx={{ position: 'relative', zIndex: 2 }}>
+                  <Box sx={{ position: 'relative', zIndex: 2, textAlign: 'center' }}>
                     <Box 
                       className="card-icon"
                       sx={{
-                        fontSize: '4rem',
-                        mb: 2,
+                        fontSize: '5rem',
+                        mb: 3,
                         transition: 'all 0.3s ease'
                       }}
                     >
-                      🎮
+                      🎵
                     </Box>
+                    <Typography 
+                      variant="h4" 
+                      sx={{ 
+                        color: '#FB42D4',
+                        fontWeight: 'bold',
+                        mb: 2,
+                        textShadow: '0 0 15px #F40AD5',
+                        fontFamily: 'neon, monospace'
+                      }}
+                    >
+                      테스트
+                    </Typography>
                     <Typography 
                       variant="h6" 
                       sx={{ 
-                        color: '#fff',
-                        fontWeight: 'bold',
+                        color: '#42FDEB',
+                        lineHeight: 1.6,
+                        textShadow: '0 0 10px #23F6EF',
+                        fontFamily: 'neon, monospace',
                         mb: 2
                       }}
                     >
-                      음성 테스트
+                      음성 테스트 또는 기존 녹음본으로<br/>
+                      맞춤 추천을 받아보세요
                     </Typography>
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: '#a78bfa',
-                        lineHeight: 1.6
+                        color: '#42FDEB',
+                        lineHeight: 1.6,
+                        textShadow: '0 0 5px #23F6EF',
+                        fontFamily: 'neon, monospace',
+                        opacity: 0.8
                       }}
                     >
-                      당신의 음역대를 분석하여<br/>
-                      완벽한 맞춤 추천을 받아보세요
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {/* 빠른 추천 카드 */}
-                <Box
-                  onClick={handleStartQuickRecommendation}
-                  sx={{
-                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(22, 163, 74, 0.1) 100%)',
-                    border: '2px solid rgba(34, 197, 94, 0.3)',
-                    borderRadius: '25px',
-                    p: 4,
-                    cursor: 'pointer',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&:hover': {
-                      transform: 'translateY(-10px) scale(1.02)',
-                      border: '2px solid rgba(34, 197, 94, 0.6)',
-                      boxShadow: '0 25px 50px rgba(34, 197, 94, 0.3)',
-                      '& .card-icon': {
-                        transform: 'scale(1.2) rotate(10deg)'
-                      }
-                    }
-                  }}
-                >
-                  <Box sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, transparent 50%)',
-                    zIndex: 1
-                  }} />
-                  
-                  <Box sx={{ position: 'relative', zIndex: 2 }}>
-                    <Box 
-                      className="card-icon"
-                      sx={{
-                        fontSize: '4rem',
-                        mb: 2,
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      ⚡
-                    </Box>
-                    <Typography 
-                      variant="h6" 
-                      sx={{ 
-                        color: '#fff',
-                        fontWeight: 'bold',
-                        mb: 2
-                      }}
-                    >
-                      빠른 추천 받기
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: '#86efac',
-                        lineHeight: 1.6
-                      }}
-                    >
-                      내가 부른 노래의<br/>
-                      녹음본으로 즉시 추천받기
+                      새로 녹음하기 • 기존 녹음본 사용하기
                     </Typography>
                   </Box>
                 </Box>
@@ -686,18 +679,19 @@ const RecommendationsPage: React.FC = () => {
                 <Box
                   onClick={handleGoToMyRecommendations}
                   sx={{
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)',
-                    border: '2px solid rgba(59, 130, 246, 0.3)',
+                    background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.1) 0%, rgba(175, 15, 90, 0.1) 100%)',
+                    border: '2px solid rgba(251, 66, 212, 0.3)',
                     borderRadius: '25px',
                     p: 4,
                     cursor: 'pointer',
                     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     position: 'relative',
                     overflow: 'hidden',
+                    fontFamily: 'neon, monospace',
                     '&:hover': {
                       transform: 'translateY(-10px) scale(1.02)',
-                      border: '2px solid rgba(59, 130, 246, 0.6)',
-                      boxShadow: '0 25px 50px rgba(59, 130, 246, 0.3)',
+                      border: '2px solid rgba(251, 66, 212, 0.6)',
+                      boxShadow: '0 25px 50px rgba(251, 66, 212, 0.3)',
                       '& .card-icon': {
                         transform: 'scale(1.2) rotate(-10deg)'
                       }
@@ -710,7 +704,7 @@ const RecommendationsPage: React.FC = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, transparent 50%)',
+                    background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.05) 0%, transparent 50%)',
                     zIndex: 1
                   }} />
                   
@@ -728,9 +722,11 @@ const RecommendationsPage: React.FC = () => {
                     <Typography 
                       variant="h6" 
                       sx={{ 
-                        color: '#fff',
+                        color: '#FB42D4',
                         fontWeight: 'bold',
-                        mb: 2
+                        mb: 2,
+                        textShadow: '0 0 10px #F40AD5',
+                        fontFamily: 'neon, monospace'
                       }}
                     >
                       내 추천 리스트
@@ -738,8 +734,10 @@ const RecommendationsPage: React.FC = () => {
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: '#93c5fd',
-                        lineHeight: 1.6
+                        color: '#42FDEB',
+                        lineHeight: 1.6,
+                        textShadow: '0 0 5px #23F6EF',
+                        fontFamily: 'neon, monospace'
                       }}
                     >
                       이전에 받은 추천들을<br/>
@@ -871,7 +869,7 @@ const RecommendationsPage: React.FC = () => {
                     
                     <Button
                       variant="contained"
-                      onClick={() => generateNewRecommendation(userVoiceAnalysis)}
+                      onClick={() => generateNewRecommendation(null)}
                       sx={{
                         background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                         borderRadius: '15px',

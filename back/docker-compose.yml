@@ -11,6 +11,7 @@ services:
       MYSQL_DATABASE: ${DB_NAME_LOCAL}
       MYSQL_USER: ${DB_USERNAME_LOCAL}
       MYSQL_PASSWORD: ${DB_PASSWORD_LOCAL}
+      MYSQL_ROOT_HOST: "%"
     ports:
       - "${DB_PORT_LOCAL:-3306}:3306"
     volumes:

@@ -95,7 +95,6 @@ class RecordControllerTest {
         testUser = User.builder()
             .id(1L)
             .email("test@test.com")
-            .nickname("testuser")
             .googleID("google123")
             .build();
         
@@ -129,7 +128,6 @@ class RecordControllerTest {
         User user = User.builder()
             .id(userId)
             .email("test@test.com")
-            .nickname("testuser")
             .googleID("google123")
             .build();
         CustomUserPrincipal principal = new CustomUserPrincipal(user);
@@ -286,7 +284,7 @@ class RecordControllerTest {
         // given
         Long recordId = 1L;
         String newTitle = "수정된 제목";
-        User user2 = User.builder().id(2L).email("test2@test.com").nickname("testuser2").googleID("google456").build();
+        User user2 = User.builder().id(2L).email("test2@test.com").googleID("google456").build();
         CustomUserPrincipal principal2 = new CustomUserPrincipal(user2);
         
         // Create a new MockMvc with the different user
@@ -343,7 +341,7 @@ class RecordControllerTest {
     void deleteRecord_PermissionDenied_Returns403() throws Exception {
         // given
         Long recordId = 1L;
-        User user2 = User.builder().id(2L).email("test2@test.com").nickname("testuser2").googleID("google456").build();
+        User user2 = User.builder().id(2L).email("test2@test.com").googleID("google456").build();
         CustomUserPrincipal principal2 = new CustomUserPrincipal(user2);
         
         // Create a new MockMvc with the different user

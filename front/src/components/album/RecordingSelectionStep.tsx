@@ -90,24 +90,38 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
       {/* 헤더 */}
       <Box sx={{ textAlign: 'center', mb: 4 }}>
         <Box sx={{ mb: 2 }}>
-          <MusicNote sx={{ fontSize: 48, color: '#2c2c2c' }} />
+          <MusicNote sx={{ fontSize: 48, color: '#C147E9' }} />
         </Box>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
           새 앨범 만들기
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
           녹음본으로 나만의 앨범을 만들어보세요
         </Typography>
       </Box>
 
       {/* 녹음 선택 섹션 */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      <Paper sx={{ 
+        p: 3, 
+        mb: 3,
+        background: 'transparent',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderRadius: 3
+      }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ 
+            fontWeight: 600, 
+            display: 'flex', 
+            alignItems: 'center',
+            color: '#FFFFFF'
+          }}>
             ♫ 녹음 선택
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ 
+              color: 'rgba(255, 255, 255, 0.6)'
+            }}>
               {selectedRecordings.length}곡 선택됨
             </Typography>
             <Button
@@ -115,13 +129,28 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
               size="small"
               onClick={onSelectAll}
               disabled={selectedRecordings.length === recordings.length}
+              sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                '&:hover': {
+                  borderColor: '#C147E9',
+                  backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 255, 255, 0.3)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                }
+              }}
             >
               전체 선택
             </Button>
           </Box>
         </Box>
         
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography variant="body2" sx={{ 
+          mb: 3,
+          color: 'rgba(255, 255, 255, 0.6)'
+        }}>
           앨범에 포함할 녹음을 선택해주세요 (최소 1곡, 최대 10곡)
         </Typography>
 
@@ -135,11 +164,12 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
                 key={recording.id}
                 disablePadding
                 sx={{
-                  border: '1px solid #e0e0e0',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
                   borderRadius: 1,
                   mb: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   '&:hover': {
-                    backgroundColor: '#f5f5f5',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
                   },
                 }}
               >
@@ -151,16 +181,26 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
                     <Checkbox
                       checked={isSelected}
                       onChange={() => onToggleRecording(recording.id)}
-                      sx={{ p: 0.5 }}
+                      sx={{ 
+                        p: 0.5,
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        '&.Mui-checked': {
+                          color: '#C147E9',
+                        },
+                      }}
                     />
                   </ListItemIcon>
                   
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <MusicNote sx={{ color: '#666' }} />
+                    <MusicNote sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
                   </ListItemIcon>
                   
                   <Box sx={{ flex: 1 }}>
-                    <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5 }}>
+                    <Typography variant="body1" sx={{ 
+                      fontWeight: 500, 
+                      mb: 0.5,
+                      color: '#FFFFFF'
+                    }}>
                       {recording.song.title} - {recording.song.artist}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -174,10 +214,14 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
                           height: 20,
                         }}
                       />
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" sx={{ 
+                        color: 'rgba(255, 255, 255, 0.6)'
+                      }}>
                         {formatDuration(recording.duration)}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" sx={{ 
+                        color: 'rgba(255, 255, 255, 0.6)'
+                      }}>
                         {formatDate(recording.createdAt)}
                       </Typography>
                       <Typography
@@ -193,8 +237,17 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
                   </Box>
                   
                   <ListItemIcon sx={{ minWidth: 40 }}>
-                    <IconButton size="small">
-                      <PlayArrow sx={{ color: '#666' }} />
+                    <IconButton size="small" sx={{
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      }
+                    }}>
+                      <PlayArrow sx={{ 
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        '&:hover': {
+                          color: '#FFFFFF'
+                        }
+                      }} />
                     </IconButton>
                   </ListItemIcon>
                 </ListItemButton>

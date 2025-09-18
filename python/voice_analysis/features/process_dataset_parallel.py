@@ -109,8 +109,8 @@ def process_dataset_parallel(dataset_path, output_path, song_ids, popularity_map
 if __name__ == '__main__':
     MELON_DATASET_PATH = "E:/melondataset/data"
     OUTPUT_FEATURES_PATH = "E:/melondataset/features"  # 피처 저장 경로
-    POPULARITY_JSON_PATH = "E:/melondataset/song_popularity.json"
-   # SONG_META_JSON_PATH = "E:/melondataset/song_meta.json"
+    POPULARITY_JSON_PATH = "E:/melondataset/output/song_popularity.json"
+   # SONG_META_JSON_PATH = "E:/melondataset/output/song_meta.json"
     TOTAL_SONGS = 707989
 
     logging.info("=" * 50)

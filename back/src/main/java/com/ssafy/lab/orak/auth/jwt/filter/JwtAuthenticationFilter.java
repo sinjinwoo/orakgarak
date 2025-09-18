@@ -8,7 +8,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -31,20 +30,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
 
-        log.info("JWT Filter - Request path: {}", path);
-
-        // OAuth2 관련 경로는 JWT 필터 건너뜀
         if (path.startsWith("/api/oauth2/") ||
-            path.startsWith("/api/login/oauth2/") ||
-            path.startsWith("/api/test/") ||
-            path.equals("/api/auth/refresh") ||
-            path.startsWith("/api/yjs/") ||
-            path.startsWith("/api/swagger-ui/") ||
-            path.startsWith("/swagger-ui/") ||
-            path.startsWith("/v3/api-docs") ||
-            path.startsWith("/api-docs") ||
-            path.startsWith("/api/api-docs") ||
-            path.startsWith("/actuator")) {
+                path.startsWith("/api/login/oauth2/") ||
+                path.startsWith("/api/test/") ||
+                path.equals("/api/auth/refresh") ||
+                path.startsWith("/api/yjs/") ||
+                path.startsWith("/api/swagger-ui/") ||
+                path.startsWith("/swagger-ui/") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/api-docs") ||
+                path.startsWith("/api/api-docs") ||
+                path.startsWith("/api/images") ||
+                path.startsWith("/actuator")) {
             log.info("JWT Filter - Bypassing authentication for path: {}", path);
             filterChain.doFilter(request, response);
             return;
@@ -68,7 +65,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
         } else {
-            log.info("JWT Filter - No token provided for non-actuator path: {}", path);
+            // 토큰이 없으면 401 반환
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
             response.getWriter().write("JWT token is required.");
             return;
