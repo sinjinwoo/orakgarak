@@ -29,7 +29,7 @@ const dummySongs = [
   { id: 19, title: 'Blinding Lights', artist: 'The Weeknd', genre: 'Pop', duration: '3:20' },
   { id: 20, title: 'Levitating', artist: 'Dua Lipa', genre: 'Pop', duration: '3:23' },
   // 추가 더미: 브라운아이드소울 - gone (유튜브 MR 사용)
-  { id: 21, title: 'gone', artist: '브라운아이드소울', genre: 'K-Pop', duration: '4:11', youtubeId: 'o-M16KEy7Ng' }
+  { id: 21, title: 'gone', artist: '브라운아이드소울', genre: 'K-Pop', duration: '4:11', youtubeId: 'yNdQjHnyy_c' }
 ];
 
 const SongSearchPanel: React.FC = () => {
