@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 // API 기본 설정
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://https://j13c103.p.ssafy.io/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13c103.p.ssafy.io/api';
 
 // Axios 인스턴스 생성
 const apiClient: AxiosInstance = axios.create({

@@ -115,7 +115,7 @@ export const ReservationProvider: React.FC<ReservationProviderProps> = ({ childr
   const fetchSongDetails = async (songId: number): Promise<Song | null> => {
     try {
       const authToken = localStorage.getItem('auth-token');
-      const response = await fetch(`http://https://j13c103.p.ssafy.io/api/songs/${songId}`, {
+      const response = await fetch(`https://j13c103.p.ssafy.io/api/songs/${songId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
