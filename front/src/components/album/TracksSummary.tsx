@@ -86,7 +86,7 @@ const TracksSummary: React.FC<TracksSummaryProps> = ({ tracks, className = '' })
             >
               {/* 트랙 번호 */}
               <div className="w-8 h-8 rounded-full bg-fuchsia-500/20 flex items-center justify-center text-sm font-bold text-fuchsia-300">
-                {track.order}
+                {index + 1}
               </div>
 
               {/* 곡 정보 */}

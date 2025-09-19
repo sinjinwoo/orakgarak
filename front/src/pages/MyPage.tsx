@@ -45,6 +45,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useMyProfile } from '../hooks/useProfile';
 import { motion } from 'framer-motion';
 import AlbumCoverflow from '../components/AlbumCoverflow';
+import { albumAPI } from '../services/backend';
+import type { Album as AlbumType } from '../types/album';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -194,40 +196,10 @@ const MyPage: React.FC = () => {
     return customBg ? `url(${customBg})` : 'url(/images/background/Music.jpg)';
   }, []);
   
-  // 앨범 데이터 (localStorage에서 불러오기)
-  const [myAlbums, setMyAlbums] = useState(() => {
-    const savedAlbums = localStorage.getItem('myAlbums');
-    if (savedAlbums) {
-      return JSON.parse(savedAlbums);
-    }
-    // 기본 더미 데이터
-    return [
-      {
-        id: '1',
-        title: 'My Favorite Songs',
-        description: '내가 좋아하는 노래들을 모아서 만든 첫 번째 앨범입니다.',
-        coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
-        isPublic: true,
-        trackCount: 3,
-        duration: '11분',
-        likeCount: 42,
-        playCount: 156,
-        createdAt: '2025-01-15T00:00:00Z',
-      },
-      {
-        id: '2',
-        title: '감성 발라드 모음',
-        description: '마음에 담고 싶은 감성적인 발라드들',
-        coverImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=300&fit=crop',
-        isPublic: false,
-        trackCount: 5,
-        duration: '18분',
-        likeCount: 0,
-        playCount: 12,
-        createdAt: '2025-01-10T00:00:00Z',
-      },
-    ];
-  });
+  // 앨범 데이터 상태
+  const [myAlbums, setMyAlbums] = useState<AlbumType[]>([]);
+  const [albumsLoading, setAlbumsLoading] = useState(true);
+  const [albumsError, setAlbumsError] = useState<string | null>(null);
   
   // 프로필 상태 관리
   const [profileData, setProfileData] = useState(() => {
@@ -281,14 +253,34 @@ const MyPage: React.FC = () => {
     }
   }, []);
 
-  // 통계 데이터 로드 (실제로는 API 호출)
-  React.useEffect(() => {
-    // 임시로 더미 데이터 설정 (나중에 API 호출로 교체)
+  // 앨범 데이터 로드
+  useEffect(() => {
+    const loadAlbums = async () => {
+      try {
+        setAlbumsLoading(true);
+        setAlbumsError(null);
+        const albumsData = await albumAPI.getAlbums({ page: 0, size: 100 });
+        setMyAlbums(albumsData.content);
+      } catch (error) {
+        console.error('앨범 로드 실패:', error);
+        setAlbumsError('앨범을 불러오는데 실패했습니다.');
+        // 에러 시 빈 배열로 설정
+        setMyAlbums([]);
+      } finally {
+        setAlbumsLoading(false);
+      }
+    };
+
+    loadAlbums();
+  }, []);
+
+  // 통계 데이터 계산
+  useEffect(() => {
     setUserStats({
       albums: myAlbums.length,
       recordings: recordings.length,
-      likes: myAlbums.reduce((sum: number, album: { likeCount: number }) => sum + album.likeCount, 0),
-      totalPlays: myAlbums.reduce((sum: number, album: { playCount: number }) => sum + album.playCount, 0)
+      likes: myAlbums.reduce((sum, album) => sum + album.likeCount, 0),
+      totalPlays: 0 // totalPlays는 Album 타입에 없으므로 0으로 설정
     });
   }, [myAlbums, recordings]);
 
@@ -757,24 +749,56 @@ const MyPage: React.FC = () => {
                 </Button>
               </Box>
               
-              {/* 3D Coverflow */}
-              <AlbumCoverflow
-                albums={myAlbums.map((album: { id: string; title: string; coverImage: string; createdAt: string; trackCount?: number }) => ({
-                  id: album.id,
-                  title: album.title,
-                  coverImage: album.coverImage,
-                  artist: '나',
-                  year: new Date(album.createdAt).getFullYear().toString(),
-                  trackCount: album.trackCount || 0
-                }))}
-                onAlbumClick={(album: { id: string; title: string }) => navigate(`/albums/${album.id}`, { 
-                  state: { from: '/me' } 
-                })}
-                onPlayClick={(album: { id: string; title: string }) => {
-                  // 재생 기능 구현
-                  console.log('Play album:', album.title);
-                }}
-              />
+              {/* 앨범 로딩/에러/데이터 표시 */}
+              {albumsLoading ? (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                    앨범을 불러오는 중...
+                  </Typography>
+                </Box>
+              ) : albumsError ? (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Typography variant="h6" sx={{ color: '#FF6B6B', mb: 2 }}>
+                    {albumsError}
+                  </Typography>
+                  <Button 
+                    onClick={() => window.location.reload()} 
+                    variant="outlined"
+                    sx={{ color: '#FFFFFF', borderColor: '#FFFFFF' }}
+                  >
+                    다시 시도
+                  </Button>
+                </Box>
+              ) : myAlbums.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Album sx={{ fontSize: 64, color: 'rgba(255, 255, 255, 0.6)', mb: 2 }} />
+                  <Typography variant="h6" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.8)' }}>
+                    아직 만든 앨범이 없습니다
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 3 }}>
+                    첫 번째 앨범을 만들어보세요!
+                  </Typography>
+                </Box>
+              ) : (
+                /* 3D Coverflow */
+                <AlbumCoverflow
+                  albums={myAlbums.map((album) => ({
+                    id: album.id.toString(),
+                    title: album.title,
+                    coverImage: '', // 실제 커버 이미지 URL이 없으므로 빈 문자열
+                    artist: '나',
+                    year: new Date(album.createdAt).getFullYear().toString(),
+                    trackCount: album.trackCount
+                  }))}
+                  onAlbumClick={(album) => navigate(`/albums/${album.id}`, { 
+                    state: { from: '/me' } 
+                  })}
+                  onPlayClick={(album) => {
+                    // 재생 기능 구현
+                    console.log('Play album:', album.title);
+                  }}
+                />
+              )}
             </Box>
           </TabPanel>
 
@@ -1273,7 +1297,7 @@ const MyPage: React.FC = () => {
               overflowY: 'auto',
               pr: 1
             }}>
-              {myAlbums.map((album: { id: string; title: string; coverImage: string }) => (
+              {myAlbums.map((album) => (
                 <Box
                   key={album.id}
                   sx={{
@@ -1283,30 +1307,21 @@ const MyPage: React.FC = () => {
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
                     border: '2px solid transparent',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)', // 기본 배경색 추가
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     '&:hover': {
                       borderColor: 'rgba(255, 255, 255, 0.5)',
                       transform: 'scale(1.05)',
                     }
                   }}
                   onClick={() => {
-                    // 앨범 커버를 배경으로 설정하는 로직
-                    localStorage.setItem('customBackground', album.coverImage);
-                    showToast('앨범 커버가 배경으로 설정되었습니다.', 'success');
-                    setIsBackgroundModalOpen(false);
-                    // 페이지 새로고침으로 배경 적용
-                    window.location.reload();
+                    // 현재는 커버 이미지가 없으므로 기본 동작 비활성화
+                    showToast('앨범 커버 이미지가 설정되지 않았습니다.', 'info');
                   }}
                 >
-                  <ImageWithFallback
-                    src={album.coverImage}
-                    fallback="/images/default-album-cover.jpg"
-                    alt={album.title}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                  />
+                  <Album sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.6)' }} />
                 </Box>
               ))}
             </Box>

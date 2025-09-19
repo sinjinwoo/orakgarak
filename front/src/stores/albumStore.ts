@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AlbumCreateData, AlbumTrack } from '../types/album';
+import type { Recording } from '../types/recording';
 
 interface AlbumCreationState {
   // 앨범 메타데이터
@@ -56,10 +57,10 @@ interface AlbumStore extends AlbumCreationState {
   getAlbumData: () => AlbumCreateData;
 
   // 새 앨범 생성
-  createAlbum: (albumData: AlbumCreateData, recordings: any[]) => string;
+  createAlbum: (albumData: AlbumCreateData, recordings: Recording[]) => string;
 
   // 앨범 상세 정보 가져오기
-  getAlbumById: (albumId: string) => any;
+  getAlbumById: (albumId: string) => AlbumCreateData | null;
 }
 
 const initialData: AlbumCreationState = {
@@ -218,7 +219,7 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
   },
   
   // 새 앨범 생성
-  createAlbum: (albumData: AlbumCreateData, recordings: any[]) => {
+  createAlbum: (albumData: AlbumCreateData, recordings: Recording[]) => {
     // 선택된 녹음들로 트랙 데이터 생성
     const tracks = recordings
       .filter(recording => albumData.recordingIds.includes(recording.id))
@@ -266,8 +267,8 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
   getAlbumById: (albumId: string) => {
     const savedAlbums = localStorage.getItem('myAlbums');
     if (savedAlbums) {
-      const albums = JSON.parse(savedAlbums);
-      return albums.find((a: any) => a.id === albumId);
+      const albums = JSON.parse(savedAlbums) as AlbumCreateData[];
+      return albums.find((a) => a.recordingIds.includes(albumId)) || null;
     }
     return null;
   },
