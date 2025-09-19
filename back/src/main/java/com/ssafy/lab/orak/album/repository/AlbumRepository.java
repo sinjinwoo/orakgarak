@@ -21,4 +21,21 @@ public interface AlbumRepository extends JpaRepository<Album, Long> {
 //    공개 앨범 검색 조회 (키워드 있음)
     @Query("SELECT a FROM Album a WHERE a.isPublic = true AND (a.title LIKE %:keyword% OR a.description LIKE %:keyword%) ORDER BY a.createdAt DESC")
     Page<Album> findPublicAlbumsByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+//    팔로우한 사용자의 공개 앨범 조회
+    @Query("SELECT a FROM Album a " +
+           "JOIN Follow f ON a.userId = f.following.id " +
+           "WHERE f.follower.id = :currentUserId AND a.isPublic = true " +
+           "ORDER BY a.createdAt DESC")
+    Page<Album> findPublicAlbumsByFollowedUsers(@Param("currentUserId") Long currentUserId, Pageable pageable);
+
+//    팔로우한 사용자의 공개 앨범 검색 조회 (키워드 있음)
+    @Query("SELECT a FROM Album a " +
+           "JOIN Follow f ON a.userId = f.following.id " +
+           "WHERE f.follower.id = :currentUserId AND a.isPublic = true " +
+           "AND (a.title LIKE %:keyword% OR a.description LIKE %:keyword%) " +
+           "ORDER BY a.createdAt DESC")
+    Page<Album> findPublicAlbumsByFollowedUsersAndKeyword(@Param("currentUserId") Long currentUserId,
+                                                          @Param("keyword") String keyword,
+                                                          Pageable pageable);
 }

@@ -238,5 +238,23 @@ public class AlbumService {
 
         return AlbumResponseDto.from(album);
     }
+
+//    팔로우한 사용자의 공개 앨범 목록 조회
+    @Transactional(readOnly = true)
+    public Page<AlbumResponseDto> getFollowedUsersPublicAlbums(Long currentUserId, int page, int size, String keyword) {
+        log.info("getFollowedUsersPublicAlbums - currentUserId: {}, page: {}, size: {}, keyword: {}",
+                currentUserId, page, size, keyword);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Album> albums;
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            albums = albumRepository.findPublicAlbumsByFollowedUsersAndKeyword(currentUserId, keyword.trim(), pageable);
+        } else {
+            albums = albumRepository.findPublicAlbumsByFollowedUsers(currentUserId, pageable);
+        }
+
+        return albums.map(this::convertToResponseDto);
+    }
 }
 
