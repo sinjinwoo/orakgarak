@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { recordingService } from '../services/recordingApi';
+import React from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { recordingService } from "../services/recordingApi";
 import {
   Recording,
   CreateRecordingRequest,
@@ -7,17 +8,24 @@ import {
   RecordingFilters,
   ApiError,
   UploadProgress,
-  RecordingQueueItem
-} from '../types/recording';
-import { uploadToS3, validateAudioFile, generateUniqueId } from '../utils/fileUpload';
-import { useRecordingStore } from '../stores/recordingStore';
-import { toast } from 'react-toastify';
+  RecordingQueueItem,
+  ProcessingStatus,
+  ProcessingStatusResponse,
+} from "../types/recording";
+import {
+  uploadToS3,
+  validateAudioFile,
+  generateUniqueId,
+} from "../utils/fileUpload";
+import { useRecordingStore } from "../stores/recordingStore";
+import { toast } from "react-toastify";
 
 export const RECORDING_QUERY_KEYS = {
-  all: ['recordings'] as const,
-  lists: () => [...RECORDING_QUERY_KEYS.all, 'list'] as const,
-  list: (filters?: RecordingFilters) => [...RECORDING_QUERY_KEYS.lists(), filters] as const,
-  details: () => [...RECORDING_QUERY_KEYS.all, 'detail'] as const,
+  all: ["recordings"] as const,
+  lists: () => [...RECORDING_QUERY_KEYS.all, "list"] as const,
+  list: (filters?: RecordingFilters) =>
+    [...RECORDING_QUERY_KEYS.lists(), filters] as const,
+  details: () => [...RECORDING_QUERY_KEYS.all, "detail"] as const,
   detail: (id: number) => [...RECORDING_QUERY_KEYS.details(), id] as const,
 };
 
@@ -57,10 +65,10 @@ export const useCreateRecording = () => {
     mutationFn: recordingService.createRecording,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: RECORDING_QUERY_KEYS.lists() });
-      toast.success('녹음이 성공적으로 생성되었습니다.');
+      toast.success("녹음이 성공적으로 생성되었습니다.");
     },
     onError: (error) => {
-      toast.error(error.message || '녹음 생성에 실패했습니다.');
+      toast.error(error.message || "녹음 생성에 실패했습니다.");
     },
   });
 };
@@ -72,11 +80,13 @@ export const useDeleteRecording = () => {
     mutationFn: recordingService.deleteRecording,
     onSuccess: (_, recordingId) => {
       queryClient.invalidateQueries({ queryKey: RECORDING_QUERY_KEYS.lists() });
-      queryClient.removeQueries({ queryKey: RECORDING_QUERY_KEYS.detail(recordingId) });
-      toast.success('녹음이 성공적으로 삭제되었습니다.');
+      queryClient.removeQueries({
+        queryKey: RECORDING_QUERY_KEYS.detail(recordingId),
+      });
+      toast.success("녹음이 성공적으로 삭제되었습니다.");
     },
     onError: (error) => {
-      toast.error(error.message || '녹음 삭제에 실패했습니다.');
+      toast.error(error.message || "녹음 삭제에 실패했습니다.");
     },
   });
 };
@@ -85,7 +95,7 @@ export const usePresignedUrl = () => {
   return useMutation<any, ApiError, PresignedUrlRequest>({
     mutationFn: recordingService.getPresignedUrl,
     onError: (error) => {
-      toast.error(error.message || 'Presigned URL 생성에 실패했습니다.');
+      toast.error(error.message || "Presigned URL 생성에 실패했습니다.");
     },
   });
 };
@@ -99,7 +109,8 @@ interface ProcessRecordingParams {
 
 export const useProcessRecording = () => {
   const queryClient = useQueryClient();
-  const { addToQueue, updateQueueItem, removeFromQueue, setUploadProgress } = useRecordingStore();
+  const { addToQueue, updateQueueItem, removeFromQueue, setUploadProgress } =
+    useRecordingStore();
   const getPresignedUrl = usePresignedUrl();
   const createRecording = useCreateRecording();
 
@@ -116,16 +127,18 @@ export const useProcessRecording = () => {
           audioBlob,
           songId,
           durationSeconds,
-          status: 'pending',
+          status: "pending",
           createdAt: Date.now(),
         };
 
         addToQueue(queueItem);
 
-        updateQueueItem(queueId, { status: 'uploading' });
+        updateQueueItem(queueId, { status: "uploading" });
 
         const presignedData = await getPresignedUrl.mutateAsync({
-          originalFilename: `${title}.${audioBlob.type.split('/')[1] || 'webm'}`,
+          originalFilename: `${title}.${
+            audioBlob.type.split("/")[1] || "webm"
+          }`,
           fileSize: audioBlob.size,
           contentType: audioBlob.type,
           durationSeconds,
@@ -135,17 +148,17 @@ export const useProcessRecording = () => {
           presignedUrl: presignedData.presignedUrl,
           file: audioBlob,
           contentType: audioBlob.type,
-          uploadId: presignedData.uploadId,
+          uploadId: presignedData.uploadId.toString(), // number를 string으로 변환
           onProgress: (progress: UploadProgress) => {
             setUploadProgress(queueId, progress);
           },
         });
 
         if (!uploadResult.success) {
-          throw new Error('파일 업로드에 실패했습니다.');
+          throw new Error("파일 업로드에 실패했습니다.");
         }
 
-        updateQueueItem(queueId, { status: 'processing' });
+        updateQueueItem(queueId, { status: "processing" });
 
         const recording = await createRecording.mutateAsync({
           title,
@@ -155,8 +168,9 @@ export const useProcessRecording = () => {
         });
 
         updateQueueItem(queueId, {
-          status: 'completed',
+          status: "completed",
           recordingId: recording.id,
+          uploadId: presignedData.uploadId,
         });
 
         setTimeout(() => {
@@ -164,12 +178,14 @@ export const useProcessRecording = () => {
         }, 5000);
 
         return recording;
-
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "알 수 없는 오류가 발생했습니다.";
 
         updateQueueItem(queueId, {
-          status: 'failed',
+          status: "failed",
           error: errorMessage,
         });
 
@@ -177,18 +193,26 @@ export const useProcessRecording = () => {
       }
     },
     onError: (error) => {
-      toast.error(error.message || '녹음 처리에 실패했습니다.');
+      toast.error(error.message || "녹음 처리에 실패했습니다.");
     },
   });
 };
 
-export const useProcessingStatus = (recordingId: number, enabled: boolean = false) => {
+// 레거시 처리 상태 훅 (recordId 기반) - 하위 호환성을 위해 유지
+export const useLegacyProcessingStatus = (
+  recordingId: number,
+  enabled: boolean = false
+) => {
   return useQuery<Recording, ApiError>({
-    queryKey: [...RECORDING_QUERY_KEYS.detail(recordingId), 'status'],
+    queryKey: [...RECORDING_QUERY_KEYS.detail(recordingId), "status"],
     queryFn: () => recordingService.checkProcessingStatus(recordingId),
     enabled: enabled && !!recordingId,
     refetchInterval: (data) => {
-      if (!data || data.processingStatus === 'COMPLETED' || data.processingStatus === 'FAILED') {
+      if (
+        !data ||
+        data.processingStatus === "COMPLETED" ||
+        data.processingStatus === "FAILED"
+      ) {
         return false;
       }
       return 3000;
@@ -219,7 +243,10 @@ export const useRecordingMutations = () => {
     createRecording,
     deleteRecording,
     processRecording,
-    isLoading: createRecording.isPending || deleteRecording.isPending || processRecording.isPending,
+    isLoading:
+      createRecording.isPending ||
+      deleteRecording.isPending ||
+      processRecording.isPending,
   };
 };
 
@@ -229,18 +256,100 @@ export const useBulkDeleteRecordings = () => {
 
   return useMutation<void, ApiError, number[]>({
     mutationFn: async (recordingIds: number[]) => {
-      const deletePromises = recordingIds.map(id => recordingService.deleteRecording(id));
+      const deletePromises = recordingIds.map((id) =>
+        recordingService.deleteRecording(id)
+      );
       await Promise.all(deletePromises);
     },
     onSuccess: (_, recordingIds) => {
       queryClient.invalidateQueries({ queryKey: RECORDING_QUERY_KEYS.lists() });
-      recordingIds.forEach(id => {
-        queryClient.removeQueries({ queryKey: RECORDING_QUERY_KEYS.detail(id) });
+      recordingIds.forEach((id) => {
+        queryClient.removeQueries({
+          queryKey: RECORDING_QUERY_KEYS.detail(id),
+        });
       });
-      toast.success(`${recordingIds.length}개의 녹음이 성공적으로 삭제되었습니다.`);
+      toast.success(
+        `${recordingIds.length}개의 녹음이 성공적으로 삭제되었습니다.`
+      );
     },
     onError: (error) => {
-      toast.error(error.message || '녹음 삭제에 실패했습니다.');
+      toast.error(error.message || "녹음 삭제에 실패했습니다.");
     },
   });
+};
+
+// 처리 상태 관련 훅들
+export const useProcessingStatus = (
+  uploadId: number,
+  enabled: boolean = true
+) => {
+  return useQuery<ProcessingStatusResponse, ApiError>({
+    queryKey: ["processing", "status", uploadId],
+    queryFn: () => recordingService.getProcessingStatus(uploadId),
+    enabled: enabled && !!uploadId,
+    refetchInterval: (data) => {
+      if (
+        !data ||
+        data.processingStatus === "COMPLETED" ||
+        data.processingStatus === "FAILED"
+      ) {
+        return false;
+      }
+      return 3000; // 3초마다 폴링
+    },
+    retry: false,
+    staleTime: 0,
+  });
+};
+
+export const useMyProcessingFiles = (status?: string) => {
+  return useQuery<ProcessingStatus[], ApiError>({
+    queryKey: ["processing", "my-files", status],
+    queryFn: () => recordingService.getMyProcessingFiles(status),
+    staleTime: 30 * 1000, // 30초
+    retry: (failureCount, error) => {
+      if (error.statusCode === 404 || error.statusCode === 401) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+};
+
+// SSE를 사용한 실시간 처리 상태 구독 훅
+export const useProcessingStatusStream = (
+  uploadId: number,
+  enabled: boolean = true
+) => {
+  const [status, setStatus] = React.useState<ProcessingStatusResponse | null>(
+    null
+  );
+  const [isConnected, setIsConnected] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!enabled || !uploadId) return;
+
+    const eventSource = recordingService.subscribeToProcessingStatus(
+      uploadId,
+      (data) => {
+        setStatus(data);
+        setError(null);
+        setIsConnected(true);
+      },
+      (error) => {
+        setError("연결이 끊어졌습니다.");
+        setIsConnected(false);
+      }
+    );
+
+    setIsConnected(true);
+
+    return () => {
+      eventSource.close();
+      setIsConnected(false);
+    };
+  }, [uploadId, enabled]);
+
+  return { status, isConnected, error };
 };

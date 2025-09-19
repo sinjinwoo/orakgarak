@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -16,7 +16,7 @@ import {
   AlertTitle,
   CircularProgress,
   Skeleton,
-} from '@mui/material';
+} from "@mui/material";
 import {
   PlayArrow,
   Pause,
@@ -28,51 +28,60 @@ import {
   Schedule,
   AudioFile,
   Error as ErrorIcon,
-} from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'react-toastify';
+} from "@mui/icons-material";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
 
 // 타입 및 훅 import
-import { Recording } from '@/types/recording';
-import { Album, CreateAlbumRequest } from '@/types/album';
+import { Recording } from "@/types/recording";
+import { Album, CreateAlbumRequest } from "@/types/album";
 import {
   useAlbumCreationSelectors,
-  useAlbumCreationActions
-} from '@/stores/albumStore';
+  useAlbumCreationActions,
+} from "@/stores/albumStore";
 import {
   useCreateCompleteAlbum,
   useUploadCover,
-  useGenerateCover
-} from '@/hooks/useAlbum';
+  useGenerateCover,
+} from "@/hooks/useAlbum";
 
 interface AlbumPreviewStepProps {
-  recordings: Recording[];
-  recordingsLoading: boolean;
-  recordingsError: string | null;
+  title: string;
+  description: string;
+  coverImage: string | null;
+  isPublic: boolean;
+  selectedRecordings: string[];
+  recordings?: Recording[];
+  recordingsLoading?: boolean;
+  recordingsError?: string | null;
   onPrev: () => void;
-  onComplete: (createdAlbum: Album) => void;
+  onPublish: () => void;
+  onComplete?: (createdAlbum: Album) => void;
 }
 
 const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
+  title,
+  description,
+  coverImage,
+  isPublic,
+  selectedRecordings,
   recordings,
   recordingsLoading,
   recordingsError,
   onPrev,
+  onPublish,
   onComplete,
 }) => {
-  // Zustand store hooks
-  const {
-    selectedRecordIds,
-    selectedCoverUploadId,
-    albumInfo,
-    isValidForCreation,
-  } = useAlbumCreationSelectors();
+  // Zustand store hooks (필요한 액션들만)
+  const { updateAlbumInfo, getCompleteAlbumData, resetCreationState } =
+    useAlbumCreationActions();
 
-  const {
-    updateAlbumInfo,
-    getCompleteAlbumData,
-    resetCreationState,
-  } = useAlbumCreationActions();
+  // Props에서 받은 값들을 우선 사용
+  const selectedRecordIds = selectedRecordings.map(Number);
+  const isValidForCreation =
+    title.trim() !== "" &&
+    description.trim() !== "" &&
+    selectedRecordIds.length > 0;
 
   // React Query mutations
   const createCompleteAlbum = useCreateCompleteAlbum();
@@ -82,32 +91,34 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
   const [isPublishing, setIsPublishing] = useState(false);
 
   // 선택된 녹음들 필터링
-  const selectedRecordings = useMemo(() => {
-    return recordings.filter(recording =>
-      selectedRecordIds.includes(Number(recording.id))
+  const filteredRecordings = useMemo(() => {
+    return (
+      recordings?.filter((recording) =>
+        selectedRecordIds.includes(Number(recording.id))
+      ) || []
     );
   }, [recordings, selectedRecordIds]);
 
   // 총 재생 시간 계산
   const totalDuration = useMemo(() => {
-    return selectedRecordings.reduce((total, recording) => {
+    return filteredRecordings.reduce((total, recording) => {
       return total + (recording.duration || 0);
     }, 0);
-  }, [selectedRecordings]);
+  }, [filteredRecordings]);
 
   // 재생 시간 포맷팅
   const formatDuration = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   // 점수 색상 결정
   const getScoreColor = (score: number): string => {
-    if (score >= 90) return '#4caf50';
-    if (score >= 80) return '#ff9800';
-    if (score >= 70) return '#2196f3';
-    return '#f44336';
+    if (score >= 90) return "#4caf50";
+    if (score >= 80) return "#ff9800";
+    if (score >= 70) return "#2196f3";
+    return "#f44336";
   };
 
   // 재생/일시정지 토글
@@ -126,25 +137,24 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
 
       const albumData = getCompleteAlbumData();
       if (!albumData) {
-        toast.error('앨범 정보가 완전하지 않습니다.');
+        toast.error("앨범 정보가 완전하지 않습니다.");
         return;
       }
 
       // 숫자 형태의 recordId로 변환
-      const recordIds = selectedRecordIds.map(id => Number(id));
+      const recordIds = selectedRecordIds.map((id) => Number(id));
 
       const createdAlbum = await createCompleteAlbum.mutateAsync({
         albumData,
         recordIds,
       });
 
-      toast.success('앨범이 성공적으로 발행되었습니다!');
+      toast.success("앨범이 성공적으로 발행되었습니다!");
       resetCreationState();
       onComplete(createdAlbum);
-
     } catch (error: any) {
-      console.error('앨범 발행 실패:', error);
-      toast.error(error.message || '앨범 발행에 실패했습니다.');
+      console.error("앨범 발행 실패:", error);
+      toast.error(error.message || "앨범 발행에 실패했습니다.");
     } finally {
       setIsPublishing(false);
     }
@@ -177,11 +187,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
           <AlertTitle>녹음 데이터 로드 실패</AlertTitle>
           {recordingsError}
         </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBack />}
-          onClick={onPrev}
-        >
+        <Button variant="outlined" startIcon={<ArrowBack />} onClick={onPrev}>
           이전 단계로
         </Button>
       </Box>
@@ -189,18 +195,14 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
   }
 
   // 유효성 검사
-  if (!isValidForCreation() || selectedRecordings.length === 0) {
+  if (!isValidForCreation || selectedRecordings.length === 0) {
     return (
       <Box p={3}>
         <Alert severity="warning" sx={{ mb: 3 }}>
           <AlertTitle>앨범 생성 불가</AlertTitle>
           앨범 제목, 공개 설정, 그리고 최소 1개의 녹음이 필요합니다.
         </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBack />}
-          onClick={onPrev}
-        >
+        <Button variant="outlined" startIcon={<ArrowBack />} onClick={onPrev}>
           이전 단계로 돌아가기
         </Button>
       </Box>
@@ -215,7 +217,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
       transition={{ duration: 0.3 }}
     >
       <Box p={3}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold' }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
           앨범 미리보기
         </Typography>
 
@@ -231,24 +233,24 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
               sx={{
                 width: 200,
                 height: 200,
-                bgcolor: 'grey.200',
+                bgcolor: "grey.200",
                 borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
               {selectedCoverUploadId ? (
                 <Avatar
-                  sx={{ width: '100%', height: '100%', borderRadius: 2 }}
+                  sx={{ width: "100%", height: "100%", borderRadius: 2 }}
                   variant="rounded"
                 >
                   <MusicNote sx={{ fontSize: 80 }} />
                 </Avatar>
               ) : (
                 <Box textAlign="center">
-                  <MusicNote sx={{ fontSize: 60, color: 'grey.400' }} />
+                  <MusicNote sx={{ fontSize: 60, color: "grey.400" }} />
                   <Typography variant="body2" color="grey.500">
                     기본 커버
                   </Typography>
@@ -259,25 +261,25 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
             {/* 앨범 메타데이터 */}
             <Box flex={1}>
               <Typography variant="h5" fontWeight="bold" gutterBottom>
-                {albumInfo.title}
+                {title}
               </Typography>
 
-              {albumInfo.description && (
+              {description && (
                 <Typography variant="body1" color="text.secondary" paragraph>
-                  {albumInfo.description}
+                  {description}
                 </Typography>
               )}
 
               <Box display="flex" gap={1} mb={2}>
                 <Chip
-                  icon={albumInfo.isPublic ? <Public /> : <Lock />}
-                  label={albumInfo.isPublic ? '공개' : '비공개'}
-                  color={albumInfo.isPublic ? 'primary' : 'default'}
+                  icon={isPublic ? <Public /> : <Lock />}
+                  label={isPublic ? "공개" : "비공개"}
+                  color={isPublic ? "primary" : "default"}
                   size="small"
                 />
                 <Chip
                   icon={<AudioFile />}
-                  label={`${selectedRecordings.length}곡`}
+                  label={`${filteredRecordings.length}곡`}
                   size="small"
                 />
                 <Chip
@@ -294,17 +296,17 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
         <Paper elevation={2} sx={{ mb: 3 }}>
           <Box p={2}>
             <Typography variant="h6" gutterBottom>
-              트랙 목록 ({selectedRecordings.length}곡)
+              트랙 목록 ({filteredRecordings.length}곡)
             </Typography>
 
             <List>
-              {selectedRecordings.map((recording, index) => (
+              {filteredRecordings.map((recording, index) => (
                 <React.Fragment key={recording.id}>
                   <ListItem
                     sx={{
                       borderRadius: 1,
-                      '&:hover': { bgcolor: 'action.hover' },
-                      transition: 'background-color 0.2s',
+                      "&:hover": { bgcolor: "action.hover" },
+                      transition: "background-color 0.2s",
                     }}
                   >
                     <ListItemAvatar>
@@ -312,13 +314,13 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                         sx={{
                           width: 40,
                           height: 40,
-                          borderRadius: '50%',
-                          bgcolor: 'primary.main',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: 'bold',
+                          borderRadius: "50%",
+                          bgcolor: "primary.main",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontWeight: "bold",
                         }}
                       >
                         {index + 1}
@@ -334,9 +336,14 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            {recording.song?.artist || '알 수 없는 아티스트'}
+                            {recording.song?.artist || "알 수 없는 아티스트"}
                           </Typography>
-                          <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            gap={1}
+                            mt={0.5}
+                          >
                             <Typography variant="caption">
                               {formatDuration(recording.duration)}
                             </Typography>
@@ -345,9 +352,11 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                                 label={`점수: ${recording.analysis.overallScore}`}
                                 size="small"
                                 sx={{
-                                  bgcolor: getScoreColor(recording.analysis.overallScore),
-                                  color: 'white',
-                                  fontWeight: 'bold',
+                                  bgcolor: getScoreColor(
+                                    recording.analysis.overallScore
+                                  ),
+                                  color: "white",
+                                  fontWeight: "bold",
                                 }}
                               />
                             )}
@@ -361,11 +370,17 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                       color="primary"
                       size="large"
                     >
-                      {currentPlayingId === recording.id ? <Pause /> : <PlayArrow />}
+                      {currentPlayingId === recording.id ? (
+                        <Pause />
+                      ) : (
+                        <PlayArrow />
+                      )}
                     </IconButton>
                   </ListItem>
 
-                  {index < selectedRecordings.length - 1 && <Divider variant="inset" />}
+                  {index < filteredRecordings.length - 1 && (
+                    <Divider variant="inset" />
+                  )}
                 </React.Fragment>
               ))}
             </List>
@@ -393,15 +408,15 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                 <Send />
               )
             }
-            onClick={handlePublish}
-            disabled={isPublishing || !isValidForCreation()}
+            onClick={onPublish}
+            disabled={isPublishing || !isValidForCreation}
             size="large"
             sx={{
               minWidth: 140,
-              fontWeight: 'bold',
+              fontWeight: "bold",
             }}
           >
-            {isPublishing ? '발행 중...' : '앨범 발행'}
+            {isPublishing ? "발행 중..." : "앨범 발행"}
           </Button>
         </Box>
 
@@ -410,7 +425,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
           {isPublishing && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
+              animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
             >
               <Alert severity="info" sx={{ mt: 3 }}>
@@ -425,7 +440,8 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
         {createCompleteAlbum.isError && (
           <Alert severity="error" sx={{ mt: 3 }}>
             <AlertTitle>앨범 발행 실패</AlertTitle>
-            {createCompleteAlbum.error?.message || '알 수 없는 오류가 발생했습니다.'}
+            {createCompleteAlbum.error?.message ||
+              "알 수 없는 오류가 발생했습니다."}
           </Alert>
         )}
       </Box>
