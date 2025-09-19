@@ -19,8 +19,8 @@ const SongSearchField: React.FC<SongSearchFieldProps> = ({
     
     setLoading(true);
     try {
-      const response = await songAPI.search(query, 10);
-      setOptions(response.data);
+      const songs = await songAPI.search(query, 10);
+      setOptions(songs);
     } catch (error) {
       console.error('곡 검색 실패:', error);
     } finally {

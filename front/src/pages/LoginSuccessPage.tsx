@@ -33,8 +33,7 @@ const LoginSuccessPage: React.FC = () => {
         // 백엔드에서 사용자 정보 가져오기 (토큰으로 인증된 상태)
         try {
           // 토큰으로 사용자 정보를 가져오는 API 호출
-          const userResponse = await authAPI.getUserInfo();
-          const userData = userResponse.data;
+          const userData = await authAPI.getUserInfo();
           
           // 스토어에 사용자 정보 저장
           login(userData);

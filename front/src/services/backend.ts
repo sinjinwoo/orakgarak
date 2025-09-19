@@ -15,38 +15,38 @@ export const authAPI = {
   // 일반 로그인 - POST /api/auth/login
   login: async (email: string, password: string) => {
     const response = await apiClient.post('/auth/login', { email, password });
-    return response;
+    return response.data;
   },
   
   // 회원가입 - POST /api/auth/register
   register: async (email: string, password: string, nickname: string) => {
     const response = await apiClient.post('/auth/register', { email, password, nickname });
-    return response;
+    return response.data;
   },
   
   // 로그아웃 - POST /api/auth/logout
   logout: async () => {
     const response = await apiClient.post('/auth/logout');
-    return response;
+    return response.data;
   },
   
   // 토큰 갱신 - POST /api/auth/refresh (자동 처리됨)
   refreshToken: async () => {
     const response = await apiClient.post('/auth/refresh');
-    return response;
+    return response.data;
   },
 
   // 현재 로그인 사용자 정보 보기 - GET /api/auth/me
   getUserInfo: async () => {
     const response = await apiClient.get('/auth/me');
-    return response;
+    return response.data;
   },
 
   // 구글 소셜 로그인 (리다이렉트 방식이므로 직접 사용 안 함)
   loginWithGoogle: async (googleToken: string) => {
     // 실제로는 사용되지 않음 (리다이렉트 방식)
     const response = await apiClient.post('/auth/google', { token: googleToken });
-    return response;
+    return response.data;
   },
 
   // 카카오 소셜 로그인
@@ -199,13 +199,13 @@ export const albumAPI = {
   // 앨범 좋아요 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
   likeAlbum: async (albumId: number) => {
     const response = await apiClient.post(`/albums/${albumId}/like`);
-    return response;
+    return response.data;
   },
   
   // 앨범 좋아요 취소 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
   unlikeAlbum: async (albumId: number) => {
     const response = await apiClient.delete(`/albums/${albumId}/like`);
-    return response;
+    return response.data;
   },
 };
 

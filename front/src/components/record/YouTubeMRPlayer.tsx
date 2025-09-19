@@ -15,7 +15,7 @@ interface YouTubeMRPlayerProps {
   volumePercent?: number; // 0-100
   playing?: boolean;
   onSongFinished?: () => void; // 곡이 끝났을 때 호출할 콜백
-  onPlayerReady?: () => void; // 플레이어가 준비되었을 때 호출할 콜백
+  onPlayerReady?: (player: any) => void; // 플레이어가 준비되었을 때 호출할 콜백
 }
 
 type YTPlayer = {
@@ -260,7 +260,7 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
                   console.log('YouTube Player methods now available');
                   setReady(true);
                   if (onPlayerReady) {
-                    onPlayerReady();
+                    onPlayerReady(playerRef.current);
                   }
                 } else {
                   console.error('YouTube Player methods still not available');
