@@ -200,8 +200,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
         album: 'Real',
         duration: '3:29',
         genre: '팝',
-        difficulty: '중급',
+        difficulty: 'medium',
         score: 92,
+        matchScore: 92,
+        key: 'C',
+        tempo: 120,
+        vocalRange: { min: 200, max: 800 },
         reason: '비슷한 음역대와 감성적인 표현',
         audioUrl: '',
         coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
@@ -213,8 +217,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
         album: 'Palette',
         duration: '4:03',
         genre: '팝',
-        difficulty: '중급',
+        difficulty: 'medium',
         score: 88,
+        matchScore: 88,
+        key: 'D',
+        tempo: 110,
+        vocalRange: { min: 180, max: 750 },
         reason: '안정적인 톤과 감정 표현',
         audioUrl: '',
         coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
@@ -226,8 +234,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
         album: '버스커 버스커 1집',
         duration: '3:18',
         genre: '인디',
-        difficulty: '초급',
+        difficulty: 'easy',
         score: 85,
+        matchScore: 85,
+        key: 'G',
+        tempo: 95,
+        vocalRange: { min: 150, max: 600 },
         reason: '따뜻한 감성과 쉬운 멜로디',
         audioUrl: '',
         coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
@@ -239,8 +251,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
         album: 'Red Diary Page.1',
         duration: '3:54',
         genre: '인디',
-        difficulty: '중급',
+        difficulty: 'medium',
         score: 87,
+        matchScore: 87,
+        key: 'F',
+        tempo: 105,
+        vocalRange: { min: 170, max: 700 },
         reason: '감성적인 표현과 비슷한 음색',
         audioUrl: '',
         coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
@@ -252,8 +268,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
         album: '4.0',
         duration: '4:12',
         genre: '인디',
-        difficulty: '고급',
+        difficulty: 'hard',
         score: 83,
+        matchScore: 83,
+        key: 'A',
+        tempo: 130,
+        vocalRange: { min: 190, max: 850 },
         reason: '복잡한 멜로디와 감정 표현',
         audioUrl: '',
         coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
@@ -265,8 +285,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
         album: '좋아',
         duration: '3:45',
         genre: '발라드',
-        difficulty: '중급',
+        difficulty: 'medium',
         score: 90,
+        matchScore: 90,
+        key: 'E',
+        tempo: 115,
+        vocalRange: { min: 160, max: 720 },
         reason: '완벽한 음정과 리듬감',
         audioUrl: '',
         coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
@@ -278,8 +302,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
         album: 'Red Diary Page.2',
         duration: '3:42',
         genre: '인디',
-        difficulty: '중급',
+        difficulty: 'medium',
         score: 86,
+        matchScore: 86,
+        key: 'B',
+        tempo: 100,
+        vocalRange: { min: 175, max: 680 },
         reason: '비슷한 음역대와 감성적 표현',
         audioUrl: '',
         coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
@@ -523,12 +551,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '5px',
-                        color: getScoreColor(recording.analysis.overallScore),
+                        color: getScoreColor(recording.analysis?.overallScore || 0),
                         fontSize: '14px',
-                        textShadow: `0 0 5px ${getScoreColor(recording.analysis.overallScore)}`
+                        textShadow: `0 0 5px ${getScoreColor(recording.analysis?.overallScore || 0)}`
                       }}>
                         <Star size={16} />
-                        <span>{getQualityText(recording.analysis.overallScore)}</span>
+                        <span>{getQualityText(recording.analysis?.overallScore || 0)}</span>
                       </div>
                     </div>
 
@@ -549,12 +577,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
                         background: 'rgba(0, 0, 0, 0.3)',
                         borderRadius: '10px',
                         padding: '2px 8px',
-                        color: getScoreColor(recording.analysis.overallScore),
+                        color: getScoreColor(recording.analysis?.overallScore || 0),
                         fontSize: '14px',
                         fontWeight: 'bold',
-                        textShadow: `0 0 5px ${getScoreColor(recording.analysis.overallScore)}`
+                        textShadow: `0 0 5px ${getScoreColor(recording.analysis?.overallScore || 0)}`
                       }}>
-                        {recording.analysis.overallScore}점
+                        {recording.analysis?.overallScore || 0}점
                       </div>
                     </div>
                   </div>
@@ -806,12 +834,12 @@ const ExistingRecordingSelection: React.FC<ExistingRecordingSelectionProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                color: getScoreColor(selectedRecording.analysis.overallScore),
+                color: getScoreColor(selectedRecording.analysis?.overallScore || 0),
                 fontSize: '16px',
-                textShadow: `0 0 5px ${getScoreColor(selectedRecording.analysis.overallScore)}`
+                textShadow: `0 0 5px ${getScoreColor(selectedRecording.analysis?.overallScore || 0)}`
               }}>
                 <Star size={20} />
-                <span>{selectedRecording.analysis.overallScore}점</span>
+                <span>{selectedRecording.analysis?.overallScore || 0}점</span>
               </div>
             </div>
           </div>

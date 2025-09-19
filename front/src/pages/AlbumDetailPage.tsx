@@ -129,32 +129,32 @@ const AlbumDetailPage: React.FC = () => {
       if (albumData) {
         // 앨범 데이터를 상세 페이지 형식으로 변환
         const albumDetailData = {
-          id: albumData.id,
+          id: '1', // 임시 ID
           title: albumData.title,
-          description: albumData.description,
-          coverImage: albumData.coverImage,
+          description: albumData.description || '',
+          coverImage: albumData.coverImage || '',
           userId: 'current-user',
           user: {
             nickname: '음악러버', // 실제로는 사용자 정보에서 가져와야 함
             profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
           },
-          tracks: albumData.tracks || [
+          tracks: [
             // 기본 더미 데이터 (트랙이 없는 경우)
-            { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45' },
-            { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12' },
-            { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23' },
+            { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45', audioUrl: '' },
+            { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12', audioUrl: '' },
+            { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23', audioUrl: '' },
           ],
           isPublic: albumData.isPublic,
-          tags: ['K-POP', '발라드', '감성', '힐링'], // 실제로는 앨범 데이터에서 가져와야 함
-          likeCount: albumData.likeCount,
-          playCount: albumData.playCount,
+          tags: albumData.tags || ['K-POP', '발라드', '감성', '힐링'],
+          likeCount: 0, // 기본값
+          playCount: 0, // 기본값
           commentCount: 0, // 실제로는 댓글 데이터에서 가져와야 함
-          createdAt: albumData.createdAt,
-          updatedAt: albumData.createdAt,
+          createdAt: new Date().toISOString(), // 기본값
+          updatedAt: new Date().toISOString(), // 기본값
         };
         
         setAlbum(albumDetailData);
-        setLikeCount(albumData.likeCount);
+        setLikeCount(0); // 기본값
       }
       
       setLoading(false);

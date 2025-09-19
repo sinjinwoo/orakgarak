@@ -82,8 +82,8 @@ def insert_songs_batch(connection, songs_data):
     INSERT INTO songs (
         song_id, song_name, artist_name, album_name, music_url,
         lyrics, album_cover_url, spotify_track_id, duration_ms,
-        popularity, status
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        popularity, status, created_at, updated_at
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
     ON DUPLICATE KEY UPDATE
         song_name = VALUES(song_name),
         artist_name = VALUES(artist_name),
@@ -95,7 +95,7 @@ def insert_songs_batch(connection, songs_data):
         duration_ms = VALUES(duration_ms),
         popularity = VALUES(popularity),
         status = VALUES(status),
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = NOW()
     """
 
     try:
@@ -169,10 +169,6 @@ def find_csv_files():
     # 찾을 패턴들
     search_patterns = [
         os.path.join(project_root, "**/*.csv"),
-        os.path.join(project_root, "python/**/*.csv"),
-        os.path.join(project_root, "data/**/*.csv"),
-        "*.csv",  # 현재 디렉토리
-        "../*.csv",  # 상위 디렉토리
     ]
 
     found_files = []

@@ -3,6 +3,7 @@ export interface RecommendedSong {
   id: string;
   title: string;
   artist: string;
+  album?: string; // 앨범명
   genre: string;
   duration: string;
   coverImage?: string;
@@ -16,6 +17,8 @@ export interface RecommendedSong {
     max: number; // 최고 음 (Hz)
   };
   mood?: string[]; // 감정/분위기
+  score?: number; // 점수 필드 추가
+  audioUrl?: string; // 오디오 URL 필드 추가
 }
 
 export interface UserVocalRange {
