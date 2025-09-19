@@ -6,14 +6,15 @@
 import React, { useState, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { Search, Filter, SortAsc, Music, Calendar, Star } from 'lucide-react';
-import RecordingCard, { type Recording } from './RecordingCard';
+import RecordingCard from './RecordingCard';
+import { type Recording } from '../../types/recording';
 
 interface LibraryPanelProps {
   recordings: Recording[];
   selectedRecordings: string[];
   onToggleRecording: (recordingId: string) => void;
   onPlayRecording: (recordingId: string) => void;
-  currentPlayingId?: string;
+  currentPlayingId?: string | null;
   className?: string;
 }
 
@@ -41,8 +42,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
   // Filter and sort recordings
   const filteredAndSortedRecordings = useMemo(() => {
     let filtered = recordings.filter((recording) => {
-      const title = recording.song?.title || recording.title || '';
-      const artist = recording.song?.artist || recording.artist || '';
+      const title = recording.song?.title || '';
+      const artist = recording.song?.artist || '';
       const matchesSearch =
         title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         artist.toLowerCase().includes(searchQuery.toLowerCase());
@@ -60,12 +61,12 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
 
       switch (sortField) {
         case 'title':
-          aValue = (a.song?.title || a.title || '').toLowerCase();
-          bValue = (b.song?.title || b.title || '').toLowerCase();
+          aValue = (a.song?.title || '').toLowerCase();
+          bValue = (b.song?.title || '').toLowerCase();
           break;
         case 'artist':
-          aValue = (a.song?.artist || a.artist || '').toLowerCase();
-          bValue = (b.song?.artist || b.artist || '').toLowerCase();
+          aValue = (a.song?.artist || '').toLowerCase();
+          bValue = (b.song?.artist || '').toLowerCase();
           break;
         case 'createdAt':
           aValue = new Date(a.createdAt).getTime();
@@ -76,8 +77,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
           bValue = b.analysis?.overallScore || 0;
           break;
         case 'duration':
-          aValue = a.duration || a.durationSec || 0;
-          bValue = b.duration || b.durationSec || 0;
+          aValue = a.duration || 0;
+          bValue = b.duration || 0;
           break;
         default:
           return 0;

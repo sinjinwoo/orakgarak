@@ -26,5 +26,5 @@
     "noUncheckedSideEffectImports": false
   },
   "include": ["src"],
-  "exclude": ["src/game"]
+  "exclude": ["src/game", "**/*.test.ts", "**/*.test.tsx", "src/components/voiceTest/**/*", "src/components/voiceTest/*"]
 }

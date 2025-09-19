@@ -1,50 +1,58 @@
 // 실제 백엔드 API 클라이언트
 import apiClient from './apiClient';
 import type { User, Profile, ProfileUpdateRequest, ProfileImageUpdateRequest } from '../types/user';
+import type { 
+  Album, 
+  AlbumCreateRequest, 
+  AlbumUpdateRequest, 
+  AlbumCoverUploadResponse, 
+  AlbumCoverGenerateRequest, 
+  AlbumListResponse 
+} from '../types/album';
 
 // Auth API
 export const authAPI = {
   // 일반 로그인 - POST /api/auth/login
   login: async (email: string, password: string) => {
     const response = await apiClient.post('/auth/login', { email, password });
-    return response;
+    return response.data;
   },
   
   // 회원가입 - POST /api/auth/register
   register: async (email: string, password: string, nickname: string) => {
     const response = await apiClient.post('/auth/register', { email, password, nickname });
-    return response;
+    return response.data;
   },
   
   // 로그아웃 - POST /api/auth/logout
   logout: async () => {
     const response = await apiClient.post('/auth/logout');
-    return response;
+    return response.data;
   },
   
   // 토큰 갱신 - POST /api/auth/refresh (자동 처리됨)
   refreshToken: async () => {
     const response = await apiClient.post('/auth/refresh');
-    return response;
+    return response.data;
   },
 
   // 현재 로그인 사용자 정보 보기 - GET /api/auth/me
   getUserInfo: async () => {
     const response = await apiClient.get('/auth/me');
-    return response;
+    return response.data;
   },
 
   // 구글 소셜 로그인 (리다이렉트 방식이므로 직접 사용 안 함)
   loginWithGoogle: async (googleToken: string) => {
     // 실제로는 사용되지 않음 (리다이렉트 방식)
     const response = await apiClient.post('/auth/google', { token: googleToken });
-    return response;
+    return response.data;
   },
 
   // 카카오 소셜 로그인
   loginWithKakao: async (kakaoToken: string) => {
     const response = await apiClient.post('/auth/kakao', { token: kakaoToken });
-    return response;
+    return response.data;
   },
 };
 
@@ -54,25 +62,25 @@ export const userAPI = {
   // 팔로우
   follow: async (userId: string) => {
     const response = await apiClient.post(`/users/${userId}/follow`);
-    return response;
+    return response.data;
   },
 
   // 언팔로우
   unfollow: async (userId: string) => {
     const response = await apiClient.delete(`/users/${userId}/follow`);
-    return response;
+    return response.data;
   },
 
   // 팔로워 목록
   getFollowers: async (userId: string) => {
     const response = await apiClient.get(`/users/${userId}/followers`);
-    return response;
+    return response.data;
   },
 
   // 팔로잉 목록
   getFollowing: async (userId: string) => {
     const response = await apiClient.get(`/users/${userId}/following`);
-    return response;
+    return response.data;
   },
 };
 
@@ -83,7 +91,7 @@ export const songAPI = {
     const response = await apiClient.get('/songs/search', { 
       params: { query, limit } 
     });
-    return response;
+    return response.data;
   },
   
   // 추천 곡 목록
@@ -91,13 +99,13 @@ export const songAPI = {
     const response = await apiClient.get('/songs/recommendations', { 
       params: filters 
     });
-    return response;
+    return response.data;
   },
   
   // 곡 상세 정보
   getSong: async (songId: string) => {
     const response = await apiClient.get(`/songs/${songId}`);
-    return response;
+    return response.data;
   },
 };
 
@@ -106,7 +114,7 @@ export const recordingAPI = {
   // 내 녹음본 목록
   getMyRecordings: async () => {
     const response = await apiClient.get('/recordings/me');
-    return response;
+    return response.data;
   },
   
   // 녹음본 업로드
@@ -123,64 +131,81 @@ export const recordingAPI = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response;
+    return response.data;
   },
   
   // 녹음본 삭제
   deleteRecording: async (recordingId: string) => {
     const response = await apiClient.delete(`/recordings/${recordingId}`);
-    return response;
+    return response.data;
   },
   
   // 녹음본 분석
   analyzeRecording: async (recordingId: string) => {
     const response = await apiClient.post(`/recordings/${recordingId}/analyze`);
-    return response;
+    return response.data;
   },
 };
 
 // Album API
 export const albumAPI = {
-  // 앨범 목록
-  getAlbums: async (filters?: Record<string, unknown>) => {
-    const response = await apiClient.get('/albums', { params: filters });
-    return response;
+  // 사용자 앨범 목록 조회 - GET /albums
+  getAlbums: async (params?: { page?: number; size?: number; sort?: string }): Promise<AlbumListResponse> => {
+    const response = await apiClient.get<AlbumListResponse>('/albums', { params });
+    return response.data;
   },
   
-  // 앨범 상세
-  getAlbum: async (albumId: string) => {
-    const response = await apiClient.get(`/albums/${albumId}`);
-    return response;
+  // 특정 앨범 조회 - GET /albums/{albumId}
+  getAlbum: async (albumId: number): Promise<Album> => {
+    const response = await apiClient.get<Album>(`/albums/${albumId}`);
+    return response.data;
   },
   
-  // 앨범 생성
-  createAlbum: async (albumData: Record<string, unknown>) => {
-    const response = await apiClient.post('/albums', albumData);
-    return response;
+  // 새 앨범 생성 - POST /albums
+  createAlbum: async (albumData: AlbumCreateRequest): Promise<Album> => {
+    const response = await apiClient.post<Album>('/albums', albumData);
+    return response.data;
   },
   
-  // 앨범 수정
-  updateAlbum: async (albumId: string, albumData: Record<string, unknown>) => {
-    const response = await apiClient.put(`/albums/${albumId}`, albumData);
-    return response;
+  // 앨범 정보 수정 - PUT /albums/{albumId}
+  updateAlbum: async (albumId: number, albumData: AlbumUpdateRequest): Promise<Album> => {
+    const response = await apiClient.put<Album>(`/albums/${albumId}`, albumData);
+    return response.data;
   },
   
-  // 앨범 삭제
-  deleteAlbum: async (albumId: string) => {
-    const response = await apiClient.delete(`/albums/${albumId}`);
-    return response;
+  // 앨범 삭제 - DELETE /albums/{albumId}
+  deleteAlbum: async (albumId: number): Promise<void> => {
+    await apiClient.delete(`/albums/${albumId}`);
   },
   
-  // 앨범 좋아요
-  likeAlbum: async (albumId: string) => {
+  // 앨범 커버 직접 업로드 - POST /albums/cover/upload
+  uploadCover: async (file: File): Promise<AlbumCoverUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<AlbumCoverUploadResponse>('/albums/cover/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  
+  // AI 앨범 커버 자동 생성 - POST /albums/cover/generate
+  generateCover: async (request: AlbumCoverGenerateRequest): Promise<AlbumCoverUploadResponse> => {
+    const response = await apiClient.post<AlbumCoverUploadResponse>('/albums/cover/generate', request);
+    return response.data;
+  },
+  
+  // 앨범 좋아요 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
+  likeAlbum: async (albumId: number) => {
     const response = await apiClient.post(`/albums/${albumId}/like`);
-    return response;
+    return response.data;
   },
   
-  // 앨범 좋아요 취소
-  unlikeAlbum: async (albumId: string) => {
+  // 앨범 좋아요 취소 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
+  unlikeAlbum: async (albumId: number) => {
     const response = await apiClient.delete(`/albums/${albumId}/like`);
-    return response;
+    return response.data;
   },
 };
 
