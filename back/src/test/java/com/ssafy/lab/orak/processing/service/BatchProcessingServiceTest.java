@@ -98,7 +98,7 @@ class BatchProcessingServiceTest {
     @DisplayName("배치 처리 기본 동작 테스트")
     void testBasicBatchProcessing() throws InterruptedException {
         // Given: 처리 대기 중인 파일들 설정 (maxConcurrentJobs=3이므로 3개만 처리됨)
-        when(fileUploadService.getPendingAudioProcessing(3))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(3), anyInt(), anyLong()))
                 .thenReturn(testUploads.subList(0, 3));
 
         // When: 배치 처리 실행
@@ -126,7 +126,7 @@ class BatchProcessingServiceTest {
                 createMockUpload(3L, "file3.mp3", ProcessingStatus.UPLOADED)
         );
 
-        when(fileUploadService.getPendingAudioProcessing(3))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(3), anyInt(), anyLong()))
                 .thenReturn(manyUploads);
 
         // When: 배치 처리 실행
@@ -134,7 +134,7 @@ class BatchProcessingServiceTest {
 
         // Then: 설정된 배치 크기만큼만 처리되는지 확인
         verify(fileUploadService, times(1))
-                .getPendingAudioProcessing(3); // 최대 동시 실행 개수만큼 조회
+                .getPendingAudioProcessingWithRetry(eq(3), anyInt(), anyLong()); // 최대 동시 실행 개수만큼 조회
 
         System.out.println("✅ 배치 크기 제한 확인 완료");
     }
@@ -148,7 +148,7 @@ class BatchProcessingServiceTest {
             return true;
         });
 
-        when(fileUploadService.getPendingAudioProcessing(3))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(3), anyInt(), anyLong()))
                 .thenReturn(testUploads.subList(0, 3));
 
         // When: 첫 번째 배치 처리 시작
@@ -158,7 +158,7 @@ class BatchProcessingServiceTest {
         // 잠시 대기 후 두 번째 배치 처리 시도
         Thread.sleep(100);
 
-        when(fileUploadService.getPendingAudioProcessing(0))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(0), anyInt(), anyLong()))
                 .thenReturn(Collections.emptyList()); // 이미 최대 개수 처리 중이므로 0개 조회
 
         batchProcessingService.processPendingFiles();
@@ -184,7 +184,7 @@ class BatchProcessingServiceTest {
         // Given: 처리 실패하는 작업 설정
         when(mockProcessingJob.process(any(Upload.class))).thenReturn(false); // 처리 실패
 
-        when(fileUploadService.getPendingAudioProcessing(1))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(1), anyInt(), anyLong()))
                 .thenReturn(testUploads.subList(0, 1));
 
         // When: 배치 처리 실행
@@ -207,7 +207,7 @@ class BatchProcessingServiceTest {
         when(mockProcessingJob.process(any(Upload.class)))
                 .thenThrow(new RuntimeException("Processing error"));
 
-        when(fileUploadService.getPendingAudioProcessing(1))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(1), anyInt(), anyLong()))
                 .thenReturn(testUploads.subList(0, 1));
 
         // When: 배치 처리 실행
@@ -227,7 +227,7 @@ class BatchProcessingServiceTest {
     @DisplayName("배치 처리 활성화/비활성화 테스트")
     void testBatchProcessingToggle() {
         // Given: 처리 대기 중인 파일들 설정
-        when(fileUploadService.getPendingAudioProcessing(any(Integer.class)))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(anyInt(), anyInt(), anyLong()))
                 .thenReturn(testUploads);
 
         // When: 배치 처리 비활성화
@@ -244,7 +244,7 @@ class BatchProcessingServiceTest {
 
         // Then: 처리됨 확인
         verify(fileUploadService, atLeastOnce())
-                .getPendingAudioProcessing(any(Integer.class));
+                .getPendingAudioProcessingWithRetry(anyInt(), anyInt(), anyLong());
 
         System.out.println("✅ 배치 처리 활성화/비활성화 확인 완료");
     }
@@ -301,7 +301,7 @@ class BatchProcessingServiceTest {
         when(processingJobs.stream())
                 .thenReturn(Arrays.asList(lowPriorityJob, highPriorityJob).stream());
 
-        when(fileUploadService.getPendingAudioProcessing(1))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(1), anyInt(), anyLong()))
                 .thenReturn(testUploads.subList(0, 1));
 
         // When: 배치 처리 실행
@@ -325,7 +325,7 @@ class BatchProcessingServiceTest {
                 .mapToObj(i -> createMockUpload((long) i, "large-batch-" + i + ".mp3", ProcessingStatus.UPLOADED))
                 .collect(java.util.stream.Collectors.toList());
 
-        when(fileUploadService.getPendingAudioProcessing(3))
+        when(fileUploadService.getPendingAudioProcessingWithRetry(eq(3), anyInt(), anyLong()))
                 .thenReturn(largeUploads.subList(0, 3))
                 .thenReturn(largeUploads.subList(3, 6))
                 .thenReturn(largeUploads.subList(6, 9))

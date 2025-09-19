@@ -44,7 +44,7 @@ scrape_configs:
       - labels:
           stream:
 
-  # 애플리케이션 로그 (파일 기반 - 백업)
+  # 애플리케이션 로그 (환경별 Docker Volume 마운트로 통일)
   - job_name: app-logs
     static_configs:
       - targets:
@@ -52,7 +52,7 @@ scrape_configs:
         labels:
           job: orakgaraki
           service: app
-          __path__: /var/log/app/*.log
+          __path__: /var/log/app/*.log  # Docker에서 통일된 경로
 
     pipeline_stages:
       - match:

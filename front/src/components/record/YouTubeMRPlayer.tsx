@@ -85,31 +85,36 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
 
   useImperativeHandle(ref, () => ({
     play: () => {
+      console.log('🎬 play() 호출됨');
       if (isPlayerActuallyReady()) {
         try {
+          console.log('🎬 playVideo() 실행');
           playerRef.current!.playVideo();
-          console.log('YouTube playVideo called successfully');
+          console.log('✅ YouTube playVideo 성공');
         } catch (error) {
-          console.error('YouTube playVideo failed:', error);
+          console.error('❌ YouTube playVideo 실패:', error);
         }
       } else {
-        console.warn('YouTube player not ready for play operation', {
+        console.warn('⚠️ YouTube player not ready:', {
           hasPlayer: !!playerRef.current,
           ready,
-          hasPlayVideo: playerRef.current ? typeof playerRef.current.playVideo === 'function' : false
+          hasPlayVideo: playerRef.current ? typeof playerRef.current.playVideo === 'function' : false,
+          hasPauseVideo: playerRef.current ? typeof playerRef.current.pauseVideo === 'function' : false
         });
       }
     },
     pause: () => {
+      console.log('🛑 pause() 호출됨');
       if (isPlayerActuallyReady()) {
         try {
+          console.log('🛑 pauseVideo() 실행');
           playerRef.current!.pauseVideo();
-          console.log('YouTube pauseVideo called successfully');
+          console.log('✅ YouTube pauseVideo 성공');
         } catch (error) {
-          console.error('YouTube pauseVideo failed:', error);
+          console.error('❌ YouTube pauseVideo 실패:', error);
         }
       } else {
-        console.warn('YouTube player not ready for pause operation', {
+        console.warn('⚠️ YouTube player not ready for pause:', {
           hasPlayer: !!playerRef.current,
           ready,
           hasPauseVideo: playerRef.current ? typeof playerRef.current.pauseVideo === 'function' : false
@@ -206,12 +211,13 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
               typeof playerRef.current.setVolume === 'function';
             
             if (hasRequiredMethods) {
-              console.log('YouTube Player fully ready with all methods');
+              console.log('✅ YouTube Player 모든 함수 준비 완료');
               setReady(true);
               
-              // 상위 컴포넌트에 플레이어 준비 완료 알림
+              // 플레이어 객체를 직접 상위 컴포넌트에 전달
               if (onPlayerReady) {
-                onPlayerReady();
+                console.log('🎬 플레이어 객체 상위로 전달');
+                onPlayerReady(playerRef.current);
               }
               
               // autoplay 권한 부여
@@ -308,7 +314,7 @@ const YouTubeMRPlayer = forwardRef<YouTubeMRPlayerHandle, YouTubeMRPlayerProps>(
         playerRef.current = null;
       }
     };
-  }, [videoId, playing, startSeconds, volumePercent]);
+  }, [videoId]); // videoId 변경 시에만 플레이어 재생성
 
   useEffect(() => {
     if (!ready || !playerRef.current) return;

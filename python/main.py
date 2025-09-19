@@ -4,8 +4,10 @@ import tempfile
 import requests
 import pandas as pd
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -41,7 +43,7 @@ logging.basicConfig(
 )
 
 # 전체 곡 features 로드 (서버 시작시 한번만)
-ALL_FEATURES_CSV = "C:/Users/SSAFY/Desktop/output/all_features.csv"
+ALL_FEATURES_CSV = "C:/Users/SSAFY/Desktop/S13P21C103/python/data/all_features.csv"
 all_songs_df = None
 
 class VoiceRecommendationRequest(BaseModel):
@@ -70,7 +72,7 @@ async def startup_event():
 class RecordData(BaseModel):
     id: int
     userId: int
-    songId: int
+    songId: Optional[int] = None  # Upload ID 기반으로 올 때는 songId가 없을 수 있음
     title: str
     durationSeconds: Optional[int] = None
     extension: Optional[str] = None
@@ -96,6 +98,16 @@ class VoiceImageGenerationResponse(BaseModel):
     song_titles: Optional[List[str]] = None
     parameters: Optional[dict] = None
     error: Optional[str] = None
+
+# Validation 오류 핸들러
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logging.error(f"Validation error: {exc.errors()}")
+    logging.error(f"Request body: {await request.body()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": f"Validation error: {exc.errors()}"}
+    )
 
 # 클라이언트 초기화
 imagen_client = ImagenClient()
@@ -214,31 +226,49 @@ async def generate_voice_image(request: VoiceImageGenerationRequest):
     녹음 리스트 기반 AI 이미지 생성 API
     """
     try:
+        logging.info(f"Received voice image generation request with {len(request.records)} records")
+        logging.info(f"Request parameters: aspect_ratio={request.aspect_ratio}, safety_filter_level={request.safety_filter_level}, person_generation={request.person_generation}")
+
+        for i, record in enumerate(request.records):
+            logging.info(f"Record {i}: id={record.id}, userId={record.userId}, songId={record.songId}, title='{record.title}', url='{record.url[:50] if record.url else None}...'")
+
         # 1. 녹음된 음성들에서 키워드 추출
         voice_keywords = []
         song_titles = []
 
         for record in request.records:
+            temp_audio_path = None
             try:
-                # 파일 존재 확인
-                if not os.path.exists(record.url):
-                    print(f"파일이 존재하지 않음: {record.url}")
-                    continue
+                # S3 URL에서 파일 다운로드
+                logging.info(f"S3에서 음성 파일 다운로드 중... (ID: {record.id})")
+                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
+                    response = requests.get(record.url, timeout=30)
+                    response.raise_for_status()
+                    tmp_file.write(response.content)
+                    temp_audio_path = tmp_file.name
+                    logging.info(f"음성 파일 다운로드 완료: {len(response.content)} bytes")
 
                 # 음성 분석으로 키워드 추출
-                voice_analysis = analyze_voice(record.url)
+                voice_analysis = analyze_voice(temp_audio_path)
                 voice_keywords.append(voice_analysis)
-                print(f"음성 분석 성공 (ID: {record.id}): {voice_analysis}")
+                logging.info(f"음성 분석 성공 (ID: {record.id}): {voice_analysis}")
 
                 # 노래 제목도 수집
                 if record.title:
                     song_titles.append(record.title)
 
+            except requests.exceptions.RequestException as e:
+                logging.error(f"S3 파일 다운로드 오류 (ID: {record.id}): {e}")
+                continue
             except Exception as e:
-                print(f"음성 분석 실패 (ID: {record.id}): {str(e)}")
+                logging.error(f"음성 분석 실패 (ID: {record.id}): {str(e)}")
                 import traceback
                 traceback.print_exc()
                 continue
+            finally:
+                # 임시 파일 정리
+                if temp_audio_path and os.path.exists(temp_audio_path):
+                    os.unlink(temp_audio_path)
 
         # 2. 키워드와 노래 제목을 바탕으로 프롬프트 생성
         if not voice_keywords and not song_titles:
