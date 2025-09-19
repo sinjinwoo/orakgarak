@@ -212,8 +212,8 @@ const AlbumCreatePage: React.FC = () => {
       try {
         setRecordingsLoading(true);
         setRecordingsError(null);
-        const response = await recordingAPI.getMyRecordings();
-        setRecordings(response.data || []);
+        const recordings = await recordingAPI.getMyRecordings();
+        setRecordings(recordings || []);
       } catch (error) {
         console.error('녹음 목록 로드 실패:', error);
         setRecordingsError('녹음 목록을 불러오는데 실패했습니다.');

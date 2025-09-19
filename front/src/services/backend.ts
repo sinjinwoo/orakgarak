@@ -52,7 +52,7 @@ export const authAPI = {
   // 카카오 소셜 로그인
   loginWithKakao: async (kakaoToken: string) => {
     const response = await apiClient.post('/auth/kakao', { token: kakaoToken });
-    return response;
+    return response.data;
   },
 };
 
@@ -62,25 +62,25 @@ export const userAPI = {
   // 팔로우
   follow: async (userId: string) => {
     const response = await apiClient.post(`/users/${userId}/follow`);
-    return response;
+    return response.data;
   },
 
   // 언팔로우
   unfollow: async (userId: string) => {
     const response = await apiClient.delete(`/users/${userId}/follow`);
-    return response;
+    return response.data;
   },
 
   // 팔로워 목록
   getFollowers: async (userId: string) => {
     const response = await apiClient.get(`/users/${userId}/followers`);
-    return response;
+    return response.data;
   },
 
   // 팔로잉 목록
   getFollowing: async (userId: string) => {
     const response = await apiClient.get(`/users/${userId}/following`);
-    return response;
+    return response.data;
   },
 };
 
@@ -91,7 +91,7 @@ export const songAPI = {
     const response = await apiClient.get('/songs/search', { 
       params: { query, limit } 
     });
-    return response;
+    return response.data;
   },
   
   // 추천 곡 목록
@@ -99,13 +99,13 @@ export const songAPI = {
     const response = await apiClient.get('/songs/recommendations', { 
       params: filters 
     });
-    return response;
+    return response.data;
   },
   
   // 곡 상세 정보
   getSong: async (songId: string) => {
     const response = await apiClient.get(`/songs/${songId}`);
-    return response;
+    return response.data;
   },
 };
 
@@ -114,7 +114,7 @@ export const recordingAPI = {
   // 내 녹음본 목록
   getMyRecordings: async () => {
     const response = await apiClient.get('/recordings/me');
-    return response;
+    return response.data;
   },
   
   // 녹음본 업로드
@@ -131,19 +131,19 @@ export const recordingAPI = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response;
+    return response.data;
   },
   
   // 녹음본 삭제
   deleteRecording: async (recordingId: string) => {
     const response = await apiClient.delete(`/recordings/${recordingId}`);
-    return response;
+    return response.data;
   },
   
   // 녹음본 분석
   analyzeRecording: async (recordingId: string) => {
     const response = await apiClient.post(`/recordings/${recordingId}/analyze`);
-    return response;
+    return response.data;
   },
 };
 
