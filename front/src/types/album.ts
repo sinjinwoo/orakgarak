@@ -10,6 +10,7 @@ export interface Album {
   likeCount: number;
   createdAt: string;
   updatedAt: string;
+  coverImageUrl?: string; // 마이페이지 API에서 추가된 필드
 }
 
 export interface AlbumTrack {
@@ -84,6 +85,32 @@ export interface AlbumListResponse {
     unpaged: boolean;
   };
   empty: boolean;
+}
+
+// 마이페이지 API 응답 타입들
+export interface MyPageStats {
+  followerCount: number;
+  followingCount: number;
+  albumCount: number;
+  likedAlbumCount: number;
+}
+
+export interface MyPageAlbumListResponse {
+  albums: Album[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface MyPageLikedAlbumListResponse {
+  likedAlbums: Album[];
+  currentPage: number;
+  totalPages: number;
+  totalElements: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 // 기존 타입 호환성을 위해 유지

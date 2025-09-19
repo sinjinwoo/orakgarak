@@ -260,4 +260,26 @@ export const profileAPI = {
     });
     return response.data; // true: 사용 가능, false: 중복됨
   },
+
+  // 마이페이지 통계 조회 - GET /profiles/mypage/stats
+  getMyPageStats: async () => {
+    const response = await apiClient.get('/profiles/mypage/stats');
+    return response.data;
+  },
+
+  // 마이페이지 내 앨범 목록 - GET /profiles/mypage/albums
+  getMyPageAlbums: async (page: number = 0, size: number = 10) => {
+    const response = await apiClient.get('/profiles/mypage/albums', {
+      params: { page, size }
+    });
+    return response.data;
+  },
+
+  // 마이페이지 좋아요한 앨범 목록 - GET /profiles/mypage/liked-albums
+  getMyPageLikedAlbums: async (page: number = 0, size: number = 10) => {
+    const response = await apiClient.get('/profiles/mypage/liked-albums', {
+      params: { page, size }
+    });
+    return response.data;
+  },
 };
