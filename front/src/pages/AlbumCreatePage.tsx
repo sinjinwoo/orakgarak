@@ -6,7 +6,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAlbumStore } from '../stores/albumStore';
+import { useAlbumCreationSelectors, useAlbumCreationActions } from '../stores/albumStore';
 import type { Recording } from '../types/recording';
 import NewRecordingSelectionStep from '../components/album/NewRecordingSelectionStep';
 import NewCoverSelectionStep from '../components/album/NewCoverSelectionStep';
@@ -118,26 +118,24 @@ const AlbumCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const {
     currentStep,
-    title,
-    description,
-    coverImage,
-    isPublic,
-    selectedRecordings,
-    setTitle,
-    setDescription,
-    setCoverImage,
-    setIsPublic,
-    addRecording,
-    removeRecording,
-    setSelectedRecordings,
+    selectedRecordIds,
+    albumInfo,
+  } = useAlbumCreationSelectors();
+
+  const {
+    setCreationStep,
     nextStep,
     prevStep,
-    goToStep,
-    resetAlbum,
-    createAlbum,
-    getAlbumData,
-    saveDraft,
-  } = useAlbumStore();
+    setSelectedRecordIds,
+    updateAlbumInfo,
+    resetCreationState,
+  } = useAlbumCreationActions();
+
+  // Legacy compatibility getters
+  const title = albumInfo.title || '';
+  const description = albumInfo.description || '';
+  const isPublic = albumInfo.isPublic ?? false;
+  const selectedRecordings = selectedRecordIds.map(String);
 
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
@@ -214,10 +212,27 @@ const AlbumCreatePage: React.FC = () => {
         setRecordingsError(null);
         const response = await recordingAPI.getMyRecordings();
         setRecordings(response.data || []);
-      } catch (error) {
+      } catch (error: any) {
         console.error('녹음 목록 로드 실패:', error);
-        setRecordingsError('녹음 목록을 불러오는데 실패했습니다.');
-        setRecordings([]);
+
+        // 에러 타입에 따른 적절한 메시지 설정
+        let errorMessage = '녹음 목록을 불러오는데 실패했습니다.';
+
+        if (error?.response?.status === 401) {
+          errorMessage = '로그인이 필요합니다.';
+        } else if (error?.response?.status === 403) {
+          errorMessage = '접근 권한이 없습니다.';
+        } else if (error?.response?.status >= 500) {
+          errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        } else if (error?.message?.includes('Network Error')) {
+          errorMessage = '네트워크 연결을 확인해주세요.';
+        }
+
+        setRecordingsError(errorMessage);
+
+        // 더미 데이터로 fallback (개발 중)
+        console.warn('녹음 API 실패로 더미 데이터 사용');
+        setRecordings(dummyRecordings);
       } finally {
         setRecordingsLoading(false);
       }

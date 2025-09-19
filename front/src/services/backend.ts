@@ -113,7 +113,7 @@ export const songAPI = {
 export const recordingAPI = {
   // 내 녹음본 목록
   getMyRecordings: async () => {
-    const response = await apiClient.get('/recordings/me');
+    const response = await apiClient.get('/records/me');
     return response;
   },
   
