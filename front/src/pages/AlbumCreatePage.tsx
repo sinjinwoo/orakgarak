@@ -233,6 +233,8 @@ const AlbumCreatePage: React.FC = () => {
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
+        title: recording.song?.title || '',
+        artist: recording.song?.artist || '',
         durationSec: recording.duration || 0,
       }));
     setTracks(newTracks);
@@ -377,7 +379,13 @@ const AlbumCreatePage: React.FC = () => {
               {currentStage !== 'cover' && (
                 <div className="absolute top-0 right-0 z-20">
                   <MiniPreviewCard
-                    tracks={tracks}
+                    tracks={tracks.map(track => ({
+                      id: track.id,
+                      title: track.song?.title || '',
+                      artist: track.song?.artist || '',
+                      durationSec: track.duration || 0,
+                      order: track.order
+                    }))}
                     coverImageUrl={coverImage}
                     albumTitle={title || '새 앨범'}
                   />

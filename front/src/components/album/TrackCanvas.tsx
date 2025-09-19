@@ -23,19 +23,20 @@ import {
 } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { Music, Plus } from 'lucide-react';
-import { SortableRecordingCard, type Recording } from './RecordingCard';
+import { SortableRecordingCard } from './RecordingCard';
+import { type Recording } from '../../types/recording';
 
-interface Track extends Recording {
+interface CanvasTrack extends Recording {
   order: number;
 }
 
 interface TrackCanvasProps {
-  tracks: Track[];
-  onTracksReorder: (tracks: Track[]) => void;
+  tracks: CanvasTrack[];
+  onTracksReorder: (tracks: CanvasTrack[]) => void;
   onTrackRemove: (trackId: string) => void;
   onTrackAdd: (recording: Recording) => void;
   onPlayTrack: (trackId: string) => void;
-  currentPlayingId?: string;
+  currentPlayingId?: string | null;
   maxTracks?: number;
   className?: string;
 }
@@ -141,7 +142,7 @@ const TrackCanvas: React.FC<TrackCanvasProps> = ({
   const activeTrack = tracks.find(track => track.id === activeId);
 
   // Calculate total duration
-  const totalDuration = tracks.reduce((sum, track) => sum + (track.duration || track.durationSec || 0), 0);
+  const totalDuration = tracks.reduce((sum, track) => sum + (track.duration || 0), 0);
   const formatTotalDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -223,7 +224,6 @@ const TrackCanvas: React.FC<TrackCanvasProps> = ({
                     onPlay={() => onPlayTrack(track.id)}
                     onRemove={() => onTrackRemove(track.id)}
                     data-track-id={track.id}
-                    tabIndex={0}
                   />
                 ))}
               </div>

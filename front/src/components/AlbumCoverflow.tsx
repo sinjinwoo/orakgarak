@@ -36,7 +36,7 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
     setActiveIndex(swiper.activeIndex);
   };
 
-  const handleAlbumClick = (album: Album) => {
+  const handleAlbumClick = (album: CoverflowAlbum) => {
     if (onAlbumClick) {
       onAlbumClick(album);
     }

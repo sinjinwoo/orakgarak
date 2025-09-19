@@ -59,8 +59,6 @@ function SpeakerModel({
             color={isActive ? color : "#ff0080"}
             transparent={true}
             opacity={isActive ? 0.8 : 0.3}
-            emissive={isActive ? color : "#ff0080"}
-            emissiveIntensity={isActive ? intensity * 2 : 0.5}
           />
         </Torus>
         
@@ -70,8 +68,6 @@ function SpeakerModel({
             color={isActive ? "#00ffff" : "#00ff00"}
             transparent={true}
             opacity={isActive ? 0.6 : 0.2}
-            emissive={isActive ? "#00ffff" : "#00ff00"}
-            emissiveIntensity={isActive ? intensity * 1.5 : 0.3}
           />
         </Torus>
         
@@ -81,8 +77,6 @@ function SpeakerModel({
             color={isActive ? "#ffff00" : "#ff00ff"}
             transparent={true}
             opacity={isActive ? 0.4 : 0.1}
-            emissive={isActive ? "#ffff00" : "#ff00ff"}
-            emissiveIntensity={isActive ? intensity * 1 : 0.2}
           />
         </Torus>
         
@@ -92,8 +86,6 @@ function SpeakerModel({
             color={isActive ? color : "#ffffff"}
             transparent={true}
             opacity={isActive ? 0.3 : 0.1}
-            emissive={isActive ? color : "#ffffff"}
-            emissiveIntensity={isActive ? intensity * 3 : 0.5}
           />
         </Sphere>
         
@@ -103,8 +95,6 @@ function SpeakerModel({
             color={isActive ? "#ff0080" : "#ff00ff"}
             transparent={true}
             opacity={isActive ? 0.4 : 0.1}
-            emissive={isActive ? "#ff0080" : "#ff00ff"}
-            emissiveIntensity={isActive ? intensity * 1.5 : 0.3}
           />
         </Torus>
         
@@ -113,8 +103,6 @@ function SpeakerModel({
             color={isActive ? "#00ffff" : "#00ff00"}
             transparent={true}
             opacity={isActive ? 0.2 : 0.05}
-            emissive={isActive ? "#00ffff" : "#00ff00"}
-            emissiveIntensity={isActive ? intensity * 1 : 0.2}
           />
         </Torus>
       </group>

@@ -130,7 +130,7 @@ const ParameterSliders: React.FC<ParameterSlidersProps> = ({
         );
       })}
 
-      <style jsx>{`
+      <style>{`
         .slider-input::-webkit-slider-thumb {
           appearance: none;
           width: 20px;

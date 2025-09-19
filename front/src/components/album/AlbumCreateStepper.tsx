@@ -152,7 +152,6 @@ const AlbumCreateStepper: React.FC<AlbumCreateStepperProps> = ({ currentStep }) 
                   alignItems: 'center',
                   px: 3,
                   py: 2,
-                  position: 'relative',
                   overflow: 'hidden'
                 }}>
                   {/* 아이콘과 텍스트 */}
