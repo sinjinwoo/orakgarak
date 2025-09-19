@@ -1,6 +1,14 @@
 // 실제 백엔드 API 클라이언트
 import apiClient from './apiClient';
 import type { User, Profile, ProfileUpdateRequest, ProfileImageUpdateRequest } from '../types/user';
+import type { 
+  Album, 
+  AlbumCreateRequest, 
+  AlbumUpdateRequest, 
+  AlbumCoverUploadResponse, 
+  AlbumCoverGenerateRequest, 
+  AlbumListResponse 
+} from '../types/album';
 
 // Auth API
 export const authAPI = {
@@ -141,44 +149,61 @@ export const recordingAPI = {
 
 // Album API
 export const albumAPI = {
-  // 앨범 목록
-  getAlbums: async (filters?: Record<string, unknown>) => {
-    const response = await apiClient.get('/albums', { params: filters });
-    return response;
+  // 사용자 앨범 목록 조회 - GET /albums
+  getAlbums: async (params?: { page?: number; size?: number; sort?: string }): Promise<AlbumListResponse> => {
+    const response = await apiClient.get<AlbumListResponse>('/albums', { params });
+    return response.data;
   },
   
-  // 앨범 상세
-  getAlbum: async (albumId: string) => {
-    const response = await apiClient.get(`/albums/${albumId}`);
-    return response;
+  // 특정 앨범 조회 - GET /albums/{albumId}
+  getAlbum: async (albumId: number): Promise<Album> => {
+    const response = await apiClient.get<Album>(`/albums/${albumId}`);
+    return response.data;
   },
   
-  // 앨범 생성
-  createAlbum: async (albumData: Record<string, unknown>) => {
-    const response = await apiClient.post('/albums', albumData);
-    return response;
+  // 새 앨범 생성 - POST /albums
+  createAlbum: async (albumData: AlbumCreateRequest): Promise<Album> => {
+    const response = await apiClient.post<Album>('/albums', albumData);
+    return response.data;
   },
   
-  // 앨범 수정
-  updateAlbum: async (albumId: string, albumData: Record<string, unknown>) => {
-    const response = await apiClient.put(`/albums/${albumId}`, albumData);
-    return response;
+  // 앨범 정보 수정 - PUT /albums/{albumId}
+  updateAlbum: async (albumId: number, albumData: AlbumUpdateRequest): Promise<Album> => {
+    const response = await apiClient.put<Album>(`/albums/${albumId}`, albumData);
+    return response.data;
   },
   
-  // 앨범 삭제
-  deleteAlbum: async (albumId: string) => {
-    const response = await apiClient.delete(`/albums/${albumId}`);
-    return response;
+  // 앨범 삭제 - DELETE /albums/{albumId}
+  deleteAlbum: async (albumId: number): Promise<void> => {
+    await apiClient.delete(`/albums/${albumId}`);
   },
   
-  // 앨범 좋아요
-  likeAlbum: async (albumId: string) => {
+  // 앨범 커버 직접 업로드 - POST /albums/cover/upload
+  uploadCover: async (file: File): Promise<AlbumCoverUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post<AlbumCoverUploadResponse>('/albums/cover/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  
+  // AI 앨범 커버 자동 생성 - POST /albums/cover/generate
+  generateCover: async (request: AlbumCoverGenerateRequest): Promise<AlbumCoverUploadResponse> => {
+    const response = await apiClient.post<AlbumCoverUploadResponse>('/albums/cover/generate', request);
+    return response.data;
+  },
+  
+  // 앨범 좋아요 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
+  likeAlbum: async (albumId: number) => {
     const response = await apiClient.post(`/albums/${albumId}/like`);
     return response;
   },
   
-  // 앨범 좋아요 취소
-  unlikeAlbum: async (albumId: string) => {
+  // 앨범 좋아요 취소 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
+  unlikeAlbum: async (albumId: number) => {
     const response = await apiClient.delete(`/albums/${albumId}/like`);
     return response;
   },
