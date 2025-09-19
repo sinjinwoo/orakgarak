@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 추가 사이버펑크 애니메이션 import */
+@import './styles/cyberpunk-animations.css';
+
 /* 사이버펑크 폰트 */
 @font-face {
   font-family: neon;

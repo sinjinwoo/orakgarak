@@ -30,33 +30,34 @@ interface AlbumStore extends AlbumCreationState {
   setCoverImage: (imageUrl: string) => void;
   setIsPublic: (isPublic: boolean) => void;
   setTags: (tags: string[]) => void;
-  
+
   // 녹음 선택 관리
   addRecording: (recordingId: string) => void;
   removeRecording: (recordingId: string) => void;
   setSelectedRecordings: (recordingIds: string[]) => void;
-  
+
   // 트랙 관리
   setTracks: (tracks: AlbumTrack[]) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
   updateTrackTitle: (trackId: string, title: string) => void;
-  
+
   // 단계 관리
   setCurrentStep: (step: AlbumCreationState['currentStep']) => void;
+  goToStep: (stepName: string) => void;
   nextStep: () => void;
   prevStep: () => void;
-  
+
   // 초기화 및 저장
   resetAlbum: () => void;
   saveDraft: () => void;
   loadDraft: () => void;
-  
+
   // 앨범 생성 데이터 가져오기
   getAlbumData: () => AlbumCreateData;
-  
+
   // 새 앨범 생성
   createAlbum: (albumData: AlbumCreateData, recordings: any[]) => string;
-  
+
   // 앨범 상세 정보 가져오기
   getAlbumById: (albumId: string) => any;
 }
@@ -131,6 +132,19 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
   
   // 단계 관리
   setCurrentStep: (currentStep) => set({ currentStep }),
+
+  goToStep: (stepName: string) => {
+    const stepMap: Record<string, AlbumCreationState['currentStep']> = {
+      'recordings': 'recordings',
+      'cover': 'cover',
+      'metadata': 'metadata',
+      'preview': 'preview',
+    };
+    const targetStep = stepMap[stepName];
+    if (targetStep) {
+      set({ currentStep: targetStep });
+    }
+  },
   
   nextStep: () => {
     const steps: AlbumCreationState['currentStep'][] = ['recordings', 'cover', 'metadata', 'preview', 'completed'];
@@ -150,29 +164,43 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
   
   // 초기화 및 저장
   resetAlbum: () => set(initialData),
-  
+
   saveDraft: () => {
     const data = get().getAlbumData();
-    localStorage.setItem('album-draft', JSON.stringify(data));
-    set({ 
-      isDraft: true, 
-      lastSaved: new Date().toISOString() 
+    const draftData = {
+      ...data,
+      selectedRecordings: get().selectedRecordings,
+      currentStep: get().currentStep,
+      lastSaved: new Date().toISOString(),
+    };
+    localStorage.setItem('album.create.draft.v1', JSON.stringify(draftData));
+    set({
+      isDraft: true,
+      lastSaved: new Date().toISOString()
     });
   },
   
   loadDraft: () => {
-    const draft = localStorage.getItem('album-draft');
+    const draft = localStorage.getItem('album.create.draft.v1');
     if (draft) {
-      const data = JSON.parse(draft);
-      set({
-        title: data.title || '',
-        description: data.description || '',
-        coverImage: data.coverImage,
-        isPublic: data.isPublic ?? true,
-        tags: data.tags || [],
-        selectedRecordings: data.recordingIds || [],
-        isDraft: true,
-      });
+      try {
+        const data = JSON.parse(draft);
+        set({
+          title: data.title || '',
+          description: data.description || '',
+          coverImage: data.coverImage,
+          isPublic: data.isPublic ?? false,
+          tags: data.tags || [],
+          selectedRecordings: data.selectedRecordings || data.recordingIds || [],
+          currentStep: data.currentStep || 'recordings',
+          isDraft: true,
+          lastSaved: data.lastSaved,
+        });
+      } catch (error) {
+        console.error('Failed to load draft:', error);
+        // Clear corrupted draft
+        localStorage.removeItem('album.create.draft.v1');
+      }
     }
   },
   

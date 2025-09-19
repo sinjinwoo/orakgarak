@@ -49,7 +49,7 @@ public class JwtUtil {
                 .claims(claims)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key)
                 .compact();
         log.debug("JWT 생성됨: {}", token);
         return token;

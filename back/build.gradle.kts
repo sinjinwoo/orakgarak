@@ -39,7 +39,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web") {
         exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
     }
+    implementation("org.springframework.boot:spring-boot-starter-webflux") {
+        exclude(group = "org.springframework.boot", module = "spring-boot-starter-logging")
+    }
     implementation("org.springframework.boot:spring-boot-starter-log4j2")
+    implementation("org.apache.logging.log4j:log4j-layout-template-json:2.24.3")
     implementation("org.apache.logging.log4j:log4j-core:2.24.3")
 
     // Spring Security & OAuth2
@@ -80,9 +84,10 @@ dependencies {
     annotationProcessor("jakarta.annotation:jakarta.annotation-api")
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
 
-    // AWS S3
+    // AWS S3 & EventBridge
     implementation("io.awspring.cloud:spring-cloud-aws-starter:3.4.0")
     implementation("software.amazon.awssdk:s3:2.32.9")
+    implementation("software.amazon.awssdk:eventbridge:2.32.9")
 
     // Utilities
     implementation("net.coobird:thumbnailator:0.4.20")
@@ -91,8 +96,18 @@ dependencies {
     // Audio Processing
     implementation("com.github.kokorin.jaffree:jaffree:2023.09.10")
 
+    // Kafka 추가
+    implementation("org.springframework.kafka:spring-kafka")
+    testImplementation("org.springframework.kafka:spring-kafka-test")
+
+
     // API Documentation
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
+
+    // Actuator (Prometheus 메트릭 노출용)
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
 
     // Development Tools
     developmentOnly("org.springframework.boot:spring-boot-devtools")
@@ -101,6 +116,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.awaitility:awaitility:4.2.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
