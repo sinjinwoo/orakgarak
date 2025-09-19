@@ -76,7 +76,7 @@ const searchSongs = async (keyword: string): Promise<Song[]> => {
   try {
     // 백엔드 서버 주소를 명시적으로 지정 (포트 번호를 실제 백엔드 포트로 변경하세요)
     // 예: 8080, 8000, 3001 등 백엔드가 실행되는 포트
-    const BACKEND_BASE_URL = 'http://https://j13c103.p.ssafy.io/api'; // 백엔드 포트에 맞게 수정
+    const BACKEND_BASE_URL = 'https://j13c103.p.ssafy.io/api'; // 백엔드 포트에 맞게 수정
     const apiUrl = `${BACKEND_BASE_URL}/songs/search/realtime?keyword=${encodeURIComponent(keyword)}`;
     
     console.log('API 호출:', apiUrl); // 디버깅용 로그
