@@ -9,7 +9,8 @@ import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
-interface Album {
+// AlbumCoverflow 전용 앨범 인터페이스 (UI 표시용)
+interface CoverflowAlbum {
   id: string;
   title: string;
   coverImage: string;
@@ -19,9 +20,9 @@ interface Album {
 }
 
 interface AlbumCoverflowProps {
-  albums: Album[];
-  onAlbumClick?: (album: Album) => void;
-  onPlayClick?: (album: Album) => void;
+  albums: CoverflowAlbum[];
+  onAlbumClick?: (album: CoverflowAlbum) => void;
+  onPlayClick?: (album: CoverflowAlbum) => void;
 }
 
 const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({ 
