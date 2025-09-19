@@ -49,7 +49,7 @@ services:
       - "${SERVER_PORT:-8080}:8080"
       - "8091:8091"
     volumes:
-      - ./logs:/var/log/app
+      - ./logs:/var/log/orak
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       - DB_HOST_PROD=${DB_HOST_PROD:-orakgaraki-mysql}
