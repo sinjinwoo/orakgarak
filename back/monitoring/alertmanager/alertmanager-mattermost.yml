@@ -30,48 +30,18 @@ receivers:
     webhook_configs:
       - url: '${MATTERMOST_WEBHOOK_URL}'
         send_resolved: true
-        title: 'Orakgaraki Alert'
-        text: |
-          {{ range .Alerts }}
-          **{{ .Annotations.summary }}**
-          {{ .Annotations.description }}
-
-          Status: {{ .Status }}
-          Severity: {{ .Labels.severity }}
-          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
-          {{ end }}
 
   # 심각한 알림용
   - name: 'mattermost-critical'
     webhook_configs:
       - url: '${MATTERMOST_WEBHOOK_URL}'
         send_resolved: true
-        title: 'CRITICAL Alert'
-        text: |
-          🔥 **CRITICAL ALERT** 🔥
-          {{ range .Alerts }}
-          **{{ .Annotations.summary }}**
-          {{ .Annotations.description }}
-
-          Status: {{ .Status }}
-          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
-          {{ end }}
 
   # 경고 알림용
   - name: 'mattermost-warnings'
     webhook_configs:
       - url: '${MATTERMOST_WEBHOOK_URL}'
         send_resolved: true
-        title: 'Warning Alert'
-        text: |
-          ⚠️ **WARNING** ⚠️
-          {{ range .Alerts }}
-          **{{ .Annotations.summary }}**
-          {{ .Annotations.description }}
-
-          Status: {{ .Status }}
-          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
-          {{ end }}
 
 # 억제 규칙 (중복 알림 방지)
 inhibit_rules:
