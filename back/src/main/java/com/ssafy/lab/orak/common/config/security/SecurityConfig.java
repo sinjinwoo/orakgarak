@@ -71,9 +71,10 @@ public class SecurityConfig {
                                 "/api-docs/**",
                                 "/api/records/async/upload-completed",
                                 "/api/images/**",
-                                "/images/**"
+                                "/images/**",
+                                "/api/webhook/**"
                         ).permitAll()
-                        // API 경로는 JWT 인증 필요
+                        // API 경로는 JWT 인증 필요 (웹훅 제외)
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()
                 )

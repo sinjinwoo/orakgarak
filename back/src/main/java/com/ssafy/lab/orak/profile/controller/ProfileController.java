@@ -1,9 +1,14 @@
 package com.ssafy.lab.orak.profile.controller;
 
 import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
+import com.ssafy.lab.orak.profile.dto.LikedAlbumsResponseDTO;
 import com.ssafy.lab.orak.profile.dto.ProfileRequestDTO;
 import com.ssafy.lab.orak.profile.dto.ProfileResponseDTO;
+import com.ssafy.lab.orak.profile.dto.ProfileStatsResponseDTO;
+import com.ssafy.lab.orak.profile.dto.UserAlbumsResponseDTO;
 import com.ssafy.lab.orak.profile.service.ProfileService;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -70,6 +75,33 @@ public class ProfileController {
     public ResponseEntity<Boolean> checkNicknameAvailability(@RequestParam String nickname) {
         boolean available = profileService.isNicknameAvailable(nickname);
         return ResponseEntity.ok(available);
+    }
+
+
+    //활동 통계 (팔로워 수, 팔로잉 수 등)
+    @GetMapping("/mypage/stats")
+    public ResponseEntity<ProfileStatsResponseDTO> getMyPageStats(
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+        ProfileStatsResponseDTO response = profileService.getMyPageStats(principal.getUserId());
+        return ResponseEntity.ok(response);
+    }
+
+    //좋아요한 앨범 목록
+    @GetMapping("/mypage/liked-albums")
+    public ResponseEntity<LikedAlbumsResponseDTO> getLikedAlbums(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @PageableDefault(size = 10) Pageable pageable) {
+        LikedAlbumsResponseDTO response = profileService.getLikedAlbums(principal.getUserId(), pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    //내 앨범 목록
+    @GetMapping("/mypage/albums")
+    public ResponseEntity<UserAlbumsResponseDTO> getMyAlbums(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @PageableDefault(size = 10) Pageable pageable) {
+        UserAlbumsResponseDTO response = profileService.getMyAlbums(principal.getUserId(), pageable);
+        return ResponseEntity.ok(response);
     }
 
 }

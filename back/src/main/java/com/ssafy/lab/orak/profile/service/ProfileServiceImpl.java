@@ -1,9 +1,17 @@
 package com.ssafy.lab.orak.profile.service;
 
+import com.ssafy.lab.orak.album.dto.AlbumResponseDto;
+import com.ssafy.lab.orak.album.entity.Album;
+import com.ssafy.lab.orak.album.repository.AlbumRepository;
 import com.ssafy.lab.orak.auth.entity.User;
 import com.ssafy.lab.orak.auth.service.UserService;
+import com.ssafy.lab.orak.follow.repository.FollowRepository;
+import com.ssafy.lab.orak.like.repository.LikeRepository;
+import com.ssafy.lab.orak.profile.dto.LikedAlbumsResponseDTO;
 import com.ssafy.lab.orak.profile.dto.ProfileRequestDTO;
 import com.ssafy.lab.orak.profile.dto.ProfileResponseDTO;
+import com.ssafy.lab.orak.profile.dto.ProfileStatsResponseDTO;
+import com.ssafy.lab.orak.profile.dto.UserAlbumsResponseDTO;
 import com.ssafy.lab.orak.profile.entity.Profile;
 import com.ssafy.lab.orak.profile.exception.ProfileNotFoundException;
 import com.ssafy.lab.orak.profile.repository.ProfileRepository;
@@ -11,6 +19,9 @@ import com.ssafy.lab.orak.upload.entity.Upload;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +33,9 @@ public class ProfileServiceImpl implements ProfileService {
     private final ProfileRepository profileRepository;
     private final UserService userService;
     private final ProfileImageService profileImageService;
+    private final FollowRepository followRepository;
+    private final AlbumRepository albumRepository;
+    private final LikeRepository likeRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -109,6 +123,37 @@ public class ProfileServiceImpl implements ProfileService {
             return false;
         }
         return !profileRepository.existsByNickname(nickname);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProfileStatsResponseDTO getMyPageStats(Long userId) {
+        Profile profile = profileRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new ProfileNotFoundException("프로필을 찾을 수 없습니다: userId=" + userId));
+
+        Long followerCount = followRepository.countByFollowing(profile);
+        Long followingCount = followRepository.countByFollower(profile);
+        Long albumCount = albumRepository.countByUserId(userId);
+        Long likedAlbumCount = likeRepository.countByUserId(userId);
+
+        return ProfileStatsResponseDTO.of(followerCount, followingCount, albumCount, likedAlbumCount);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LikedAlbumsResponseDTO getLikedAlbums(Long userId, Pageable pageable) {
+        Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        Page<Album> likedAlbums = likeRepository.findLikedAlbumsByUserId(userId, sortedPageable);
+        Page<AlbumResponseDto> albumDtos = likedAlbums.map(AlbumResponseDto::from);
+        return LikedAlbumsResponseDTO.from(albumDtos);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserAlbumsResponseDTO getMyAlbums(Long userId, Pageable pageable) {
+        Page<Album> userAlbums = albumRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        Page<AlbumResponseDto> albumDtos = userAlbums.map(AlbumResponseDto::from);
+        return UserAlbumsResponseDTO.from(albumDtos);
     }
 
     private ProfileResponseDTO toResponseDTO(Profile profile) {
