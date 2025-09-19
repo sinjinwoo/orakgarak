@@ -11,7 +11,6 @@ def convert_to_wav(filepath, target_sr=16000):
     name, ext = os.path.splitext(filepath)
     ext = ext.lower()
 
-    # 이미 wav면 변환 생략
     if ext == ".wav":
         return filepath
 
@@ -122,7 +121,6 @@ def classify_tone(f):
 
     # 분위기 (mfcc_mean)
     low_tone = (c < 1600 and r < 2800 and z < 0.15)
-    # 고음 지표
     high_tone = (c > 2100 and r > 3500 and z > 0.2)
 
     if m_mean <= -85:
@@ -137,7 +135,7 @@ def classify_tone(f):
         else:
             desc.append("서정적이고 감성적인 분위기")
 
-    else:  # mfcc_mean > -72 → 고음 비중
+    else:  
         if high_tone:
             desc.append("강렬하고 에너지 넘치는 분위기")
         elif low_tone:
@@ -178,32 +176,7 @@ def analyze_voice(filepath):
 
 # 테스트
 if __name__ == "__main__":
-    #filepath = "C:/min/special_pj/data/artvit.m4a"  # 사용자 음성 파일
-    #filepath = "C:/min/special_pj/data/winter_things.mp3"
-    #filepath = "C:/min/special_pj/data/26.m4a"
-    
-    #filepath = "C:/min/special_pj/data/leemugin.mp3"
-    #filepath = "C:/min/special_pj/data/marktub.mp3"
-    #filepath = "C:/min/special_pj/data/golden2.mp3"
-    #filepath = "C:/min/special_pj/data/yerin.mp3"
-    #filepath = "C:/min/special_pj/data/sohee.mp3"
-
-    #filepath = "C:/min/special_pj/data/winter.mp3"
-    #filepath = "C:/min/special_pj/data/bumsu.mp3"
-    #filepath = "C:/min/special_pj/data/1000.mp3"
-    #filepath = "C:/min/special_pj/data/내안의그대.mp3"
-    #filepath = "C:/min/special_pj/data/garden.mp3"  
-    #filepath = "C:/min/special_pj/data/lucky.mp3"  
     filepath = "C:/min/special_pj/data/sample_data.wav"  
-    #filepath = "C:/min/special_pj/data/artvit_2.m4a"  
-    #filepath = "C:/min/special_pj/data/test_voice_1.m4a" 
-    #filepath = "C:/min/special_pj/data/test_voice_2.m4a"
-    #filepath = "C:/min/special_pj/data/test_voice_3.m4a"
-    #filepath = "C:/min/special_pj/data/woo.m4a" 
-    
-    #filepath = "C:/min/special_pj/data/wookyung.m4a" 
-    #filepath = "C:/min/special_pj/data/bum.m4a" 
-    #filepath = "C:/min/special_pj/data/sungjae.m4a"
 
-    result = analyze_voice(filepath)
+    result = analyze_voice(filepath) # 사용자 목소리 파일 입력
     print(result)
