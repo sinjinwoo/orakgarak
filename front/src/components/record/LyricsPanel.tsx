@@ -1,248 +1,451 @@
-import React, { useState } from 'react';
-import { Search, Music, Clock, Album, User } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 
-// 타입 정의
-interface LyricsRecord {
-  id: number;
-  trackName: string;
-  artistName: string;
-  albumName: string;
-  duration: number;
-  instrumental: boolean;
-  plainLyrics: string;
-  syncedLyrics: string;
+interface LyricsPanelProps {
+  selectedSong?: {
+    id: string;
+    title: string;
+    artist: string;
+    lyrics?: string;
+    albumCoverUrl?: string;
+  };
+  currentTime: number;
+  isPlaying: boolean;
+  onFlip: () => void;
 }
 
-interface SearchQueryParams {
-  q?: string;
-  trackName?: string;
-  artistName?: string;
-  albumName?: string;
+interface ParsedLyric {
+  text: string;
+  startTime: number;
 }
 
-const LyricsSearch: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState<SearchQueryParams>({
-    q: ''
-  });
-  
-  const [lyrics, setLyrics] = useState<LyricsRecord | null>(null);
-  const [searchResults, setSearchResults] = useState<LyricsRecord[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+const LyricsPanel: React.FC<LyricsPanelProps> = ({ 
+  selectedSong, 
+  currentTime, 
+  isPlaying, 
+  onFlip 
+}) => {
+  const [parsedLyrics, setParsedLyrics] = useState<ParsedLyric[]>([]);
+  const [currentLine, setCurrentLine] = useState<number>(0);
+  const [processedSongId, setProcessedSongId] = useState<string>('');
+  const lyricsContainerRef = useRef<HTMLDivElement>(null);
 
-  // 키워드로 가사 검색하기
-  const searchLyrics = async () => {
-    const { q, trackName, artistName, albumName } = searchQuery;
-    
-    if (!q?.trim() && !trackName?.trim()) {
-      setError('검색어 또는 트랙명 중 하나는 반드시 입력해주세요.');
+  // 선택된 노래가 변경될 때 가사 파싱
+  useEffect(() => {
+    console.log('🎵 LyricsPanel - 노래 변경 감지');
+    console.log('📋 받은 selectedSong 전체 데이터:', selectedSong);
+    console.log('📋 selectedSong 타입:', typeof selectedSong);
+    console.log('📋 selectedSong 키들:', selectedSong ? Object.keys(selectedSong) : 'undefined');
+
+    if (!selectedSong) {
+      console.log('🚫 selectedSong이 없음');
+      setParsedLyrics([]);
+      setCurrentLine(0);
+      setProcessedSongId('');
       return;
     }
 
-    setLoading(true);
-    setError('');
-    setSearchResults([]);
+    console.log('✅ selectedSong 존재 확인');
+    console.log('- ID:', selectedSong.id, '(타입:', typeof selectedSong.id, ')');
+    console.log('- 제목:', selectedSong.title);
+    console.log('- 아티스트:', selectedSong.artist);
+    console.log('- 가사 존재:', !!selectedSong.lyrics);
+    console.log('- 가사 타입:', typeof selectedSong.lyrics);
+    console.log('- 가사 길이:', selectedSong.lyrics?.length || 0);
 
-    try {
-      const params = new URLSearchParams();
-      if (q?.trim()) params.append('q', q);
-      if (trackName?.trim()) params.append('track_name', trackName);
-      if (artistName?.trim()) params.append('artist_name', artistName);
-      if (albumName?.trim()) params.append('album_name', albumName);
-
-      const response = await fetch(`https://lrclib.net/api/search?${params}`, {
-        headers: {
-          'User-Agent': 'LyricsSearchApp v1.0.0 (React App)'
-        }
-      });
-
-      if (response.ok) {
-        const data: LyricsRecord[] = await response.json();
-        setSearchResults(data);
-        if (data.length === 0) {
-          setError('검색 결과가 없습니다.');
-        }
-      } else {
-        setError('검색에 실패했습니다.');
-      }
-    } catch (err) {
-      setError('네트워크 오류가 발생했습니다.');
-      console.error(err);
-    } finally {
-      setLoading(false);
+    // 새 노래이거나 가사가 업데이트된 경우만 파싱
+    const currentSongKey = `${selectedSong.id}_${selectedSong.lyrics ? selectedSong.lyrics.length : 0}`;
+    if (processedSongId === currentSongKey && selectedSong.lyrics) {
+      console.log('🔄 이미 처리된 노래, 파싱 스킵');
+      return;
     }
-  };
 
-  // ID로 특정 가사 가져오기
-  const fetchLyricsById = async (id: number) => {
-    setLoading(true);
-    setError('');
+    setProcessedSongId(currentSongKey);
+    console.log('🆔 새 노래 키 설정:', currentSongKey);
+
+    // 가사가 없는 경우 빈 배열 사용
+    if (!selectedSong.lyrics || selectedSong.lyrics.trim() === '') {
+      console.log('📝 가사 없음 - 빈 가사 표시');
+      setParsedLyrics([]);
+      setCurrentLine(0);
+      return;
+    }
     
+    // 가사가 있는 경우 파싱 진행
+    console.log('🎵 가사 파싱 시작:', selectedSong.title);
+    console.log('📝 가사 데이터 샘플 (첫 100자):', selectedSong.lyrics.substring(0, 100));
+
+    // 정규식으로 직접 파싱 - 가장 안정적인 방법
     try {
-      const response = await fetch(`https://lrclib.net/api/get/${id}`, {
-        headers: {
-          'User-Agent': 'LyricsSearchApp v1.0.0 (React App)'
+      const lyricsText = selectedSong.lyrics;
+      
+      // 'words'와 'startTimeMs' 패턴 찾기 (Python dict 형태 지원)
+      const wordMatches = [...lyricsText.matchAll(/'words':\s*'([^']*(?:''[^']*)*)'/g)];
+      const timeMatches = [...lyricsText.matchAll(/'startTimeMs':\s*'(\d+)'/g)];
+      
+      console.log('📋 찾은 words 개수:', wordMatches.length);
+      console.log('📋 찾은 time 개수:', timeMatches.length);
+      
+      if (wordMatches.length > 0 && timeMatches.length > 0) {
+        const newParsedLyrics: ParsedLyric[] = [];
+        const maxLength = Math.min(wordMatches.length, timeMatches.length);
+        
+        for (let i = 0; i < maxLength; i++) {
+          const words = wordMatches[i][1]
+            .replace(/''/g, "'") // '' -> ' 변환
+            .replace(/\\'/g, "'") // \' -> ' 변환
+            .trim();
+          const startTimeMs = parseInt(timeMatches[i][1]);
+          
+          // 빈 가사나 음악 기호 제외
+          if (words && words !== '' && words !== '♪') {
+            newParsedLyrics.push({
+              text: words,
+              startTime: startTimeMs / 1000 // ms를 초로 변환
+            });
+          }
         }
-      });
-
-      if (response.ok) {
-        const data: LyricsRecord = await response.json();
-        setLyrics(data);
+        
+        console.log('✅ 파싱 성공:', newParsedLyrics.length, '줄');
+        console.log('📋 첫 5줄 샘플:', newParsedLyrics.slice(0, 5));
+        setParsedLyrics(newParsedLyrics);
+        setCurrentLine(0);
       } else {
-        setError('가사를 가져오는데 실패했습니다.');
+        console.log('❌ 가사 패턴을 찾을 수 없음');
+        setParsedLyrics([]);
+        setCurrentLine(0);
       }
-    } catch (err) {
-      setError('네트워크 오류가 발생했습니다.');
-      console.error(err);
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('❌ 가사 파싱 실패:', error);
+      setParsedLyrics([]);
+      setCurrentLine(0);
     }
-  };
+  }, [selectedSong, processedSongId]);
 
-  // 재생시간을 분:초 형태로 변환
-  const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  // 현재 시간에 따른 가사 라인 업데이트 - 정밀한 싱크
+  useEffect(() => {
+    if (parsedLyrics.length === 0 || !isPlaying) return;
+
+    console.log('🎵 가사 싱크 업데이트:', {
+      currentTime: Math.floor(currentTime),
+      totalLyrics: parsedLyrics.length,
+      currentLine: currentLine
+    });
+
+    // 현재 시간에 맞는 가사 라인 찾기 - 더 정확한 로직
+    let newCurrentLine = 0;
+    
+    // 현재 시간보다 작거나 같은 시작 시간을 가진 마지막 라인 찾기
+    for (let i = 0; i < parsedLyrics.length; i++) {
+      if (parsedLyrics[i].startTime <= currentTime + 0.5) { // 0.5초 여유
+        newCurrentLine = i;
+      } else {
+        break;
+      }
+    }
+
+    // 다음 가사가 곧 나올 예정이면 미리 준비 (1초 전)
+    const nextLine = newCurrentLine + 1;
+    if (nextLine < parsedLyrics.length) {
+      const timeToNext = parsedLyrics[nextLine].startTime - currentTime;
+      if (timeToNext <= 1 && timeToNext > 0) {
+        console.log('🔜 다음 가사 준비:', {
+          nextLine,
+          timeToNext: timeToNext.toFixed(1),
+          nextText: parsedLyrics[nextLine].text.substring(0, 20)
+        });
+      }
+    }
+
+    if (newCurrentLine !== currentLine) {
+      console.log('📝 가사 라인 변경:', {
+        from: currentLine,
+        to: newCurrentLine,
+        text: parsedLyrics[newCurrentLine]?.text.substring(0, 30)
+      });
+      
+      setCurrentLine(newCurrentLine);
+      
+      // 현재 가사로 부드럽게 스크롤 - 더 정확한 타이밍
+      if (lyricsContainerRef.current) {
+        const lineElement = lyricsContainerRef.current.children[newCurrentLine] as HTMLElement;
+        if (lineElement) {
+          // 스크롤 애니메이션 최적화
+          setTimeout(() => {
+            lineElement.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }, 100); // 약간의 지연으로 더 자연스러운 스크롤
+        }
+      }
+    }
+  }, [currentTime, parsedLyrics, currentLine, isPlaying]);
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-          가사 검색기
-        </h1>
-        
-        {/* 키워드 검색 */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                통합 검색어
-              </label>
-              <input
-                type="text"
-                value={searchQuery.q || ''}
-                onChange={(e) => setSearchQuery(prev => ({...prev, q: e.target.value}))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="트랙명, 아티스트명, 앨범명에서 통합 검색"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                아티스트명
-              </label>
-              <input
-                type="text"
-                value={searchQuery.artistName || ''}
-                onChange={(e) => setSearchQuery(prev => ({...prev, artistName: e.target.value}))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="아티스트명으로 검색"
-              />
-            </div>
-          </div>
-          
-          <button
-            onClick={searchLyrics}
-            disabled={loading}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Search size={16} />
-            {loading ? '검색 중...' : '키워드 검색'}
-          </button>
-        </div>
+      <div style={{ 
+      width: '100%',
+      height: '100%',
+        display: 'flex', 
+      flexDirection: 'column',
+      background: `
+        linear-gradient(145deg, 
+          rgba(15, 15, 25, 0.95) 0%,
+          rgba(25, 15, 35, 0.92) 50%,
+          rgba(15, 15, 25, 0.95) 100%
+        )
+      `,
+      borderRadius: '16px',
+      border: '1px solid rgba(0, 255, 255, 0.3)',
+      boxShadow: `
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 60px rgba(0, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05)
+      `,
+      overflow: 'hidden',
+      position: 'relative',
+      backdropFilter: 'blur(10px)'
+    }}>
+      {/* 미니멀 배경 효과 */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 10% 20%, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 90% 80%, rgba(255, 0, 128, 0.05) 0%, transparent 50%)
+        `,
+        pointerEvents: 'none',
+        zIndex: 1
+      }} />
 
-        {/* 에러 메시지 */}
-        {error && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
+      {/* 헤더 - 모던 미니멀 */}
+      <div style={{
+        padding: '16px 20px',
+        borderBottom: '1px solid rgba(0, 255, 255, 0.2)',
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 2
+      }}>
+        <h3 style={{
+          color: '#00ffff',
+          fontSize: '1.1rem',
+          fontWeight: '600',
+          margin: '0',
+          textShadow: '0 0 10px rgba(0, 255, 255, 0.6)',
+          letterSpacing: '1px'
+        }}>
+          🎵 가사
+        </h3>
+        {selectedSong && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: '8px',
+            gap: '8px'
+          }}>
+            {/* 앨범 커버 */}
+            {selectedSong.albumCoverUrl && (
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '2px solid rgba(0, 255, 255, 0.4)',
+                boxShadow: '0 0 8px rgba(0, 255, 255, 0.3)'
+              }}>
+                <img 
+                  src={selectedSong.albumCoverUrl} 
+                  alt="album cover"
+            style={{
+              width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+            }}
+          />
+        </div>
+      )}
+            <p style={{
+              color: '#ffffff',
+              fontSize: '0.9rem',
+              margin: '0',
+              fontWeight: '500'
+            }}>
+              <span style={{ color: '#00ffff' }}>{selectedSong.title}</span>
+              <span style={{ color: '#666', margin: '0 6px' }}>•</span>
+              <span style={{ color: '#ff0080' }}>{selectedSong.artist}</span>
+            </p>
           </div>
         )}
       </div>
 
-      {/* 검색 결과 */}
-      {searchResults.length > 0 && (
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">검색 결과</h2>
-          <div className="grid gap-4">
-            {searchResults.map((result) => (
-              <div
-                key={result.id}
-                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                onClick={() => fetchLyricsById(result.id)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg text-gray-800 flex items-center gap-2">
-                      <Music size={16} className="text-blue-600" />
-                      {result.trackName}
-                    </h3>
-                    <p className="text-gray-600 flex items-center gap-2 mt-1">
-                      <User size={14} />
-                      {result.artistName}
-                    </p>
-                    <p className="text-gray-500 flex items-center gap-2 mt-1">
-                      <Album size={14} />
-                      {result.albumName}
-                    </p>
-                    <p className="text-gray-500 flex items-center gap-2 mt-1">
-                      <Clock size={14} />
-                      {formatDuration(result.duration)}
-                      {result.instrumental && <span className="bg-gray-200 px-2 py-1 rounded text-xs">연주곡</span>}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* 가사 영역 - 모던 스크롤 */}
+      <div 
+        ref={lyricsContainerRef}
+                style={{
+          flex: 1,
+          padding: '16px 20px',
+          overflowY: 'auto',
+          scrollBehavior: 'smooth',
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(0, 255, 255, 0.4) rgba(15, 15, 25, 0.3)',
+        }}
+        className="lyrics-scrollbar"
+      >
+        {parsedLyrics.length === 0 ? (
+      <div style={{ 
+        display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+        justifyContent: 'center',
+            height: '100%',
+            color: '#666',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: '20px', opacity: 0.3 }}>📝</div>
+            <p style={{ fontSize: '1.1rem', margin: '0' }}>가사가 없습니다</p>
+            {selectedSong && (
+              <p style={{ fontSize: '0.9rem', margin: '8px 0 0 0', opacity: 0.7 }}>
+                {selectedSong.title}에 대한 가사를 찾을 수 없습니다
+              </p>
+            )}
           </div>
-        </div>
-      )}
-
-      {/* 가사 표시 */}
-      {lyrics && (
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="border-b border-gray-200 pb-4 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <Music className="text-blue-600" />
-              {lyrics.trackName}
-            </h2>
-            <p className="text-gray-600 flex items-center gap-2 mt-2">
-              <User size={16} />
-              {lyrics.artistName}
-            </p>
-            <p className="text-gray-500 flex items-center gap-2 mt-1">
-              <Album size={16} />
-              {lyrics.albumName}
-            </p>
-            <p className="text-gray-500 flex items-center gap-2 mt-1">
-              <Clock size={16} />
-              {formatDuration(lyrics.duration)}
-              {lyrics.instrumental && <span className="bg-gray-200 px-2 py-1 rounded text-xs">연주곡</span>}
-            </p>
-          </div>
-
-          {lyrics.instrumental ? (
-            <div className="text-center py-8">
-              <Music size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 text-lg">이 곡은 연주곡입니다</p>
+        ) : (
+          parsedLyrics.map((lyric, index) => (
+            <div
+              key={index}
+          style={{
+                padding: '12px 16px',
+                margin: '4px 0',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                lineHeight: '1.6',
+                transition: 'all 0.3s ease',
+            cursor: 'pointer',
+                position: 'relative',
+                zIndex: 2,
+                ...(index === currentLine ? {
+                  // 현재 재생 중인 가사 - 강조
+                  background: 'linear-gradient(90deg, rgba(0, 255, 255, 0.15), rgba(255, 0, 128, 0.15))',
+                  color: '#ffffff',
+                  fontWeight: '600',
+                  textShadow: '0 0 12px rgba(0, 255, 255, 0.8)',
+                  border: '1px solid rgba(0, 255, 255, 0.4)',
+                  transform: 'translateX(8px) scale(1.02)',
+                  boxShadow: '0 4px 16px rgba(0, 255, 255, 0.2)'
+                } : index < currentLine ? {
+                  // 이미 지나간 가사 - 흐리게
+                  color: '#555',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  opacity: 0.6
+                } : {
+                  // 아직 나오지 않은 가사 - 기본
+                  color: '#aaa',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(0, 255, 255, 0.1)',
+                  opacity: 0.8
+                })
+          }}
+          onMouseEnter={(e) => {
+                if (index !== currentLine) {
+                  e.currentTarget.style.background = 'rgba(0, 255, 255, 0.08)';
+                  e.currentTarget.style.border = '1px solid rgba(0, 255, 255, 0.2)';
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  e.currentTarget.style.opacity = '1';
+                }
+          }}
+          onMouseLeave={(e) => {
+                if (index !== currentLine) {
+                  e.currentTarget.style.background = index < currentLine ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.03)';
+                  e.currentTarget.style.border = index < currentLine ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(0, 255, 255, 0.1)';
+                  e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.opacity = index < currentLine ? '0.6' : '0.8';
+                }
+              }}
+            >
+              {/* 현재 라인 표시기 */}
+              {index === currentLine && (
+                <div style={{
+                  position: 'absolute',
+                  left: '-8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '3px',
+                  height: '70%',
+                  background: 'linear-gradient(180deg, #00ffff, #ff0080)',
+                  borderRadius: '2px',
+                  boxShadow: '0 0 8px rgba(0, 255, 255, 0.6)'
+                }} />
+              )}
+              
+              {/* 가사 텍스트 */}
+              {lyric.text}
             </div>
-          ) : (
-            lyrics.plainLyrics && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">가사</h3>
-                <div className="bg-gray-50 p-4 rounded-lg border max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-700 font-mono">
-                    {lyrics.plainLyrics}
-                  </pre>
-                </div>
-              </div>
-            )
-          )}
-        </div>
-      )}
+          ))
+        )}
+      </div>
+
+      {/* 플립 버튼 - 모던 미니멀 */}
+      <div style={{
+        padding: '16px 20px',
+        borderTop: '1px solid rgba(0, 255, 255, 0.15)',
+        textAlign: 'center'
+      }}>
+        <button
+          onClick={onFlip}
+          style={{
+            padding: '10px 20px',
+            background: 'linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 128, 0.2))',
+            border: '1px solid rgba(0, 255, 255, 0.3)',
+            borderRadius: '20px',
+            color: '#00ffff',
+            fontSize: '0.85rem',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            textShadow: '0 0 8px rgba(0, 255, 255, 0.6)',
+            boxShadow: '0 2px 8px rgba(0, 255, 255, 0.2)',
+            backdropFilter: 'blur(10px)'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.background = 'linear-gradient(45deg, rgba(0, 255, 255, 0.3), rgba(255, 0, 128, 0.3))';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 255, 255, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.background = 'linear-gradient(45deg, rgba(0, 255, 255, 0.2), rgba(255, 0, 128, 0.2))';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 255, 255, 0.2)';
+          }}
+        >
+          🎤 MR 컨트롤
+        </button>
+      </div>
+
+      <style jsx>{`
+        .lyrics-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .lyrics-scrollbar::-webkit-scrollbar-track {
+          background: rgba(15, 15, 25, 0.4);
+          border-radius: 3px;
+        }
+        .lyrics-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, rgba(0, 255, 255, 0.6), rgba(255, 0, 128, 0.6));
+          border-radius: 3px;
+          transition: all 0.3s ease;
+        }
+        .lyrics-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(180deg, rgba(0, 255, 255, 0.8), rgba(255, 0, 128, 0.8));
+          box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+        }
+      `}</style>
     </div>
   );
 };
 
-export default LyricsSearch;
+export default LyricsPanel;

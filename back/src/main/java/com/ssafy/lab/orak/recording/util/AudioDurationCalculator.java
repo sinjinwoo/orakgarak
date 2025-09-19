@@ -1,5 +1,6 @@
 package com.ssafy.lab.orak.recording.util;
 
+import com.ssafy.lab.orak.recording.exception.AudioConversionException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
 
@@ -48,8 +49,8 @@ public class AudioDurationCalculator {
             log.error("오디오 파일 읽기 실패: {}", filePath, e);
             return 0;
         } catch (Exception e) {
-            log.error("오디오 파일 재생시간 계산 중 오류 발생: {}", filePath, e);
-            return 0;
+            log.error("오디오 파일 재생시간 계산 중 예상치 못한 오류 발생: {}", filePath, e);
+            throw new AudioConversionException("오디오 파일 재생시간 계산 중 예상치 못한 오류가 발생했습니다", e);
         }
     }
 }

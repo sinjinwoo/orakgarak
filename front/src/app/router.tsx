@@ -14,6 +14,7 @@ const FeedPage = React.lazy(() => import('../pages/FeedPage').catch(() => ({ def
 const AIDemoPage = React.lazy(() => import('../pages/AIDemoPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 const MyPage = React.lazy(() => import('../pages/MyPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 const NotFoundPage = React.lazy(() => import('../pages/NotFoundPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const LoginSuccessPage = React.lazy(() => import('../pages/LoginSuccessPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 
 const LoadingSpinner = () => (
   <Box 
@@ -32,6 +33,9 @@ export const AppRouter: React.FC = () => {
       <Routes>
         {/* 랜딩 페이지 - 인증 불필요 */}
         <Route path="/" element={<LandingPage />} />
+        
+        {/* 구글 로그인 성공 페이지 - 인증 불필요 */}
+        <Route path="/login/success" element={<LoginSuccessPage />} />
         
         {/* 인증이 필요한 모든 페이지들 */}
         <Route path="/onboarding/range" element={

@@ -12,6 +12,12 @@
 .idea/**/dictionaries
 .idea/**/shelf
 
+# Log files and directories
+*.log
+*.log.*
+logs/
+log/
+app_logs/
 
 # AWS User-specific
 .idea/**/aws.xml
@@ -197,7 +203,7 @@ docs/_build/
 # PyBuilder
 .pybuilder/
 target/
-
+__init__.py
 # Jupyter Notebook
 .ipynb_checkpoints
 
@@ -339,6 +345,17 @@ pyrightconfig.json
 hs_err_pid*
 replay_pid*
 
+# Node
+/node_modules
+
 # End of https://www.toptal.com/developers/gitignore/api/java
 # End of https://www.toptal.com/developers/gitignore/api/intellij,visualstudiocode,python
 
+
+CLAUDE.md
+.claude
+othercode
+
+*.csv
+song_meta.json
+AGENTS.md

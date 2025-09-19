@@ -1,0 +1,175 @@
+groups:
+  # 애플리케이션 관련 알림
+  - name: orakgaraki.application
+    rules:
+      # 애플리케이션 서버 다운
+      - alert: ApplicationDown
+        expr: up{job="orakgaraki-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "오락가락이 애플리케이션이 중단되었습니다"
+          description: "오락가락이 애플리케이션이 1분 이상 중단된 상태입니다."
+
+      # 높은 응답 시간
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job="orakgaraki-app"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 응답 시간이 감지되었습니다"
+          description: "95% 응답 시간이 {{ $value }}초로 5분 이상 지속되고 있습니다."
+
+      # 높은 에러율
+      - alert: HighErrorRate
+        expr: rate(http_server_requests_total{job="orakgaraki-app",status=~"5.."}[5m]) / rate(http_server_requests_total{job="orakgaraki-app"}[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "높은 오류율이 감지되었습니다"
+          description: "오류율이 {{ $value | humanizePercentage }}로 3분 이상 지속되고 있습니다."
+
+      # JVM 메모리 사용률 높음
+      - alert: HighJVMMemoryUsage
+        expr: (jvm_memory_used_bytes{job="orakgaraki-app",area="heap"} / jvm_memory_max_bytes{job="orakgaraki-app",area="heap"}) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM 힙 메모리 사용률이 높습니다"
+          description: "JVM 힙 메모리 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."
+
+  # 인프라 관련 알림
+  - name: orakgaraki.infrastructure
+    rules:
+      # 높은 CPU 사용률
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 CPU 사용률이 감지되었습니다"
+          description: "인스턴스 {{ $labels.instance }}에서 CPU 사용률이 {{ $value }}%로 5분 이상 지속되고 있습니다."
+
+      # 높은 메모리 사용률
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 메모리 사용률이 감지되었습니다"
+          description: "인스턴스 {{ $labels.instance }}에서 메모리 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."
+
+      # 디스크 사용률 높음
+      - alert: HighDiskUsage
+        expr: (1 - (node_filesystem_free_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 디스크 사용률이 감지되었습니다"
+          description: "마운트 포인트 {{ $labels.mountpoint }}에서 디스크 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."
+
+  # 데이터베이스 관련 알림
+  - name: orakgaraki.database
+    rules:
+      # MySQL 서버 다운
+      - alert: MySQLDown
+        expr: up{job="mysql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL 서버가 중단되었습니다"
+          description: "MySQL 서버가 1분 이상 중단된 상태입니다."
+
+      # MySQL 연결 수 높음
+      - alert: MySQLHighConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL 연결 사용률이 높습니다"
+          description: "MySQL 연결 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."
+
+      # Redis 서버 다운
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis 서버가 중단되었습니다"
+          description: "Redis 서버가 1분 이상 중단된 상태입니다."
+
+      # Redis 메모리 사용률 높음
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis 메모리 사용률이 높습니다"
+          description: "Redis 메모리 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."
+
+  # Kafka 관련 알림
+  - name: orakgaraki.kafka
+    rules:
+      # Kafka 서버 다운
+      - alert: KafkaDown
+        expr: up{job="kafka"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka 서버가 중단되었습니다"
+          description: "Kafka 서버가 1분 이상 중단된 상태입니다."
+
+      # Kafka 컨슈머 랙 높음
+      - alert: KafkaConsumerLag
+        expr: kafka_consumer_lag_sum{topic="upload-events"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka 컨슈머 지연이 높습니다"
+          description: "토픽 {{ $labels.topic }}의 컨슈머 지연이 {{ $value }}개 메시지로 5분 이상 지속되고 있습니다."
+
+  # 컨테이너 관련 알림
+  - name: orakgaraki.containers
+    rules:
+      # 컨테이너 재시작 빈발
+      - alert: ContainerRestartingFrequently
+        expr: increase(container_start_time_seconds[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "컨테이너가 자주 재시작되고 있습니다"
+          description: "컨테이너 {{ $labels.name }}이 지난 1시간 동안 {{ $value }}번 재시작되었습니다."
+
+      # 컨테이너 높은 CPU 사용률
+      - alert: ContainerHighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{name!=""}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "컨테이너 CPU 사용률이 높습니다"
+          description: "컨테이너 {{ $labels.name }}의 CPU 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."
+
+      # 컨테이너 높은 메모리 사용률
+      - alert: ContainerHighMemoryUsage
+        expr: container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""} > 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "컨테이너 메모리 사용률이 높습니다"
+          description: "컨테이너 {{ $labels.name }}의 메모리 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."

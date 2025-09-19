@@ -30,7 +30,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
 
-        // OAuth2 관련 경로는 JWT 필터 건너뜀
         if (path.startsWith("/api/oauth2/") ||
                 path.startsWith("/api/login/oauth2/") ||
                 path.startsWith("/api/test/") ||
@@ -40,8 +39,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/swagger-ui/") ||
                 path.startsWith("/v3/api-docs") ||
                 path.startsWith("/api-docs") ||
-                path.startsWith("/api/api-docs")||
-                path.startsWith("/api/images")) {
+                path.startsWith("/api/api-docs") ||
+                path.startsWith("/api/images") ||
+                path.startsWith("/actuator")) {
+            log.info("JWT Filter - Bypassing authentication for path: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
