@@ -2,7 +2,7 @@ import librosa
 import numpy as np
 import os
 import logging
-from extract_mel import extract_mel
+from .extract_mel import extract_mel
 
 # 로깅 설정
 logging.basicConfig(
@@ -58,8 +58,8 @@ def extract_features(mel_spectrogram, song_id=None, sr=16000, n_mfcc=13):
 
 
 if __name__ == '__main__':
-    sample_audio_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'sample_data.wav')  # 테스트용
-
+    # sample_audio_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'sample_data.wav')  # 테스트용
+    sample_audio_path = "C:/min/special_pj/data/sample_data.wav" 
     mel = extract_mel(sample_audio_path)
     
     if mel is None:
@@ -70,4 +70,4 @@ if __name__ == '__main__':
 
     logging.info("Extracted Features:")
     for feature_name, feature_value in extracted_features.items():
-        logging.info(f"- {feature_name}: shape={feature_value.shape}, value={feature_value}")
+        logging.info(f"- {feature_name}: , value={feature_value}")

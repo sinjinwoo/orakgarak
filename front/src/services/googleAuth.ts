@@ -1,8 +1,6 @@
-import { OAuth2Client } from 'google-auth-library';
-
-// 구글 OAuth 클라이언트 설정
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || 'your-google-client-id';
-const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+// 백엔드 OAuth2 엔드포인트 설정
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const GOOGLE_OAUTH_URL = `${API_BASE_URL}/oauth2/authorization/google`;
 
 export interface GoogleUserInfo {
   id: string;
@@ -13,65 +11,56 @@ export interface GoogleUserInfo {
 
 export class GoogleAuthService {
   /**
-   * 구글 로그인 팝업을 열고 사용자 정보를 가져옵니다
-   * 백엔드 API가 준비되지 않았으므로 임시로 더미 로그인을 사용합니다
+   * 구글 로그인 리다이렉트
+   * 백엔드의 /oauth2/authorization/google 엔드포인트로 리다이렉트
    */
-  static async signInWithPopup(): Promise<GoogleUserInfo | null> {
-    try {
-      // 임시: 사용자 확인을 위한 간단한 팝업
-      const confirmed = window.confirm(
-        '구글 로그인을 시도하시겠습니까?\n\n' +
-        '(현재는 백엔드 API가 준비되지 않아 더미 로그인을 사용합니다)'
-      );
+  static initiateGoogleLogin(): void {
+    // 현재 페이지 URL을 저장 (로그인 후 돌아올 페이지)
+    const currentPath = window.location.pathname;
+    localStorage.setItem('pre-login-path', currentPath);
+    
+    // 구글 OAuth2 엔드포인트로 리다이렉트
+    window.location.href = GOOGLE_OAUTH_URL;
+  }
 
-      if (!confirmed) {
-        return null;
+  /**
+   * 로그인 성공 페이지에서 토큰 처리
+   */
+  static handleLoginSuccess(accessToken: string): boolean {
+    try {
+      if (!accessToken) {
+        throw new Error('액세스 토큰이 없습니다.');
       }
 
-      // 더미 사용자 정보 반환
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 로딩 시뮬레이션
+      // 토큰을 localStorage에 저장
+      localStorage.setItem('auth-token', accessToken);
+      localStorage.setItem('token-created-time', Date.now().toString());
       
-      return {
-        id: 'google-user-123',
-        email: 'user@gmail.com',
-        name: '구글 사용자',
-        picture: 'https://via.placeholder.com/150'
-      };
-
+      return true;
     } catch (error) {
-      console.error('구글 로그인 실패:', error);
-      return null;
+      console.error('로그인 성공 처리 실패:', error);
+      return false;
     }
   }
 
-
   /**
-   * 구글 토큰 검증
+   * 로그인 후 리다이렉트할 페이지 결정
    */
-  static async verifyToken(token: string): Promise<GoogleUserInfo | null> {
-    try {
-      const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: GOOGLE_CLIENT_ID,
-      });
-
-      const payload = ticket.getPayload();
-      if (!payload) return null;
-
-      return {
-        id: payload.sub,
-        email: payload.email || '',
-        name: payload.name || '',
-        picture: payload.picture
-      };
-    } catch (error) {
-      console.error('토큰 검증 실패:', error);
-      return null;
+  static getRedirectPath(): string {
+    const savedPath = localStorage.getItem('pre-login-path');
+    localStorage.removeItem('pre-login-path');
+    
+    // 저장된 경로가 있고, 로그인 관련 페이지가 아니면 해당 페이지로
+    if (savedPath && !savedPath.includes('/login')) {
+      return savedPath;
     }
+    
+    // 기본적으로 랜딩 페이지로
+    return '/';
   }
 }
 
-// 구글 로그인 버튼 컴포넌트를 위한 유틸리티 함수
-export const openGoogleLogin = async (): Promise<GoogleUserInfo | null> => {
-  return await GoogleAuthService.signInWithPopup();
+// 구글 로그인 시작 함수
+export const initiateGoogleLogin = (): void => {
+  GoogleAuthService.initiateGoogleLogin();
 };

@@ -4,6 +4,7 @@ import com.ssafy.lab.orak.recording.dto.RecordRequestDTO;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.entity.Record;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
+import com.ssafy.lab.orak.recording.exception.RecordOperationException;
 import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
@@ -13,6 +14,7 @@ import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
+import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -35,6 +38,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("RecordService 단위 테스트")
+@org.springframework.test.context.TestPropertySource(properties = {
+    "s3.upload.path=/test/upload/path"
+})
 class RecordServiceTest {
 
     @Mock
@@ -55,6 +61,9 @@ class RecordServiceTest {
     @Mock
     private AudioDurationCalculator audioDurationCalculator;
 
+    @Mock
+    private UploadRepository uploadRepository;
+
     @InjectMocks
     private RecordService recordService;
 
@@ -65,6 +74,9 @@ class RecordServiceTest {
 
     @BeforeEach
     void setUp() {
+        // RecordService의 uploadPath 필드 설정
+        ReflectionTestUtils.setField(recordService, "uploadPath", "/test/upload/path");
+        
         testAudioFile = new MockMultipartFile(
             "audioFile",
             "test-recording.mp3",
@@ -74,7 +86,7 @@ class RecordServiceTest {
 
         testUpload = Upload.builder()
             .id(1L)
-            .originalFilename("test-recording.mp3")
+            .originalFilename("test-recording")
             .uuid("uuid_test-recording")
             .extension("mp3")
             .uploaderId(1L)
@@ -112,11 +124,11 @@ class RecordServiceTest {
         Long songId = 100L;
         Long userId = 1L;
 
-        when(localUploader.uploadLocal(testAudioFile))
+        when(localUploader.uploadLocal(eq(testAudioFile), anyString()))
             .thenReturn("/test/path/test-recording.mp3");
         when(audioConverter.isAudioFile(anyString(), any()))
             .thenReturn(false); // Test non-audio file path
-        when(audioDurationCalculator.calculateDurationInSeconds("/test/path/test-recording.mp3"))
+        when(audioDurationCalculator.calculateDurationInSeconds("/test/upload/path/uuid_test-recording_test-recording.mp3"))
             .thenReturn(180);
         when(fileUploadService.uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId, "test-recording.mp3"))
             .thenReturn(testUpload);
@@ -126,6 +138,7 @@ class RecordServiceTest {
         when(fileUploadService.getUpload(testRecord.getUploadId())).thenReturn(testUpload);
         when(recordMapper.toResponseDTO(testRecord, testUpload)).thenReturn(testResponseDTO);
         when(fileUploadService.getFileUrl(testUpload)).thenReturn("https://presigned-url.example.com");
+        when(uploadRepository.save(any(Upload.class))).thenReturn(testUpload);
 
         // when
         RecordResponseDTO result = recordService.createRecord(title, songId, testAudioFile, userId);
@@ -136,10 +149,10 @@ class RecordServiceTest {
         assertEquals(testResponseDTO.getTitle(), result.getTitle());
         assertEquals(testResponseDTO.getUserId(), result.getUserId());
 
-        verify(localUploader).uploadLocal(testAudioFile);
+        verify(localUploader).uploadLocal(eq(testAudioFile), anyString());
         verify(audioConverter).isAudioFile(anyString(), any());
         verify(audioConverter, never()).convertToWav(anyString(), anyString()); // No conversion for non-audio
-        verify(audioDurationCalculator).calculateDurationInSeconds("/test/path/test-recording.mp3");
+        verify(audioDurationCalculator).calculateDurationInSeconds("/test/upload/path/uuid_test-recording_test-recording.mp3");
         verify(fileUploadService).uploadLocalFile("/test/path/test-recording.mp3", "recordings", userId, "test-recording.mp3");
         verify(recordMapper).toEntity(any(RecordRequestDTO.class), eq(userId), eq(testUpload));
         verify(recordRepository).save(any(Record.class));
@@ -156,15 +169,15 @@ class RecordServiceTest {
         Long songId = 100L;
         Long userId = 1L;
 
-        when(localUploader.uploadLocal(testAudioFile))
+        when(localUploader.uploadLocal(eq(testAudioFile), anyString()))
             .thenThrow(new RuntimeException("파일 업로드 실패"));
 
         // when & then
-        assertThrows(FileUploadException.class, () -> 
+        assertThrows(RecordOperationException.class, () ->
             recordService.createRecord(title, songId, testAudioFile, userId)
         );
 
-        verify(localUploader).uploadLocal(testAudioFile);
+        verify(localUploader).uploadLocal(eq(testAudioFile), anyString());
         verify(recordRepository, never()).save(any());
     }
 

@@ -1,92 +1,162 @@
 import React from 'react';
 import { Box, Container, Typography, Link } from '@mui/material';
 import { Favorite } from '@mui/icons-material';
+import { theme, textStyles } from '../../styles/theme';
 
 const Footer: React.FC = () => {
+  // 공통 스타일 정의
+  const sectionTitleStyles = {
+    margin: 0,
+    padding: '16px 0 8px 0',
+    color: 'rgba(255,255,255,0.2)',
+    fontWeight: 'normal',
+    textTransform: 'uppercase',
+    letterSpacing: '0.25em',
+    fontSize: { xs: '14px', sm: '12px' },
+    lineHeight: { xs: '20px', sm: '17px' },
+  };
+
+  const linkStyles = {
+    ...textStyles.caption,
+    textDecoration: 'none',
+    fontSize: { xs: '13px', sm: '14px' },
+    '&:hover': { color: theme.colors.text.primary }
+  };
+
+  const listItemStyles = { py: 0.25 };
+
+  // 푸터 섹션 데이터
+  const footerSections = [
+    {
+      title: 'Company',
+      links: [
+        { label: '홈', href: '/' },
+        { label: 'AI 데모', href: '/ai-demo' },
+      ]
+    },
+    {
+      title: 'Products',
+      links: [
+        { label: '노래 추천', href: '/recommendations' },
+        { label: '녹음하기', href: '/record' },
+        { label: '앨범 만들기', href: '/albums/create' },
+        { label: '커뮤니티', href: '/feed' },
+      ]
+    },
+    {
+      title: 'Accounts',
+      links: [
+        { label: '마이페이지', href: '/me' },
+        { label: '프로필 편집', href: '/me/edit' },
+        { label: '내 녹음', href: '/me/recordings' },
+        { label: '내 앨범', href: '/me/albums' },
+      ]
+    },
+    {
+      title: 'Resources',
+      links: [
+        { label: '음역대 테스트', href: '/onboarding/range' },
+        { label: 'AI 커버 갤러리', href: '/me/ai-covers' },
+      ]
+    },
+    {
+      title: 'Support',
+      links: [
+        { label: '문의: support@orak.or.kr', href: null },
+        { label: '버전: v1.0.0', href: null },
+      ]
+    },
+    {
+      title: 'Social',
+      links: [
+        { label: '준비 중...', href: null },
+      ]
+    },
+  ];
+
   return (
     <Box
       component="footer"
       sx={{
-        backgroundColor: '#2c2c2c',
-        py: 4,
+        width: '100%',
+        position: 'relative',
+        backgroundColor: '#070617',
+        color: theme.colors.text.primary,
         mt: 'auto',
-        color: 'white',
       }}
     >
-      <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {/* 브랜드 정보 */}
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
-              오락가락
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#b0b0b0', lineHeight: 1.6 }}>
-              내 목소리에 딱 맞는 노래를 찾아보세요
-            </Typography>
-          </Box>
-          
-          {/* 서비스 링크 */}
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
-              서비스
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Link href="/recommendations" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                노래 추천
-              </Link>
-              <Link href="/record" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                녹음하기
-              </Link>
-              <Link href="/feed" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                커뮤니티
-              </Link>
-              <Link href="/me" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                마이페이지
-              </Link>
+      <Container 
+        maxWidth="lg"
+        sx={{
+          width: '100%',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          px: { xs: 2, sm: 3 },
+        }}
+      >
+        {/* 메인 콘텐츠 */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'repeat(2, 1fr)',
+              sm: 'repeat(3, 1fr)',
+              md: 'repeat(5, 1fr)',
+              lg: 'repeat(6, 1fr)',
+            },
+            gap: { xs: 2, sm: 3 },
+            py: 3,
+          }}
+        >
+          {footerSections.map((section, index) => (
+            <Box key={section.title}>
+              <Typography variant="h6" sx={sectionTitleStyles}>
+                {section.title}
+              </Typography>
+              <Box component="ul" sx={{ 
+                listStyle: 'none', 
+                margin: 0, 
+                padding: 0,
+                ...(section.title === 'Social' && { display: 'flex', gap: 2, flexWrap: 'wrap' })
+              }}>
+                {section.links.map((link, linkIndex) => (
+                  <Box key={linkIndex} component="li" sx={listItemStyles}>
+                    {link.href ? (
+                      <Link href={link.href} sx={linkStyles}>
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <Typography sx={{ ...textStyles.caption, fontSize: { xs: '13px', sm: '14px' } }}>
+                        {link.label}
+                      </Typography>
+                    )}
+                  </Box>
+                ))}
+              </Box>
             </Box>
-          </Box>
-          
-          {/* 고객지원 */}
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
-              고객지원
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                문의하기
-              </Link>
-              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                자주 묻는 질문
-              </Link>
-            </Box>
-          </Box>
-          
-          {/* 약관 */}
-          <Box>
-            <Typography variant="h6" gutterBottom sx={{ color: 'white', fontWeight: 'bold' }}>
-              약관
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                이용약관
-              </Link>
-              <Link href="#" sx={{ color: '#b0b0b0', textDecoration: 'none', '&:hover': { color: 'white' } }}>
-                개인정보처리방침
-              </Link>
-            </Box>
-          </Box>
+          ))}
         </Box>
-        
-        <Box sx={{ borderTop: '1px solid #404040', mt: 3, pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
+
+        {/* 하단 섹션 */}
+        <Box sx={{ 
+          borderTop: '1px solid rgba(255,255,255,0.1)', 
+          pt: 2, 
+          pb: 2, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          flexWrap: 'wrap', 
+          gap: 2 
+        }}>
+          <Typography variant="body2" sx={{ ...textStyles.caption }}>
             © 2025 오락가락 All rights reserved.
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
+            <Typography variant="body2" sx={{ ...textStyles.caption }}>
               Made with
             </Typography>
-            <Favorite sx={{ color: '#ff6b6b', fontSize: '1rem' }} />
-            <Typography variant="body2" sx={{ color: '#b0b0b0' }}>
+            <Favorite sx={{ color: theme.colors.accent.pink, fontSize: '1rem' }} />
+            <Typography variant="body2" sx={{ ...textStyles.caption }}>
               in Korea
             </Typography>
           </Box>

@@ -11,10 +11,12 @@ services:
       MYSQL_DATABASE: ${DB_NAME_PROD}
       MYSQL_USER: ${DB_USERNAME_PROD}
       MYSQL_PASSWORD: ${DB_PASSWORD_PROD}
+      MYSQL_ROOT_HOST: "%"
     ports:
       - "${DB_PORT_PROD:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD_PROD}"]
       timeout: 20s
@@ -45,8 +47,9 @@ services:
     restart: unless-stopped
     ports:
       - "${SERVER_PORT:-8080}:8080"
+      - "8091:8091"
     volumes:
-      - ./logs:/var/log/orak
+      - ./logs:/var/log/app
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       - DB_HOST_PROD=${DB_HOST_PROD:-orakgaraki-mysql}
@@ -76,9 +79,317 @@ services:
     networks:
       - orakgaraki-network
 
+  # Kafka (KRaft mode - Zookeeper 없이)
+  kafka:
+    image: apache/kafka:latest
+    container_name: orakgaraki-kafka
+    restart: unless-stopped
+    user: "0:0"  # 현업 스타일 - 권한 문제 단순 해결
+    ports:
+      - "${KAFKA_PORT:-9092}:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://j13c103.p.ssafy.io:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      # JVM 옵션 - 성능 최적화 (GC 로그 제거)
+      KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35"
+    volumes:
+      - kafka_data:/opt/kafka/logs  # 실제 데이터만 영구 보존
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
+    networks:
+      - orakgaraki-network
+  # Kafka UI
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: orakgaraki-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "${KAFKA_UI_PORT:-8090}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: orakgaraki
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Prometheus Config Generator - 설정 파일 생성
+  # ============================================
+  prometheus-config:
+    image: alpine:latest
+    container_name: orakgaraki-prometheus-config
+    environment:
+      PROMETHEUS_ACTUATOR_USER: ${PROMETHEUS_ACTUATOR_USER}
+      PROMETHEUS_ACTUATOR_PASSWORD: ${PROMETHEUS_ACTUATOR_PASSWORD}
+      SPRING_APP_TARGET: ${SPRING_APP_TARGET}
+    volumes:
+      - ./monitoring/prometheus:/templates:ro
+      - prometheus_config:/config
+    command: |
+      sh -c "apk add --no-cache gettext &&
+             envsubst < /templates/prometheus.yml.template > /config/prometheus.yml &&
+             cp -r /templates/rules /config/ &&
+             echo 'Prometheus configuration generated successfully'"
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Prometheus - 메트릭 수집 및 저장
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: orakgaraki-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - prometheus_config:/etc/prometheus:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    depends_on:
+      - prometheus-config
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # z - 시각화 및 대시보드
+  # ============================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: orakgaraki-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_SECURITY_SECRET_KEY: ${GRAFANA_SECRET_KEY}
+      GF_SECURITY_DISABLE_GRAVATAR: true
+      GF_ANALYTICS_REPORTING_ENABLED: false
+      GF_ANALYTICS_CHECK_FOR_UPDATES: false
+      GF_USERS_DEFAULT_THEME: dark
+      GF_AUTH_ANONYMOUS_ENABLED: false
+      # 플러그인 서명 검증 비활성화
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: true
+      GF_PLUGINS_PLUGIN_ADMIN_ENABLED: false
+      # 로그 레벨 설정
+      GF_LOG_LEVEL: warn
+      # 프로비저닝 안정성 개선
+      GF_PROVISIONING_RELOAD_INTERVAL: 10s
+      # Public Dashboard 비활성화 (보안)
+      GF_FEATURE_TOGGLES_ENABLE: ""
+      GF_PUBLIC_DASHBOARDS_ENABLED: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Node Exporter - 시스템 메트릭
+  # ============================================
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: orakgaraki-node-exporter
+    restart: unless-stopped
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # cAdvisor - 컨테이너 메트릭
+  # ============================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: orakgaraki-cadvisor
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # MySQL Exporter - MySQL 메트릭
+  # ============================================
+  mysql-exporter:
+    image: prom/mysqld-exporter:latest
+    container_name: orakgaraki-mysql-exporter
+    restart: unless-stopped
+    ports:
+      - "9104:9104"
+    command:
+      - "--mysqld.username=${MYSQL_EXPORTER_USER}:${MYSQL_EXPORTER_PASSWORD}"
+      - "--mysqld.address=mysql:3306"
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Redis Exporter - Redis 메트릭
+  # ============================================
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: orakgaraki-redis-exporter
+    restart: unless-stopped
+    ports:
+      - "9121:9121"
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+    depends_on:
+      - redis
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Kafka Exporter - Kafka 메트릭
+  # ============================================
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:latest
+    container_name: orakgaraki-kafka-exporter
+    restart: unless-stopped
+    ports:
+      - "9308:9308"
+    command:
+      - '--kafka.server=kafka:29092'
+      - '--web.listen-address=:9308'
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Alertmanager Config Generator - 설정 파일 생성
+  # ============================================
+  alertmanager-config:
+    image: alpine:latest
+    container_name: orakgaraki-alertmanager-config
+    environment:
+      MATTERMOST_WEBHOOK_URL: "${MATTERMOST_WEBHOOK_URL:-http://localhost:8065/hooks/disabled}"
+    volumes:
+      - ./monitoring/alertmanager:/templates:ro
+      - alertmanager_config:/config
+    command: |
+      sh -c "apk add --no-cache gettext &&
+             envsubst < /templates/alertmanager.yml.template > /config/alertmanager.yml &&
+             echo 'Configuration generated successfully'"
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Alertmanager - 알림 관리
+  # ============================================
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: orakgaraki-alertmanager
+    restart: unless-stopped
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - alertmanager_data:/alertmanager
+      - alertmanager_config:/etc/alertmanager:ro
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=https://j13c103.p.ssafy.io:9093
+      - --cluster.advertise-address=0.0.0.0:9093
+    depends_on:
+      - alertmanager-config
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Loki - 로그 집계 및 저장
+  # ============================================
+  loki:
+    image: grafana/loki:latest
+    container_name: orakgaraki-loki
+    restart: unless-stopped
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - loki_data:/loki
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Promtail - 로그 수집 에이전트
+  # ============================================
+  promtail:
+    image: grafana/promtail:latest
+    container_name: orakgaraki-promtail
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./logs:/var/log/app:ro  # 로컬: ./logs -> /var/log/app로 마운트
+      - /var/log:/var/log/host:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - orakgaraki-network
+
 volumes:
   mysql_data:
   redis_data:
+  kafka_data:
+  loki_data:
+  prometheus_data:
+  prometheus_config:
+  grafana_data:
+  alertmanager_data:
+  alertmanager_config:
 
 networks:
   orakgaraki-network:

@@ -1,0 +1,314 @@
+import React, { useState, useRef } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { EffectCoverflow, Navigation, Pagination } from 'swiper/modules';
+import { Box, Typography, IconButton } from '@mui/material';
+import { NavigateBefore, NavigateNext } from '@mui/icons-material';
+import { theme, textStyles } from '../styles/theme';
+import 'swiper/css';
+import 'swiper/css/effect-coverflow';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
+
+interface Album {
+  id: string;
+  title: string;
+  coverImage: string;
+  artist: string;
+  year: string;
+  trackCount: number;
+}
+
+interface AlbumCoverflowProps {
+  albums: Album[];
+  onAlbumClick?: (album: Album) => void;
+  onPlayClick?: (album: Album) => void;
+}
+
+const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({ 
+  albums, 
+  onAlbumClick
+}) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const swiperRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  const handleSlideChange = (swiper: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    setActiveIndex(swiper.activeIndex);
+  };
+
+  const handleAlbumClick = (album: Album) => {
+    if (onAlbumClick) {
+      onAlbumClick(album);
+    }
+  };
+
+  if (albums.length === 0) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: 400,
+        color: theme.colors.text.tertiary
+      }}>
+        <Typography variant="h6">앨범이 없습니다</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ 
+      position: 'relative',
+      width: '100%',
+      height: 600, // 앨범 + reflection + 정보를 위한 충분한 높이
+      overflow: 'visible',
+      background: theme.colors.background.main,
+      borderRadius: 3,
+    }}>
+      {/* 제목 */}
+      <Box sx={{ 
+        position: 'absolute', 
+        top: 20, 
+        left: '50%', 
+        transform: 'translateX(-50%)',
+        zIndex: 10,
+        textAlign: 'center'
+      }}>
+        <Typography variant="h3" sx={{ 
+          ...textStyles.title,
+          mb: 1,
+        }}>
+          My Albums
+        </Typography>
+        <Typography variant="h6" sx={{ 
+          ...textStyles.caption,
+          fontWeight: 400
+        }}>
+          나만의 음악 컬렉션
+        </Typography>
+      </Box>
+
+      {/* Swiper Container - 앨범과 reflection을 모두 포함 */}
+      <Box sx={{ 
+        position: 'absolute',
+        top: '55%', 
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '100%',
+        height: 400, // 앨범 + reflection을 위한 충분한 높이
+        zIndex: 5
+      }}>
+        <Swiper
+          ref={swiperRef}
+          effect="coverflow"
+          grabCursor={false}
+          centeredSlides={true}
+          slidesPerView={3}
+          spaceBetween={50}
+          coverflowEffect={{
+            rotate: 30,
+            stretch: 0,
+            depth: 100,
+            modifier: 1,
+            slideShadows: false,
+          }}
+          navigation={{
+            nextEl: '.swiper-button-next-custom',
+            prevEl: '.swiper-button-prev-custom',
+          }}
+          pagination={{
+            el: '.swiper-pagination-custom',
+            clickable: true,
+            dynamicBullets: true,
+          }}
+          modules={[EffectCoverflow, Navigation, Pagination]}
+          onSlideChange={handleSlideChange}
+          className="album-coverflow-swiper"
+        >
+          {albums.map((album, index) => (
+            <SwiperSlide 
+              key={album.id} 
+              className="album-slide"
+              style={{ 
+                width: '200px',
+                height: '400px', // 앨범 + reflection을 위한 높이
+                cursor: 'pointer'
+              }}
+            >
+              {/* 앨범과 Reflection을 포함하는 컨테이너 */}
+              <Box sx={{
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+              }}>
+                {/* 앨범 커버 */}
+                <Box
+                  className="album-cover"
+                  sx={{
+                    width: '180px',
+                    height: '180px',
+                    cursor: 'pointer',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+                    transition: 'all 0.3s ease',
+                    zIndex: 10,
+                    '&:hover': {
+                      transform: 'scale(1.05)',
+                      boxShadow: theme.shadows.glowHover,
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAlbumClick(album);
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      backgroundImage: `url(${album.coverImage})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      backgroundRepeat: 'no-repeat',
+                      borderRadius: 2,
+                    }}
+                  />
+                </Box>
+                
+                {/* Reflection - 앨범과 간격을 두고 자연스러운 효과 */}
+                <Box
+                  className="reflection"
+                  sx={{
+                    width: '180px',
+                    height: '120px', // 높이를 줄여서 더 자연스럽게
+                    marginTop: 2, // 앨범과 간격 추가
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    position: 'relative',
+                    // 앨범 커버의 실제 이미지를 배경으로 설정
+                    backgroundImage: `url(${album.coverImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    // 더 자연스러운 반사 효과
+                    opacity: index === activeIndex ? 0.4 : 0.2,
+                    filter: 'blur(1px) brightness(0.5) contrast(0.8)',
+                    transform: 'scaleY(-1)', // 상하반전
+                    // 더 부드러운 페이드 아웃 효과
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.95) 100%)',
+                      borderRadius: 2,
+                    },
+                    // 추가적인 블러 효과로 더 자연스럽게
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.2) 100%)',
+                      borderRadius: 2,
+                    }
+                  }} 
+                />
+              </Box>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </Box>
+
+      {/* Navigation Buttons */}
+      <IconButton
+        className="swiper-button-prev-custom"
+        sx={{
+          position: 'absolute',
+          left: 20,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 10,
+          backgroundColor: theme.colors.navigation.background,
+          color: theme.colors.text.primary,
+          '&:hover': {
+            backgroundColor: theme.colors.navigation.backgroundHover,
+          }
+        }}
+      >
+        <NavigateBefore />
+      </IconButton>
+
+      <IconButton
+        className="swiper-button-next-custom"
+        sx={{
+          position: 'absolute',
+          right: 20,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 10,
+          backgroundColor: theme.colors.navigation.background,
+          color: theme.colors.text.primary,
+          '&:hover': {
+            backgroundColor: theme.colors.navigation.backgroundHover,
+          }
+        }}
+      >
+        <NavigateNext />
+      </IconButton>
+
+      {/* Pagination */}
+      <Box
+        className="swiper-pagination-custom"
+        sx={{
+          position: 'absolute',
+          bottom: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          '& .swiper-pagination-bullet': {
+            backgroundColor: theme.colors.pagination.inactive,
+            opacity: 1,
+            '&.swiper-pagination-bullet-active': {
+              backgroundColor: theme.colors.pagination.active,
+            }
+          }
+        }}
+      />
+
+      {/* 앨범 정보 표시 - reflection 아래에 배치 */}
+      {albums[activeIndex] && (
+        <Box sx={{
+          position: 'absolute',
+          bottom: 50,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          textAlign: 'center',
+          zIndex: 10,
+          color: theme.colors.text.primary
+        }}>
+          <Typography variant="h6" sx={{ ...textStyles.subtitle, mb: 0.5 }}>
+            {albums[activeIndex].title}
+          </Typography>
+          <Typography variant="body2" sx={{ ...textStyles.caption }}>
+            {albums[activeIndex].artist} • {albums[activeIndex].year}
+          </Typography>
+          <Typography variant="body2" sx={{ ...textStyles.caption }}>
+            {albums[activeIndex].trackCount}곡
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+export default AlbumCoverflow;
