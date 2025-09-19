@@ -41,6 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/api-docs") ||
                 path.startsWith("/api/api-docs") ||
                 path.startsWith("/api/images") ||
+                path.startsWith("/api/webhook/") ||
                 path.startsWith("/actuator")) {
             log.info("JWT Filter - Bypassing authentication for path: {}", path);
             filterChain.doFilter(request, response);
@@ -59,7 +60,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 } catch (Exception e) {
                     log.warn("인증 정보 설정 중 오류: {}", e.getMessage());
                 }
-            } else {
+
+       } else {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
                 response.getWriter().write("JWT token is invalid or expired.");
                 return;

@@ -122,7 +122,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
         "targets": [
           {
-            "expr": "histogram_quantile(0.50, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
+            "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m])) by (le))",
             "legendFormat": "50th percentile",
             "refId": "A",
             "datasource": {
@@ -131,7 +131,7 @@
             }
           },
           {
-            "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
+            "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m])) by (le))",
             "legendFormat": "95th percentile",
             "refId": "B",
             "datasource": {
@@ -140,7 +140,7 @@
             }
           },
           {
-            "expr": "histogram_quantile(0.99, rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m]))",
+            "expr": "histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{job=\"orakgaraki-app\"}[5m])) by (le))",
             "legendFormat": "99th percentile",
             "refId": "C",
             "datasource": {
@@ -178,13 +178,13 @@
       },
       {
         "id": 5,
-        "title": "🗄️ 데이터베이스 연결",
+        "title": "🏊‍♂️ 애플리케이션 커넥션 풀 (HikariCP)",
         "type": "timeseries",
         "gridPos": {"h": 8, "w": 8, "x": 8, "y": 12},
         "targets": [
           {
             "expr": "hikaricp_connections_active{job=\"orakgaraki-app\"}",
-            "legendFormat": "활성 연결",
+            "legendFormat": "App Pool - 활성 연결",
             "refId": "A",
             "datasource": {
               "type": "prometheus",
@@ -193,7 +193,7 @@
           },
           {
             "expr": "hikaricp_connections_idle{job=\"orakgaraki-app\"}",
-            "legendFormat": "유휴 연결",
+            "legendFormat": "App Pool - 유휴 연결",
             "refId": "B",
             "datasource": {
               "type": "prometheus",
@@ -202,7 +202,7 @@
           },
           {
             "expr": "hikaricp_connections_pending{job=\"orakgaraki-app\"}",
-            "legendFormat": "대기 중인 연결",
+            "legendFormat": "App Pool - 대기 중인 연결",
             "refId": "C",
             "datasource": {
               "type": "prometheus",
@@ -212,10 +212,68 @@
         ]
       },
       {
+        "id": 15,
+        "title": "🗄️ MySQL 서버 연결 상태 (DB Exporter)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+        "targets": [
+          {
+            "expr": "mysql_global_status_threads_connected{job=\"mysql\"}",
+            "legendFormat": "DB Server - 총 연결 수",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          },
+          {
+            "expr": "mysql_global_variables_max_connections{job=\"mysql\"}",
+            "legendFormat": "DB Server - 최대 연결 수",
+            "refId": "B",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "barAlignment": 0,
+              "lineWidth": 1,
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "auto",
+              "pointSize": 5,
+              "stacking": {"mode": "none", "group": "A"},
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "scaleDistribution": {"type": "linear"},
+              "axisCenteredZero": false,
+              "hideFrom": {"legend": false, "tooltip": false, "vis": false},
+              "thresholdsStyle": {"mode": "off"}
+            },
+            "mappings": [],
+            "unit": "short",
+            "min": 0
+          }
+        },
+        "options": {
+          "legend": {"calcs": [], "displayMode": "table", "placement": "bottom", "showLegend": true},
+          "tooltip": {"mode": "multi", "sort": "none"}
+        }
+      },
+      {
         "id": 6,
         "title": "📦 Kafka 컨슈머 상태",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 12},
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 20},
         "targets": [
           {
             "expr": "kafka_consumer_lag_sum{job=\"kafka\"}",

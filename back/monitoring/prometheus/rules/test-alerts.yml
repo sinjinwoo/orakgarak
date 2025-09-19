@@ -1,0 +1,26 @@
+groups:
+  - name: test-alerts
+    rules:
+      # 즉시 발동 테스트 알림 (Warning)
+      - alert: TestWebhookWarning
+        expr: vector(1)
+        for: 0s
+        labels:
+          severity: warning
+          service: test
+          instance: localhost:8080
+        annotations:
+          summary: "경고 알림 테스트"
+          description: "Spring Boot 웹훅 변환 경고 알림 테스트입니다."
+
+      # Critical 테스트 알림
+      - alert: TestWebhookCritical
+        expr: vector(1) > 0.5
+        for: 0s
+        labels:
+          severity: critical
+          service: test
+          instance: localhost:8080
+        annotations:
+          summary: "심각한 알림 테스트"
+          description: "Spring Boot 웹훅 변환 심각한 알림 테스트입니다."
