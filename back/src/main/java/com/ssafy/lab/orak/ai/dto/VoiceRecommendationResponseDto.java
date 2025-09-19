@@ -9,6 +9,7 @@ import java.util.List;
 public record VoiceRecommendationResponseDto(
         String status,
         String message,
-        List<SongResponseDTO> recommendations
+        List<SongResponseDTO> recommendations,
+        String voiceAnalysis
 ) {
 }

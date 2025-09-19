@@ -17,7 +17,7 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @RestController
-@RequestMapping("/ai")
+@RequestMapping("/recommendations")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 @Tag(name = "Voice Recommendation API", description = "음성 기반 음악 추천 API")
@@ -25,7 +25,7 @@ public class VoiceRecommendationController {
 
     private final VoiceRecommendationService voiceRecommendationService;
 
-    @PostMapping("/voice-recommendation")
+    @PostMapping("/song")
     @Operation(summary = "음성 기반 음악 추천", description = "업로드된 음성 파일을 분석하여 유사한 음악을 추천합니다.")
     public ResponseEntity<VoiceRecommendationResponseDto> getVoiceRecommendations(
             @RequestBody @Valid VoiceRecommendationRequestDto request,

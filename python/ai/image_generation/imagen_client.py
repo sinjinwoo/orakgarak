@@ -58,7 +58,9 @@ class ImagenClient:
                 "sampleCount": 1,
                 "aspectRatio": aspect_ratio,
                 "safetyFilterLevel": safety_filter_level,
-                "personGeneration": person_generation
+                "personGeneration": person_generation,
+                "includeRaiReasons": False,  # 안전 필터 이유 제외
+                "negativeSeed": 42  # 일관성을 위한 시드
             }
         }
 
@@ -106,7 +108,8 @@ class ImagenClient:
                 response.raise_for_status()
 
             raw_text = response.text
-            print(f"API 응답 원문: {raw_text[:500]}")
+            print(f"API 응답 원문: {raw_text}")
+            print(f"응답 헤더: {dict(response.headers)}")
 
             if not raw_text.strip():
                 print("응답 본문이 비어있습니다.")

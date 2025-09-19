@@ -42,8 +42,8 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
-# 전체 곡 features 로드 (서버 시작시 한번만)
-ALL_FEATURES_CSV = "C:/Users/SSAFY/Desktop/S13P21C103/python/data/all_features.csv"
+# DB에 존재하는 곡들의 features 로드 (서버 시작시 한번만)
+ALL_FEATURES_CSV = "C:/Users/SSAFY/Desktop/S13P21C103/python/dataset/filtered_features.csv"
 all_songs_df = None
 
 class VoiceRecommendationRequest(BaseModel):
@@ -51,21 +51,21 @@ class VoiceRecommendationRequest(BaseModel):
     top_n: Optional[int] = 10
 
 def load_all_songs_features():
-    """전체 곡 features 로드"""
+    """DB에 존재하는 곡들의 features 로드"""
     global all_songs_df
     try:
         all_songs_df = pd.read_csv(ALL_FEATURES_CSV)
-        logging.info(f"전체 곡 features 로드 완료: {len(all_songs_df)}곡")
+        logging.info(f"DB 매칭된 곡 features 로드 완료: {len(all_songs_df)}곡")
         return True
     except Exception as e:
-        logging.error(f"전체 곡 features 로드 실패: {e}")
+        logging.error(f"DB 매칭된 곡 features 로드 실패: {e}")
         return False
 
 @app.on_event("startup")
 async def startup_event():
-    """서버 시작시 전체 곡 데이터 로드"""
+    """서버 시작시 DB 매칭된 곡 데이터 로드"""
     if not load_all_songs_features():
-        logging.error("전체 곡 데이터 로드 실패")
+        logging.error("DB 매칭된 곡 데이터 로드 실패")
 
 @app.get("/health")
 # Request/Response 모델
@@ -126,11 +126,11 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
     S3 URL에서 음성 파일을 받아서 추천 결과 반환
     """
     try:
-        # 전체 곡 데이터 확인
+        # DB 매칭된 곡 데이터 확인
         if all_songs_df is None:
             raise HTTPException(
                 status_code=500,
-                detail="전체 곡 데이터가 로드되지 않았습니다."
+                detail="DB 매칭된 곡 데이터가 로드되지 않았습니다."
             )
 
         # S3에서 파일 다운로드
@@ -179,6 +179,11 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
                     detail="음성 특성 추출에 실패했습니다."
                 )
 
+            # 음성 분석 (키워드 추출)
+            logging.info("음성 분석 중...")
+            voice_analysis = analyze_voice(temp_audio_path)
+            logging.info(f"음성 분석 결과: {voice_analysis}")
+
             # 추천 실행
             logging.info("추천 곡 계산 중...")
             recommendations = get_recommendations(user_df, all_songs_df, request.top_n)
@@ -187,13 +192,15 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
                 return {
                     "status": "success",
                     "message": "추천 결과가 없습니다.",
-                    "recommendations": []
+                    "recommendations": [],
+                    "voice_analysis": voice_analysis
                 }
 
             # 결과 반환
             result = {
                 "status": "success",
-                "recommendations": recommendations.to_dict('records')
+                "recommendations": recommendations.to_dict('records'),
+                "voice_analysis": voice_analysis
             }
 
             logging.info(f"추천 완료: {len(recommendations)}곡")
@@ -281,33 +288,56 @@ async def generate_voice_image(request: VoiceImageGenerationRequest):
         prompt_parts = []
 
         if voice_keywords:
-            voice_desc = ", ".join(voice_keywords[:3])  # 최대 3개 음성 특성
+            voice_desc = ", ".join(voice_keywords[:])  # 최대 3개 음성 특성
             prompt_parts.append(f"음성 특성: {voice_desc}")
 
         if song_titles:
-            songs_desc = ", ".join(song_titles[:5])  # 최대 5개 노래 제목
+            songs_desc = ", ".join(song_titles[:])  # 최대 5개 노래 제목
             prompt_parts.append(f"노래: {songs_desc}")
 
-        # 최종 프롬프트 생성 - 텍스트 금지 강조
-        base_prompt = "ABSOLUTELY NO TEXT, NO WORDS, NO LETTERS - Create a completely abstract artistic album cover that reflects "
+        # 다양한 스타일과 강력한 텍스트 제거 프롬프트 생성
+        import random
+
+        # 스타일 옵션들
+        styles = [
+            "fluid organic shapes with flowing curves",
+            "atmospheric color gradients and soft textures",
+            "dynamic brush strokes and paint splatters",
+            "dreamlike swirling patterns",
+            "ethereal light and shadow play",
+            "cosmic nebula-like formations",
+            "watercolor-style color bleeds",
+            "oil painting texture with thick impasto",
+            "crystalline formations and prismatic effects",
+            "zen-like minimalist composition"
+        ]
+
+        # 무드 설정
+        mood_desc = ""
         if voice_keywords:
-            base_prompt += f"the vocal characteristics of '{voice_keywords[0]}' "
-        if song_titles:
-            base_prompt += f"and the musical mood of songs like '{', '.join(song_titles[:3])}' "
-        base_prompt += "with vibrant colors, abstract geometric patterns, artistic design, and emotional depth. "
-        base_prompt += "CRITICAL REQUIREMENTS: NO TEXT, NO WRITING, NO LETTERS, NO CHARACTERS, NO SYMBOLS, NO NUMBERS, NO ALBUM TITLES, NO ARTIST NAMES, NO TYPOGRAPHY, NO WORDS IN ANY LANGUAGE (English, Korean, Japanese, Chinese, etc.). "
-        base_prompt += "ALSO NO PEOPLE, NO FACES, NO HUMAN FIGURES, NO PORTRAITS. "
-        base_prompt += "ONLY: Pure abstract art with shapes, colors, gradients, patterns, and textures. Think Kandinsky, Mondrian, or Rothko style abstract art."
+            mood_desc = voice_keywords[0]
+        elif song_titles:
+            mood_desc = "musical harmony"
+        else:
+            mood_desc = "emotional expression"
+
+        # 랜덤 스타일 선택
+        selected_style = random.choice(styles)
+
+        base_prompt = f"Pure abstract art with {selected_style}, expressing {mood_desc}, rich vibrant colors, artistic composition. NO TEXT NO LETTERS NO WORDS NO TYPOGRAPHY NO SYMBOLS NO NUMBERS NO WRITING NO CHARACTERS NO ALPHABET NO LANGUAGE. Only shapes, colors, textures, and visual elements."
 
         # 3. 이미지 생성
         print(f"생성할 프롬프트: {base_prompt}")
         print(f"이미지 생성 파라미터: aspect_ratio={request.aspect_ratio}, safety_filter_level={request.safety_filter_level}, person_generation={request.person_generation}")
 
+        # 안전 필터 레벨을 더 관대하게 설정
+        safety_level = "block_few" if request.safety_filter_level == "block_most" else request.safety_filter_level
+
         result = imagen_client.generate_image(
             prompt=base_prompt,
             aspect_ratio=request.aspect_ratio,
-            safety_filter_level=request.safety_filter_level,
-            person_generation=request.person_generation
+            safety_filter_level=safety_level,
+            person_generation="dont_allow"  # 사람 생성 명시적으로 비활성화
         )
 
         print(f"이미지 생성 결과: success={result.get('success')}")

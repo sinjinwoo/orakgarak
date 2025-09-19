@@ -14,7 +14,7 @@ public record VoiceRecommendationRequestDto(
 ) {
     public VoiceRecommendationRequestDto {
         if (topN == null) {
-            topN = 10; // 기본값
+            topN = 5; // 기본값
         }
     }
 }

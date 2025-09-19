@@ -56,7 +56,10 @@ public class VoiceRecommendationService {
                                     );
                         }
 
-                        // 5. 응답 생성
+                        // 5. 음성 분석 결과 추출
+                        String voiceAnalysis = extractVoiceAnalysis(pythonResponse);
+
+                        // 6. 응답 생성
                         String status = songDtos.isEmpty() ? "no_results" : "success";
                         String message = songDtos.isEmpty() ?
                                 "추천할 수 있는 곡을 찾을 수 없습니다." :
@@ -66,6 +69,7 @@ public class VoiceRecommendationService {
                                 .status(status)
                                 .message(message)
                                 .recommendations(songDtos)
+                                .voiceAnalysis(voiceAnalysis)
                                 .build();
 
                         log.info("Voice recommendation completed for user: {} - {} songs recommended", userId, songDtos.size());
@@ -99,5 +103,23 @@ public class VoiceRecommendationService {
         }
 
         return songIds;
+    }
+
+    private String extractVoiceAnalysis(JsonNode pythonResponse) {
+        try {
+            // Python 응답에서 voice_analysis 필드 추출
+            if (pythonResponse.has("voice_analysis")) {
+                String voiceAnalysis = pythonResponse.get("voice_analysis").asText();
+                log.info("Successfully extracted voice analysis: {}", voiceAnalysis);
+                return voiceAnalysis;
+            }
+
+            log.warn("No voice_analysis field found in Python response");
+            return null;
+
+        } catch (Exception e) {
+            log.error("Error extracting voice analysis from Python response: {}", e.getMessage(), e);
+            return null;
+        }
     }
 }
