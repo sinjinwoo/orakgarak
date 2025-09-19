@@ -212,6 +212,24 @@ public class FileUploadService {
     public List<Upload> getPendingAudioProcessing(int limit) {
         return uploadRepository.findPendingAudioProcessing(limit);
     }
+
+    /**
+     * 재시도 로직을 포함한 대기 중인 오디오 처리 조회
+     */
+    public List<Upload> getPendingAudioProcessingWithRetry(int limit, int maxRetries, long retryDelayMs) {
+        // 재시도 가능 시간 계산 (현재 시간에서 지연 시간만큼 빼기)
+        java.time.LocalDateTime retryAfterTime = java.time.LocalDateTime.now()
+                .minusNanos(retryDelayMs * 1_000_000);
+
+        return uploadRepository.findPendingAudioProcessingWithRetry(limit, maxRetries, retryAfterTime);
+    }
+
+    /**
+     * Upload 엔티티 저장 (재시도 로직용)
+     */
+    public Upload save(Upload upload) {
+        return uploadRepository.save(upload);
+    }
     
     // 특정 상태의 업로드 목록 조회
     public List<Upload> getUploadsByStatus(ProcessingStatus status, int limit) {

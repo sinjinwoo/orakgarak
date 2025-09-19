@@ -2,7 +2,7 @@ package com.ssafy.lab.orak.recording.service;
 
 import com.ssafy.lab.orak.event.dto.UploadEvent;
 import com.ssafy.lab.orak.event.service.EventBridgeService;
-import com.ssafy.lab.orak.recording.dto.RecordRequestDTO;
+import com.ssafy.lab.orak.recording.dto.CreateRecordRequest;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.entity.Record;
 import com.ssafy.lab.orak.recording.exception.RecordNotFoundException;
@@ -10,9 +10,6 @@ import com.ssafy.lab.orak.recording.exception.RecordPermissionDeniedException;
 import com.ssafy.lab.orak.recording.exception.RecordOperationException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
-import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
-import com.ssafy.lab.orak.upload.dto.PresignedUploadRequest;
-import com.ssafy.lab.orak.upload.dto.PresignedUploadResponse;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.PresignedUploadService;
@@ -43,50 +40,7 @@ public class AsyncRecordService {
     private final FileUploadService fileUploadService;
     private final EventBridgeService eventBridgeService;
     private final RecordMapper recordMapper;
-    private final AudioDurationCalculator audioDurationCalculator;
 
-    /**
-     * 1단계: Presigned URL 생성 (클라이언트가 직접 S3에 업로드)
-     */
-    public PresignedUploadResponse generatePresignedUrlForRecord(
-            String title, Long songId, String originalFilename,
-            Long fileSize, String contentType, Integer durationSeconds, Long userId) {
-
-        try {
-            // Presigned URL 요청 생성
-            PresignedUploadRequest request = PresignedUploadRequest.builder()
-                    .originalFilename(originalFilename)
-                    .fileSize(fileSize)
-                    .contentType(contentType)
-                    .directory("recordings")
-                    .build();
-
-            // Presigned URL 생성
-            PresignedUploadResponse response = presignedUploadService
-                    .generatePresignedUploadUrl(request, userId);
-
-            // Record 메타데이터를 DB에 미리 저장 (PENDING 상태)
-            Record record = Record.builder()
-                    .userId(userId)
-                    .songId(songId)
-                    .title(title)
-                    .uploadId(response.getUploadId())
-                    .durationSeconds(durationSeconds)
-                    .build();
-
-            recordRepository.save(record);
-
-            log.info("레코딩 Presigned URL 생성 완료: userId={}, uploadId={}, duration={}초",
-                    userId, response.getUploadId(), durationSeconds);
-
-            return response;
-
-        } catch (Exception e) {
-            log.error("레코딩 Presigned URL 생성 실패: userId={}, filename={}",
-                    userId, originalFilename, e);
-            throw new RecordOperationException("Presigned URL 생성에 실패했습니다", e);
-        }
-    }
 
     /**
      * 2단계: S3 업로드 완료 후 이벤트 발생 (웹훅 또는 S3 이벤트 트리거)
@@ -163,7 +117,7 @@ public class AsyncRecordService {
     }
 
     private void simulateAudioProcessing(Upload upload) throws InterruptedException {
-        // 실제로는 AudioConverter, AudioDurationCalculator 등 사용
+        // 실제로는 AudioConverter 등 사용 (duration은 프론트에서 이미 계산됨)
         log.info("오디오 처리 중... uploadId={}", upload.getId());
         Thread.sleep(2000); // 2초 처리 시뮬레이션
         log.info("오디오 처리 완료: uploadId={}", upload.getId());
@@ -189,6 +143,116 @@ public class AsyncRecordService {
                     return recordMapper.toResponseDTO(record, upload);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 새로운 Record 생성 메서드 (API 분리용)
+     * - Upload 검증 후 Record 생성
+     * - 즉시 처리 시도 + 실패 시 비동기 처리
+     */
+    @Transactional
+    public RecordResponseDTO createRecord(CreateRecordRequest request, Long userId) {
+        try {
+            log.info("Record 생성 시작: uploadId={}, title={}, userId={}",
+                    request.getUploadId(), request.getTitle(), userId);
+
+            // 1. Upload 존재 및 상태 검증
+            Upload upload = validateUploadForRecord(request.getUploadId(), userId);
+
+            // 2. Record 생성
+            Record record = Record.builder()
+                    .userId(userId)
+                    .songId(request.getSongId())
+                    .title(request.getTitle())
+                    .uploadId(request.getUploadId())
+                    .durationSeconds(request.getDurationSeconds())
+                    .build();
+
+            Record savedRecord = recordRepository.save(record);
+            log.info("Record 저장 완료: recordId={}, uploadId={}", savedRecord.getId(), request.getUploadId());
+
+            // 3. 즉시 처리 시도
+            boolean immediateProcessingSuccess = tryImmediateProcessing(upload, savedRecord);
+
+            // 4. ResponseDTO 생성
+            RecordResponseDTO response = recordMapper.toResponseDTO(savedRecord, upload);
+
+            if (immediateProcessingSuccess) {
+                log.info("Record 즉시 처리 완료: recordId={}", savedRecord.getId());
+            } else {
+                log.info("Record 비동기 처리 예정: recordId={}", savedRecord.getId());
+            }
+
+            return response;
+
+        } catch (Exception e) {
+            log.error("Record 생성 실패: uploadId={}, title={}",
+                    request.getUploadId(), request.getTitle(), e);
+            throw new RecordOperationException("Record 생성에 실패했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Upload 검증 (존재, 상태, 소유권)
+     */
+    private Upload validateUploadForRecord(Long uploadId, Long userId) {
+        Upload upload = fileUploadService.getUpload(uploadId);
+        if (upload == null) {
+            throw new RecordOperationException("업로드를 찾을 수 없습니다: " + uploadId, null);
+        }
+
+        // 소유권 확인
+        if (!upload.getUploaderId().equals(userId)) {
+            throw new RecordPermissionDeniedException(null, userId);
+        }
+
+        // 이미 Record가 존재하는지 확인
+        Record existingRecord = recordRepository.findByUploadId(uploadId);
+        if (existingRecord != null) {
+            throw new RecordOperationException("이미 Record가 존재하는 업로드입니다: " + uploadId, null);
+        }
+
+        return upload;
+    }
+
+    /**
+     * 즉시 처리 시도
+     */
+    private boolean tryImmediateProcessing(Upload upload, Record record) {
+        try {
+            if (upload.getProcessingStatus() == ProcessingStatus.UPLOADED) {
+                log.info("즉시 처리 시도: uploadId={}", upload.getId());
+
+                // 동기적으로 처리 (간단한 변환만)
+                processRecordingSync(upload.getId());
+                return true;
+            } else {
+                log.info("Upload 상태가 UPLOADED가 아님, 비동기 처리 예정: status={}", upload.getProcessingStatus());
+                return false;
+            }
+        } catch (Exception e) {
+            log.warn("즉시 처리 실패, 비동기 처리로 전환: uploadId={}", upload.getId(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 동기 처리 (간단한 변환만)
+     */
+    private void processRecordingSync(Long uploadId) {
+        try {
+            fileUploadService.updateProcessingStatus(uploadId, ProcessingStatus.PROCESSING);
+
+            // 빠른 처리 (메타데이터 추출 등)
+            Thread.sleep(100); // 실제로는 빠른 변환 작업
+
+            fileUploadService.updateProcessingStatus(uploadId, ProcessingStatus.COMPLETED);
+            log.info("동기 처리 완료: uploadId={}", uploadId);
+
+        } catch (Exception e) {
+            log.error("동기 처리 실패: uploadId={}", uploadId, e);
+            throw new RecordOperationException("동기 처리 실패", e);
+        }
     }
 
     public void deleteRecord(Long recordId, Long userId) {
