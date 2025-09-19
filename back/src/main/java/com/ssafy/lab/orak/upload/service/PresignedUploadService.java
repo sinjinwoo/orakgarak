@@ -10,6 +10,7 @@ import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,10 +32,13 @@ public class PresignedUploadService {
     private final Counter uploadFailedCounter;
     private final Timer uploadDurationTimer;
     private final AtomicLong activeUploadCount;
+    private final MeterRegistry meterRegistry;
 
     public PresignedUploadResponse generatePresignedUploadUrl(PresignedUploadRequest request, Long userId) {
         Timer.Sample sample = Timer.start();
-        uploadStartedCounter.increment();
+        // 파일 타입 추출 (미리 계산)
+        String fileType = getFileType(request.getOriginalFilename());
+        meterRegistry.counter("upload_started_total", "file_type", fileType, "application", "orakgaraki").increment();
         activeUploadCount.incrementAndGet();
 
         try {
@@ -81,7 +85,7 @@ public class PresignedUploadService {
                     savedUpload.getId(), uuid);
 
             // 성공 메트릭 기록
-            uploadCompletedCounter.increment();
+            meterRegistry.counter("upload_completed_total", "file_type", fileType, "application", "orakgaraki").increment();
             sample.stop(uploadDurationTimer);
             activeUploadCount.decrementAndGet();
 
@@ -96,7 +100,7 @@ public class PresignedUploadService {
 
         } catch (Exception e) {
             // 실패 메트릭 기록
-            uploadFailedCounter.increment();
+            meterRegistry.counter("upload_failed_total", "file_type", fileType, "application", "orakgaraki").increment();
             sample.stop(uploadDurationTimer);
             activeUploadCount.decrementAndGet();
 
@@ -166,5 +170,30 @@ public class PresignedUploadService {
             }
         }
         return false;
+    }
+
+    private String getFileType(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "unknown";
+        }
+
+        String extension = filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+
+        // 오디오 파일
+        if (extension.matches("mp3|wav|m4a|flac|aac|ogg")) {
+            return "audio";
+        }
+
+        // 이미지 파일
+        if (extension.matches("jpg|jpeg|png|gif|webp")) {
+            return "image";
+        }
+
+        // 문서 파일
+        if (extension.matches("txt|pdf|doc|docx")) {
+            return "document";
+        }
+
+        return "other";
     }
 }

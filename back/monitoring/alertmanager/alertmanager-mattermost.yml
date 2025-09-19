@@ -28,29 +28,50 @@ receivers:
   # 기본 Mattermost 알림
   - name: 'mattermost-notifications'
     webhook_configs:
-      - url: 'http://host.docker.internal:8080/api/webhook/alertmanager'
+      - url: '${MATTERMOST_WEBHOOK_URL}'
         send_resolved: true
-        http_config:
-          headers:
-            Content-Type: 'application/json; charset=utf-8'
+        title: 'Orakgaraki Alert'
+        text: |
+          {{ range .Alerts }}
+          **{{ .Annotations.summary }}**
+          {{ .Annotations.description }}
+
+          Status: {{ .Status }}
+          Severity: {{ .Labels.severity }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
 
   # 심각한 알림용
   - name: 'mattermost-critical'
     webhook_configs:
-      - url: 'http://host.docker.internal:8080/api/webhook/alertmanager'
+      - url: '${MATTERMOST_WEBHOOK_URL}'
         send_resolved: true
-        http_config:
-          headers:
-            Content-Type: 'application/json; charset=utf-8'
+        title: 'CRITICAL Alert'
+        text: |
+          🔥 **CRITICAL ALERT** 🔥
+          {{ range .Alerts }}
+          **{{ .Annotations.summary }}**
+          {{ .Annotations.description }}
+
+          Status: {{ .Status }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
 
   # 경고 알림용
   - name: 'mattermost-warnings'
     webhook_configs:
-      - url: 'http://host.docker.internal:8080/api/webhook/alertmanager'
+      - url: '${MATTERMOST_WEBHOOK_URL}'
         send_resolved: true
-        http_config:
-          headers:
-            Content-Type: 'application/json; charset=utf-8'
+        title: 'Warning Alert'
+        text: |
+          ⚠️ **WARNING** ⚠️
+          {{ range .Alerts }}
+          **{{ .Annotations.summary }}**
+          {{ .Annotations.description }}
+
+          Status: {{ .Status }}
+          Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+          {{ end }}
 
 # 억제 규칙 (중복 알림 방지)
 inhibit_rules:
