@@ -44,7 +44,7 @@ export function useAuth(): UseAuthReturn {
     
     try {
       const response = await authAPI.login(credentials.email, credentials.password);
-      const { user: userData, token } = response.data;
+      const { user: userData, token } = response;
       
       // 토큰 저장
       localStorage.setItem('auth-token', token);
@@ -70,7 +70,7 @@ export function useAuth(): UseAuthReturn {
     
     try {
       const response = await authAPI.register(data.email, data.password, data.nickname);
-      const { user: userData, token } = response.data;
+      const { user: userData, token } = response;
       
       // 토큰 저장
       localStorage.setItem('auth-token', token);
@@ -135,7 +135,7 @@ export function useAuth(): UseAuthReturn {
   const refreshToken = async (): Promise<boolean> => {
     try {
       const response = await authAPI.refreshToken();
-      const { accessToken } = response.data;
+      const { accessToken } = response;
       
       // 새 토큰 저장
       localStorage.setItem('auth-token', accessToken);
@@ -196,6 +196,7 @@ export function useRequireAuth() {
 
 // 소셜 로그인을 위한 훅
 export function useSocialAuth() {
+  const { login: loginStore } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -224,7 +225,7 @@ export function useSocialAuth() {
     try {
       // 카카오 로그인 로직 (구현 예정)
       const response = await authAPI.loginWithKakao('kakao-token');
-      const { user, token } = response.data;
+      const { user, token } = response;
       
       localStorage.setItem('auth-token', token);
       loginStore(user);

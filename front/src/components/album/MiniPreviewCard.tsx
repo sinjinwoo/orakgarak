@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { Music, Clock, Image as ImageIcon, Eye, Users, Lock } from 'lucide-react';
 import { useCoverStore } from '../../stores/coverStore';
 
-interface Track {
+interface MiniPreviewTrack {
   id: string;
   title: string;
   artist: string;
@@ -17,7 +17,7 @@ interface Track {
 }
 
 interface MiniPreviewCardProps {
-  tracks: Track[];
+  tracks: MiniPreviewTrack[];
   coverImageUrl?: string;
   albumTitle?: string;
   isPublic?: boolean;

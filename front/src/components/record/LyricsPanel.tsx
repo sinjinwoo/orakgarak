@@ -426,7 +426,7 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .lyrics-scrollbar::-webkit-scrollbar {
           width: 6px;
         }

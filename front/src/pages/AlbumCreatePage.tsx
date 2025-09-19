@@ -12,6 +12,7 @@ import NewRecordingSelectionStep from '../components/album/NewRecordingSelection
 import NewCoverSelectionStep from '../components/album/NewCoverSelectionStep';
 import AlbumInfoStep from '../components/album/AlbumInfoStep';
 import AlbumPreviewStep from '../components/album/AlbumPreviewStep';
+import { recordingAPI } from '../services/backend';
 
 // 더미 녹음 데이터
 const dummyRecordings: Recording[] = [
@@ -138,7 +139,9 @@ const AlbumCreatePage: React.FC = () => {
     saveDraft,
   } = useAlbumStore();
 
-  const [recordings] = useState<Recording[]>(dummyRecordings);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [recordingsLoading, setRecordingsLoading] = useState(true);
+  const [recordingsError, setRecordingsError] = useState<string | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -203,6 +206,26 @@ const AlbumCreatePage: React.FC = () => {
     }
   }, [saveDraft, addToast]);
 
+  // Load recordings data
+  useEffect(() => {
+    const loadRecordings = async () => {
+      try {
+        setRecordingsLoading(true);
+        setRecordingsError(null);
+        const recordings = await recordingAPI.getMyRecordings();
+        setRecordings(recordings || []);
+      } catch (error) {
+        console.error('녹음 목록 로드 실패:', error);
+        setRecordingsError('녹음 목록을 불러오는데 실패했습니다.');
+        setRecordings([]);
+      } finally {
+        setRecordingsLoading(false);
+      }
+    };
+
+    loadRecordings();
+  }, []);
+
   // Convert selected recordings to tracks
   useEffect(() => {
     const newTracks = recordings
@@ -210,6 +233,8 @@ const AlbumCreatePage: React.FC = () => {
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
+        title: recording.song?.title || '',
+        artist: recording.song?.artist || '',
         durationSec: recording.duration || 0,
       }));
     setTracks(newTracks);
@@ -243,6 +268,8 @@ const AlbumCreatePage: React.FC = () => {
           <NewRecordingSelectionStep
             recordings={recordings}
             selectedRecordings={selectedRecordings}
+            loading={recordingsLoading}
+            error={recordingsError}
             onToggleRecording={(recordingId) => {
               if (selectedRecordings.includes(recordingId)) {
                 removeRecording(recordingId);
@@ -352,7 +379,13 @@ const AlbumCreatePage: React.FC = () => {
               {currentStage !== 'cover' && (
                 <div className="absolute top-0 right-0 z-20">
                   <MiniPreviewCard
-                    tracks={tracks}
+                    tracks={tracks.map(track => ({
+                      id: track.id,
+                      title: track.song?.title || '',
+                      artist: track.song?.artist || '',
+                      durationSec: track.duration || 0,
+                      order: track.order
+                    }))}
                     coverImageUrl={coverImage}
                     albumTitle={title || '새 앨범'}
                   />
