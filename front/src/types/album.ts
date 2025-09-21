@@ -11,6 +11,7 @@ export interface Album {
   likeCount: number;
   createdAt: string;
   updatedAt: string;
+  coverImageUrl?: string; // 마이페이지 API에서 추가된 필드
 }
 
 export interface CreateAlbumRequest {

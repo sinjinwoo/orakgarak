@@ -7,24 +7,7 @@ import React, { forwardRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Play, Pause, GripVertical, X, Music } from 'lucide-react';
-
-export interface Recording {
-  id: string;
-  title: string;
-  artist: string;
-  durationSec: number;
-  createdAt: string;
-  url?: string;
-  audioUrl?: string;
-  analysis?: {
-    overallScore: number;
-  };
-  song?: {
-    title: string;
-    artist: string;
-  };
-  duration?: number;
-}
+import { type Recording } from '../../types/recording';
 
 interface RecordingCardProps {
   recording: Recording;
@@ -71,9 +54,9 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
     return 'text-red-400';
   };
 
-  const title = recording.song?.title || recording.title;
-  const artist = recording.song?.artist || recording.artist;
-  const duration = recording.duration || recording.durationSec;
+  const title = recording.song?.title || '';
+  const artist = recording.song?.artist || '';
+  const duration = recording.duration || 0;
   const score = recording.analysis?.overallScore || 0;
 
   return (

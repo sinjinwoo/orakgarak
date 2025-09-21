@@ -15,44 +15,44 @@ export const authAPI = {
   // 일반 로그인 - POST /api/auth/login
   login: async (email: string, password: string) => {
     const response = await apiClient.post('/auth/login', { email, password });
-    return response;
+    return response.data;
   },
   
   // 회원가입 - POST /api/auth/register
   register: async (email: string, password: string, nickname: string) => {
     const response = await apiClient.post('/auth/register', { email, password, nickname });
-    return response;
+    return response.data;
   },
   
   // 로그아웃 - POST /api/auth/logout
   logout: async () => {
     const response = await apiClient.post('/auth/logout');
-    return response;
+    return response.data;
   },
   
   // 토큰 갱신 - POST /api/auth/refresh (자동 처리됨)
   refreshToken: async () => {
     const response = await apiClient.post('/auth/refresh');
-    return response;
+    return response.data;
   },
 
   // 현재 로그인 사용자 정보 보기 - GET /api/auth/me
   getUserInfo: async () => {
     const response = await apiClient.get('/auth/me');
-    return response;
+    return response.data;
   },
 
   // 구글 소셜 로그인 (리다이렉트 방식이므로 직접 사용 안 함)
   loginWithGoogle: async (googleToken: string) => {
     // 실제로는 사용되지 않음 (리다이렉트 방식)
     const response = await apiClient.post('/auth/google', { token: googleToken });
-    return response;
+    return response.data;
   },
 
   // 카카오 소셜 로그인
   loginWithKakao: async (kakaoToken: string) => {
     const response = await apiClient.post('/auth/kakao', { token: kakaoToken });
-    return response;
+    return response.data;
   },
 };
 
@@ -62,25 +62,25 @@ export const userAPI = {
   // 팔로우
   follow: async (userId: string) => {
     const response = await apiClient.post(`/users/${userId}/follow`);
-    return response;
+    return response.data;
   },
 
   // 언팔로우
   unfollow: async (userId: string) => {
     const response = await apiClient.delete(`/users/${userId}/follow`);
-    return response;
+    return response.data;
   },
 
   // 팔로워 목록
   getFollowers: async (userId: string) => {
     const response = await apiClient.get(`/users/${userId}/followers`);
-    return response;
+    return response.data;
   },
 
   // 팔로잉 목록
   getFollowing: async (userId: string) => {
     const response = await apiClient.get(`/users/${userId}/following`);
-    return response;
+    return response.data;
   },
 };
 
@@ -91,7 +91,7 @@ export const songAPI = {
     const response = await apiClient.get('/songs/search', { 
       params: { query, limit } 
     });
-    return response;
+    return response.data;
   },
   
   // 추천 곡 목록
@@ -99,13 +99,13 @@ export const songAPI = {
     const response = await apiClient.get('/songs/recommendations', { 
       params: filters 
     });
-    return response;
+    return response.data;
   },
   
   // 곡 상세 정보
   getSong: async (songId: string) => {
     const response = await apiClient.get(`/songs/${songId}`);
-    return response;
+    return response.data;
   },
 };
 
@@ -131,19 +131,19 @@ export const recordingAPI = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response;
+    return response.data;
   },
   
   // 녹음본 삭제
   deleteRecording: async (recordingId: string) => {
     const response = await apiClient.delete(`/recordings/${recordingId}`);
-    return response;
+    return response.data;
   },
   
   // 녹음본 분석
   analyzeRecording: async (recordingId: string) => {
     const response = await apiClient.post(`/recordings/${recordingId}/analyze`);
-    return response;
+    return response.data;
   },
 };
 
@@ -199,13 +199,13 @@ export const albumAPI = {
   // 앨범 좋아요 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
   likeAlbum: async (albumId: number) => {
     const response = await apiClient.post(`/albums/${albumId}/like`);
-    return response;
+    return response.data;
   },
   
   // 앨범 좋아요 취소 (기존 기능 유지 - 나중에 엔드포인트 추가 시 사용)
   unlikeAlbum: async (albumId: number) => {
     const response = await apiClient.delete(`/albums/${albumId}/like`);
-    return response;
+    return response.data;
   },
 
   // AI 앨범 커버 생성
@@ -282,5 +282,27 @@ export const profileAPI = {
       params: { nickname }
     });
     return response.data; // true: 사용 가능, false: 중복됨
+  },
+
+  // 마이페이지 통계 조회 - GET /profiles/mypage/stats
+  getMyPageStats: async () => {
+    const response = await apiClient.get('/profiles/mypage/stats');
+    return response.data;
+  },
+
+  // 마이페이지 내 앨범 목록 - GET /profiles/mypage/albums
+  getMyPageAlbums: async (page: number = 0, size: number = 10) => {
+    const response = await apiClient.get('/profiles/mypage/albums', {
+      params: { page, size }
+    });
+    return response.data;
+  },
+
+  // 마이페이지 좋아요한 앨범 목록 - GET /profiles/mypage/liked-albums
+  getMyPageLikedAlbums: async (page: number = 0, size: number = 10) => {
+    const response = await apiClient.get('/profiles/mypage/liked-albums', {
+      params: { page, size }
+    });
+    return response.data;
   },
 };

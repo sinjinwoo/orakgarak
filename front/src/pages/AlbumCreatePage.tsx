@@ -359,6 +359,8 @@ const AlbumCreatePage: React.FC = () => {
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
+        title: recording.song?.title || '',
+        artist: recording.song?.artist || '',
         durationSec: recording.duration || 0,
       }));
     setTracks(newTracks);

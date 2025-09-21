@@ -16,15 +16,21 @@ import {
 } from '@dnd-kit/core';
 import LibraryPanel from './LibraryPanel';
 import TrackCanvas from './TrackCanvas';
-import { type Recording } from './RecordingCard';
+import { type Recording } from '../../types/recording';
 
 interface Track extends Recording {
   order: number;
+  // UI에서 필요한 추가 필드들
+  title?: string;
+  artist?: string;
+  durationSec?: number;
 }
 
 interface NewRecordingSelectionStepProps {
   recordings: Recording[];
   selectedRecordings: string[];
+  loading?: boolean;
+  error?: string | null;
   onToggleRecording: (recordingId: string) => void;
   onAddToast?: (toast: { type: 'success' | 'error' | 'warning' | 'info'; message: string }) => void;
   loading?: boolean;
@@ -35,6 +41,8 @@ interface NewRecordingSelectionStepProps {
 const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
   recordings,
   selectedRecordings,
+  loading = false,
+  error = null,
   onToggleRecording,
   onAddToast,
   loading = false,
@@ -63,7 +71,7 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
-        durationSec: recording.duration || recording.durationSec || 0,
+        durationSec: recording.duration || 0,
       }));
     setTracks(newTracks);
   }, [recordings, selectedRecordings]);
@@ -98,7 +106,7 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     onToggleRecording(normalizeId(recording.id));
     onAddToast?.({
       type: 'success',
-      message: `"${recording.song?.title || recording.title}"이(가) 추가되었습니다.`,
+      message: `"${recording.song?.title || ''}"이(가) 추가되었습니다.`,
     });
   }, [selectedRecordings.length, onToggleRecording, onAddToast]);
 
