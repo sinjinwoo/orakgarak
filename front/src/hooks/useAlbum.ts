@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { albumService } from '../services/albumApi';
+import { albumService } from '../services/api';
 import {
   Album,
   CreateAlbumRequest,
@@ -45,7 +45,7 @@ export const useAlbums = (params?: AlbumQueryParams) => {
 export const useAlbum = (albumId: number, enabled: boolean = true) => {
   return useQuery<Album, ApiError>({
     queryKey: ALBUM_QUERY_KEYS.detail(albumId),
-    queryFn: () => albumService.getAlbumById(albumId),
+    queryFn: () => albumService.getAlbum(albumId),
     enabled: enabled && !!albumId,
     staleTime: 5 * 60 * 1000,
     retry: (failureCount, error) => {
@@ -236,7 +236,7 @@ export const useCreateCompleteAlbum = () => {
         await albumService.addTracks(album.id, tracksData);
 
         // 최신 앨범 정보 다시 가져오기
-        const updatedAlbum = await albumService.getAlbumById(album.id);
+        const updatedAlbum = await albumService.getAlbum(album.id);
         return updatedAlbum;
       }
 
@@ -261,7 +261,7 @@ export const usePrefetchAlbum = () => {
   return (albumId: number) => {
     queryClient.prefetchQuery({
       queryKey: ALBUM_QUERY_KEYS.detail(albumId),
-      queryFn: () => albumService.getAlbumById(albumId),
+      queryFn: () => albumService.getAlbum(albumId),
       staleTime: 5 * 60 * 1000,
     });
   };

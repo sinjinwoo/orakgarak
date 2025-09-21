@@ -11,7 +11,6 @@ export interface Album {
   likeCount: number;
   createdAt: string;
   updatedAt: string;
-  coverImageUrl?: string; // 마이페이지 API에서 추가된 필드
 }
 
 export interface CreateAlbumRequest {
@@ -19,6 +18,21 @@ export interface CreateAlbumRequest {
   description?: string;
   uploadId?: number;
   isPublic: boolean;
+}
+
+export interface AlbumCreateRequest extends CreateAlbumRequest {}
+
+export interface AlbumUpdateRequest extends UpdateAlbumRequest {}
+
+export interface AlbumCoverUploadResponse {
+  uploadId: number;
+  imageUrl: string;
+}
+
+export interface AlbumCoverGenerateRequest {
+  trackIds: string[];
+  params: Record<string, unknown>;
+  count?: number;
 }
 
 export interface UpdateAlbumRequest {
@@ -74,6 +88,19 @@ export interface AlbumListResponse {
   pageSize: number;
   totalPages: number;
 }
+
+export interface MyPageStats {
+  albumCount: number;
+  recordingCount: number;
+  followerCount: number;
+  followingCount: number;
+  totalPlays: number;
+  totalLikes: number;
+}
+
+export interface MyPageAlbumListResponse extends AlbumListResponse {}
+
+export interface MyPageLikedAlbumListResponse extends AlbumListResponse {}
 
 export interface AlbumQueryParams {
   page?: number;

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { profileAPI } from '../services/backend';
+import { profileService } from '../services/api';
 import type { Profile, ProfileUpdateRequest, ProfileImageUpdateRequest } from '../types/user';
 
 export interface UseProfileReturn {
@@ -30,7 +30,7 @@ export function useProfile(): UseProfileReturn {
     setError(null);
     
     try {
-      const profileData = await profileAPI.getMyProfile();
+      const profileData = await profileService.getMyProfile();
       setProfile(profileData);
       return profileData;
     } catch (err: unknown) {
@@ -48,7 +48,7 @@ export function useProfile(): UseProfileReturn {
     setError(null);
     
     try {
-      const profileData = await profileAPI.getUserProfile(userId);
+      const profileData = await profileService.getUserProfile(userId);
       setProfile(profileData);
       return profileData;
     } catch (err: unknown) {
@@ -66,7 +66,7 @@ export function useProfile(): UseProfileReturn {
     setError(null);
     
     try {
-      const updatedProfile = await profileAPI.updateMyProfile(data);
+      const updatedProfile = await profileService.updateMyProfile(data);
       setProfile(updatedProfile);
       return updatedProfile;
     } catch (err: any) {
@@ -84,7 +84,7 @@ export function useProfile(): UseProfileReturn {
     setError(null);
     
     try {
-      const updatedProfile = await profileAPI.updateMyProfileWithImage(data);
+      const updatedProfile = await profileService.updateMyProfileWithImage(data);
       setProfile(updatedProfile);
       return updatedProfile;
     } catch (err: any) {
@@ -102,7 +102,7 @@ export function useProfile(): UseProfileReturn {
     setError(null);
     
     try {
-      const isAvailable = await profileAPI.checkNicknameDuplicate(nickname);
+      const isAvailable = await profileService.checkNicknameDuplicate(nickname);
       return isAvailable;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || '닉네임 중복 체크에 실패했습니다.';

@@ -162,7 +162,7 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
 RecordingCard.displayName = 'RecordingCard';
 
 // Sortable wrapper for use in canvas
-export const SortableRecordingCard: React.FC<RecordingCardProps & { id: string }> = ({ id, ...props }) => {
+export const SortableRecordingCard: React.FC<RecordingCardProps & { id: string | number }> = ({ id, ...props }) => {
   const {
     attributes,
     listeners,

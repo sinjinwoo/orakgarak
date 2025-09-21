@@ -38,6 +38,29 @@ export interface Recording {
   publicUrl?: string;
   createdAt: string;
   updatedAt: string;
+  
+  // 호환성을 위한 추가 속성들
+  duration?: number;
+  audioUrl?: string;
+  song?: {
+    title?: string;
+    artist?: string;
+  };
+  analysis?: {
+    overallScore?: number;
+    pitchAccuracy?: number;
+    tempoAccuracy?: number;
+    vocalRange?: {
+      min: number;
+      max: number;
+    };
+    toneAnalysis?: {
+      clarity?: number;
+      brightness?: number;
+      warmth?: number;
+    };
+    feedback?: string[];
+  };
 }
 
 // 곡 검색 관련 타입들

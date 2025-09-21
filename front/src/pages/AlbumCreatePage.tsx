@@ -21,7 +21,7 @@ import NewRecordingSelectionStep from "../components/album/NewRecordingSelection
 import NewCoverSelectionStep from "../components/album/NewCoverSelectionStep";
 import AlbumInfoStep from "../components/album/AlbumInfoStep";
 import AlbumPreviewStep from "../components/album/AlbumPreviewStep";
-import { recordingAPI } from "../services/backend";
+import { recordingService } from "../services/api";
 
 // 더미 녹음 데이터
 const dummyRecordings: Recording[] = [
@@ -319,8 +319,8 @@ const AlbumCreatePage: React.FC = () => {
       try {
         setRecordingsLoading(true);
         setRecordingsError(null);
-        const response = await recordingAPI.getMyRecordings();
-        setRecordings(response.data || []);
+        const response = await recordingService.getMyRecordings();
+        setRecordings(response || []);
       } catch (error: any) {
         console.error("녹음 목록 로드 실패:", error);
 

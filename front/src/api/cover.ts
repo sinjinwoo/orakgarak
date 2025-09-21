@@ -3,7 +3,7 @@
  * AI 기반 앨범 커버 생성 및 업로드 기능
  */
 
-import apiClient from '../services/apiClient';
+import { apiClient } from '../services/api';
 import type { CoverParams, GeneratedCover } from '../types/cover';
 
 const mockImages = [

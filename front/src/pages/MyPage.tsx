@@ -45,8 +45,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useMyProfile } from '../hooks/useProfile';
 import { motion } from 'framer-motion';
 import AlbumCoverflow from '../components/AlbumCoverflow';
-import { albumAPI, userAPI } from '../services/backend';
-import apiClient from '../services/apiClient';
+import { albumService, userService, apiClient } from '../services/api';
 import type { 
   Album as AlbumType, 
   MyPageStats, 
@@ -217,7 +216,7 @@ const MyPage: React.FC = () => {
     followerCount: 0,
     followingCount: 0,
     albumCount: 0,
-    likedAlbumCount: 0
+    // likedAlbumCount: 0 // 사용하지 않는 속성 제거
   });
   const [statsLoading, setStatsLoading] = useState(true);
   
@@ -304,7 +303,7 @@ const MyPage: React.FC = () => {
             params: { page: 0, size: 100 }
           });
           const likedAlbumsData: MyPageLikedAlbumListResponse = likedAlbumsResponse.data;
-          setLikedAlbums(likedAlbumsData.likedAlbums);
+          setLikedAlbums(likedAlbumsData.albums || likedAlbumsData.content || []);
         } catch (error) {
           console.error('좋아요한 앨범 데이터 로드 실패:', error);
           setLikedAlbumsError('좋아요한 앨범을 불러오는데 실패했습니다.');
@@ -326,7 +325,7 @@ const MyPage: React.FC = () => {
     setUserStats({
       albums: myPageStats.albumCount,
       recordings: recordings.length, // 녹음 데이터는 아직 더미 데이터
-      likes: myPageStats.likedAlbumCount,
+      likes: myPageStats.totalLikes || 0,
       totalPlays: 0 // totalPlays는 현재 API에 없으므로 0으로 설정
     });
   }, [myPageStats, recordings]);
@@ -1062,7 +1061,8 @@ const MyPage: React.FC = () => {
                   duration: album.totalDuration,
                   trackCount: album.trackCount,
                   isPublic: album.isPublic,
-                  createdAt: album.createdAt
+                  createdAt: album.createdAt,
+                  year: new Date(album.createdAt).getFullYear().toString(), // year 속성 추가
                 }))}
                 onAlbumClick={(album) => {
                   console.log('좋아요한 앨범 클릭:', album);
