@@ -14,6 +14,8 @@ interface LibraryPanelProps {
   onToggleRecording: (recordingId: string) => void;
   onPlayRecording: (recordingId: string) => void;
   currentPlayingId?: string;
+  loading?: boolean;
+  error?: string | null;
   className?: string;
 }
 
@@ -26,6 +28,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
   onToggleRecording,
   onPlayRecording,
   currentPlayingId,
+  loading = false,
+  error = null,
   className = '',
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,7 +118,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
           내 녹음 목록
         </h2>
         <p className="text-sm text-white/60">
-          {recordings.length}개의 녹음 · {selectedRecordings.length}개 선택됨
+          {recordings.length}개의 녹음 · {new Set(selectedRecordings).size}개 선택됨
         </p>
       </div>
 

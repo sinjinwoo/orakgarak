@@ -143,8 +143,9 @@ const AlbumCreatePage: React.FC = () => {
   const title = albumInfo.title || "";
   const description = albumInfo.description || "";
   const isPublic = albumInfo.isPublic ?? false;
+  // Convert to strings and remove duplicates using Set
   const selectedRecordings = useMemo(
-    () => selectedRecordIds.map(String),
+    () => Array.from(new Set(selectedRecordIds.map(String))),
     [selectedRecordIds]
   );
   const coverImage = albumInfo.coverImageUrl || null; // 커버 이미지 URL
@@ -162,17 +163,29 @@ const AlbumCreatePage: React.FC = () => {
     updateAlbumInfo({ isPublic: newIsPublic });
   }, [updateAlbumInfo]);
 
-  // Handler functions for recording selection
+  // Handler functions for recording selection with Set-based deduplication
   const addRecording = useCallback((recordingId: string) => {
-    const currentIds = selectedRecordIds.map(String);
-    if (!currentIds.includes(recordingId)) {
-      setSelectedRecordIds([...selectedRecordIds, recordingId]);
+    const currentSet = new Set(selectedRecordIds.map(String));
+
+    // 중복 방지
+    if (currentSet.has(recordingId)) {
+      return;
     }
+
+    // 최대 10곡 제한
+    if (currentSet.size >= 10) {
+      return;
+    }
+
+    // Set을 사용해서 중복 제거하고 추가
+    const newSet = new Set([...currentSet, recordingId]);
+    setSelectedRecordIds(Array.from(newSet));
   }, [selectedRecordIds, setSelectedRecordIds]);
 
   const removeRecording = useCallback((recordingId: string) => {
-    const newIds = selectedRecordIds.filter(id => String(id) !== recordingId);
-    setSelectedRecordIds(newIds);
+    const currentSet = new Set(selectedRecordIds.map(String));
+    currentSet.delete(recordingId);
+    setSelectedRecordIds(Array.from(currentSet));
   }, [selectedRecordIds, setSelectedRecordIds]);
 
   const [recordings, setRecordings] = useState<Recording[]>([]);
@@ -337,12 +350,12 @@ const AlbumCreatePage: React.FC = () => {
     loadRecordings();
   }, []);
 
-  // Convert selected recordings to tracks
+  // Convert selected recordings to tracks with Set-based filtering
   useEffect(() => {
     // Set으로 중복 제거 후 매핑
-    const uniqueSelectedIds = Array.from(new Set(selectedRecordIds.map(String)));
+    const uniqueSelectedSet = new Set(selectedRecordIds.map(String));
     const newTracks = recordings
-      .filter((recording) => uniqueSelectedIds.includes(recording.id))
+      .filter((recording) => uniqueSelectedSet.has(recording.id))
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
@@ -382,11 +395,13 @@ const AlbumCreatePage: React.FC = () => {
             loading={recordingsLoading}
             error={recordingsError}
             onToggleRecording={(recordingId) => {
-              const currentSelectedIds = selectedRecordIds.map(String);
-              if (currentSelectedIds.includes(recordingId)) {
+              const currentSelectedSet = new Set(selectedRecordIds.map(String));
+              if (currentSelectedSet.has(recordingId)) {
+                // 이미 선택된 곡이면 선택 해제
                 removeRecording(recordingId);
               } else {
-                if (currentSelectedIds.length >= 10) {
+                // 새로 선택하는 경우 10곡 제한 체크
+                if (currentSelectedSet.size >= 10) {
                   addToast({
                     type: "warning",
                     message: "최대 10곡까지만 선택할 수 있습니다.",

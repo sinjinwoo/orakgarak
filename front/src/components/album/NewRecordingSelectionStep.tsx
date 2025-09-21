@@ -27,6 +27,8 @@ interface NewRecordingSelectionStepProps {
   selectedRecordings: string[];
   onToggleRecording: (recordingId: string) => void;
   onAddToast?: (toast: { type: 'success' | 'error' | 'warning' | 'info'; message: string }) => void;
+  loading?: boolean;
+  error?: string | null;
   className?: string;
 }
 
@@ -35,10 +37,14 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
   selectedRecordings,
   onToggleRecording,
   onAddToast,
+  loading = false,
+  error = null,
   className = '',
 }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+
+  const normalizeId = (id: string | number): string => String(id).trim();
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -50,10 +56,10 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     useSensor(KeyboardSensor)
   );
 
-  // Convert selected recordings to tracks
   React.useEffect(() => {
+    const normalizedSelectedIds = new Set(selectedRecordings.map(normalizeId));
     const newTracks = recordings
-      .filter(recording => selectedRecordings.includes(recording.id))
+      .filter(recording => normalizedSelectedIds.has(normalizeId(recording.id)))
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
@@ -71,10 +77,8 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     // For now, we'll just keep the tracks state in sync
   }, []);
 
-  // Handle track removal
   const handleTrackRemove = useCallback((trackId: string) => {
-    onToggleRecording(trackId); // This will remove from selectedRecordings
-    setTracks(prev => prev.filter(track => track.id !== trackId));
+    onToggleRecording(normalizeId(trackId));
 
     onAddToast?.({
       type: 'info',
@@ -82,7 +86,6 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     });
   }, [onToggleRecording, onAddToast]);
 
-  // Handle adding track from library
   const handleTrackAdd = useCallback((recording: Recording) => {
     if (selectedRecordings.length >= 10) {
       onAddToast?.({
@@ -92,7 +95,7 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
       return;
     }
 
-    onToggleRecording(recording.id);
+    onToggleRecording(normalizeId(recording.id));
     onAddToast?.({
       type: 'success',
       message: `"${recording.song?.title || recording.title}"이(가) 추가되었습니다.`,
@@ -105,16 +108,14 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     // TODO: Implement actual audio playback
   }, []);
 
-  // Handle drag end
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
 
     if (!over) return;
 
-    // Handle drop from library to canvas
-    if (over.id === 'track-canvas' && !tracks.find(t => t.id === active.id)) {
-      const recording = recordings.find(r => r.id === active.id);
-      if (recording && !selectedRecordings.includes(recording.id)) {
+    if (over.id === 'track-canvas' && !tracks.find(t => normalizeId(t.id) === normalizeId(active.id))) {
+      const recording = recordings.find(r => normalizeId(r.id) === normalizeId(active.id));
+      if (recording && !selectedRecordings.some(id => normalizeId(id) === normalizeId(recording.id))) {
         handleTrackAdd(recording);
       }
     }
@@ -147,9 +148,11 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
           <LibraryPanel
             recordings={recordings}
             selectedRecordings={selectedRecordings}
-            onToggleRecording={onToggleRecording}
+            onToggleRecording={(id) => onToggleRecording(normalizeId(id))}
             onPlayRecording={handlePlayToggle}
             currentPlayingId={currentPlayingId}
+            loading={loading}
+            error={error}
           />
 
           {/* Right: Track Canvas */}
@@ -167,7 +170,7 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
         {/* Quick Stats */}
         <div className="mt-4 flex items-center justify-between text-sm text-white/60">
           <div className="flex items-center gap-4">
-            <span>선택된 트랙: {selectedRecordings.length}/10</span>
+            <span>선택된 트랙: {new Set(selectedRecordings).size}/10</span>
             <span>
               총 길이: {Math.floor(tracks.reduce((sum, track) => sum + (track.duration || track.durationSec || 0), 0) / 60)}분
             </span>
