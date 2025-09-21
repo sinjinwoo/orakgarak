@@ -2,8 +2,9 @@ export interface Album {
   id: number;
   userId: number;
   title: string;
-  description: string;
-  uploadId: number;
+  description?: string;
+  uploadId?: number;
+  coverImageUrl?: string;
   isPublic: boolean;
   trackCount: number;
   totalDuration: number;
@@ -13,112 +14,78 @@ export interface Album {
   coverImageUrl?: string; // 마이페이지 API에서 추가된 필드
 }
 
-export interface AlbumTrack {
-  id: string;
-  recordingId: string;
-  recording: {
-    song: {
-      title: string;
-      artist: string;
-    };
-    audioUrl: string;
-    duration: number;
-  };
-  trackNumber: number;
-  title?: string; // 커스텀 트랙 제목
-}
-
-// 앨범 생성 요청 타입
-export interface AlbumCreateRequest {
-  title: string;
-  description: string;
-  uploadId: number;
-  isPublic: boolean;
-}
-
-// 앨범 수정 요청 타입
-export interface AlbumUpdateRequest {
-  title: string;
-  description: string;
-  uploadId: number;
-  isPublic: boolean;
-}
-
-// 앨범 커버 업로드 응답 타입
-export interface AlbumCoverUploadResponse {
-  uploadId: number;
-  presignedUrl: string;
-  s3Key: string;
-  originalFileName: string;
-}
-
-// AI 앨범 커버 생성 요청 타입
-export interface AlbumCoverGenerateRequest {
-  uploadIds: number[];
-}
-
-// 페이지네이션된 앨범 목록 응답 타입
-export interface AlbumListResponse {
-  totalPages: number;
-  totalElements: number;
-  size: number;
-  content: Album[];
-  number: number;
-  sort: {
-    empty: boolean;
-    sorted: boolean;
-    unsorted: boolean;
-  };
-  first: boolean;
-  last: boolean;
-  numberOfElements: number;
-  pageable: {
-    offset: number;
-    sort: {
-      empty: boolean;
-      sorted: boolean;
-      unsorted: boolean;
-    };
-    paged: boolean;
-    pageNumber: number;
-    pageSize: number;
-    unpaged: boolean;
-  };
-  empty: boolean;
-}
-
-// 마이페이지 API 응답 타입들
-export interface MyPageStats {
-  followerCount: number;
-  followingCount: number;
-  albumCount: number;
-  likedAlbumCount: number;
-}
-
-export interface MyPageAlbumListResponse {
-  albums: Album[];
-  currentPage: number;
-  totalPages: number;
-  totalElements: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
-
-export interface MyPageLikedAlbumListResponse {
-  likedAlbums: Album[];
-  currentPage: number;
-  totalPages: number;
-  totalElements: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
-
-// 기존 타입 호환성을 위해 유지
-export interface AlbumCreateData {
+export interface CreateAlbumRequest {
   title: string;
   description?: string;
-  coverImage?: string;
-  recordingIds: string[];
+  uploadId?: number;
   isPublic: boolean;
-  tags: string[];
+}
+
+export interface UpdateAlbumRequest {
+  title: string;
+  description?: string;
+  uploadId?: number;
+  isPublic: boolean;
+}
+
+// Album Track 관련 타입들
+export interface AlbumTrack {
+  id: number;
+  albumId: number;
+  recordId: number;
+  trackOrder: number;
+  title: string;
+  duration: number;
+  audioUrl: string;
+  createdAt: string;
+}
+
+export interface AddTrackRequest {
+  recordId: number;
+  trackOrder?: number;
+}
+
+export interface BulkAddTracksRequest {
+  tracks: Array<{
+    recordId: number;
+    trackOrder?: number;
+  }>;
+}
+
+export interface AlbumTracksResponse {
+  albumId: number;
+  tracks: AlbumTrack[];
+  totalTracks: number;
+}
+
+export interface PlaybackResponse {
+  currentTrack: AlbumTrack;
+  nextTrack?: AlbumTrack;
+  previousTrack?: AlbumTrack;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  totalTracks: number;
+}
+
+export interface AlbumListResponse {
+  albums: Album[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface AlbumQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  isPublic?: boolean;
+  sortBy?: 'createdAt' | 'updatedAt' | 'title' | 'likeCount';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface ApiError {
+  message: string;
+  statusCode: number;
+  details?: any;
 }

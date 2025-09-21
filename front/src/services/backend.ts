@@ -113,8 +113,8 @@ export const songAPI = {
 export const recordingAPI = {
   // 내 녹음본 목록
   getMyRecordings: async () => {
-    const response = await apiClient.get('/recordings/me');
-    return response.data;
+    const response = await apiClient.get('/records/me');
+    return response;
   },
   
   // 녹음본 업로드
@@ -206,6 +206,29 @@ export const albumAPI = {
   unlikeAlbum: async (albumId: number) => {
     const response = await apiClient.delete(`/albums/${albumId}/like`);
     return response.data;
+  },
+
+  // AI 앨범 커버 생성
+  generateAICover: async (trackIds: string[], params: Record<string, unknown>, count = 3) => {
+    const response = await apiClient.post('/albums/covers/generate', {
+      trackIds,
+      params,
+      count
+    });
+    return response;
+  },
+
+  // 앨범 커버 이미지 업로드
+  uploadCoverImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await apiClient.post('/albums/covers/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response;
   },
 };
 
