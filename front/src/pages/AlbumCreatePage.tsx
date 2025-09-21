@@ -149,6 +149,32 @@ const AlbumCreatePage: React.FC = () => {
   );
   const coverImage = albumInfo.coverImageUrl || null; // 커버 이미지 URL
 
+  // Handler functions for form updates
+  const setTitle = useCallback((newTitle: string) => {
+    updateAlbumInfo({ title: newTitle });
+  }, [updateAlbumInfo]);
+
+  const setDescription = useCallback((newDescription: string) => {
+    updateAlbumInfo({ description: newDescription });
+  }, [updateAlbumInfo]);
+
+  const setIsPublic = useCallback((newIsPublic: boolean) => {
+    updateAlbumInfo({ isPublic: newIsPublic });
+  }, [updateAlbumInfo]);
+
+  // Handler functions for recording selection
+  const addRecording = useCallback((recordingId: string) => {
+    const currentIds = selectedRecordIds.map(String);
+    if (!currentIds.includes(recordingId)) {
+      setSelectedRecordIds([...selectedRecordIds, recordingId]);
+    }
+  }, [selectedRecordIds, setSelectedRecordIds]);
+
+  const removeRecording = useCallback((recordingId: string) => {
+    const newIds = selectedRecordIds.filter(id => String(id) !== recordingId);
+    setSelectedRecordIds(newIds);
+  }, [selectedRecordIds, setSelectedRecordIds]);
+
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
   const [recordingsError, setRecordingsError] = useState<string | null>(null);
@@ -156,13 +182,13 @@ const AlbumCreatePage: React.FC = () => {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Convert currentStep to StageId
+  // Convert currentStep (number) to StageId (string)
   const currentStage: StageId =
-    currentStep === "recordings"
+    currentStep === 1
       ? "recordings"
-      : currentStep === "cover"
+      : currentStep === 2
       ? "cover"
-      : currentStep === "metadata"
+      : currentStep === 3
       ? "metadata"
       : "preview";
 
@@ -188,7 +214,12 @@ const AlbumCreatePage: React.FC = () => {
   // Stage navigation
   const goToStep = useCallback(
     (stage: StageId) => {
-      setCreationStep(stage);
+      const stepNumber =
+        stage === "recordings" ? 1 :
+        stage === "cover" ? 2 :
+        stage === "metadata" ? 3 :
+        4; // preview
+      setCreationStep(stepNumber);
     },
     [setCreationStep]
   );
@@ -215,6 +246,7 @@ const AlbumCreatePage: React.FC = () => {
   // 앨범 초기화 함수
   const resetAlbum = useCallback(() => {
     resetCreationState();
+    setTracks([]); // tracks 상태도 초기화
   }, [resetCreationState]);
 
   // 앨범 데이터 생성 함수
@@ -307,9 +339,10 @@ const AlbumCreatePage: React.FC = () => {
 
   // Convert selected recordings to tracks
   useEffect(() => {
-    const selectedRecordingIds = selectedRecordIds.map(String);
+    // Set으로 중복 제거 후 매핑
+    const uniqueSelectedIds = Array.from(new Set(selectedRecordIds.map(String)));
     const newTracks = recordings
-      .filter((recording) => selectedRecordingIds.includes(recording.id))
+      .filter((recording) => uniqueSelectedIds.includes(recording.id))
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
@@ -349,10 +382,11 @@ const AlbumCreatePage: React.FC = () => {
             loading={recordingsLoading}
             error={recordingsError}
             onToggleRecording={(recordingId) => {
-              if (selectedRecordings.includes(recordingId)) {
+              const currentSelectedIds = selectedRecordIds.map(String);
+              if (currentSelectedIds.includes(recordingId)) {
                 removeRecording(recordingId);
               } else {
-                if (selectedRecordings.length >= 10) {
+                if (currentSelectedIds.length >= 10) {
                   addToast({
                     type: "warning",
                     message: "최대 10곡까지만 선택할 수 있습니다.",
@@ -423,14 +457,19 @@ const AlbumCreatePage: React.FC = () => {
     }
   };
 
+  // Initialize/reset when component mounts
+  useEffect(() => {
+    // 페이지 진입 시 이전 상태 초기화 (새로운 앨범 생성 시작)
+    resetCreationState();
+  }, [resetCreationState]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (currentStep === "completed") {
-        resetAlbum();
-      }
+      // Clean up when leaving the page
+      // Note: currentStep is a number, not "completed"
     };
-  }, [currentStep, resetAlbum]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 relative">
