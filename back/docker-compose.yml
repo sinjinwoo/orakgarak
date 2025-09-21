@@ -290,6 +290,27 @@ services:
     depends_on:
       - alertmanager-config
   # ============================================
+    # Loki Config Generator - 설정 파일 생성
+  # ============================================
+  loki-config:
+    image: alpine:latest
+    container_name: orakgaraki-loki-config
+    environment:
+      LOKI_AUTH_ENABLED: ${LOKI_AUTH_ENABLED}
+      LOKI_CACHE_SIZE: ${LOKI_CACHE_SIZE}
+      LOKI_INGESTION_RATE: ${LOKI_INGESTION_RATE}
+      LOKI_INGESTION_BURST: ${LOKI_INGESTION_BURST}
+      LOKI_MAX_STREAMS: ${LOKI_MAX_STREAMS}
+      LOKI_MAX_LINE_SIZE: ${LOKI_MAX_LINE_SIZE}
+      LOKI_RETENTION: ${LOKI_RETENTION}
+    volumes:
+      - ./monitoring/loki:/templates:ro
+      - loki_config:/config
+    command: |
+      sh -c "apk add --no-cache gettext &&
+             envsubst < /templates/loki.yml.template > /config/loki.yml &&
+             echo 'Loki local configuration generated successfully'"
+  # ============================================
   # Loki - 로그 집계 및 저장
   # ============================================
   loki:
@@ -300,9 +321,29 @@ services:
       - "${LOKI_PORT:-3100}:3100"
     volumes:
       - loki_data:/loki
-      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
-    command: -config.file=/etc/loki/local-config.yaml
+      - loki_config:/etc/loki:ro
+    command: -config.file=/etc/loki/loki.yml
+    depends_on:
+      - loki-config
 
+  # ============================================
+  # Promtail Config Generator - 설정 파일 생성
+  # ============================================
+  promtail-config:
+    image: alpine:latest
+    container_name: orakgaraki-promtail-config
+    environment:
+      LOKI_PORT: ${LOKI_PORT}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      PROMTAIL_READLINE_RATE: ${PROMTAIL_READLINE_RATE}
+      PROMTAIL_MAX_STREAMS: ${PROMTAIL_MAX_STREAMS}
+    volumes:
+      - ./monitoring/promtail:/templates:ro
+      - promtail_config:/config
+    command: |
+      sh -c "apk add --no-cache gettext &&
+             envsubst < /templates/promtail-config.yml.template > /config/promtail-config.yml &&
+             echo 'Promtail local configuration generated successfully'"
   # ============================================
   # Promtail - 로그 수집 에이전트
   # ============================================
@@ -311,13 +352,14 @@ services:
     container_name: orakgaraki-promtail
     restart: unless-stopped
     volumes:
-      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - promtail_config:/etc/promtail:ro
       - ./logs:/var/log/app:ro  # 로컬: ./logs -> /var/log/app로 마운트
       - /var/log:/var/log/host:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: -config.file=/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/promtail-config.yml
     depends_on:
+      - promtail-config
       - loki
 
 volumes:
@@ -325,8 +367,10 @@ volumes:
   redis_data:
   kafka_data:
   loki_data:
+  loki_config:
   prometheus_data:
   prometheus_config:
   grafana_data:
   alertmanager_data:
   alertmanager_config:
+  promtail_config:

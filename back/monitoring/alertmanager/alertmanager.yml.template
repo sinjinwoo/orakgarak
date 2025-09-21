@@ -23,24 +23,24 @@ route:
       group_wait: 2m
       repeat_interval: 1h
 
-# 알림 수신자 설정
+# 알림 수신자 설정 (Spring Boot WebhookController 경유)
 receivers:
   # 기본 Mattermost 알림
   - name: 'mattermost-notifications'
     webhook_configs:
-      - url: '${MATTERMOST_WEBHOOK_URL}'
+      - url: '${ALERTMANAGER_WEBHOOK_URL}'
         send_resolved: true
 
-  # 심각한 알림용 (빨간색)
+  # 심각한 알림용
   - name: 'mattermost-critical'
     webhook_configs:
-      - url: '${MATTERMOST_WEBHOOK_URL}'
+      - url: '${ALERTMANAGER_WEBHOOK_URL}'
         send_resolved: true
 
-  # 경고 알림용 (노란색)
+  # 경고 알림용
   - name: 'mattermost-warnings'
     webhook_configs:
-      - url: '${MATTERMOST_WEBHOOK_URL}'
+      - url: '${ALERTMANAGER_WEBHOOK_URL}'
         send_resolved: true
 
 # 억제 규칙 (중복 알림 방지)
