@@ -13,6 +13,12 @@ export interface Song {
   durationMs?: number;
   popularity?: number;
   status: string;
+  
+  // 호환성을 위한 추가 속성들
+  title?: string;
+  artist?: string;
+  duration?: number;
+  youtubeId?: string;
 }
 
 // 가사 데이터 구조 (lyrics JSON을 파싱했을 때)

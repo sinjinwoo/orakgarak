@@ -1,6 +1,6 @@
 import React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { recordingService } from "../services/recordingApi";
+import { recordingService } from "../services/api";
 import {
   Recording,
   CreateRecordingRequest,

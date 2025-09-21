@@ -12,7 +12,7 @@ import QuickRecommendation from '../components/recommendation/QuickRecommendatio
 // import ExistingRecordingSelection from '../components/voiceTest/ExistingRecordingSelection'; // 기존 녹음본 선택
 
 // 데이터 및 유틸리티
-import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스
+// import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스 - 임시 주석
 import { 
   calculateRecommendationScore, // 추천 점수 계산
   generateRecommendationReason, // 추천 이유 생성

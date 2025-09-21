@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { songService } from "../services/songApi";
+import { songService } from "../services/api";
 import { Song, SongSearchResponse, SongDetailResponse } from "../types/song";
 import { ApiError } from "../types/recording";
 

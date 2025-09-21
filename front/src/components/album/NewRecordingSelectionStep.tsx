@@ -33,8 +33,6 @@ interface NewRecordingSelectionStepProps {
   error?: string | null;
   onToggleRecording: (recordingId: string) => void;
   onAddToast?: (toast: { type: 'success' | 'error' | 'warning' | 'info'; message: string }) => void;
-  loading?: boolean;
-  error?: string | null;
   className?: string;
 }
 
@@ -45,8 +43,6 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
   error = null,
   onToggleRecording,
   onAddToast,
-  loading = false,
-  error = null,
   className = '',
 }) => {
   const [tracks, setTracks] = useState<Track[]>([]);

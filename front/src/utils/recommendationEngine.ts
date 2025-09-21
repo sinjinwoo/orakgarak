@@ -1,4 +1,5 @@
-import type { MusicData } from '../data/musicDatabase';
+// import type { MusicData } from '../data/musicDatabase'; // 임시 주석
+type MusicData = any; // 임시 타입
 import type { VoiceAnalysis, VoiceTestResult } from '../types/voiceAnalysis';
 import type { RecommendedSong } from '../types/recommendation';
 
