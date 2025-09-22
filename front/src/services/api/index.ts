@@ -6,6 +6,7 @@ export * from './songs';
 export * from './recordings';
 export * from './users';
 export * from './profiles';
+export * from './social';
 
 // 타입 re-export
 export type { ApiResponse, ApiError, PaginatedResponse } from './types';

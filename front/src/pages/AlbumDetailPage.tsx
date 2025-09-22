@@ -162,7 +162,7 @@ const AlbumDetailPage: React.FC = () => {
     };
 
     loadAlbum();
-  }, [albumId, albumData]);
+  }, [albumId]);
 
   // 앨범을 찾을 수 없으면 이전 페이지로 리다이렉트 (API 연동 전까지는 비활성화)
   // useEffect(() => {

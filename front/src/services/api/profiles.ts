@@ -81,6 +81,19 @@ export const profileService = {
     return response.data;
   },
 
+  // 배경화면 업로드
+  updateBackgroundImage: async (imageFile: File): Promise<Profile> => {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await apiClient.post<Profile>('/profiles/me/background-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   // === 다른 사용자 프로필 ===
   
   // 특정 사용자 프로필 조회
