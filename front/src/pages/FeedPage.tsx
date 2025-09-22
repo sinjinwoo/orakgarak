@@ -31,7 +31,8 @@ import {
 import {
   FilterList,
   Add,
-  MusicNote
+  MusicNote,
+  Person
 } from '@mui/icons-material';
 
 // 타입 정의 (API 응답에 맞게 수정)
@@ -622,7 +623,7 @@ const FeedPage: React.FC = () => {
                 }}>
                   {safeFeedAlbums.map((album: FeedAlbum, index: number) => (
                   <motion.div
-                    key={album.id}
+                    key={album.id ? `album-${album.id}` : `album-${index}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -671,8 +672,8 @@ const FeedPage: React.FC = () => {
                             objectFit: 'cover',
                             transition: 'all 0.3s ease',
                           }}
-                          image={album.coverImage}
-                          alt={album.title}
+                          image={album.coverImage || '/images/default-album-cover.jpg'}
+                          alt={album.title || '앨범'}
                         />
                       </Box>
 
@@ -690,7 +691,7 @@ const FeedPage: React.FC = () => {
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical',
                         }}>
-                          {album.title}
+                          {album.title || '제목 없음'}
                         </Typography>
                         
                         <Typography variant="body2" sx={{ 
@@ -699,25 +700,27 @@ const FeedPage: React.FC = () => {
                           color: 'rgba(255, 255, 255, 0.6)',
                           mb: 1
                         }}>
-                          ({album.createdAt.split('.')[0]}년)
+                          ({album.createdAt ? new Date(album.createdAt).getFullYear() : new Date().getFullYear()}년)
                         </Typography>
 
                         {/* 사용자 정보 */}
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <Avatar 
-                            src={album.user.avatar} 
+                            src={album.user?.avatar} 
                             sx={{ 
                               width: 20, 
                               height: 20, 
                               mr: 1,
                               border: '1px solid rgba(255, 255, 255, 0.2)'
                             }}
-                          />
+                          >
+                            <Person sx={{ fontSize: 12 }} />
+                          </Avatar>
                           <Typography variant="body2" sx={{ 
                             fontSize: '0.8rem',
                             color: 'rgba(255, 255, 255, 0.7)'
                           }}>
-                            {album.user.nickname}
+                            {album.user?.nickname || `사용자 ${album.userId}`}
                           </Typography>
                         </Box>
 
@@ -731,7 +734,7 @@ const FeedPage: React.FC = () => {
                             alignItems: 'center',
                             gap: 0.5
                           }}>
-                            ♫ {album.trackCount}곡
+                            ♫ {album.trackCount || 0}곡
                           </Typography>
                           <Typography variant="body2" sx={{ 
                             fontSize: '0.75rem',
@@ -740,7 +743,7 @@ const FeedPage: React.FC = () => {
                             alignItems: 'center',
                             gap: 0.5
                           }}>
-                            ▶ {album.playCount}회
+                            ▶ {album.playCount || 0}회
                           </Typography>
                         </Box>
                           
@@ -917,8 +920,8 @@ const FeedPage: React.FC = () => {
                              border: '2px solid rgba(196, 71, 233, 0.3)',
                              boxShadow: '0 0 10px rgba(196, 71, 233, 0.3)'
                            }}
-                           image={album.coverImage}
-                           alt={album.title}
+                           image={album.coverImage || '/images/default-album-cover.jpg'}
+                           alt={album.title || '앨범'}
                          />
                          <Box sx={{ flex: 1 }}>
                            <Typography variant="h6" sx={{ 
@@ -926,7 +929,7 @@ const FeedPage: React.FC = () => {
                              mb: 1,
                              color: '#FFFFFF'
                            }}>
-                             {album.title}
+                             {album.title || '제목 없음'}
                            </Typography>
                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                              <Typography variant="body2" sx={{ color: '#B3B3B3' }}>
