@@ -70,6 +70,27 @@ public class ProfileController {
         return ResponseEntity.ok(response);
     }
 
+    // 백그라운드 이미지 업로드
+    @PostMapping("/me/background-image")
+    public ResponseEntity<ProfileResponseDTO> uploadBackgroundImage(
+            @AuthenticationPrincipal CustomUserPrincipal principal,
+            @RequestParam("image") MultipartFile imageFile
+    ) {
+        ProfileResponseDTO response = profileService.updateBackgroundImage(
+                principal.getUserId(), imageFile);
+        return ResponseEntity.ok(response);
+    }
+
+    // 백그라운드 이미지 삭제
+    @PostMapping("/me/background-image/remove")
+    public ResponseEntity<ProfileResponseDTO> removeBackgroundImage(
+            @AuthenticationPrincipal CustomUserPrincipal principal
+    ) {
+        ProfileResponseDTO response = profileService.removeBackgroundImage(
+                principal.getUserId());
+        return ResponseEntity.ok(response);
+    }
+
     // 닉네임 중복 체크
     @GetMapping("/nickname/check")
     public ResponseEntity<Boolean> checkNicknameAvailability(@RequestParam String nickname) {
