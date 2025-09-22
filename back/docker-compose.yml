@@ -353,7 +353,7 @@ services:
     restart: unless-stopped
     volumes:
       - promtail_config:/etc/promtail:ro
-      - ./logs:/var/log/app:ro  # 로컬: ./logs -> /var/log/app로 마운트
+      - ../back/logs:/var/log/app:ro  # 로그 디렉토리 마운트
       - /var/log:/var/log/host:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

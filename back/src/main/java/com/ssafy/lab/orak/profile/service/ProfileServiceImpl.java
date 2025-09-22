@@ -128,6 +128,10 @@ public class ProfileServiceImpl implements ProfileService {
     @Override
     @Transactional(readOnly = true)
     public ProfileStatsResponseDTO getMyPageStats(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("사용자 ID는 null일 수 없습니다");
+        }
+
         Profile profile = profileRepository.findByUser_Id(userId)
                 .orElseThrow(() -> new ProfileNotFoundException("프로필을 찾을 수 없습니다: userId=" + userId));
 
@@ -135,6 +139,12 @@ public class ProfileServiceImpl implements ProfileService {
         Long followingCount = followRepository.countByFollower(profile);
         Long albumCount = albumRepository.countByUserId(userId);
         Long likedAlbumCount = likeRepository.countByUserId(userId);
+
+        // Null 값을 0으로 처리
+        followerCount = followerCount != null ? followerCount : 0L;
+        followingCount = followingCount != null ? followingCount : 0L;
+        albumCount = albumCount != null ? albumCount : 0L;
+        likedAlbumCount = likedAlbumCount != null ? likedAlbumCount : 0L;
 
         return ProfileStatsResponseDTO.of(followerCount, followingCount, albumCount, likedAlbumCount);
     }

@@ -6,7 +6,7 @@ positions:
   filename: /tmp/positions.yaml
 
 clients:
-  - url: http://loki:${LOKI_PORT:-3100}/loki/api/v1/push
+  - url: http://loki:${LOKI_PORT}/loki/api/v1/push
 
 scrape_configs:
   # Docker 컨테이너 로그만 수집 (현업 방식)
@@ -54,25 +54,18 @@ scrape_configs:
         labels:
           job: orakgaraki
           service: app
-          environment: ${SPRING_PROFILES_ACTIVE:-local}
+          environment: ${SPRING_PROFILES_ACTIVE}
           __path__: /var/log/app/*.log  # Docker에서 통일된 경로
 
     pipeline_stages:
-      - match:
-          selector: '{job="orakgaraki"}'
-          stages:
-            - json:
-                expressions:
-                  level: level
-                  message: message
-                  timestamp: timestamp
-            - timestamp:
-                source: timestamp
-                format: '2006-01-02 15:04:05.000'
-            - labels:
-                level:
+      # 파일명을 라벨로 추가
+      - regex:
+          expression: '^.*/(?P<filename>[^/]+)$'
+          source: filename
+      - labels:
+          filename:
 
 # 현업에서는 환경별 다른 제한 설정
 limits_config:
-  readline_rate: ${PROMTAIL_READLINE_RATE:-10000}
-  max_streams: ${PROMTAIL_MAX_STREAMS:-5000}
+  readline_rate: ${PROMTAIL_READLINE_RATE}
+  max_streams: ${PROMTAIL_MAX_STREAMS}
