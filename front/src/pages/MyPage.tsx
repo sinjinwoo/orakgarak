@@ -42,7 +42,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
 import { useAuth } from '../hooks/useAuth';
-import { useMyProfile } from '../hooks/useProfile';
+import { useProfile } from '../hooks/useProfile';
 import { motion } from 'framer-motion';
 import AlbumCoverflow from '../components/AlbumCoverflow';
 import { albumService, userService, apiClient } from '../services/api';
@@ -183,23 +183,54 @@ const MyPage: React.FC = () => {
   const { showToast } = useUIStore();
   const { user, updateProfile } = useAuth();
   const { 
-    updateMyProfile, 
-    updateMyProfileWithImage, 
-    checkNicknameDuplicate,
+    profile,
+    updateProfile: updateMyProfile, 
+    updateProfileWithImage: updateMyProfileWithImage, 
+    updateBackgroundImage,
+    updateProfileImage,
+    deleteProfileImage,
     isLoading: profileLoading,
     error: profileError 
-  } = useMyProfile();
+  } = useProfile() || {};
   const [tabValue, setTabValue] = useState(0);
   const [profileEditOpen, setProfileEditOpen] = useState(false);
   const [followModalOpen, setFollowModalOpen] = useState(false);
   const [followType, setFollowType] = useState<'following' | 'followers'>('following');
   const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
   
-  // 배경 이미지 캐싱
+  // 배경 이미지 - 실제 프로필에서 가져오기
   const backgroundImage = useMemo(() => {
+    // 1순위: 실제 프로필 API에서 가져온 배경화면
+    if (profile?.backgroundImageUrl) {
+      return `url(${profile.backgroundImageUrl})`;
+    }
+    // 2순위: localStorage에 저장된 커스텀 배경
     const customBg = localStorage.getItem('customBackground');
-    return customBg ? `url(${customBg})` : 'url(/images/background/Music.jpg)';
-  }, []);
+    if (customBg) {
+      return `url(${customBg})`;
+    }
+    // 3순위: 기본 배경화면
+    return 'url(/images/background/Music.jpg)';
+  }, [profile?.backgroundImageUrl]);
+
+  // 프로필 데이터 통합 (useProfile 훅의 profile 데이터 직접 사용)
+  const currentProfile = useMemo(() => {
+    // useProfile 훅에서 이미 profile || user를 반환하므로 그대로 사용
+    if (profile) {
+      return {
+        nickname: profile.nickname || '음악러버',
+        introduction: profile.description || '음악을 사랑하는 평범한 사람입니다. 노래 부르는 것이 취미예요!',
+        profileImageUrl: profile.profileImageUrl || ''
+      };
+    }
+    
+    // profile이 없는 경우 기본값
+    return {
+      nickname: '음악러버',
+      introduction: '음악을 사랑하는 평범한 사람입니다. 노래 부르는 것이 취미예요!',
+      profileImageUrl: ''
+    };
+  }, [profile]);
   
   // 앨범 데이터 상태
   const [myAlbums, setMyAlbums] = useState<AlbumType[]>([]);
@@ -220,33 +251,22 @@ const MyPage: React.FC = () => {
   });
   const [statsLoading, setStatsLoading] = useState(true);
   
-  // 프로필 상태 관리
-  const [profileData, setProfileData] = useState(() => {
-    // localStorage에서 프로필 데이터 불러오기
-    const savedProfile = localStorage.getItem('userProfile');
-    if (savedProfile) {
-      const parsed = JSON.parse(savedProfile);
-      return {
-        nickname: parsed.nickname || '음악러버',
-        introduction: parsed.introduction || '음악을 사랑하는 평범한 사람입니다. 노래 부르는 것이 취미예요!',
-        profileImage: null as File | null,
-        profileImageUrl: parsed.profileImageUrl || ''
-      };
-    }
-    return {
-      nickname: '음악러버',
-      introduction: '음악을 사랑하는 평범한 사람입니다. 노래 부르는 것이 취미예요!',
-      profileImage: null as File | null,
-      profileImageUrl: ''
-    };
-  });
+  // 프로필 상태는 useProfile 훅에서 관리됨
   
 
   // 편집 폼 상태
   const [editForm, setEditForm] = useState({
-    nickname: profileData.nickname,
-    introduction: profileData.introduction
+    nickname: currentProfile.nickname,
+    introduction: currentProfile.introduction
   });
+
+  // currentProfile이 변경될 때 editForm 업데이트
+  useEffect(() => {
+    setEditForm({
+      nickname: currentProfile.nickname,
+      introduction: currentProfile.introduction
+    });
+  }, [currentProfile.nickname, currentProfile.introduction]);
 
   // 실제 데이터 상태 관리
   const [recordings, setRecordings] = useState([
@@ -277,7 +297,13 @@ const MyPage: React.FC = () => {
           setMyPageStats(statsResponse.data);
         } catch (error) {
           console.error('통계 데이터 로드 실패:', error);
-          // 기본값 유지
+          // 서버 에러 시 기본값 사용 (앱이 크래시되지 않도록)
+          setMyPageStats({
+            followerCount: 0,
+            followingCount: 0,
+            albumCount: myAlbums.length, // 로컬 앨범 수는 사용
+          });
+          showToast('통계 데이터 로드에 실패했습니다. 기본값을 표시합니다.', 'warning');
         }
 
         // 내 앨범 목록 로드
@@ -342,8 +368,8 @@ const MyPage: React.FC = () => {
 
   const handleProfileEdit = () => {
     setEditForm({
-      nickname: profileData.nickname,
-      introduction: profileData.introduction
+      nickname: currentProfile.nickname,
+      introduction: currentProfile.introduction
     });
     setProfileEditOpen(true);
   };
@@ -376,40 +402,12 @@ const MyPage: React.FC = () => {
       }
 
       try {
-        // 실제 백엔드 API 호출
-        const updatedProfile = await updateMyProfileWithImage({
-          image: file,
-          nickname: profileData.nickname,
-          gender: 'male', // TODO: 성별 선택 UI 추가 후 실제 값 사용
-          description: profileData.introduction
-        });
-
-        if (updatedProfile) {
-          // 로컬 상태 업데이트
-          const updatedProfileData = {
-            ...profileData,
-            profileImage: file,
-            profileImageUrl: updatedProfile.profileImageUrl
-          };
-          
-          setProfileData(updatedProfileData);
-          
-          // localStorage에 프로필 데이터 저장
-          localStorage.setItem('userProfile', JSON.stringify({
-            nickname: updatedProfile.nickname,
-            introduction: updatedProfile.description,
-            profileImageUrl: updatedProfile.profileImageUrl
-          }));
-          
-          // authStore 업데이트 (Header 동기화를 위해)
-          if (user) {
-            updateProfile({
-              nickname: updatedProfile.nickname,
-              profileImage: updatedProfile.profileImageUrl
-            });
-          }
-          
+        // 실제 API 호출
+        const success = await updateProfileImage(file);
+        if (success) {
           showToast('프로필 사진이 업로드되었습니다.', 'success');
+        } else {
+          throw new Error('프로필 사진 업로드에 실패했습니다.');
         }
       } catch (error) {
         console.error('프로필 이미지 업로드 실패:', error);
@@ -420,40 +418,18 @@ const MyPage: React.FC = () => {
 
   const handleSaveProfile = async () => {
     try {
-      // 실제 백엔드 API 호출
-      const updatedProfile = await updateMyProfile({
+      // 실제 API 호출
+      const success = await updateMyProfile({
         nickname: editForm.nickname,
-        gender: 'male', // TODO: 성별 선택 UI 추가 후 실제 값 사용
+        gender: profile?.gender || 'male', // 기존 성별 유지 또는 기본값
         description: editForm.introduction
       });
-
-      if (updatedProfile) {
-        // 로컬 상태 업데이트
-        const updatedProfileData = {
-          ...profileData,
-          nickname: updatedProfile.nickname,
-          introduction: updatedProfile.description
-        };
-        
-        setProfileData(updatedProfileData);
-        
-        // localStorage에 프로필 데이터 저장
-        localStorage.setItem('userProfile', JSON.stringify({
-          nickname: updatedProfile.nickname,
-          introduction: updatedProfile.description,
-          profileImageUrl: profileData.profileImageUrl
-        }));
-        
-        // authStore 업데이트 (Header 동기화를 위해)
-        if (user) {
-          updateProfile({
-            nickname: updatedProfile.nickname,
-            profileImage: profileData.profileImageUrl
-          });
-        }
-        
+      
+      if (success) {
         setProfileEditOpen(false);
         showToast('프로필이 성공적으로 저장되었습니다.', 'success');
+      } else {
+        throw new Error('프로필 저장에 실패했습니다.');
       }
     } catch (error) {
       console.error('프로필 저장 실패:', error);
@@ -461,30 +437,54 @@ const MyPage: React.FC = () => {
     }
   };
 
-  const handleResetProfileImage = () => {
-    const updatedProfileData = {
-      ...profileData,
-      profileImage: null,
-      profileImageUrl: ''
-    };
-    
-    setProfileData(updatedProfileData);
-    
-    // localStorage에 프로필 데이터 저장
-    localStorage.setItem('userProfile', JSON.stringify({
-      nickname: profileData.nickname,
-      introduction: profileData.introduction,
-      profileImageUrl: ''
-    }));
-    
-    // authStore 업데이트 (Header 동기화를 위해)
-    if (user) {
-      updateProfile({
-        profileImage: ''
-      });
+  const handleResetProfileImage = async () => {
+    try {
+      // 서버에 기본 프로필 이미지가 있다면 해당 이미지를 가져와서 업로드
+      // 또는 빈 이미지를 업로드해서 서버에서 기본 이미지로 처리하도록 함
+      
+      // 기본 프로필 이미지 URL에서 이미지를 가져와서 업로드  
+      const defaultImageUrl = '/images/default-profile.svg'; // 기본 프로필 이미지
+      
+      try {
+        const response = await fetch(defaultImageUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const defaultFile = new File([blob], 'default-profile.png', { type: 'image/png' });
+          const success = await updateProfileImage(defaultFile);
+          if (success) {
+            showToast('프로필 사진이 기본 이미지로 변경되었습니다.', 'success');
+            return;
+          }
+        }
+      } catch (fetchError) {
+        console.log('기본 이미지 파일을 찾을 수 없습니다. 빈 이미지로 대체합니다.');
+      }
+      
+      // 기본 이미지가 없으면 1x1 투명 픽셀 이미지 생성
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, 1, 1);
+      }
+      
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const defaultFile = new File([blob], 'default.png', { type: 'image/png' });
+          const success = await updateProfileImage(defaultFile);
+          if (success) {
+            showToast('프로필 사진이 기본 이미지로 변경되었습니다.', 'success');
+          } else {
+            throw new Error('프로필 사진 초기화에 실패했습니다.');
+          }
+        }
+      }, 'image/png');
+      
+    } catch (error) {
+      console.error('프로필 사진 초기화 실패:', error);
+      showToast('프로필 사진 초기화에 실패했습니다. 백엔드 서버를 확인해주세요.', 'error');
     }
-    
-    showToast('프로필 사진이 기본 이미지로 변경되었습니다.', 'success');
   };
 
   // 녹음 추가 함수 (나중에 녹음 페이지에서 호출)
@@ -584,7 +584,7 @@ const MyPage: React.FC = () => {
           }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3, position: 'relative', zIndex: 1 }}>
               <Avatar 
-                src={profileData.profileImageUrl}
+                src={currentProfile.profileImageUrl}
                 sx={{ 
                   width: 80, 
                   height: 80, 
@@ -595,7 +595,7 @@ const MyPage: React.FC = () => {
                   color: '#C147E9'
                 }}
               >
-                {!profileData.profileImageUrl && <Person />}
+                {!currentProfile.profileImageUrl && <Person />}
               </Avatar>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h4" sx={{ 
@@ -608,7 +608,7 @@ const MyPage: React.FC = () => {
                   WebkitTextFillColor: 'transparent',
                   textShadow: '0 0 20px rgba(210, 151, 228, 0.5)'
                 }}>
-                  {profileData.nickname}
+                  {currentProfile.nickname}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
                   <Button 
@@ -651,7 +651,7 @@ const MyPage: React.FC = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.8)' }}>
-                  {profileData.introduction}
+                  {currentProfile.introduction}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
                   <Button
@@ -1104,10 +1104,10 @@ const MyPage: React.FC = () => {
         <DialogContent>
           <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Avatar 
-              src={profileData.profileImageUrl}
+              src={currentProfile.profileImageUrl}
               sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'rgba(255, 255, 255, 0.2)' }}
             >
-              {!profileData.profileImageUrl && <Person sx={{ color: 'rgba(255, 255, 255, 0.8)' }} />}
+              {!currentProfile.profileImageUrl && <Person sx={{ color: 'rgba(255, 255, 255, 0.8)' }} />}
             </Avatar>
             <input
               accept="image/*"
@@ -1138,7 +1138,7 @@ const MyPage: React.FC = () => {
                   사진 변경
                 </Button>
               </label>
-              {profileData.profileImageUrl && (
+              {currentProfile.profileImageUrl && (
                 <Button 
                   variant="outlined" 
                   onClick={handleResetProfileImage}
@@ -1346,20 +1346,44 @@ const MyPage: React.FC = () => {
                 type="file"
                 accept="image/jpeg,image/png,image/jpg"
                 style={{ display: 'none' }}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const imageUrl = event.target?.result as string;
-                      // 배경 이미지 설정 로직
-                      localStorage.setItem('customBackground', imageUrl);
-                      showToast('배경 이미지가 설정되었습니다.', 'success');
-                      setIsBackgroundModalOpen(false);
-                      // 페이지 새로고침으로 배경 적용
-                      window.location.reload();
-                    };
-                    reader.readAsDataURL(file);
+                    // 파일 크기 체크 (5MB 제한)
+                    if (file.size > 5 * 1024 * 1024) {
+                      showToast('파일 크기는 5MB 이하여야 합니다.', 'error');
+                      return;
+                    }
+                    
+                    // 이미지 파일 타입 체크
+                    if (!file.type.startsWith('image/')) {
+                      showToast('이미지 파일만 업로드 가능합니다.', 'error');
+                      return;
+                    }
+
+                    try {
+                      if (updateBackgroundImage) {
+                        const success = await updateBackgroundImage(file);
+                        if (success) {
+                          showToast('배경 이미지가 설정되었습니다.', 'success');
+                          setIsBackgroundModalOpen(false);
+                          return;
+                        }
+                      }
+                      
+                      // Fallback: localStorage 사용
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const imageUrl = event.target?.result as string;
+                        localStorage.setItem('customBackground', imageUrl);
+                        showToast('배경 이미지가 설정되었습니다.', 'success');
+                        setIsBackgroundModalOpen(false);
+                        window.location.reload();
+                      };
+                      reader.readAsDataURL(file);
+                    } catch (error) {
+                      showToast('배경 이미지 업로드에 실패했습니다.', 'error');
+                    }
                   }
                 }}
               />
@@ -1441,13 +1465,23 @@ const MyPage: React.FC = () => {
             <Button
               variant="outlined"
               fullWidth
-              onClick={() => {
-                // 기본 배경으로 복원하는 로직
-                localStorage.removeItem('customBackground');
-                showToast('기본 배경으로 복원되었습니다.', 'success');
-                setIsBackgroundModalOpen(false);
-                // 페이지 새로고침으로 배경 적용
-                window.location.reload();
+              onClick={async () => {
+                try {
+                  // 1. localStorage 커스텀 배경 제거
+                  localStorage.removeItem('customBackground');
+                  
+                  // 2. TODO: 서버의 배경화면도 삭제하는 API 필요
+                  // 현재는 localStorage 제거만으로 기본 배경 적용
+                  
+                  showToast('기본 배경으로 복원되었습니다.', 'success');
+                  setIsBackgroundModalOpen(false);
+                  
+                  // 페이지 새로고침으로 배경 적용
+                  window.location.reload();
+                } catch (error) {
+                  console.error('배경 복원 실패:', error);
+                  showToast('기본 배경 복원에 실패했습니다.', 'error');
+                }
               }}
               sx={{
                 borderColor: 'rgba(255, 255, 255, 0.3)',

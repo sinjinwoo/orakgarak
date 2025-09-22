@@ -174,6 +174,9 @@ const FeedPage: React.FC = () => {
   const isLoading = tabValue === 0 ? publicLoading : followingLoading;
   const error = tabValue === 0 ? publicError : followingError;
 
+  // 안전성 체크: filteredFeedAlbums가 배열인지 확인
+  const safeFeedAlbums = Array.isArray(filteredFeedAlbums) ? filteredFeedAlbums : [];
+
   const handleSortChange = (event: any) => {
     setSortBy(event.target.value as string);
   };
@@ -463,7 +466,7 @@ const FeedPage: React.FC = () => {
                     color: '#B3B3B3',
                     fontWeight: 500
                   }}>
-                    {filteredFeedAlbums.length}개 앨범
+                    {safeFeedAlbums.length}개 앨범
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -527,8 +530,48 @@ const FeedPage: React.FC = () => {
                 </Box>
               </Box>
 
+              {/* 에러 상태 표시 */}
+              {error && (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 4,
+                  px: 3,
+                  mb: 3,
+                  backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                  border: '1px solid rgba(255, 0, 0, 0.3)',
+                  borderRadius: 2,
+                }}>
+                  <Typography variant="h6" sx={{ color: '#FF6B6B', mb: 1 }}>
+                    데이터를 불러오는데 실패했습니다
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mb: 2 }}>
+                    서버에 일시적인 문제가 있을 수 있습니다.
+                  </Typography>
+                  <Button 
+                    variant="outlined" 
+                    color="error" 
+                    onClick={() => tabValue === 0 ? refetchPublic() : refetchFollowing()}
+                    sx={{ mt: 1 }}
+                  >
+                    다시 시도
+                  </Button>
+                </Box>
+              )}
+
+              {/* 로딩 상태 표시 */}
+              {isLoading && (
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 8,
+                }}>
+                  <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    앨범을 불러오는 중...
+                  </Typography>
+                </Box>
+              )}
+
               {/* 앨범 카드 목록 */}
-              {filteredFeedAlbums.length === 0 ? (
+              {!isLoading && !error && safeFeedAlbums.length === 0 ? (
                 <Box sx={{ 
                   textAlign: 'center', 
                   py: 8,
@@ -568,7 +611,7 @@ const FeedPage: React.FC = () => {
                     </Button>
                   )}
                          </Box>
-              ) : (
+              ) : !isLoading && !error && (
                 <Box sx={{ 
                   display: 'grid',
                   gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' },
@@ -577,7 +620,7 @@ const FeedPage: React.FC = () => {
                     gap: 4
                   }
                 }}>
-                  {filteredFeedAlbums.map((album: FeedAlbum, index: number) => (
+                  {safeFeedAlbums.map((album: FeedAlbum, index: number) => (
                   <motion.div
                     key={album.id}
                     initial={{ opacity: 0, y: 20 }}

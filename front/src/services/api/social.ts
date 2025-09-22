@@ -142,8 +142,10 @@ export const socialService = {
   albums: {
     // 공개 앨범 목록 조회
     getPublicAlbums: async (): Promise<Album[]> => {
-      const response = await apiClient.get<Album[]>('/social/albums');
-      return response.data;
+      const response = await apiClient.get('/social/albums');
+      // API 응답이 단일 객체일 수 있으므로 배열로 변환
+      const data = response.data;
+      return Array.isArray(data) ? data : (data ? [data] : []);
     },
 
     // 공개 앨범 상세 조회
@@ -153,9 +155,18 @@ export const socialService = {
     },
 
     // 팔로잉한 멤버의 공개 앨범 조회
-    getFollowingAlbums: async (): Promise<any> => {
+    getFollowingAlbums: async (): Promise<Album[]> => {
       const response = await apiClient.get('/social/albums/follow');
-      return response.data;
+      // API 응답이 다양한 형태일 수 있으므로 안전하게 처리
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return data;
+      } else if (data && typeof data === 'object') {
+        // 단일 객체인 경우 배열로 변환
+        return [data];
+      } else {
+        return [];
+      }
     },
 
     // 앨범 좋아요
