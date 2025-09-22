@@ -4,6 +4,9 @@ import { ApiError } from './types';
 // API 기본 설정
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
+// 토큰 만료 시간 설정 (기본값: 1시간)
+const TOKEN_EXPIRY_TIME = parseInt(import.meta.env.VITE_TOKEN_EXPIRY_HOURS || '1') * 60 * 60 * 1000;
+
 // 통합 Axios 인스턴스 생성
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -54,10 +57,10 @@ export const tokenManager = {
     
     if (!token || !createdTime) return true;
     
-    // 토큰이 1시간(3600초) 이상 지났으면 만료로 간주
+    // 설정된 시간 이상 지났으면 만료로 간주
     const now = Date.now();
     const created = parseInt(createdTime);
-    return (now - created) > 3600000; // 1시간
+    return (now - created) > TOKEN_EXPIRY_TIME;
   }
 };
 

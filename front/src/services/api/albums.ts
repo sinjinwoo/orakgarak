@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { normalizeAlbum } from '../../utils/typeHelpers';
 import type { PaginatedResponse, PaginationParams, SearchParams } from './types';
 import type { 
   Album, 
@@ -39,13 +40,18 @@ export const albumService = {
   // 앨범 목록 조회
   getAlbums: async (params?: AlbumQueryParams): Promise<PaginatedResponse<Album>> => {
     const response = await apiClient.get<PaginatedResponse<Album>>('/albums', { params });
-    return response.data;
+    // 앨범 목록 정규화 적용
+    const data = response.data;
+    return {
+      ...data,
+      content: (data.content || []).map(normalizeAlbum).filter(Boolean)
+    };
   },
   
   // 특정 앨범 조회
   getAlbum: async (albumId: number): Promise<Album> => {
     const response = await apiClient.get<Album>(`/albums/${albumId}`);
-    return response.data;
+    return normalizeAlbum(response.data);
   },
   
   // 새 앨범 생성
