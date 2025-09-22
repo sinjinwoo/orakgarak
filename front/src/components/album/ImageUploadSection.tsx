@@ -64,7 +64,7 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
       setUploadedImage(localUrl);
 
       // 실제 업로드 처리
-      const result = await uploadCover(file);
+       const result = await uploadCover(file);
       setCoverUpload(result.imageUrl, result.uploadId);
       onUploadComplete?.(result.imageUrl);
     } catch (error) {
@@ -108,7 +108,7 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
 
   const handleRemoveImage = useCallback(() => {
     setUploadedImage(null);
-    setCoverUpload('', undefined);
+    setCoverUpload('',undefined);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';

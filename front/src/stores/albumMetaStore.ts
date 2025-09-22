@@ -3,12 +3,12 @@
  * 스토리 기반 폼과 브랜드 잠금 기능 지원
  */
 
-import { create } from 'zustand';
+import { create } from "zustand";
 
 // 브랜드 잠금 설정
 export interface BrandLock {
   logo?: string;
-  font: 'modern' | 'classic' | 'handwrite';
+  font: "modern" | "classic" | "handwrite";
   palette: {
     primary: string;
     secondary: string;
@@ -18,11 +18,11 @@ export interface BrandLock {
 
 // 커버 설정
 export interface CoverConfig {
-  mode: 'ai' | 'upload';
+  mode: "ai" | "upload";
   variantId?: string;
   seed?: number;
   params: {
-    style: 'poster' | 'filmgrain' | 'lineart' | 'collage';
+    style: "poster" | "filmgrain" | "lineart" | "collage";
     emphasizeColor: string;
     noise: number;
     texture: number;
@@ -46,7 +46,7 @@ export interface CoverConfig {
   referenceBoard: Array<{
     id: string;
     url: string;
-    type: 'image' | 'url';
+    type: "image" | "url";
     palette: string[];
   }>;
 }
@@ -76,7 +76,7 @@ interface AlbumMetaState {
   autoChips: Array<{
     id: string;
     text: string;
-    category: 'mood' | 'genre' | 'tempo' | 'keyword';
+    category: "mood" | "genre" | "tempo" | "keyword";
     weight: number;
   }>;
 
@@ -104,28 +104,32 @@ interface AlbumMetaActions {
   setCoreKeywords: (keywords: string[]) => void;
   setTagline: (tagline: string) => void;
   setDescription: (description: string) => void;
-  addAutoChip: (chip: AlbumMetaState['autoChips'][0]) => void;
+  addAutoChip: (chip: AlbumMetaState["autoChips"][0]) => void;
   removeAutoChip: (chipId: string) => void;
-  insertChipToField: (chipId: string, field: 'tagline' | 'description', position: number) => void;
+  insertChipToField: (
+    chipId: string,
+    field: "tagline" | "description",
+    position: number
+  ) => void;
 
   // 브랜드 잠금 액션
   setBrandLock: (brandLock: BrandLock | null) => void;
-  updateBrandFont: (font: BrandLock['font']) => void;
-  updateBrandPalette: (palette: BrandLock['palette']) => void;
+  updateBrandFont: (font: BrandLock["font"]) => void;
+  updateBrandPalette: (palette: BrandLock["palette"]) => void;
   uploadBrandLogo: (logo: string) => void;
 
   // 커버 액션
-  setCoverMode: (mode: CoverConfig['mode']) => void;
-  updateCoverParams: (params: Partial<CoverConfig['params']>) => void;
-  addCoverVariant: (variant: CoverConfig['variants'][0]) => void;
+  setCoverMode: (mode: CoverConfig["mode"]) => void;
+  updateCoverParams: (params: Partial<CoverConfig["params"]>) => void;
+  addCoverVariant: (variant: CoverConfig["variants"][0]) => void;
   selectCoverVariant: (variantId: string) => void;
-  addToReferenceBoard: (reference: CoverConfig['referenceBoard'][0]) => void;
+  addToReferenceBoard: (reference: CoverConfig["referenceBoard"][0]) => void;
   removeFromReferenceBoard: (referenceId: string) => void;
   setCoverUpload: (url: string, uploadId?: number) => void;
 
   // 인사이트 액션
   setInsights: (insights: TrackInsights) => void;
-  toggleInsightEnabled: (field: keyof TrackInsights['enabled']) => void;
+  toggleInsightEnabled: (field: keyof TrackInsights["enabled"]) => void;
 
   // 유틸리티 액션
   setIsPublic: (isPublic: boolean) => void;
@@ -153,19 +157,19 @@ const PROMPT_WEIGHTS = {
 } as const;
 
 const FONT_PRESETS = {
-  modern: { name: 'Inter', weight: [400, 600, 700] },
-  classic: { name: 'Playfair Display', weight: [400, 600, 700] },
-  handwrite: { name: 'Caveat', weight: [400, 600, 700] },
+  modern: { name: "Inter", weight: [400, 600, 700] },
+  classic: { name: "Playfair Display", weight: [400, 600, 700] },
+  handwrite: { name: "Caveat", weight: [400, 600, 700] },
 } as const;
 
 const initialCoverConfig: CoverConfig = {
-  mode: 'ai',
+  mode: "ai",
   params: {
-    style: 'poster',
-    emphasizeColor: '#A855F7',
+    style: "poster",
+    emphasizeColor: "#A855F7",
     noise: 0.1,
     texture: 0.2,
-    focusSubject: '',
+    focusSubject: "",
     marginRatio: 0.1,
     typoRatio: 0.3,
   },
@@ -176,8 +180,8 @@ const initialCoverConfig: CoverConfig = {
 
 const initialState: AlbumMetaState = {
   coreKeywords: [],
-  tagline: '',
-  description: '',
+  tagline: "",
+  description: "",
   autoChips: [],
   brandLock: null,
   cover: initialCoverConfig,
@@ -197,17 +201,19 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
   setTagline: (tagline) => set({ tagline }),
   setDescription: (description) => set({ description }),
 
-  addAutoChip: (chip) => set((state) => ({
-    autoChips: [...state.autoChips, chip],
-  })),
+  addAutoChip: (chip) =>
+    set((state) => ({
+      autoChips: [...state.autoChips, chip],
+    })),
 
-  removeAutoChip: (chipId) => set((state) => ({
-    autoChips: state.autoChips.filter(chip => chip.id !== chipId),
-  })),
+  removeAutoChip: (chipId) =>
+    set((state) => ({
+      autoChips: state.autoChips.filter((chip) => chip.id !== chipId),
+    })),
 
   insertChipToField: (chipId, field, position) => {
     const state = get();
-    const chip = state.autoChips.find(c => c.id === chipId);
+    const chip = state.autoChips.find((c) => c.id === chipId);
     if (!chip) return;
 
     const currentValue = state[field];
@@ -222,84 +228,116 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
   // 브랜드 잠금 액션
   setBrandLock: (brandLock) => set({ brandLock }),
 
-  updateBrandFont: (font) => set((state) => ({
-    brandLock: state.brandLock
-      ? { ...state.brandLock, font }
-      : { font, palette: { primary: '#A855F7', secondary: '#EC4899', locked: false } }
-  })),
+  updateBrandFont: (font) =>
+    set((state) => ({
+      brandLock: state.brandLock
+        ? { ...state.brandLock, font }
+        : {
+            font,
+            palette: {
+              primary: "#A855F7",
+              secondary: "#EC4899",
+              locked: false,
+            },
+          },
+    })),
 
-  updateBrandPalette: (palette) => set((state) => ({
-    brandLock: state.brandLock
-      ? { ...state.brandLock, palette }
-      : { font: 'modern', palette }
-  })),
+  updateBrandPalette: (palette) =>
+    set((state) => ({
+      brandLock: state.brandLock
+        ? { ...state.brandLock, palette }
+        : { font: "modern", palette },
+    })),
 
-  uploadBrandLogo: (logo) => set((state) => ({
-    brandLock: state.brandLock
-      ? { ...state.brandLock, logo }
-      : { font: 'modern', logo, palette: { primary: '#A855F7', secondary: '#EC4899', locked: false } }
-  })),
+  uploadBrandLogo: (logo) =>
+    set((state) => ({
+      brandLock: state.brandLock
+        ? { ...state.brandLock, logo }
+        : {
+            font: "modern",
+            logo,
+            palette: {
+              primary: "#A855F7",
+              secondary: "#EC4899",
+              locked: false,
+            },
+          },
+    })),
 
   // 커버 액션
-  setCoverMode: (mode) => set((state) => ({
-    cover: { ...state.cover, mode }
-  })),
+  setCoverMode: (mode) =>
+    set((state) => ({
+      cover: { ...state.cover, mode },
+    })),
 
-  updateCoverParams: (params) => set((state) => ({
-    cover: {
-      ...state.cover,
-      params: { ...state.cover.params, ...params }
-    }
-  })),
-
-  addCoverVariant: (variant) => set((state) => ({
-    cover: {
-      ...state.cover,
-      variants: [variant, ...state.cover.variants].slice(0, 4)
-    }
-  })),
-
-  selectCoverVariant: (variantId) => set((state) => {
-    const variant = state.cover.variants.find(v => v.id === variantId);
-    return variant ? {
+  updateCoverParams: (params) =>
+    set((state) => ({
       cover: {
         ...state.cover,
-        variantId,
-        seed: variant.seed
-      }
-    } : {};
-  }),
+        params: { ...state.cover.params, ...params },
+      },
+    })),
 
-  addToReferenceBoard: (reference) => set((state) => ({
-    cover: {
-      ...state.cover,
-      referenceBoard: [...state.cover.referenceBoard, reference]
-    }
-  })),
+  addCoverVariant: (variant) =>
+    set((state) => ({
+      cover: {
+        ...state.cover,
+        variants: [variant, ...state.cover.variants].slice(0, 4),
+      },
+    })),
 
-  removeFromReferenceBoard: (referenceId) => set((state) => ({
-    cover: {
-      ...state.cover,
-      referenceBoard: state.cover.referenceBoard.filter(ref => ref.id !== referenceId)
-    }
-  })),
+  selectCoverVariant: (variantId) =>
+    set((state) => {
+      const variant = state.cover.variants.find((v) => v.id === variantId);
+      return variant
+        ? {
+            cover: {
+              ...state.cover,
+              variantId,
+              seed: variant.seed,
+            },
+          }
+        : {};
+    }),
 
-  setCoverUpload: (url, uploadId) => set((state) => ({
-    cover: { ...state.cover, uploadedUrl: url, uploadId }
-  })),
+  addToReferenceBoard: (reference) =>
+    set((state) => ({
+      cover: {
+        ...state.cover,
+        referenceBoard: [...state.cover.referenceBoard, reference],
+      },
+    })),
+
+  removeFromReferenceBoard: (referenceId) =>
+    set((state) => ({
+      cover: {
+        ...state.cover,
+        referenceBoard: state.cover.referenceBoard.filter(
+          (ref) => ref.id !== referenceId
+        ),
+      },
+    })),
+
+  setCoverUpload: (url, uploadId) =>
+    set((state) => ({
+      cover: { ...state.cover, uploadedUrl: url, uploadId },
+    })),
 
   // 인사이트 액션
   setInsights: (insights) => set({ insights }),
 
-  toggleInsightEnabled: (field) => set((state) => ({
-    insights: state.insights ? {
-      ...state.insights,
-      enabled: {
-        ...state.insights.enabled,
-        [field]: !state.insights.enabled[field]
-      }
-    } : null
-  })),
+  toggleInsightEnabled: (field) =>
+    set((state) => ({
+      insights: state.insights
+        ? {
+            ...state.insights,
+            enabled: {
+              ...state.insights.enabled,
+              [field]: !state.insights.enabled[field],
+            },
+          }
+        : null,
+    })),
 
   // 유틸리티 액션
   setIsPublic: (isPublic) => set({ isPublic }),
@@ -310,31 +348,34 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
   saveToStorage: () => {
     const state = get();
     try {
-      localStorage.setItem('album.meta.v2', JSON.stringify({
-        coreKeywords: state.coreKeywords,
-        tagline: state.tagline,
-        description: state.description,
-        brandLock: state.brandLock,
-        cover: state.cover,
-        insights: state.insights,
-        isPublic: state.isPublic,
-        tags: state.tags,
-      }));
+      localStorage.setItem(
+        "album.meta.v2",
+        JSON.stringify({
+          coreKeywords: state.coreKeywords,
+          tagline: state.tagline,
+          description: state.description,
+          brandLock: state.brandLock,
+          cover: state.cover,
+          insights: state.insights,
+          isPublic: state.isPublic,
+          tags: state.tags,
+        })
+      );
       set({ lastSaved: new Date().toISOString() });
     } catch (error) {
-      console.error('Failed to save album meta to storage:', error);
+      console.error("Failed to save album meta to storage:", error);
     }
   },
 
   loadFromStorage: () => {
     try {
-      const saved = localStorage.getItem('album.meta.v2');
+      const saved = localStorage.getItem("album.meta.v2");
       if (saved) {
         const data = JSON.parse(saved);
         set({
           coreKeywords: data.coreKeywords || [],
-          tagline: data.tagline || '',
-          description: data.description || '',
+          tagline: data.tagline || "",
+          description: data.description || "",
           brandLock: data.brandLock || null,
           cover: { ...initialCoverConfig, ...data.cover },
           insights: data.insights || null,
@@ -344,7 +385,7 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
         });
       }
     } catch (error) {
-      console.error('Failed to load album meta from storage:', error);
+      console.error("Failed to load album meta from storage:", error);
     }
   },
 
@@ -355,7 +396,7 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
     const state = get();
 
     // 자동 칩에서 활성화된 인사이트 기반 텍스트 생성
-    let autoText = '';
+    let autoText = "";
     if (state.insights) {
       const { enabled, mood, key, bpm, lyricTone } = state.insights;
       const autoChips = [];
@@ -365,15 +406,17 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
       if (enabled.bpm) autoChips.push(`${bpm} BPM`);
       if (enabled.lyricTone) autoChips.push(lyricTone);
 
-      autoText = autoChips.join(', ');
+      autoText = autoChips.join(", ");
     }
 
     // 사용자 입력 텍스트
     const userText = [
-      state.coreKeywords.join(' '),
+      state.coreKeywords.join(" "),
       state.tagline,
-      state.description
-    ].filter(Boolean).join('. ');
+      state.description,
+    ]
+      .filter(Boolean)
+      .join(". ");
 
     return {
       text: `${autoText}. ${userText}`.trim(),
