@@ -31,6 +31,7 @@ export interface CoverConfig {
     typoRatio: number;
   };
   uploadedUrl?: string;
+  uploadId?: number;
   variants: Array<{
     id: string;
     imageUrl: string;
@@ -120,7 +121,7 @@ interface AlbumMetaActions {
   selectCoverVariant: (variantId: string) => void;
   addToReferenceBoard: (reference: CoverConfig['referenceBoard'][0]) => void;
   removeFromReferenceBoard: (referenceId: string) => void;
-  setCoverUpload: (url: string) => void;
+  setCoverUpload: (url: string, uploadId?: number) => void;
 
   // 인사이트 액션
   setInsights: (insights: TrackInsights) => void;
@@ -283,8 +284,8 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
     }
   })),
 
-  setCoverUpload: (url) => set((state) => ({
-    cover: { ...state.cover, uploadedUrl: url }
+  setCoverUpload: (url, uploadId) => set((state) => ({
+    cover: { ...state.cover, uploadedUrl: url, uploadId }
   })),
 
   // 인사이트 액션

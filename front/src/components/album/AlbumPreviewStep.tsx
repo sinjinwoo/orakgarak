@@ -72,7 +72,8 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
   onPublish,
   onComplete,
 }) => {
-  // Zustand store hooks (필요한 액션들만)
+  // Zustand store hooks
+  const { selectedCoverUploadId } = useAlbumCreationSelectors();
   const { updateAlbumInfo, getCompleteAlbumData, resetCreationState } =
     useAlbumCreationActions();
 
