@@ -86,7 +86,7 @@
             }
           },
           {
-            "expr": "processing_queue_size{job=\"orakgaraki-app\"}",
+            "expr": "processing_queue_size{job=\"orakgaraki-app\"} or vector(0)",
             "legendFormat": "처리 대기",
             "refId": "D",
             "datasource": {
@@ -418,7 +418,7 @@
         "gridPos": {"h": 8, "w": 12, "x": 12, "y": 46},
         "targets": [
           {
-            "expr": "(rate(upload_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(upload_duration_count{job=\"orakgaraki-app\"}[5m])) or on() vector(0)",
+            "expr": "(rate(upload_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(upload_duration_count{job=\"orakgaraki-app\"}[5m])) or vector(0)",
             "legendFormat": "평균 업로드 시간 (초)",
             "refId": "A",
             "datasource": {
@@ -436,7 +436,7 @@
             }
           },
           {
-            "expr": "(rate(upload_completed_total{job=\"orakgaraki-app\"}[5m]) / rate(upload_started_total{job=\"orakgaraki-app\"}[5m]) * 100) or vector(0)",
+            "expr": "(rate(upload_completed_total{job=\"orakgaraki-app\"}[5m]) / rate(upload_started_total{job=\"orakgaraki-app\"}[5m])) * 100",
             "legendFormat": "업로드 성공률 (%)",
             "refId": "C",
             "datasource": {
