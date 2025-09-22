@@ -114,7 +114,7 @@ export default function ExistingRecordingSelection({
     if (playingRecordingId === recording.id && currentAudio.current) {
       if (currentAudio.current.paused) {
         currentAudio.current.play().catch(console.error);
-      } else {
+    } else {
         currentAudio.current.pause();
       }
       return;
@@ -281,7 +281,7 @@ export default function ExistingRecordingSelection({
               className="neon-card hologram-panel"
               sx={{ 
                 p: 4, 
-                textAlign: 'center',
+              textAlign: 'center',
                 background: 'rgba(26,26,26,0.9)',
                 border: '2px solid rgba(255,0,128,0.4)',
                 borderRadius: 4,
@@ -440,7 +440,7 @@ export default function ExistingRecordingSelection({
     );
   }
 
-  return (
+    return (
     <Box className="matrix-bg cyberpunk-scrollbar" sx={{ minHeight: '100vh', p: 3 }}>
       <Fade in timeout={1000}>
         <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
@@ -553,7 +553,7 @@ export default function ExistingRecordingSelection({
                     }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      {/* 재생 버튼 */}
+            {/* 재생 버튼 */}
                       <IconButton
                         onClick={() => playRecording(recording)}
                         disabled={!hasValidUrl}
@@ -581,7 +581,7 @@ export default function ExistingRecordingSelection({
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           '&:hover': hasValidUrl ? {
                             transform: 'scale(1.1) rotate(5deg)',
-                            boxShadow: isPlaying 
+                boxShadow: isPlaying 
                               ? '0 0 50px rgba(255,0,128,0.8)' 
                               : '0 0 50px rgba(0,255,255,0.6)',
                           } : {},
@@ -603,7 +603,7 @@ export default function ExistingRecordingSelection({
                         )}
                       </IconButton>
 
-                      {/* 녹음본 정보 */}
+            {/* 녹음본 정보 */}
                       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                           <Typography 
