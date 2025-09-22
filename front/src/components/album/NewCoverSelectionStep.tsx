@@ -3,11 +3,13 @@
  * AI 자동 생성과 직접 업로드 두 가지 방식 제공
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import CoverSelectionTab, { type CoverSelectionMode } from './CoverSelectionTab';
 import AICoverSection from './AICoverSection';
 import ImageUploadSection from './ImageUploadSection';
+import { useAlbumCreationActions } from '../../stores/albumStore';
+import { useAlbumMetaStore } from '../../stores/albumMetaStore';
 
 interface NewCoverSelectionStepProps {
   selectedRecordings: string[];
@@ -19,6 +21,19 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
   className = '',
 }) => {
   const [mode, setMode] = useState<CoverSelectionMode>('ai');
+
+  // Store hooks
+  const { setSelectedCoverUploadId, updateAlbumInfo } = useAlbumCreationActions();
+  const { cover } = useAlbumMetaStore();
+
+  // 이미지 업로드 완료 핸들러
+  const handleUploadComplete = useCallback((imageUrl: string) => {
+    // albumMetaStore에서 uploadId 가져와서 albumStore에 저장
+    if (cover.uploadId) {
+      setSelectedCoverUploadId(cover.uploadId);
+      updateAlbumInfo({ coverImageUrl: imageUrl });
+    }
+  }, [cover.uploadId, setSelectedCoverUploadId, updateAlbumInfo]);
 
   return (
     <div className={`h-full ${className}`}>
@@ -63,7 +78,7 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
                   원하는 이미지를 업로드해 앨범 커버로 사용하세요
                 </p>
               </div>
-              <ImageUploadSection />
+              <ImageUploadSection onUploadComplete={handleUploadComplete} />
             </div>
           )}
         </motion.div>

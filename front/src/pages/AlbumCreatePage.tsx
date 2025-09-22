@@ -22,6 +22,8 @@ import NewCoverSelectionStep from "../components/album/NewCoverSelectionStep";
 import AlbumInfoStep from "../components/album/AlbumInfoStep";
 import AlbumPreviewStep from "../components/album/AlbumPreviewStep";
 import { recordingService } from "../services/api";
+import { useCreateAlbum } from "../hooks/useAlbum";
+import { useAlbumMetaStore } from "../stores/albumMetaStore";
 
 // 더미 녹음 데이터
 const dummyRecordings: Recording[] = [
@@ -127,7 +129,7 @@ interface Track extends Recording {
 
 const AlbumCreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentStep, selectedRecordIds, albumInfo } =
+  const { currentStep, selectedRecordIds, albumInfo, selectedCoverUploadId } =
     useAlbumCreationSelectors();
 
   const {
@@ -149,6 +151,10 @@ const AlbumCreatePage: React.FC = () => {
     [selectedRecordIds]
   );
   const coverImage = albumInfo.coverImageUrl || null; // 커버 이미지 URL
+
+  // Hooks
+  const createAlbumMutation = useCreateAlbum();
+  const { cover } = useAlbumMetaStore();
 
   // Handler functions for form updates
   const setTitle = useCallback((newTitle: string) => {
@@ -268,16 +274,9 @@ const AlbumCreatePage: React.FC = () => {
       title,
       description,
       isPublic,
-      coverImageUrl: coverImage,
+      uploadId: selectedCoverUploadId || cover.uploadId, // albumStore 우선, 없으면 albumMetaStore 사용
     };
-  }, [title, description, isPublic, coverImage]);
-
-  // 앨범 생성 함수 (임시)
-  const createAlbum = useCallback((albumData: any, recordings: Recording[]) => {
-    // TODO: 실제 앨범 생성 API 호출
-    console.log("앨범 생성:", albumData, recordings);
-    return Date.now(); // 임시 앨범 ID
-  }, []);
+  }, [title, description, isPublic, selectedCoverUploadId, cover.uploadId]);
 
   // Action bar handlers
   const handleNext = useCallback(() => {
@@ -453,7 +452,9 @@ const AlbumCreatePage: React.FC = () => {
   const handlePublish = async () => {
     try {
       const albumData = getAlbumData();
-      const albumId = createAlbum(albumData, recordings);
+
+      // 실제 앨범 생성 API 호출
+      const album = await createAlbumMutation.mutateAsync(albumData);
 
       addToast({
         type: "success",
