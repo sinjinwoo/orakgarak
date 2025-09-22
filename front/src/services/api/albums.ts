@@ -47,7 +47,12 @@ export const albumService = {
     const response = await apiClient.get<PaginatedResponse<Album>>("/albums", {
       params,
     });
-    return response.data;
+    // 앨범 목록 정규화 적용
+    const data = response.data;
+    return {
+      ...data,
+      content: (data.content || []).map(normalizeAlbum).filter(Boolean),
+    };
   },
 
   // 특정 앨범 조회
