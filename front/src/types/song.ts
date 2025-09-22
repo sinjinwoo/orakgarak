@@ -1,31 +1,67 @@
-/**
- * 곡 정보 타입 정의
- * - 예약 큐와 검색에서 사용되는 곡 데이터 구조
- */
+// 곡 관련 타입 정의
 
 export interface Song {
-  id: number;        // 곡 고유 ID
-  title: string;     // 곡 제목
-  artist: string;    // 아티스트명
-  albumName: string; // 앨범명
-  duration: string;  // 재생 시간 (mm:ss 형식)
-  albumCoverUrl?: string; // 앨범 커버 URL
-  youtubeId?: string; // 유튜브 MR 영상 ID (선택)
-  lyrics?: string;   // 가사 정보 (JSON 문자열)
-}
-
-// API 응답 타입 정의
-export interface SongApiResponse {
   id: number;
   songId: number;
   songName: string;
   artistName: string;
   albumName: string;
   musicUrl: string;
-  lyrics: string;
+  lyrics: string; // JSON 문자열로 저장된 가사 데이터
   albumCoverUrl: string;
   spotifyTrackId: string;
-  durationMs: number | null;
-  popularity: number | null;
+  durationMs?: number;
+  popularity?: number;
   status: string;
+  
+  // 호환성을 위한 추가 속성들
+  title?: string;
+  artist?: string;
+  duration?: number;
+  youtubeId?: string;
 }
+
+// 가사 데이터 구조 (lyrics JSON을 파싱했을 때)
+export interface LyricsData {
+  lyrics: {
+    syncType: "LINE_SYNCED" | "UNSYNCED";
+    lines: LyricsLine[];
+    provider: string;
+    providerLyricsId: string;
+    providerDisplayName: string;
+    syncLyricsUri: string;
+    isDenseTypeface: boolean;
+    alternatives: any[];
+    language: string;
+    isRtlLanguage: boolean;
+    capStatus: string;
+    previewLines: LyricsLine[];
+  };
+  colors: {
+    background: number;
+    text: number;
+    highlightText: number;
+  };
+  hasVocalRemoval: boolean;
+}
+
+export interface LyricsLine {
+  startTimeMs: string;
+  words: string;
+  syllables: any[];
+  endTimeMs: string;
+  transliteratedWords: string;
+}
+
+// 곡 검색 요청
+export interface SongSearchRequest {
+  keyword: string;
+  limit?: number;
+  offset?: number;
+}
+
+// 곡 검색 응답
+export type SongSearchResponse = Song[];
+
+// 특정 곡 조회 응답
+export type SongDetailResponse = Song;
