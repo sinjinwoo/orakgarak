@@ -16,7 +16,9 @@ import {
 } from '@dnd-kit/core';
 import LibraryPanel from './LibraryPanel';
 import TrackCanvas from './TrackCanvas';
+import StepHeader from './StepHeader';
 import { type Recording } from '../../types/recording';
+import { Music } from 'lucide-react';
 
 interface Track extends Recording {
   order: number;
@@ -138,13 +140,11 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     >
       <div className={`h-full ${className}`}>
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-2">녹음 선택</h1>
-          <p className="text-white/70">
-            앨범에 포함할 녹음을 선택하고 순서를 조정해보세요.
-            드래그앤드롭으로 쉽게 추가할 수 있습니다.
-          </p>
-        </div>
+        <StepHeader
+          title="녹음 선택"
+          description="앨범에 포함할 녹음을 선택하고 순서를 조정해보세요. 드래그앤드롭으로 쉽게 추가할 수 있습니다."
+          icon={<Music className="w-6 h-6 text-fuchsia-400" />}
+        />
 
         {/* Two-column layout */}
         <div className="grid grid-cols-[400px_1fr] gap-6 h-[calc(100%-120px)]">
