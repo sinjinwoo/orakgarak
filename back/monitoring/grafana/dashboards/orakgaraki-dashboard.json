@@ -427,7 +427,7 @@
             }
           },
           {
-            "expr": "rate(processing_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(processing_duration_count{job=\"orakgaraki-app\"}[5m])",
+            "expr": "(rate(processing_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(processing_duration_count{job=\"orakgaraki-app\"}[5m])) or vector(0)",
             "legendFormat": "평균 처리 시간 (초)",
             "refId": "B",
             "datasource": {
