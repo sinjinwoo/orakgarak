@@ -79,28 +79,18 @@ export const compareIds = (id1: string | number, id2: string | number): boolean 
 export const normalizeRecording = (recording: any): any => {
   if (!recording) return null;
   
+  // 백엔드 RecordResponseDTO 응답을 그대로 반환 (정규화 없이)
+  // 호환성을 위한 최소한의 매핑만 추가
   return {
     ...recording,
-    // 재생 시간 호환성 (초 단위)
-    duration: recording.duration || recording.durationSeconds || 0,
-    
-    // 오디오 URL 호환성
-    audioUrl: recording.audioUrl || recording.publicUrl || '',
-    
-    // 곡 정보 호환성
-    song: recording.song || {
-      title: recording.title || recording.songName || 'Unknown Title',
-      artist: recording.artistName || recording.artist || 'Unknown Artist',
-    },
-    
-    // 분석 결과 호환성 (기본값 제공)
-    analysis: recording.analysis || {
-      overallScore: 0,
-      pitchAccuracy: 0,
-      tempoAccuracy: 0,
-      vocalRange: { min: 0, max: 0 },
-      toneAnalysis: { clarity: 0, brightness: 0, warmth: 0 },
-      feedback: [],
+    // 호환성 매핑 (기존 컴포넌트가 사용할 수 있도록)
+    publicUrl: recording.url,
+    audioUrl: recording.url,
+    duration: recording.durationSeconds,
+    processingStatus: recording.urlStatus === 'SUCCESS' ? 'COMPLETED' : 'FAILED',
+    song: {
+      title: recording.title || 'Unknown Title',
+      artist: 'Unknown Artist',
     },
   };
 };

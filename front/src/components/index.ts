@@ -47,7 +47,6 @@ export { default as YouTubeMRPlayer } from './record/YouTubeMRPlayer';
 
 // === Recommendation 관련 ===
 export { default as CoverFlow } from './recommendation/CoverFlow';
-export { default as QuickRecommendation } from './recommendation/QuickRecommendation';
 export { default as SongCard } from './recommendation/SongCard';
 
 // === Voice Test 관련 ===

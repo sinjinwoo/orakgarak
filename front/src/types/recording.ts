@@ -21,23 +21,29 @@ export interface CreateRecordingRequest {
 }
 
 export interface Recording {
+  // 백엔드 RecordResponseDTO와 정확히 일치하는 필드들
   id: number;
-  title: string;
   userId: number;
   songId?: number;
-  uploadId: number;
-  durationSeconds: number;
-  processingStatus:
-    | "UPLOADED"
-    | "PROCESSING"
-    | "CONVERTING"
-    | "ANALYSIS_PENDING"
-    | "COMPLETED"
-    | "FAILED";
-  s3Key: string;
-  publicUrl?: string;
+  title: string;
+  durationSeconds?: number;
+  
+  // 파일 관련 정보 (Upload에서 가져옴)
+  extension?: string;
+  content_type?: string;
+  file_size?: string;
+  url?: string;           // 오디오 파일 URL
+  urlStatus?: string;     // "SUCCESS", "FAILED" 등의 상태
+  
+  // 메타데이터
   createdAt: string;
   updatedAt: string;
+  uploadId: number;
+  
+  // 기존 코드 호환성을 위한 추가 속성들
+  processingStatus?: string;  // 기존 컴포넌트 호환용
+  s3Key?: string;            // 기존 컴포넌트 호환용
+  publicUrl?: string;        // url 필드의 별칭
   
   // 호환성을 위한 추가 속성들
   duration?: number;
