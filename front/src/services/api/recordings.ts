@@ -28,12 +28,15 @@ export const recordingService = {
   
   // Presigned URL 생성 (대용량 파일 업로드용)
   getPresignedUrl: async (request: PresignedUrlRequest): Promise<PresignedUrlResponse> => {
+    // 백엔드는 POST 요청에서 @RequestParam으로 query parameter를 받음
     const params = new URLSearchParams({
       originalFilename: request.originalFilename,
       fileSize: request.fileSize.toString(),
       contentType: request.contentType,
       durationSeconds: request.durationSeconds.toString(),
     });
+
+    console.log('Presigned URL 요청 (POST with query params):', params.toString());
 
     const response = await apiClient.post<PresignedUrlResponse>(
       `/records/async/presigned-url?${params.toString()}`
@@ -89,6 +92,27 @@ export const recordingService = {
     }
     
     const response = await apiClient.post<Recording>('/recordings', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  // 백엔드 프록시를 통한 직접 업로드 (CORS 회피)
+  uploadRecordingDirect: async (
+    title: string,
+    audioBlob: Blob,
+    songId?: number,
+    durationSeconds?: number
+  ): Promise<Recording> => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, `${title}.wav`);
+    formData.append('title', title);
+    if (songId) formData.append('songId', songId.toString());
+    if (durationSeconds) formData.append('durationSeconds', durationSeconds.toString());
+    
+    const response = await apiClient.post<Recording>('/records/direct', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
