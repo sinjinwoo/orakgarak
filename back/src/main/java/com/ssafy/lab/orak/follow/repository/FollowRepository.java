@@ -1,6 +1,7 @@
 package com.ssafy.lab.orak.follow.repository;
 
 import com.ssafy.lab.orak.follow.entity.Follow;
+import com.ssafy.lab.orak.profile.entity.Profile;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,4 +41,10 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
             "WHERE (f.follower.id = :userId1 AND f.following.id = :userId2) " +
             "OR (f.follower.id = :userId2 AND f.following.id = :userId1)")
     long countMutualFollow(@Param("userId1") Long userId1, @Param("userId2") Long userId2);
+
+//    특정 프로필을 팔로우하는 사람 수 (팔로워 수)
+    Long countByFollowing(Profile profile);
+
+//    특정 프로필이 팔로우하는 사람 수 (팔로잉 수)
+    Long countByFollower(Profile profile);
 }

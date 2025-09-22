@@ -6,13 +6,13 @@ import { Container, Typography, Box, Alert, Snackbar, Button } from '@mui/materi
 import CoverFlow from '../components/recommendation/CoverFlow'; // 3D 커버플로우
 import QuickRecommendation from '../components/recommendation/QuickRecommendation'; // 빠른 추천
 
-// 음성 테스트 관련 컴포넌트들
-import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
-import VoiceTestSelection from '../components/voiceTest/VoiceTestSelection'; // 음성 테스트 선택
-import ExistingRecordingSelection from '../components/voiceTest/ExistingRecordingSelection'; // 기존 녹음본 선택
+// 음성 테스트 관련 컴포넌트들 (임시 비활성화)
+// import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
+// import VoiceTestSelection from '../components/voiceTest/VoiceTestSelection'; // 음성 테스트 선택
+// import ExistingRecordingSelection from '../components/voiceTest/ExistingRecordingSelection'; // 기존 녹음본 선택
 
 // 데이터 및 유틸리티
-import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스
+// import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스 - 임시 주석
 import { 
   calculateRecommendationScore, // 추천 점수 계산
   generateRecommendationReason, // 추천 이유 생성
@@ -370,7 +370,7 @@ const RecommendationsPage: React.FC = () => {
         background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
         minHeight: '100vh' 
       }}>
-        <VoiceTestGame />
+        <div>음성 테스트 기능은 임시로 비활성화되었습니다.</div>
       </Box>
     );
   }
@@ -378,21 +378,14 @@ const RecommendationsPage: React.FC = () => {
   // 음성 테스트 선택 화면
   if (showVoiceTestSelection) {
     return (
-      <VoiceTestSelection
-        onNewRecording={handleNewRecording}
-        onUseExisting={handleUseExistingRecording}
-        onBack={handleBackFromVoiceTestSelection}
-      />
+      <div>음성 테스트 선택 기능은 임시로 비활성화되었습니다.</div>
     );
   }
 
   // 기존 녹음본 선택 화면
   if (showExistingRecordingSelection) {
     return (
-      <ExistingRecordingSelection
-        onSelectRecording={handleSelectExistingRecording}
-        onBack={handleBackFromExistingSelection}
-      />
+      <div>기존 녹음본 선택 기능은 임시로 비활성화되었습니다.</div>
     );
   }
 

@@ -72,7 +72,7 @@ def generate_data_sql():
             for i in range(0, len(songs), batch_size):
                 batch = songs[i:i + batch_size]
 
-                f.write("INSERT IGNORE INTO songs (song_id, song_name, artist_name, album_name, music_url, lyrics, album_cover_url, spotify_track_id, duration_ms, popularity, status) VALUES\n")
+                f.write("INSERT IGNORE INTO songs (song_id, song_name, artist_name, album_name, music_url, lyrics, album_cover_url, spotify_track_id, duration_ms, popularity, status, created_at, updated_at) VALUES\n")
 
                 for j, song in enumerate(batch):
                     song_id, song_name, artist_name, album_name, music_url, lyrics, album_cover_url, spotify_track_id, duration_ms, popularity, status = song
@@ -88,7 +88,9 @@ def generate_data_sql():
                         escape_sql_string(spotify_track_id),
                         str(duration_ms) if duration_ms is not None else 'NULL',
                         str(popularity) if popularity is not None else 'NULL',
-                        escape_sql_string(status)
+                        escape_sql_string(status),
+                        'NOW()',
+                        'NOW()'
                     ]
 
                     line = f"({', '.join(values)})"

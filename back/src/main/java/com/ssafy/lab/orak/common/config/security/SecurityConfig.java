@@ -1,37 +1,45 @@
 package com.ssafy.lab.orak.common.config.security;
 
-import java.util.List;
-
+import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
+import com.ssafy.lab.orak.auth.handler.OAuth2AuthenticationSuccessHandler;
+import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
+import com.ssafy.lab.orak.common.config.properties.ActuatorProperties;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.ssafy.lab.orak.auth.handler.OAuth2AuthenticationSuccessHandler;
-import com.ssafy.lab.orak.auth.jwt.filter.JwtAuthenticationFilter;
-import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
-
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
+@EnableConfigurationProperties(ActuatorProperties.class)
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final ActuatorProperties actuatorProperties;
 
     @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
     private String[] allowedOrigins;
@@ -40,9 +48,11 @@ public class SecurityConfig {
     private String pythonServiceUrl;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http,
+    @Order(0) // JWT 인증을 위한 Security FilterChain 설정
+    public SecurityFilterChain apiSecurity(HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
+                .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator"))
                 // 세션 미사용 (JWT 기반 인증)
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -50,7 +60,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 접근 제어
                 .authorizeHttpRequests(auth -> auth
-                        // 인증 없이 접근 가능한 경로
+                        // 인증 없이 접근 가능한 경로 (순서 중요!)
                         .requestMatchers(
                                 "/auth/**",
                                 "/oauth2/**",
@@ -59,10 +69,13 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
+                                "/api/records/async/upload-completed",
                                 "/api/images/**",
-                                "/images/**"
+                                "/images/**",
+                                "/api/webhook/**"
                         ).permitAll()
-                        // 그 외는 모두 인증 필요
+                        // API 경로는 JWT 인증 필요 (웹훅 제외)
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 // OAuth2 로그인 설정
@@ -73,15 +86,14 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 .exceptionHandling(e -> e
-                        .authenticationEntryPoint((req, res, ex) -> res.sendError(
-                                HttpServletResponse.SC_UNAUTHORIZED))
+                        .authenticationEntryPoint((req, res, ex) ->
+                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
                         .accessDeniedHandler((req, res, ex) -> {
-                            Authentication auth = SecurityContextHolder.getContext()
-                                    .getAuthentication();
+                            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                             if (auth == null) {
-                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED); // 토큰 없음 → 401
+                                res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                             } else {
-                                res.sendError(HttpServletResponse.SC_FORBIDDEN);     // 권한 부족 → 403
+                                res.sendError(HttpServletResponse.SC_FORBIDDEN);
                             }
                         })
                 )
@@ -90,6 +102,39 @@ public class SecurityConfig {
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    @Order(1) // Basic auth를 위한 Security FilterChain 설정
+    public SecurityFilterChain actuatorSecurity(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/actuator/**")
+                .httpBasic(httpBasic -> {})
+                .userDetailsService(actuatorUserDetailsService())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/**").hasRole(actuatorProperties.roleName())
+                        .anyRequest().denyAll()
+                );
+
+        return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public UserDetailsService actuatorUserDetailsService() {
+        var user = User.withUsername(actuatorProperties.user())
+                .password(passwordEncoder().encode(actuatorProperties.password()))
+                .roles(actuatorProperties.roleName())
+                .build();
+
+        return new InMemoryUserDetailsManager(user);
     }
 
     @Bean

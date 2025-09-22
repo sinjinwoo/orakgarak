@@ -2,9 +2,12 @@
 <Configuration status="WARN" monitorInterval="30">
     <Properties>
         <Property name="LOG_PATTERN">
-            %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n
         </Property>
-        <Property name="LOG_DIR">${spring:logging.file.path:-/var/log/orak}</Property>
+        <Property name="JSON_PATTERN">
+            {"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%-5level","thread":"%thread","logger":"%logger{36}","message":"%msg","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","mdc":"%X"}%n
+        </Property>
+        <Property name="LOG_DIR">${spring:logging.file.path:-/var/log/app}</Property>
     </Properties>
 
     <Appenders>
@@ -17,6 +20,17 @@
         <RollingFile name="FileAppender" fileName="${LOG_DIR}/application.log"
                      filePattern="${LOG_DIR}/application-%d{yyyy-MM-dd}-%i.log.gz">
             <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+
+        <!-- File Appender for Loki/Promtail (JSON 형태) -->
+        <RollingFile name="LokiFileAppender" fileName="${LOG_DIR}/orakgaraki.log"
+                     filePattern="${LOG_DIR}/orakgaraki-%d{yyyy-MM-dd}-%i.log.gz">
+            <JsonTemplateLayout eventTemplateUri="classpath:EcsLayout.json"/>
             <Policies>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
                 <SizeBasedTriggeringPolicy size="100MB"/>
@@ -132,9 +146,10 @@
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
 
-        <!-- 애플리케이션 패키지 로그 -->
+        <!-- 애플리케이션 패키지 로그 (파일에도 기록) -->
         <Logger name="com.ssafy.lab.orak" level="INFO" additivity="false">
             <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
             <AppenderRef ref="AsyncErrorAppender"/>
         </Logger>
@@ -142,11 +157,75 @@
         <!-- Security 로그 -->
         <Logger name="org.springframework.security" level="WARN" additivity="false">
             <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
 
         <!-- AWS SDK 로그 -->
         <Logger name="software.amazon.awssdk" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+
+        <!-- Kafka 로그 - 연결/재연결 메시지 대폭 축소 (운영환경) -->
+        <Logger name="org.apache.kafka" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Kafka Consumer 상세 로그 축소 (운영환경) -->
+        <Logger name="org.apache.kafka.clients.consumer" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Kafka Producer 로그 축소 (운영환경) -->
+        <Logger name="org.apache.kafka.clients.producer" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Kafka Network Client 로그 축소 (연결 실패 메시지들) -->
+        <Logger name="org.apache.kafka.clients.NetworkClient" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Kafka Metadata 로그 축소 -->
+        <Logger name="org.apache.kafka.clients.Metadata" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Kafka Consumer Coordinator 로그 축소 (가장 시끄러운 부분) -->
+        <Logger name="org.apache.kafka.clients.consumer.internals.ConsumerCoordinator" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Spring Kafka 로그 축소 (운영환경) -->
+        <Logger name="org.springframework.kafka" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+
+        <!-- HikariCP Pool Housekeeper 로그 축소 (정리 작업 메시지들) -->
+        <Logger name="com.zaxxer.hikari.pool.HikariPool" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Connection Pool 기타 로그들 (운영환경) -->
+        <Logger name="com.zaxxer.hikari" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
@@ -154,6 +233,21 @@
         <!-- Redis 로그 -->
         <Logger name="org.springframework.data.redis" level="WARN" additivity="false">
             <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Redis Connection 관련 로그 축소 (운영환경) -->
+        <Logger name="org.springframework.data.redis.core.RedisConnectionUtils" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="AsyncFileAppender"/>
+        </Logger>
+        
+        <!-- Spring Security FilterChain 로그 축소 (운영환경) -->
+        <Logger name="org.springframework.security.web.FilterChainProxy" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
 

@@ -1,0 +1,92 @@
+groups:
+  - name: upload_system_alerts
+    rules:
+      # 업로드 실패율 높음
+      - alert: HighUploadFailureRate
+        expr: rate(upload_failed_total[5m]) / rate(upload_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "업로드 실패율이 10%를 초과했습니다"
+          description: "지난 5분 동안 업로드 실패율이 {{ $value | humanizePercentage }}입니다"
+
+      # 처리 큐 적체
+      - alert: ProcessingQueueBacklog
+        expr: kafka_consumer_lag_sum > 1000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "처리 대기열에 상당한 적체가 발생했습니다"
+          description: "Kafka 컨슈머 지연이 {{ $value }}개 메시지입니다"
+
+      # 데이터베이스 연결 부족
+      - alert: LowDatabaseConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL 연결 풀이 거의 고갈되었습니다"
+          description: "MySQL 연결의 {{ $value | humanizePercentage }}가 사용 중입니다"
+
+      # 메모리 사용량 높음
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "높은 메모리 사용률이 감지되었습니다"
+          description: "메모리 사용률이 90%를 초과했습니다: {{ $value | humanizePercentage }}"
+
+      # API 응답 시간 느림
+      - alert: SlowAPIResponse
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 응답 시간이 느립니다"
+          description: "95번째 백분위수 응답 시간이 {{ $value }}초입니다"
+
+      # CPU 사용률 높음
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 CPU 사용률이 감지되었습니다"
+          description: "CPU 사용률이 80%를 초과했습니다: {{ $value }}%"
+
+      # 디스크 사용률 높음
+      - alert: HighDiskUsage
+        expr: (1 - node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"}) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "높은 디스크 사용률이 감지되었습니다"
+          description: "디스크 사용률이 85%를 초과했습니다: {{ $value }}%"
+
+      # Redis 메모리 사용률 높음
+      - alert: HighRedisMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis 메모리 사용률이 높습니다"
+          description: "Redis 메모리 사용률이 90%를 초과했습니다: {{ $value | humanizePercentage }}"
+
+      # Kafka 컨슈머 랙 증가
+      - alert: KafkaConsumerLag
+        expr: kafka_consumer_lag > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka 컨슈머 지연이 증가하고 있습니다"
+          description: "토픽 {{ $labels.topic }}의 컨슈머 지연이 {{ $value }}개 메시지입니다"

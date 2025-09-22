@@ -2,7 +2,7 @@ import librosa
 import numpy as np
 import os
 import logging
-from extract_mel import extract_mel
+from .extract_mel import extract_mel
 
 # 로깅 설정
 logging.basicConfig(

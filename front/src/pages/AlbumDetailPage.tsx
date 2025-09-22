@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAlbumStore } from '../stores/albumStore';
+import { useAlbum } from '../hooks/useAlbum';
 import ImmersivePlaybackModal from '../components/album/ImmersivePlaybackModal';
 import { theme } from '../styles/theme';
 import { motion } from 'framer-motion';
@@ -92,7 +93,8 @@ const AlbumDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { albumId } = useParams<{ albumId: string }>();
-  const { getAlbumById } = useAlbumStore();
+  // const { getAlbumById } = useAlbumStore(); // 사용하지 않음
+  const { data: albumData, isLoading, error } = useAlbum(parseInt(albumId || '0'));
   
   // 이전 페이지 추적을 위한 상태
   const [previousPage, setPreviousPage] = useState<string>('/feed');
@@ -124,37 +126,36 @@ const AlbumDetailPage: React.FC = () => {
         return;
       }
 
-      const albumData = getAlbumById(albumId);
-      
+      // 실제 API 데이터 사용 (useAlbum 훅에서 자동으로 로드됨)
       if (albumData) {
         // 앨범 데이터를 상세 페이지 형식으로 변환
         const albumDetailData = {
-          id: albumData.id,
+          id: '1', // 임시 ID
           title: albumData.title,
-          description: albumData.description,
-          coverImage: albumData.coverImage,
+          description: albumData.description || '',
+          coverImage: albumData.coverImage || '',
           userId: 'current-user',
           user: {
             nickname: '음악러버', // 실제로는 사용자 정보에서 가져와야 함
             profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
           },
-          tracks: albumData.tracks || [
+          tracks: [
             // 기본 더미 데이터 (트랙이 없는 경우)
-            { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45' },
-            { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12' },
-            { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23' },
+            { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45', audioUrl: '' },
+            { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12', audioUrl: '' },
+            { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23', audioUrl: '' },
           ],
           isPublic: albumData.isPublic,
-          tags: ['K-POP', '발라드', '감성', '힐링'], // 실제로는 앨범 데이터에서 가져와야 함
-          likeCount: albumData.likeCount,
-          playCount: albumData.playCount,
+          tags: albumData.tags || ['K-POP', '발라드', '감성', '힐링'],
+          likeCount: 0, // 기본값
+          playCount: 0, // 기본값
           commentCount: 0, // 실제로는 댓글 데이터에서 가져와야 함
-          createdAt: albumData.createdAt,
-          updatedAt: albumData.createdAt,
+          createdAt: new Date().toISOString(), // 기본값
+          updatedAt: new Date().toISOString(), // 기본값
         };
         
         setAlbum(albumDetailData);
-        setLikeCount(albumData.likeCount);
+        setLikeCount(0); // 기본값
       }
       
       setLoading(false);
