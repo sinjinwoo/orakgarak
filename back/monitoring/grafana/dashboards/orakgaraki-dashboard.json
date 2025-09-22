@@ -12,7 +12,46 @@
   },
   "version": 1,
   "schemaVersion": 27,
-    "panels": [
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "type": "query",
+        "refresh": 1,
+        "options": [],
+        "query": "label_values(up, job)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "current": {
+          "value": "All",
+          "text": "All"
+        },
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "label": "Service"
+      },
+      {
+        "name": "instance",
+        "type": "query",
+        "query": "label_values(up, instance)",
+        "refresh": 1,
+        "includeAll": true,
+        "allValue": null
+      },
+      {
+        "name": "environment",
+        "type": "query",
+        "query": "label_values(upload_started_total, environment)",
+        "refresh": 1,
+        "includeAll": true,
+        "allValue": null
+      }
+    ]
+  },
+  "panels": [
       {
         "id": 1,
         "title": "📊 시스템 개요",
@@ -273,7 +312,7 @@
         "id": 6,
         "title": "📦 Kafka 컨슈머 상태",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 20},
+        "gridPos": {"h": 8, "w": 16, "x": 8, "y": 20},
         "targets": [
           {
             "expr": "kafka_consumer_lag_sum{job=\"kafka\"}",
@@ -299,7 +338,7 @@
         "id": 7,
         "title": "📝 실시간 로그 스트림",
         "type": "logs",
-        "gridPos": {"h": 12, "w": 24, "x": 0, "y": 20},
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 28},
         "targets": [
           {
             "expr": "{job=\"orakgaraki\"} |~ \"ERROR|WARN|upload|processing\"",
@@ -325,7 +364,7 @@
         "id": 8,
         "title": "🔥 에러 로그 분석",
         "type": "logs",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 38},
         "targets": [
           {
             "expr": "{job=\"orakgaraki\"} |= \"ERROR\" | json | __error__=\"\"",
@@ -346,7 +385,7 @@
         "id": 9,
         "title": "📊 업로드 파일 타입 분포",
         "type": "piechart",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 46},
         "targets": [
           {
             "expr": "sum by (file_type) (upload_started_total{job=\"orakgaraki-app\"})",
@@ -376,10 +415,10 @@
         "id": 10,
         "title": "⚡ 처리 성능 메트릭",
         "type": "stat",
-        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 40},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 46},
         "targets": [
           {
-            "expr": "rate(upload_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(upload_duration_count{job=\"orakgaraki-app\"}[5m])",
+            "expr": "(rate(upload_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(upload_duration_count{job=\"orakgaraki-app\"}[5m])) or on() vector(0)",
             "legendFormat": "평균 업로드 시간 (초)",
             "refId": "A",
             "datasource": {
@@ -388,7 +427,7 @@
             }
           },
           {
-            "expr": "rate(processing_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(processing_duration_count{job=\"orakgaraki-app\"}[5m])",
+            "expr": "(rate(processing_duration_sum{job=\"orakgaraki-app\"}[5m]) / rate(processing_duration_count{job=\"orakgaraki-app\"}[5m])) or vector(0)",
             "legendFormat": "평균 처리 시간 (초)",
             "refId": "B",
             "datasource": {
@@ -397,7 +436,7 @@
             }
           },
           {
-            "expr": "rate(upload_completed_total{job=\"orakgaraki-app\"}[5m]) / rate(upload_started_total{job=\"orakgaraki-app\"}[5m]) * 100",
+            "expr": "(rate(upload_completed_total{job=\"orakgaraki-app\"}[5m]) / rate(upload_started_total{job=\"orakgaraki-app\"}[5m]) * 100) or vector(0)",
             "legendFormat": "업로드 성공률 (%)",
             "refId": "C",
             "datasource": {
@@ -448,7 +487,7 @@
         "id": 11,
         "title": "🚨 시스템 알람 로그",
         "type": "logs",
-        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 46},
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 54},
         "targets": [
           {
             "expr": "{job=\"orakgaraki\"} |~ \"ALERT|CRITICAL|FATAL|OutOfMemory|TimeoutException|SQLException\"",
@@ -464,28 +503,73 @@
           "showLabels": true,
           "wrapLogMessage": true
         }
+      },
+      {
+        "id": 20,
+        "title": "🚨 활성 알림",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "legendFormat": "",
+            "refId": "A",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "red", "value": 1}
+              ]
+            }
+          }
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "Time"
+            }
+          ]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "__name__": true,
+                "job": false,
+                "instance": false
+              },
+              "indexByName": {},
+              "renameByName": {
+                "alertname": "알림명",
+                "severity": "심각도",
+                "summary": "요약",
+                "description": "설명",
+                "instance": "인스턴스",
+                "job": "서비스"
+              }
+            }
+          }
+        ]
       }
     ],
-    "templating": {
-      "list": [
-        {
-          "name": "instance",
-          "type": "query",
-          "query": "label_values(up, instance)",
-          "refresh": 1,
-          "includeAll": true,
-          "allValue": null
-        },
-        {
-          "name": "environment",
-          "type": "query",
-          "query": "label_values(upload_started_total, environment)",
-          "refresh": 1,
-          "includeAll": true,
-          "allValue": null
-        }
-      ]
-    },
     "annotations": {
       "list": [
         {
