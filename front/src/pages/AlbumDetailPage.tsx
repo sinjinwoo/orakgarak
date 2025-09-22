@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAlbumStore } from '../stores/albumStore';
+import { useAlbum } from '../hooks/useAlbum';
 import ImmersivePlaybackModal from '../components/album/ImmersivePlaybackModal';
 import { theme } from '../styles/theme';
 import { motion } from 'framer-motion';
@@ -92,7 +93,8 @@ const AlbumDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { albumId } = useParams<{ albumId: string }>();
-  const { getAlbumById } = useAlbumStore();
+  // const { getAlbumById } = useAlbumStore(); // 사용하지 않음
+  const { data: albumData, isLoading, error } = useAlbum(parseInt(albumId || '0'));
   
   // 이전 페이지 추적을 위한 상태
   const [previousPage, setPreviousPage] = useState<string>('/feed');
@@ -124,8 +126,7 @@ const AlbumDetailPage: React.FC = () => {
         return;
       }
 
-      const albumData = getAlbumById(albumId);
-      
+      // 실제 API 데이터 사용 (useAlbum 훅에서 자동으로 로드됨)
       if (albumData) {
         // 앨범 데이터를 상세 페이지 형식으로 변환
         const albumDetailData = {
