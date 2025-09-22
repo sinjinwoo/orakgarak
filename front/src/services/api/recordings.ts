@@ -59,13 +59,74 @@ export const recordingService = {
     return normalizeRecording(response.data);
   },
 
-  // 내 녹음본 목록 조회
+  // 녹음본 상세 정보 조회 (presignedUrl 포함)
+  getRecordingDetail: async (recordId: number): Promise<{
+    uploadId: number;
+    presignedUrl: string;
+    s3Key: string;
+    expirationTime: string;
+  }> => {
+    console.log('🌐 API 요청: GET /records/async/' + recordId);
+    const response = await apiClient.get(`/records/async/${recordId}`);
+    console.log('🌐 API 응답:', response.data);
+    return response.data;
+  },
+
+  // 녹음본 기반 노래 추천 API
+  getRecommendations: async (uploadId: number): Promise<{
+    status: string;
+    message: string;
+    recommendations: Array<{
+      id: number;
+      songId: number;
+      songName: string;
+      artistName: string;
+      albumName: string;
+      musicUrl: string;
+      lyrics: string;
+      albumCoverUrl: string;
+      spotifyTrackId: string;
+      durationMs: number;
+      popularity: number;
+      status: string;
+    }>;
+    voiceAnalysis: string;
+  }> => {
+    console.log('🌐 API 요청: POST /recommendations/song', { uploadId });
+    const response = await apiClient.post('/recommendations/song', { uploadId });
+    console.log('🌐 API 응답:', response.data);
+    return response.data;
+  },
+
+  // 내 녹음본 목록 조회 (URL 포함된 정상 엔드포인트 사용)
   getMyRecordings: async (filters?: RecordingFilters): Promise<Recording[]> => {
-    const response = await apiClient.get<Recording[]>('/records/async/me', {
+    console.log('🌐 API 요청: GET /records/me', { filters });
+    
+    const response = await apiClient.get<Recording[]>('/records/me', {
       params: filters
     });
-    // 응답 데이터 정규화 적용
-    return (response.data || []).map(normalizeRecording).filter(Boolean);
+    
+    console.log('🌐 API 응답 상태:', response.status);
+    console.log('🌐 API 원본 응답 데이터:', response.data);
+    
+    if (response.data && Array.isArray(response.data)) {
+      console.log('📊 응답 배열 길이:', response.data.length);
+      response.data.forEach((item, index) => {
+        console.log(`원본 녹음본 ${index + 1}:`, {
+          id: item.id,
+          title: item.title,
+          url: item.url,                    // 백엔드 실제 URL 필드
+          urlStatus: item.urlStatus,        // 백엔드 URL 상태
+          extension: item.extension,
+          content_type: item.content_type,
+          durationSeconds: item.durationSeconds,
+          '전체 객체': item
+        });
+      });
+    }
+    
+    // 백엔드 응답을 그대로 사용 (정규화 없이)
+    return response.data || [];
   },
 
   // 녹음본 삭제

@@ -81,6 +81,14 @@ apiClient.interceptors.request.use(
 // 응답 인터셉터: 401 에러 시 자동 토큰 갱신
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
+    // 녹음본 API 응답 로깅
+    if (response.config.url?.includes('/records/async/me')) {
+      console.log('🌐 API 클라이언트 응답:', {
+        url: response.config.url,
+        status: response.status,
+        data: response.data
+      });
+    }
     return response;
   },
   async (error: AxiosError) => {
