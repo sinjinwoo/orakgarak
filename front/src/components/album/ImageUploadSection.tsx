@@ -6,7 +6,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, AlertCircle, Check, Crop, RotateCw, Move, ZoomIn, ZoomOut, Image as ImageIcon } from 'lucide-react';
-import { uploadCover } from '../../api/cover';
+import { uploadCover } from '../../services/api/cover';
 import { useAlbumMetaStore } from '../../stores/albumMetaStore';
 
 interface ImageUploadSectionProps {
@@ -64,9 +64,9 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
       setUploadedImage(localUrl);
 
       // 실제 업로드 처리
-      const imageUrl = await uploadCover(file);
-      setCoverUpload(imageUrl);
-      onUploadComplete?.(imageUrl);
+       const result = await uploadCover(file);
+      setCoverUpload(result.imageUrl, result.uploadId);
+      onUploadComplete?.(result.imageUrl);
     } catch (error) {
       console.error('업로드 실패:', error);
       setError('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
@@ -108,7 +108,7 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
 
   const handleRemoveImage = useCallback(() => {
     setUploadedImage(null);
-    setCoverUpload('');
+    setCoverUpload('',undefined);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';

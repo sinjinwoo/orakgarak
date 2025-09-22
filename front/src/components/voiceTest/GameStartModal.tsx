@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from '../common/Modal';
+import { Modal, Box } from '@mui/material';
 
 interface GameStartModalProps {
     isOpen: boolean;
@@ -13,8 +13,16 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
     onStartGame
 }) => {
     return (
-        <Modal open={isOpen} onClose={onClose}>
-            <div style={{
+        <Modal 
+            open={isOpen} 
+            onClose={onClose}
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
+            <Box sx={{
                 background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
                 padding: '40px',
                 borderRadius: '16px',
@@ -123,7 +131,7 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                         🎮 게임 시작
                     </button>
                 </div>
-            </div>
+            </Box>
         </Modal>
     );
 };

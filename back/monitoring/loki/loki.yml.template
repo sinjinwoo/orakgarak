@@ -1,4 +1,4 @@
-auth_enabled: false
+auth_enabled: ${LOKI_AUTH_ENABLED}
 
 server:
   http_listen_port: 3100
@@ -21,7 +21,7 @@ query_range:
     cache:
       embedded_cache:
         enabled: true
-        max_size_mb: 100
+        max_size_mb: ${LOKI_CACHE_SIZE}
 
 schema_config:
   configs:
@@ -36,7 +36,8 @@ schema_config:
 limits_config:
   reject_old_samples: true
   reject_old_samples_max_age: 168h
-  ingestion_rate_mb: 16
-  ingestion_burst_size_mb: 32
-  max_streams_per_user: 10000
-  max_line_size: 256000
+  ingestion_rate_mb: ${LOKI_INGESTION_RATE}
+  ingestion_burst_size_mb: ${LOKI_INGESTION_BURST}
+  max_streams_per_user: ${LOKI_MAX_STREAMS}
+  max_line_size: ${LOKI_MAX_LINE_SIZE}
+  retention_period: ${LOKI_RETENTION}

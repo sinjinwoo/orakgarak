@@ -4,15 +4,15 @@ import { Container, Typography, Box, Alert, Snackbar, Button } from '@mui/materi
 
 // 추천 관련 컴포넌트들
 import CoverFlow from '../components/recommendation/CoverFlow'; // 3D 커버플로우
-import QuickRecommendation from '../components/recommendation/QuickRecommendation'; // 빠른 추천
 
-// 음성 테스트 관련 컴포넌트들 (임시 비활성화)
-// import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
-// import VoiceTestSelection from '../components/voiceTest/VoiceTestSelection'; // 음성 테스트 선택
-// import ExistingRecordingSelection from '../components/voiceTest/ExistingRecordingSelection'; // 기존 녹음본 선택
+// 음성 테스트 관련 컴포넌트들
+import VoiceTestGame from '../components/voiceTest/VoiceTestGame'; // 게임형 음성 테스트
+import VoiceTestSelection from '../components/voiceTest/VoiceTestSelection'; // 음성 테스트 선택
+import ExistingRecordingSelection from '../components/voiceTest/ExistingRecordingSelection'; // 기존 녹음본 선택
+import RecommendationResult from '../components/voiceTest/RecommendationResult'; // 추천 결과
 
 // 데이터 및 유틸리티
-// import { musicDatabase } from '../data/musicDatabase'; // 더미 음악 데이터베이스 - 임시 주석
+import { songService } from '../services/api/songs';
 import { 
   calculateRecommendationScore, // 추천 점수 계산
   generateRecommendationReason, // 추천 이유 생성
@@ -80,13 +80,15 @@ const RecommendationsPage: React.FC = () => {
   // 페이지 상태
   const [currentStep, setCurrentStep] = useState<'welcome' | 'test' | 'recommendations' | 'history'>('welcome');
   
-  // 빠른 추천 관련 상태
-  const [showQuickRecommendation, setShowQuickRecommendation] = useState(false);
-  const [userRecordings, setUserRecordings] = useState<Recording[]>([]);
   
   // 음성 테스트 선택 관련 상태
   const [showVoiceTestSelection, setShowVoiceTestSelection] = useState(false);
   const [showExistingRecordingSelection, setShowExistingRecordingSelection] = useState(false);
+  
+  // 추천 결과 관련 상태
+  const [showRecommendationResult, setShowRecommendationResult] = useState(false);
+  const [selectedRecordingForRecommendation, setSelectedRecordingForRecommendation] = useState<Recording | null>(null);
+  const [selectedUploadId, setSelectedUploadId] = useState<number | null>(null);
 
   // ===== 추천 로직 =====
   
@@ -107,49 +109,69 @@ const RecommendationsPage: React.FC = () => {
   }, [currentRecommendation, filter]);
   
   // 새로운 추천 생성 함수
-  const generateNewRecommendation = useCallback((voiceAnalysis: VoiceAnalysis | null) => {
+  const generateNewRecommendation = useCallback(async (voiceAnalysis: VoiceAnalysis | null) => {
     const recommendationId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    let songs: RecommendedSong[];
-    
-    if (!voiceAnalysis) {
-      // 기본 추천 곡들 생성
-      songs = musicDatabase
-        .slice(0, 15)
-        .map(musicData => {
-          const score = Math.floor(Math.random() * 40) + 60;
-          const reason = "인기 있는 곡으로 추천합니다";
-          return convertToRecommendedSong(musicData, score, reason);
-        })
-        .sort((a, b) => b.matchScore - a.matchScore);
-    } else {
-      // 음성 분석 기반 추천
-      songs = musicDatabase
-        .map(musicData => {
-          const score = calculateRecommendationScore(voiceAnalysis, musicData, {
-            genre: filter.genre !== 'all' ? filter.genre : undefined,
-            difficulty: filter.difficulty !== 'all' ? filter.difficulty : undefined,
-            mood: filter.mood
-          });
-          const reason = generateRecommendationReason(voiceAnalysis, musicData, score);
-          return convertToRecommendedSong(musicData, score, reason);
-        })
-        .filter(song => song.matchScore >= 30)
-        .sort((a, b) => b.matchScore - a.matchScore)
-        .slice(0, 20);
+    try {
+      let songs: RecommendedSong[];
+      
+      if (!voiceAnalysis) {
+        // 기본 추천 곡들 - 인기 곡 가져오기
+        const popularSongs = await songService.getPopularSongs(15);
+        songs = popularSongs
+          .map(musicData => {
+            const score = Math.floor(Math.random() * 40) + 60;
+            const reason = "인기 있는 곡으로 추천합니다";
+            return convertToRecommendedSong(musicData, score, reason);
+          })
+          .sort((a, b) => b.matchScore - a.matchScore);
+      } else {
+        // 음성 분석 기반 추천 - 맞춤 추천 가져오기
+        const recommendedSongs = await songService.getPersonalizedRecommendations(20);
+        songs = recommendedSongs
+          .map(musicData => {
+            const score = calculateRecommendationScore(voiceAnalysis, musicData, {
+              genre: filter.genre !== 'all' ? filter.genre : undefined,
+              difficulty: filter.difficulty !== 'all' ? filter.difficulty : undefined,
+              mood: filter.mood
+            });
+            const reason = generateRecommendationReason(voiceAnalysis, musicData, score);
+            return convertToRecommendedSong(musicData, score, reason);
+          })
+          .filter(song => song.matchScore >= 30)
+          .sort((a, b) => b.matchScore - a.matchScore)
+          .slice(0, 20);
+      }
+      
+      const newRecommendation = {
+        id: recommendationId,
+        timestamp: new Date(),
+        songs,
+        voiceAnalysis
+      };
+      
+      setRecommendationHistory(prev => [newRecommendation, ...prev]);
+      setCurrentRecommendationId(recommendationId);
+      
+      return newRecommendation;
+    } catch (error) {
+      console.error('추천 생성 실패:', error);
+      setSnackbar({
+        open: true,
+        message: '추천 생성에 실패했습니다. 다시 시도해주세요.',
+        severity: 'error'
+      });
+      
+      // 실패 시 빈 추천 반환
+      const emptyRecommendation = {
+        id: recommendationId,
+        timestamp: new Date(),
+        songs: [],
+        voiceAnalysis
+      };
+      
+      return emptyRecommendation;
     }
-    
-    const newRecommendation = {
-      id: recommendationId,
-      timestamp: new Date(),
-      songs,
-      voiceAnalysis
-    };
-    
-    setRecommendationHistory(prev => [newRecommendation, ...prev]);
-    setCurrentRecommendationId(recommendationId);
-    
-    return newRecommendation;
   }, [filter]);
 
   // ===== 이벤트 핸들러 =====
@@ -222,62 +244,8 @@ const RecommendationsPage: React.FC = () => {
 
   // 녹음본 데이터 로드 (MyPage의 더미 데이터 사용)
   const loadRecordings = useCallback(() => {
-    // MyPage의 더미 녹음 데이터를 Recording 타입으로 변환
-    const mockRecordings: Recording[] = [
-      {
-        id: 'rec_1',
-        userId: 'user_1',
-        songId: 'song_1',
-        song: { title: '좋아', artist: '윤종신' },
-        audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-        duration: 225, // 3:45를 초로 변환
-        createdAt: '2024-01-15T10:30:00Z',
-        analysis: {
-          pitchAccuracy: 85,
-          tempoAccuracy: 90,
-          vocalRange: { min: 80, max: 400 },
-          toneAnalysis: { brightness: 70, warmth: 80, clarity: 75 },
-          overallScore: 85,
-          feedback: ['음정이 정확합니다', '감정 표현이 좋습니다']
-        }
-      },
-      {
-        id: 'rec_2',
-        userId: 'user_1',
-        songId: 'song_2',
-        song: { title: '사랑은 은하수 다방에서', artist: '10cm' },
-        audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-        duration: 252, // 4:12를 초로 변환
-        createdAt: '2024-01-14T14:20:00Z',
-        analysis: {
-          pitchAccuracy: 92,
-          tempoAccuracy: 88,
-          vocalRange: { min: 90, max: 380 },
-          toneAnalysis: { brightness: 75, warmth: 85, clarity: 80 },
-          overallScore: 92,
-          feedback: ['음색이 아름답습니다', '리듬감이 좋습니다']
-        }
-      },
-      {
-        id: 'rec_3',
-        userId: 'user_1',
-        songId: 'song_3',
-        song: { title: '밤편지', artist: '아이유' },
-        audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-        duration: 203, // 3:23을 초로 변환
-        createdAt: '2024-01-13T16:45:00Z',
-        analysis: {
-          pitchAccuracy: 88,
-          tempoAccuracy: 85,
-          vocalRange: { min: 85, max: 350 },
-          toneAnalysis: { brightness: 65, warmth: 90, clarity: 70 },
-          overallScore: 88,
-          feedback: ['감정이 잘 전달됩니다', '고음 처리가 좋습니다']
-        }
-      }
-    ];
-    
-    setUserRecordings(mockRecordings);
+    // QuickRecommendation 제거로 인해 더 이상 필요하지 않음
+    console.log('loadRecordings called but no longer needed');
   }, []);
 
   // 컴포넌트 마운트 시 녹음본 데이터 로드
@@ -286,50 +254,6 @@ const RecommendationsPage: React.FC = () => {
   }, [loadRecordings]);
 
 
-  // 빠른 추천 완료 핸들러
-  const handleQuickRecommendationComplete = useCallback((songs: RecommendedSong[], selectedRecording: Recording) => {
-    const recommendationId = `quick_rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    const newRecommendation = {
-      id: recommendationId,
-      timestamp: new Date(),
-      songs,
-      voiceAnalysis: selectedRecording.analysis ? {
-        vocalRange: {
-          min: selectedRecording.analysis.vocalRange.min,
-          max: selectedRecording.analysis.vocalRange.max,
-          comfortable: {
-            min: selectedRecording.analysis.vocalRange.min + 20,
-            max: selectedRecording.analysis.vocalRange.max - 20
-          }
-        },
-        confidence: selectedRecording.analysis.overallScore,
-        vocalCharacteristics: {
-          pitchVariation: selectedRecording.analysis.pitchAccuracy / 100,
-          vibrato: 0.5,
-          breathiness: 1 - (selectedRecording.analysis.toneAnalysis.clarity / 100),
-          brightness: selectedRecording.analysis.toneAnalysis.brightness / 100
-        }
-      } : null
-    };
-    
-    setRecommendationHistory(prev => [newRecommendation, ...prev]);
-    setCurrentRecommendationId(recommendationId);
-    setShowQuickRecommendation(false);
-    setCurrentStep('recommendations');
-    setIsCoverFlowOpen(true);
-    
-    setSnackbar({
-      open: true,
-      message: `"${selectedRecording.song.title}" 녹음본으로 맞춤 추천을 생성했습니다!`,
-      severity: 'success'
-    });
-  }, []);
-
-  // 빠른 추천 닫기 핸들러
-  const handleCloseQuickRecommendation = useCallback(() => {
-    setShowQuickRecommendation(false);
-  }, []);
 
   // 음성 테스트 관련 핸들러들
   const handleNewRecording = useCallback(() => {
@@ -344,11 +268,19 @@ const RecommendationsPage: React.FC = () => {
     setShowExistingRecordingSelection(true);
   }, []);
 
-  const handleSelectExistingRecording = useCallback((recording: Recording) => {
-    console.log('🎵 RecommendationsPage: 기존 녹음본 선택', recording);
+  const handleSelectExistingRecording = useCallback((recording: Recording, uploadId?: number) => {
+    console.log('🎵 RecommendationsPage: 기존 녹음본 선택', { recording, uploadId });
     setShowExistingRecordingSelection(false);
-    // 기존 녹음본으로 바로 추천 생성
-    setShowQuickRecommendation(true);
+    
+    if (uploadId) {
+      setSelectedRecordingForRecommendation(recording);
+      setSelectedUploadId(uploadId);
+      setShowRecommendationResult(true);
+    } else {
+      console.error('uploadId가 없어서 추천을 생성할 수 없습니다.');
+      // 에러 처리 - uploadId가 없을 때 기본 uploadId 사용 또는 에러 메시지
+      alert('녹음본 정보가 부족해서 추천을 생성할 수 없습니다.');
+    }
   }, []);
 
   const handleBackFromVoiceTestSelection = useCallback(() => {
@@ -360,45 +292,60 @@ const RecommendationsPage: React.FC = () => {
     setShowVoiceTestSelection(true);
   }, []);
 
+  const handleBackFromRecommendationResult = useCallback(() => {
+    setShowRecommendationResult(false);
+    setSelectedRecordingForRecommendation(null);
+    setSelectedUploadId(null);
+    setShowExistingRecordingSelection(true);
+  }, []);
+
+  const handleGoToRecord = useCallback(() => {
+    // 녹음 페이지로 이동 (라우터 사용)
+    window.location.href = '/record';
+  }, []);
+
   // ===== 조건부 렌더링 =====
   
   // 음성 테스트 화면
   if (showVoiceTest) {
     return (
-      <Box sx={{ 
-        flex: 1, 
-        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
-        minHeight: '100vh' 
-      }}>
-        <div>음성 테스트 기능은 임시로 비활성화되었습니다.</div>
-      </Box>
+      <VoiceTestGame />
     );
   }
 
   // 음성 테스트 선택 화면
   if (showVoiceTestSelection) {
     return (
-      <div>음성 테스트 선택 기능은 임시로 비활성화되었습니다.</div>
+      <VoiceTestSelection
+        onNewRecording={handleNewRecording}
+        onUseExisting={handleUseExistingRecording}
+        onBack={handleBackFromVoiceTestSelection}
+      />
     );
   }
 
   // 기존 녹음본 선택 화면
   if (showExistingRecordingSelection) {
     return (
-      <div>기존 녹음본 선택 기능은 임시로 비활성화되었습니다.</div>
-    );
-  }
-
-  // 빠른 추천 화면
-  if (showQuickRecommendation) {
-    return (
-      <QuickRecommendation
-        recordings={userRecordings}
-        onRecommendationComplete={handleQuickRecommendationComplete}
-        onClose={handleCloseQuickRecommendation}
+      <ExistingRecordingSelection
+        onSelectRecording={handleSelectExistingRecording}
+        onBack={handleBackFromExistingSelection}
       />
     );
   }
+
+  // 추천 결과 화면
+  if (showRecommendationResult && selectedRecordingForRecommendation && selectedUploadId) {
+    return (
+      <RecommendationResult
+        recording={selectedRecordingForRecommendation}
+        uploadId={selectedUploadId}
+        onBack={handleBackFromRecommendationResult}
+        onGoToRecord={handleGoToRecord}
+      />
+    );
+  }
+
 
   // ===== 메인 UI =====
   

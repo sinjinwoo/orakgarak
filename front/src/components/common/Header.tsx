@@ -223,7 +223,7 @@ const Header: React.FC = () => {
                 }}
               >
                 <Avatar
-                  src={user?.profileImage}
+                  src={user?.profileImageUrl || user?.profileImage}
                   sx={{
                     width: 32,
                     height: 32,

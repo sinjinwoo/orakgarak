@@ -442,8 +442,8 @@ services:
     container_name: orakgaraki-promtail
     restart: unless-stopped
     volumes:
-      - promtail_config:/etc/promtail:ro
-      - /var/log/app:/var/log/app:ro  # 운영: /var/log/app -> /var/log/app로 마운트
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./logs:/var/log/app:ro  # 로컬: ./logs -> /var/log/app로 마운트
       - /var/log:/var/log/host:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -465,8 +465,3 @@ volumes:
   grafana_data:
   alertmanager_data:
   alertmanager_config:
-  promtail_config:
-
-networks:
-  orakgaraki-network:
-    driver: bridge

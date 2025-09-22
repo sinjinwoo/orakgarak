@@ -18,9 +18,8 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
 
   const handleUseExisting = () => {
     console.log('🎵 기존 녹음본 사용 버튼 클릭됨');
-    // 기존 녹음본 선택 화면으로 이동
-    const mockRecording = { id: 'mock', title: 'Mock Recording' };
-    onUseExisting(mockRecording);
+    // 기존 녹음본 선택 화면으로 바로 이동 (mock 데이터 제거)
+    onUseExisting({ id: 'existing', title: 'Use Existing Recordings' });
   };
 
   return (

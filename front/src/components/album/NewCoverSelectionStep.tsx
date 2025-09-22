@@ -3,11 +3,15 @@
  * AI 자동 생성과 직접 업로드 두 가지 방식 제공
  */
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import CoverSelectionTab, { type CoverSelectionMode } from './CoverSelectionTab';
-import AICoverSection from './AICoverSection';
-import ImageUploadSection from './ImageUploadSection';
+import React, { useState, useCallback, useEffect } from "react";
+import { motion } from "framer-motion";
+import CoverSelectionTab, {
+  type CoverSelectionMode,
+} from "./CoverSelectionTab";
+import AICoverSection from "./AICoverSection";
+import ImageUploadSection from "./ImageUploadSection";
+import { useAlbumCreationActions } from "@/stores/albumStore";
+import { useAlbumMetaStore } from "@/stores/albumMetaStore";
 
 interface NewCoverSelectionStepProps {
   selectedRecordings: string[];
@@ -16,9 +20,38 @@ interface NewCoverSelectionStepProps {
 
 const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
   selectedRecordings,
-  className = '',
+  className = "",
 }) => {
-  const [mode, setMode] = useState<CoverSelectionMode>('ai');
+  const [mode, setMode] = useState<CoverSelectionMode>("ai");
+
+  // Store hooks
+  const { setSelectedCoverUploadId, updateAlbumInfo } =
+    useAlbumCreationActions();
+  const { cover } = useAlbumMetaStore();
+
+  // 이미지 업로드 완료 핸들러
+  const handleUploadComplete = useCallback(
+    (imageUrl: string) => {
+      // albumMetaStore에서 uploadId 가져와서 albumStore에 저장
+      if (cover.uploadId) {
+        setSelectedCoverUploadId(cover.uploadId);
+        updateAlbumInfo({ coverImageUrl: imageUrl });
+      }
+    },
+    [cover.uploadId, setSelectedCoverUploadId, updateAlbumInfo]
+  );
+
+  // AI 커버 선택 감지 및 처리
+  useEffect(() => {
+    // AI 커버가 선택되었고 uploadId가 있을 때
+    if (cover.variantId && cover.uploadId) {
+      const selectedVariant = cover.variants.find(v => v.id === cover.variantId);
+      if (selectedVariant) {
+        setSelectedCoverUploadId(cover.uploadId);
+        updateAlbumInfo({ coverImageUrl: selectedVariant.imageUrl });
+      }
+    }
+  }, [cover.variantId, cover.uploadId, cover.variants, setSelectedCoverUploadId, updateAlbumInfo]);
 
   return (
     <div className={`h-full ${className}`}>
@@ -53,17 +86,19 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
           transition={{ duration: 0.3 }}
           className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10"
         >
-          {mode === 'ai' ? (
+          {mode === "ai" ? (
             <AICoverSection selectedRecordings={selectedRecordings} />
           ) : (
             <div>
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-white mb-1">이미지 업로드</h3>
+                <h3 className="text-lg font-semibold text-white mb-1">
+                  이미지 업로드
+                </h3>
                 <p className="text-white/60 text-sm">
                   원하는 이미지를 업로드해 앨범 커버로 사용하세요
                 </p>
               </div>
-              <ImageUploadSection />
+              <ImageUploadSection onUploadComplete={handleUploadComplete} />
             </div>
           )}
         </motion.div>
