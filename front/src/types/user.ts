@@ -3,6 +3,9 @@ export interface User {
   email: string;
   nickname: string;
   profileImage?: string;
+  profileImageUrl?: string;
+  backgroundImageUrl?: string;
+  description?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -12,6 +15,7 @@ export interface Profile {
   id: number;
   userId: number;
   profileImageUrl: string;
+  backgroundImageUrl?: string;
   nickname: string;
   gender: string;
   description: string;
