@@ -56,10 +56,10 @@ export async function generateCovers(
   }
 }
 
-export async function uploadCover(file: File): Promise<string> {
+export async function uploadCover(file: File): Promise<{ uploadId: number; imageUrl: string }> {
   try {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('file', file);
 
     const response = await apiClient.post('/albums/covers/upload', formData, {
       headers: {
@@ -67,14 +67,13 @@ export async function uploadCover(file: File): Promise<string> {
       },
     });
 
-    return response.data.imageUrl;
+    return {
+      uploadId: response.data.uploadId,
+      imageUrl: response.data.presignedUrl
+    };
   } catch (error) {
     console.error('이미지 업로드 실패:', error);
-
-    // 백엔드 연동 실패 시 fallback으로 로컬 URL 사용
-    const delay = Math.random() * 800 + 400;
-    await new Promise(resolve => setTimeout(resolve, delay));
-
-    return URL.createObjectURL(file);
+    // 실패 시 에러를 다시 던져 컴포넌트에서 처리하도록 함
+    throw error;
   }
 }

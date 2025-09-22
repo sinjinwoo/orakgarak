@@ -18,6 +18,10 @@ public interface ProfileService {
 
     ProfileResponseDTO updateProfileWithImage(Long userId, MultipartFile imageFile, String nickname, String gender, String description);
 
+    ProfileResponseDTO updateBackgroundImage(Long userId, MultipartFile imageFile);
+
+    ProfileResponseDTO removeBackgroundImage(Long userId);
+
     boolean isNicknameAvailable(String nickname);
 
     ProfileStatsResponseDTO getMyPageStats(Long userId);
