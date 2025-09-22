@@ -295,6 +295,7 @@ export const useAlbumMetaStore = create<AlbumMetaStore>((set, get) => ({
               ...state.cover,
               variantId,
               seed: variant.seed,
+              uploadedUrl: variant.imageUrl, // 선택된 커버를 업로드 URL로도 설정
             },
           }
         : {};

@@ -6,7 +6,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, AlertCircle, Check, Crop, RotateCw, Move, ZoomIn, ZoomOut, Image as ImageIcon } from 'lucide-react';
-import { uploadCover } from '../../api/cover';
+import { uploadCover } from '../../services/api/cover';
 import { useAlbumMetaStore } from '../../stores/albumMetaStore';
 
 interface ImageUploadSectionProps {
