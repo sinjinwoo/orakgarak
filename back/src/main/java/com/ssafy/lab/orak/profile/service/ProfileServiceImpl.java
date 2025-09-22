@@ -117,6 +117,80 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
+    public ProfileResponseDTO updateBackgroundImage(Long userId, MultipartFile imageFile) {
+        Profile profile = profileRepository.findByUser_Id(userId)
+                .orElseGet(() -> {
+                    User user = userService.findById(userId);
+                    return Profile.builder()
+                            .user(user)
+                            .build();
+                });
+
+        // 기존 백그라운드 이미지 Upload 백업
+        Upload oldBackgroundUpload = profile.getBackgroundImageUpload();
+
+        try {
+            // 1. 새 백그라운드 이미지 먼저 업로드
+            Upload newBackgroundUpload = profileImageService.uploadProfileImage(imageFile, userId);
+
+            // 2. 프로필 업데이트 (DB 트랜잭션 내에서)
+            profile.updateBackgroundImage(newBackgroundUpload);
+            Profile saved = profileRepository.save(profile);
+
+            // 3. 성공 시에만 기존 백그라운드 이미지 삭제 (트랜잭션 커밋 후)
+            if (oldBackgroundUpload != null && !oldBackgroundUpload.getId().equals(newBackgroundUpload.getId())) {
+                try {
+                    profileImageService.deleteProfileImage(oldBackgroundUpload);
+                } catch (Exception e) {
+                    // 기존 이미지 삭제 실패는 로그만 남기고 진행 (새 이미지는 이미 성공적으로 업로드됨)
+                    log.warn("기존 백그라운드 이미지 삭제 실패 (데이터 일관성은 유지됨) - userId: {}, oldUploadId: {}", userId, oldBackgroundUpload.getId(), e);
+                }
+            }
+
+            log.info("백그라운드 이미지 업로드 및 업데이트 완료 - userId: {} profileId: {}", userId, saved.getId());
+            return toResponseDTO(saved);
+
+        } catch (Exception e) {
+            // 새 이미지 업로드나 DB 업데이트 실패 시 기존 상태 유지
+            log.error("백그라운드 이미지 업데이트 실패 - userId: {}", userId, e);
+            throw new RuntimeException("백그라운드 이미지 업데이트 실패: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public ProfileResponseDTO removeBackgroundImage(Long userId) {
+        Profile profile = profileRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new ProfileNotFoundException("프로필을 찾을 수 없습니다: userId=" + userId));
+
+        Upload backgroundUpload = profile.getBackgroundImageUpload();
+
+        try {
+            // 1. 프로필에서 백그라운드 이미지 참조 제거
+            profile.updateBackgroundImage(null);
+            Profile saved = profileRepository.save(profile);
+
+            // 2. 성공 시에만 기존 백그라운드 이미지 삭제
+            if (backgroundUpload != null) {
+                try {
+                    profileImageService.deleteProfileImage(backgroundUpload);
+                } catch (Exception e) {
+                    // 이미지 삭제 실패는 로그만 남기고 진행 (프로필은 이미 성공적으로 업데이트됨)
+                    log.warn("백그라운드 이미지 삭제 실패 (프로필 참조는 제거됨) - userId: {}, uploadId: {}", userId, backgroundUpload.getId(), e);
+                }
+            }
+
+            log.info("백그라운드 이미지 제거 완료 - userId: {} profileId: {}", userId, saved.getId());
+            return toResponseDTO(saved);
+
+        } catch (Exception e) {
+            log.error("백그라운드 이미지 제거 실패 - userId: {}", userId, e);
+            throw new RuntimeException("백그라운드 이미지 제거 실패: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public boolean isNicknameAvailable(String nickname) {
         if (nickname == null || nickname.isBlank()) {
@@ -158,11 +232,13 @@ public class ProfileServiceImpl implements ProfileService {
 
     private ProfileResponseDTO toResponseDTO(Profile profile) {
         String profileImageUrl = profileImageService.getProfileImageUrl(profile.getProfileImageUpload());
+        String backgroundImageUrl = profileImageService.getProfileImageUrl(profile.getBackgroundImageUpload());
 
         return ProfileResponseDTO.builder()
                 .id(profile.getId())
                 .userId(profile.getUser().getId())
                 .profileImageUrl(profileImageUrl)
+                .backgroundImageUrl(backgroundImageUrl)
                 .nickname(profile.getNickname())
                 .gender(profile.getGender())
                 .description(profile.getDescription())
