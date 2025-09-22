@@ -3,7 +3,7 @@
  * AI 자동 생성과 직접 업로드 두 가지 방식 제공
  */
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import CoverSelectionTab, {
   type CoverSelectionMode,
@@ -40,6 +40,18 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
     },
     [cover.uploadId, setSelectedCoverUploadId, updateAlbumInfo]
   );
+
+  // AI 커버 선택 감지 및 처리
+  useEffect(() => {
+    // AI 커버가 선택되었고 uploadId가 있을 때
+    if (cover.variantId && cover.uploadId) {
+      const selectedVariant = cover.variants.find(v => v.id === cover.variantId);
+      if (selectedVariant) {
+        setSelectedCoverUploadId(cover.uploadId);
+        updateAlbumInfo({ coverImageUrl: selectedVariant.imageUrl });
+      }
+    }
+  }, [cover.variantId, cover.uploadId, cover.variants, setSelectedCoverUploadId, updateAlbumInfo]);
 
   return (
     <div className={`h-full ${className}`}>

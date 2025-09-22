@@ -104,7 +104,7 @@ export const useCoverStore = create<CoverStore>((set, get) => ({
       // 선택된 트랙 ID들 사용 (없으면 빈 배열)
       const selectedTrackIds = trackIds || state.tracks.map(track => track.id);
 
-      const { generateCovers } = await import('../api/cover');
+      const { generateCovers } = await import('../services/api/cover');
       const newCovers = await generateCovers(state.params, selectedTrackIds, count);
 
       set((state) => {
