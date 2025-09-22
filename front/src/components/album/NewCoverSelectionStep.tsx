@@ -41,19 +41,6 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
     [cover.uploadId, setSelectedCoverUploadId, updateAlbumInfo]
   );
 
-  // Store hooks
-  const { setSelectedCoverUploadId, updateAlbumInfo } = useAlbumCreationActions();
-  const { cover } = useAlbumMetaStore();
-
-  // 이미지 업로드 완료 핸들러
-  const handleUploadComplete = useCallback((imageUrl: string) => {
-    // albumMetaStore에서 uploadId 가져와서 albumStore에 저장
-    if (cover.uploadId) {
-      setSelectedCoverUploadId(cover.uploadId);
-      updateAlbumInfo({ coverImageUrl: imageUrl });
-    }
-  }, [cover.uploadId, setSelectedCoverUploadId, updateAlbumInfo]);
-
   return (
     <div className={`h-full ${className}`}>
       <div className="max-w-4xl mx-auto space-y-6">
