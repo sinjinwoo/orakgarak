@@ -158,7 +158,7 @@ export const albumService = {
     formData.append("file", file);
 
     const response = await apiClient.post<AlbumCoverUploadResponse>(
-      "/albums/cover/upload",
+      "/albums/covers/upload",
       formData,
       {
         headers: {
@@ -199,7 +199,7 @@ export const albumService = {
     file: File
   ): Promise<{ uploadId: number; imageUrl: string }> => {
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("file", file);
 
     const response = await apiClient.post("/albums/covers/upload", formData, {
       headers: {

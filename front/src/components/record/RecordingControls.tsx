@@ -16,11 +16,12 @@ import {
   Snackbar,
   Modal,
   IconButton,
-  Slider,
   TextField,
+  CircularProgress,
 } from "@mui/material";
 import { Mic, PlayArrow, Pause, Save, Delete } from "@mui/icons-material";
 import { useProcessRecording } from "../../hooks/useRecording";
+import { convertWebMToWAV } from "../../utils/fileUpload";
 
 // 녹음 상태 타입 정의
 type RecordingState = "idle" | "recording" | "paused" | "completed" | "error";
@@ -38,6 +39,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [playableAudioBlob, setPlayableAudioBlob] = useState<Blob | null>(null); // 재생용 오디오
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [showSnackbar, setShowSnackbar] = useState(false);
 
@@ -47,16 +49,20 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [recordingTitle, setRecordingTitle] = useState(""); // 녹음 제목
+  const [isConverting, setIsConverting] = useState(false); // WAV 변환 중 상태
 
   // 녹음 관련 refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const isCancelledRef = useRef<boolean>(false); // ref로 취소 상태 추적
 
   // 녹음 처리 훅
   const processRecording = useProcessRecording();
+  
+
 
   // 녹음 시간을 포맷팅하는 함수
   const formatTime = (seconds: number): string => {
@@ -98,16 +104,32 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
       };
 
       // 녹음 완료 시 처리
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
           type: "audio/webm",
         });
+        console.log('녹음 완료:', audioBlob.size, 'bytes, type:', audioBlob.type);
         setAudioBlob(audioBlob);
+        
+        // 재생용 오디오 준비 (WebM이 재생 안 될 수 있으므로 WAV로 변환)
+        try {
+          console.log('재생용 오디오 준비 중...');
+          const playableBlob = await convertWebMToWAV(audioBlob);
+          console.log('재생용 WAV 생성 완료:', playableBlob.size, 'bytes');
+          setPlayableAudioBlob(playableBlob);
+        } catch (error) {
+          console.warn('WAV 변환 실패, 원본 WebM 사용:', error);
+          setPlayableAudioBlob(audioBlob);
+        }
+        
         setRecordingState("completed");
 
         // ref로 취소 상태 확인 (클로저 문제 해결)
         if (!isCancelledRef.current) {
+          console.log('모달 표시');
           setShowModal(true);
+        } else {
+          console.log('녹음 취소됨, 모달 표시 안함');
         }
 
         // 스트림 정리
@@ -179,11 +201,12 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
 
   // 다시 녹음 함수 (모달에서 또는 취소 후)
   const retakeRecording = useCallback(() => {
-    // 오디오 정리
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
+    // Web Audio 재생 정리
+    if (audioSourceRef.current) {
+      audioSourceRef.current.stop();
+      audioSourceRef.current = null;
     }
+    setIsPlaying(false);
 
     // 리소스 정리
     cleanupResources();
@@ -192,6 +215,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
     setRecordingState("idle");
     setRecordingTime(0);
     setAudioBlob(null);
+    setPlayableAudioBlob(null);
     setErrorMessage("");
     setShowModal(false);
     setCurrentTime(0);
@@ -199,50 +223,193 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
     isCancelledRef.current = false;
   }, [cleanupResources]);
 
-  // 오디오 재생/일시정지 함수
-  const togglePlayPause = useCallback(() => {
-    if (!audioRef.current) return;
+  // Web Audio API 시간 추적을 위한 타이머
+  const playbackTimerRef = useRef<number | null>(null);
+  const playbackStartTimeRef = useRef<number>(0);
 
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+  // 재생 시간 업데이트
+  const startPlaybackTimer = useCallback(() => {
+    console.log('재생 타이머 시작');
+    if (playbackTimerRef.current) {
+      clearInterval(playbackTimerRef.current);
     }
-  }, [isPlaying]);
-
-  // 오디오 시간 업데이트 함수
-  const handleTimeUpdate = useCallback(() => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  }, []);
-
-  // 오디오 메타데이터 로드 함수
-  const handleLoadedMetadata = useCallback(() => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  }, []);
-
-  // 오디오 재생 완료 함수
-  const handleEnded = useCallback(() => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  }, []);
-
-  // 슬라이더 값 변경 함수
-  const handleSliderChange = useCallback(
-    (_event: Event, newValue: number | number[]) => {
-      const time = newValue as number;
-      setCurrentTime(time);
-      if (audioRef.current) {
-        audioRef.current.currentTime = time;
+    
+    playbackStartTimeRef.current = Date.now() / 1000; // 현재 시간을 초 단위로 저장
+    
+    playbackTimerRef.current = window.setInterval(() => {
+      if (audioContextRef.current && audioSourceRef.current && isPlaying) {
+        const now = Date.now() / 1000;
+        const elapsed = now - playbackStartTimeRef.current;
+        
+        console.log('재생 시간 업데이트:', {
+          elapsed: elapsed.toFixed(2),
+          duration: duration.toFixed(2),
+          percentage: ((elapsed / duration) * 100).toFixed(1) + '%'
+        });
+        
+        setCurrentTime(elapsed);
+        
+        if (elapsed >= duration) {
+          console.log('재생 완료 (타이머)');
+          clearInterval(playbackTimerRef.current!);
+          setIsPlaying(false);
+          setCurrentTime(0);
+        }
       }
-    },
-    []
-  );
+    }, 100);
+  }, [duration, isPlaying]);
+
+  const stopPlaybackTimer = useCallback(() => {
+    console.log('재생 타이머 중지');
+    if (playbackTimerRef.current) {
+      clearInterval(playbackTimerRef.current);
+      playbackTimerRef.current = null;
+    }
+  }, []);
+
+  // Web Audio API 재생/일시정지 함수
+  const toggleWebAudioPlayback = useCallback(async () => {
+    try {
+      if (isPlaying) {
+        // 재생 중지
+        if (audioSourceRef.current) {
+          audioSourceRef.current.stop();
+          audioSourceRef.current = null;
+        }
+        stopPlaybackTimer();
+        setIsPlaying(false);
+        setCurrentTime(0);
+        console.log('Web Audio 재생 중지');
+        return;
+      }
+
+      // 재생 시작
+      const targetBlob = playableAudioBlob || audioBlob;
+      if (!targetBlob) return;
+
+      console.log('Web Audio API 재생 시작...');
+      
+      // AudioContext 생성
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      }
+      
+      const audioContext = audioContextRef.current;
+      
+      // AudioContext가 suspended 상태면 resume
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      
+      // 이전 재생 중지
+      if (audioSourceRef.current) {
+        audioSourceRef.current.stop();
+      }
+      
+      // Blob을 ArrayBuffer로 변환
+      const arrayBuffer = await targetBlob.arrayBuffer();
+      
+      // AudioBuffer로 디코딩
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      console.log('🎵 AudioBuffer 디코딩 완료:', {
+        duration: audioBuffer.duration,
+        sampleRate: audioBuffer.sampleRate,
+        numberOfChannels: audioBuffer.numberOfChannels,
+        length: audioBuffer.length
+      });
+
+      // 오디오 데이터 검증
+      let hasAudioData = false;
+      for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+        const channelData = audioBuffer.getChannelData(channel);
+        let sum = 0;
+        for (let i = 0; i < Math.min(1000, channelData.length); i++) {
+          sum += Math.abs(channelData[i]);
+        }
+        const avgAmplitude = sum / Math.min(1000, channelData.length);
+        console.log(`채널 ${channel} 평균 진폭:`, avgAmplitude);
+        if (avgAmplitude > 0.001) hasAudioData = true;
+      }
+
+      if (!hasAudioData) {
+        console.warn('⚠️ 오디오 데이터가 거의 없습니다 (무음 가능성)');
+      }
+      
+      // AudioBufferSourceNode 생성
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      
+      // 게인 노드 추가 (볼륨 조절용)
+      const gainNode = audioContext.createGain();
+      gainNode.gain.setValueAtTime(2.0, audioContext.currentTime); // 볼륨 2배로 증가
+      
+      // 오디오 그래프 연결
+      source.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // 추가 디버깅: 실제로 오디오가 재생되는지 확인
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      gainNode.connect(analyser);
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const checkAudioOutput = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const sum = dataArray.reduce((a, b) => a + b, 0);
+        const average = sum / dataArray.length;
+        
+        if (average > 0) {
+          console.log('🔊 오디오 출력 감지됨:', average.toFixed(2));
+        } else {
+          console.log('🔇 오디오 출력 없음');
+        }
+      };
+      
+      // 1초 후 오디오 출력 확인
+      setTimeout(checkAudioOutput, 1000);
+      
+      console.log('🔊 오디오 그래프 연결 완료:', {
+        contextState: audioContext.state,
+        contextSampleRate: audioContext.sampleRate,
+        destinationMaxChannelCount: audioContext.destination.maxChannelCount,
+        gainValue: gainNode.gain.value
+      });
+      
+      // 재생 완료 이벤트
+      source.onended = () => {
+        console.log('재생 완료');
+        setIsPlaying(false);
+        setCurrentTime(0);
+        audioSourceRef.current = null;
+        stopPlaybackTimer();
+      };
+      
+      audioSourceRef.current = source;
+      
+      // 재생 시작
+      source.start(0);
+      setIsPlaying(true);
+      setDuration(audioBuffer.duration);
+      
+      // 타이머는 재생 시작 후에 시작
+      setTimeout(() => {
+        startPlaybackTimer();
+      }, 50);
+      
+      console.log('✅ 재생 시작 명령 완료:', {
+        duration: audioBuffer.duration,
+        contextCurrentTime: audioContext.currentTime,
+        hasAudioData
+      });
+      
+    } catch (error) {
+      console.error('재생 실패:', error);
+      setErrorMessage(`재생 실패: ${error.message}`);
+      setShowSnackbar(true);
+      setIsPlaying(false);
+    }
+  }, [isPlaying, audioBlob, playableAudioBlob, startPlaybackTimer, stopPlaybackTimer]);
 
   // 녹음 파일을 백엔드로 전송하는 함수
   const saveRecording = useCallback(async () => {
@@ -254,9 +421,22 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
       `녹음 ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
 
     try {
+      setIsConverting(true);
+      
+      // WebM을 WAV로 변환
+      let finalAudioBlob = audioBlob;
+      if (audioBlob.type.includes('webm')) {
+        console.log('WebM 파일을 WAV로 변환 중...');
+        finalAudioBlob = await convertWebMToWAV(audioBlob);
+        console.log('WAV 변환 완료:', finalAudioBlob.type, finalAudioBlob.size);
+      }
+      
+      setIsConverting(false);
+
+      // Presigned URL을 통한 S3 업로드
       await processRecording.mutateAsync({
         title,
-        audioBlob,
+        audioBlob: finalAudioBlob,
         songId: selectedSongId,
         durationSeconds: recordingTime,
       });
@@ -269,12 +449,35 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
       setRecordingState("idle");
       setRecordingTime(0);
       setAudioBlob(null);
+      setPlayableAudioBlob(null);
       setRecordingTitle("");
       setShowModal(false);
     } catch (error) {
-      console.error("녹음 저장 실패:", error);
-      setErrorMessage("녹음 저장에 실패했습니다.");
+      console.error("=== 녹음 저장 실패 ===");
+      console.error("Error type:", error?.constructor?.name);
+      console.error("Error details:", error);
+      
+      // FileUploadError인 경우 추가 정보 표시
+      if (error?.name === 'FileUploadError') {
+        console.error("FileUploadError 상세:");
+        console.error("- statusCode:", error.statusCode);
+        console.error("- uploadId:", error.uploadId);
+      }
+      
+      let userMessage = "녹음 저장에 실패했습니다.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch') || error.message.includes('CORS')) {
+          userMessage = "네트워크 오류가 발생했습니다. CORS 설정을 확인해주세요.";
+        } else {
+          userMessage = `녹음 저장 실패: ${error.message}`;
+        }
+      }
+      
+      setErrorMessage(userMessage);
       setShowSnackbar(true);
+    } finally {
+      setIsConverting(false);
     }
   }, [
     audioBlob,
@@ -290,6 +493,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
     cleanupResources();
 
     setAudioBlob(null);
+    setPlayableAudioBlob(null);
     setShowModal(false);
     setRecordingState("idle");
     setRecordingTime(0);
@@ -298,17 +502,23 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
 
   // 컴포넌트 언마운트 시 정리
   React.useEffect(() => {
-    // ref를 변수로 캡처
-    const audioElement = audioRef.current;
-
     return () => {
       // 모든 리소스 정리
       cleanupResources();
 
-      // 오디오 정리
-      if (audioElement) {
-        audioElement.pause();
-        audioElement.src = "";
+      // AudioContext 정리
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+
+      // 재생 타이머 정리
+      if (playbackTimerRef.current) {
+        clearInterval(playbackTimerRef.current);
+      }
+
+      // Web Audio 재생 중지
+      if (audioSourceRef.current) {
+        audioSourceRef.current.stop();
       }
     };
   }, [cleanupResources]);
@@ -453,7 +663,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
 
         {/* 녹음 미리보기 모달 */}
         <Modal
-          open={showModal}
+          open={showModal && !!audioBlob}
           onClose={() => {}} // 외부 클릭으로 닫기 방지
           aria-labelledby="recording-preview-modal"
           sx={{
@@ -776,103 +986,170 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
 
             {/* 본문 */}
             <Box sx={{ p: 3 }}>
-              {/* 오디오 플레이어 */}
+              {/* 모던한 오디오 플레이어 */}
               {audioBlob && (
                 <>
-                  {/* 숨겨진 오디오 엘리먼트 */}
-                  <audio
-                    ref={audioRef}
-                    src={URL.createObjectURL(audioBlob)}
-                    onTimeUpdate={handleTimeUpdate}
-                    onLoadedMetadata={handleLoadedMetadata}
-                    onEnded={handleEnded}
-                    preload="metadata"
-                  />
-
-                  {/* 재생 컨트롤 */}
+                  {/* 메인 재생 컨트롤 */}
                   <Box
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 2,
-                      mb: 3,
+                      gap: 3,
+                      mb: 4,
+                      p: 3,
+                      borderRadius: 3,
+                      background: `
+                        linear-gradient(135deg, 
+                          rgba(0,255,255,0.08) 0%, 
+                          rgba(255,0,128,0.06) 50%,
+                          rgba(0,255,170,0.08) 100%
+                        )
+                      `,
+                      border: "1px solid rgba(0,255,255,0.2)",
+                      backdropFilter: "blur(10px)",
                     }}
                   >
-                    {/* EQ 장식 */}
-                    <Box sx={{ display: "flex", gap: 0.6, mr: 0.5 }}>
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <Box
-                          key={i}
-                          sx={{
-                            width: 4,
-                            height: 18 + (i % 3) * 6,
-                            borderRadius: 1,
-                            background:
-                              "linear-gradient(180deg, #00ffff, #ff0080)",
-                            boxShadow: "0 0 8px rgba(0,255,255,0.6)",
-                            animation: "eqBar 1s ease-in-out infinite",
-                            animationDelay: `${i * 0.08}s`,
-                          }}
-                        />
-                      ))}
-                    </Box>
+                    {/* 재생/일시정지 버튼 */}
                     <IconButton
-                      onClick={togglePlayPause}
+                      onClick={toggleWebAudioPlayback}
                       size="large"
                       sx={{
-                        width: 56,
-                        height: 56,
-                        borderRadius: "14px",
-                        bgcolor: "rgba(0,255,255,0.12)",
-                        color: "#00ffff",
-                        border: "1px solid rgba(0,255,255,0.35)",
-                        boxShadow: "0 0 16px rgba(0,255,255,0.25)",
-                        backdropFilter: "blur(6px)",
-                        "&:hover": { bgcolor: "rgba(0,255,255,0.2)" },
+                        width: 64,
+                        height: 64,
+                        borderRadius: "16px",
+                        bgcolor: isPlaying 
+                          ? "rgba(255,0,128,0.2)" 
+                          : "rgba(0,255,255,0.15)",
+                        color: isPlaying ? "#ff0080" : "#00ffff",
+                        border: isPlaying 
+                          ? "2px solid rgba(255,0,128,0.6)" 
+                          : "2px solid rgba(0,255,255,0.4)",
+                        boxShadow: isPlaying 
+                          ? "0 0 30px rgba(255,0,128,0.5)" 
+                          : "0 0 25px rgba(0,255,255,0.3)",
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        "&:hover": { 
+                          transform: "scale(1.08)",
+                          boxShadow: isPlaying 
+                            ? "0 0 40px rgba(255,0,128,0.7)" 
+                            : "0 0 35px rgba(0,255,255,0.5)",
+                        },
+                        "&:active": {
+                          transform: "scale(0.95)",
+                        },
                       }}
                     >
-                      {isPlaying ? <Pause /> : <PlayArrow />}
+                      {isPlaying ? <Pause sx={{ fontSize: 32 }} /> : <PlayArrow sx={{ fontSize: 32 }} />}
                     </IconButton>
 
+                    {/* 재생 정보 및 진행바 */}
                     <Box sx={{ flex: 1 }}>
-                      <Typography
-                        variant="body2"
-                        color="rgba(255,255,255,0.7)"
-                        sx={{ mb: 1, fontFamily: "monospace" }}
-                      >
-                        {formatTime(currentTime)} / {formatTime(duration)}
-                      </Typography>
-                      <Slider
-                        value={currentTime}
-                        max={duration || 0}
-                        onChange={handleSliderChange}
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                        <Typography
+                          variant="h6"
+                          sx={{ 
+                            color: "#00ffff",
+                            fontFamily: "monospace",
+                            fontWeight: 600,
+                            textShadow: "0 0 10px rgba(0,255,255,0.5)"
+                          }}
+                        >
+                          {formatTime(currentTime)} / {formatTime(duration)}
+                        </Typography>
+                        
+                        <Typography
+                          variant="body2"
+                          sx={{ 
+                            color: "rgba(255,255,255,0.6)",
+                            fontFamily: "monospace"
+                          }}
+                        >
+                          {playableAudioBlob ? 'WAV' : 'WebM'} • {((playableAudioBlob || audioBlob).size / 1024 / 1024).toFixed(1)}MB
+                        </Typography>
+                      </Box>
+                      
+                      {/* 모던한 진행바 */}
+                      <Box
                         sx={{
-                          color: "#00ffff",
-                          height: 8,
-                          "& .MuiSlider-rail": {
-                            opacity: 0.3,
-                            background:
-                              "linear-gradient(90deg, rgba(0,255,255,0.2), rgba(255,0,128,0.2))",
-                            height: 8,
-                          },
-                          "& .MuiSlider-track": {
-                            border: "none",
-                            background:
-                              "linear-gradient(90deg, #00ffff, #ff0080)",
-                            boxShadow: "0 0 12px rgba(0,255,255,0.6)",
-                          },
-                          "& .MuiSlider-thumb": {
-                            width: 18,
-                            height: 18,
-                            backgroundColor: "#0b0f14",
-                            border: "2px solid #00ffff",
-                            boxShadow: "0 0 12px rgba(0,255,255,0.6)",
-                            "&:hover, &.Mui-focusVisible": {
-                              boxShadow: "0 0 16px rgba(0,255,255,0.9)",
-                            },
-                          },
+                          position: "relative",
+                          height: 12,
+                          borderRadius: 6,
+                          bgcolor: "rgba(255,255,255,0.1)",
+                          overflow: "hidden",
+                          cursor: "pointer",
                         }}
-                      />
+                         onClick={(e) => {
+                           const rect = e.currentTarget.getBoundingClientRect();
+                           const clickX = e.clientX - rect.left;
+                           const newTime = (clickX / rect.width) * duration;
+                           
+                           console.log('진행바 클릭:', {
+                             clickX,
+                             rectWidth: rect.width,
+                             newTime: newTime.toFixed(2),
+                             duration: duration.toFixed(2)
+                           });
+                           
+                           setCurrentTime(newTime);
+                           
+                           // Web Audio API에서는 시간 이동이 복잡하므로 재시작
+                           if (isPlaying) {
+                             // 현재 재생 중이면 해당 시점부터 다시 재생
+                             toggleWebAudioPlayback(); // 일시정지
+                             setTimeout(() => {
+                               // TODO: 특정 시점부터 재생하는 기능 구현 필요
+                               // 현재는 처음부터 재생
+                               toggleWebAudioPlayback();
+                             }, 100);
+                           }
+                         }}
+                      >
+                        {/* 진행바 배경 */}
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            inset: 0,
+                            background: `
+                              linear-gradient(90deg, 
+                                rgba(0,255,255,0.1), 
+                                rgba(255,0,128,0.1)
+                              )
+                            `,
+                          }}
+                        />
+                        
+                        {/* 진행바 */}
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                            background: `
+                              linear-gradient(90deg, #00ffff, #ff0080)
+                            `,
+                            boxShadow: "0 0 15px rgba(0,255,255,0.6)",
+                            transition: "width 0.1s ease",
+                          }}
+                        />
+                        
+                        {/* 재생 헤드 */}
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                            top: "50%",
+                            transform: "translate(-50%, -50%)",
+                            width: 16,
+                            height: 16,
+                            borderRadius: "50%",
+                            bgcolor: "#00ffff",
+                            border: "2px solid #0b0f14",
+                            boxShadow: "0 0 12px rgba(0,255,255,0.8)",
+                          }}
+                        />
+                      </Box>
                     </Box>
                   </Box>
 
@@ -884,6 +1161,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                     value={recordingTitle}
                     onChange={(e) => setRecordingTitle(e.target.value)}
                     variant="outlined"
+                    disabled={isConverting || processRecording.isPending}
                     sx={{
                       mb: 3,
                       "& .MuiOutlinedInput-root": {
@@ -898,126 +1176,220 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                           borderColor: "#00ffff",
                           boxShadow: "0 0 12px rgba(0,255,255,0.3)",
                         },
+                        "&.Mui-disabled": {
+                          backgroundColor: "rgba(255,255,255,0.02)",
+                          borderColor: "rgba(255,255,255,0.1)",
+                          color: "#666",
+                        },
                       },
                       "& .MuiInputLabel-root": {
                         color: "rgba(255,255,255,0.7)",
                         "&.Mui-focused": {
                           color: "#00ffff",
                         },
+                        "&.Mui-disabled": {
+                          color: "#666",
+                        },
                       },
                     }}
                   />
 
-                  {/* 파일 정보 */}
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      mb: 3,
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                      border: "1px solid rgba(255,255,255,0.06)",
-                      borderRadius: 2,
-                    }}
-                  >
-                    <Box
+                  {/* 변환/저장 상태 표시 */}
+                  {(isConverting || processRecording.isPending) && (
+                    <Paper
+                      elevation={0}
                       sx={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: 1.5,
+                        p: 2,
+                        mb: 3,
+                        backgroundColor: "rgba(0,255,255,0.08)",
+                        border: "1px solid rgba(0,255,255,0.2)",
+                        borderRadius: 2,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
                       }}
                     >
+                      <CircularProgress size={20} sx={{ color: "#00ffff" }} />
                       <Typography
                         variant="body2"
-                        sx={{ color: "rgba(255,255,255,0.7)" }}
+                        sx={{ color: "#00ffff", fontWeight: 600 }}
                       >
-                        📁 파일 크기:{" "}
-                        {(audioBlob.size / 1024 / 1024).toFixed(2)} MB
+                        {isConverting 
+                          ? "🔄 WebM 파일을 WAV 형식으로 변환 중입니다..." 
+                          : "☁️ S3로 업로드 중입니다..."}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "rgba(255,255,255,0.7)" }}
-                      >
-                        ⏱️ 재생 시간: {formatTime(recordingTime)}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ color: "rgba(255,255,255,0.7)" }}
-                      >
-                        🎵 형식: {audioBlob.type}
-                      </Typography>
-                    </Box>
-                  </Paper>
+                    </Paper>
+                  )}
 
-                  {/* 액션 버튼들 */}
+                  {/* 파일 정보 카드 */}
                   <Box
                     sx={{
-                      display: "flex",
+                      p: 3,
+                      mb: 3,
+                      borderRadius: 3,
+                      background: `
+                        linear-gradient(135deg, 
+                          rgba(0,255,255,0.06) 0%, 
+                          rgba(255,0,128,0.04) 100%
+                        )
+                      `,
+                      border: "1px solid rgba(0,255,255,0.15)",
+                      backdropFilter: "blur(8px)",
+                    }}
+                  >
+                    <Typography
+                      variant="h6"
+                      sx={{ 
+                        color: "#00ffff",
+                        mb: 2,
+                        fontWeight: 600,
+                        textShadow: "0 0 8px rgba(0,255,255,0.5)"
+                      }}
+                    >
+                      📁 녹음 정보
+                    </Typography>
+                    
+                    <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
+                      <Box>
+                        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>
+                          재생 시간
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: "#00ffff", fontWeight: 600 }}>
+                          {formatTime(recordingTime)}
+                        </Typography>
+                      </Box>
+                      
+                      <Box>
+                        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>
+                          파일 크기
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: "#00ffff", fontWeight: 600 }}>
+                          {(audioBlob.size / 1024 / 1024).toFixed(1)} MB
+                        </Typography>
+                      </Box>
+                      
+                      <Box>
+                        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>
+                          원본 형식
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: "#00ffff", fontWeight: 600 }}>
+                          {audioBlob.type.split('/')[1].toUpperCase()}
+                        </Typography>
+                      </Box>
+                      
+                      <Box>
+                        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.5)" }}>
+                          재생 형식
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: "#00ffaa", fontWeight: 600 }}>
+                          {playableAudioBlob ? 'WAV' : 'WebM'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* 모던한 액션 버튼들 */}
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr 1fr",
                       gap: 2,
-                      justifyContent: "center",
-                      flexWrap: "wrap",
+                      mt: 2,
                     }}
                   >
                     <Button
                       variant="contained"
                       size="large"
-                      startIcon={<Save />}
+                      startIcon={
+                        isConverting || processRecording.isPending ? (
+                          <CircularProgress size={20} sx={{ color: "#000" }} />
+                        ) : (
+                          <Save />
+                        )
+                      }
                       onClick={saveRecording}
-                      disabled={processRecording.isPending}
+                      disabled={isConverting || processRecording.isPending}
                       sx={{
-                        minWidth: 120,
-                        background: "linear-gradient(45deg, #00ff88, #00cc66)",
-                        border: "1px solid #00ffaa",
+                        py: 1.5,
+                        borderRadius: 2,
+                        background: "linear-gradient(135deg, #00ff88, #00cc66)",
                         color: "#000",
-                        fontWeight: 800,
-                        letterSpacing: 1,
+                        fontWeight: 700,
+                        fontSize: "0.9rem",
+                        textTransform: "none",
+                        boxShadow: "0 4px 20px rgba(0,255,136,0.3)",
                         "&:hover": {
-                          background:
-                            "linear-gradient(45deg, #00ffaa, #00e695)",
-                          boxShadow: "0 0 20px rgba(0, 255, 170, 0.5)",
+                          background: "linear-gradient(135deg, #00ffaa, #00e695)",
+                          transform: "translateY(-2px)",
+                          boxShadow: "0 6px 25px rgba(0,255,170,0.4)",
+                        },
+                        "&:disabled": {
+                          background: "rgba(128,128,128,0.2)",
+                          color: "#666",
                         },
                       }}
                     >
-                      {processRecording.isPending ? "저장 중..." : "SAVE"}
+                      {isConverting 
+                        ? "변환 중..." 
+                        : processRecording.isPending
+                          ? "저장 중..." 
+                          : "저장"}
                     </Button>
+                    
                     <Button
                       variant="outlined"
                       size="large"
                       startIcon={<Mic />}
                       onClick={retakeRecording}
+                      disabled={isConverting || processRecording.isPending}
                       sx={{
-                        minWidth: 120,
-                        border: "1px solid #00ffff",
+                        py: 1.5,
+                        borderRadius: 2,
+                        border: "2px solid #00ffff",
                         color: "#00ffff",
-                        fontWeight: 800,
-                        letterSpacing: 1,
+                        fontWeight: 700,
+                        fontSize: "0.9rem",
+                        textTransform: "none",
                         "&:hover": {
-                          border: "1px solid #00ffff",
-                          background: "rgba(0, 255, 255, 0.12)",
-                          boxShadow: "0 0 15px rgba(0, 255, 255, 0.35)",
+                          bgcolor: "rgba(0,255,255,0.1)",
+                          transform: "translateY(-2px)",
+                          boxShadow: "0 6px 25px rgba(0,255,255,0.3)",
+                        },
+                        "&:disabled": {
+                          border: "2px solid #666",
+                          color: "#666",
                         },
                       }}
                     >
-                      RETRY RECORD
+                      다시 녹음
                     </Button>
+                    
                     <Button
                       variant="outlined"
                       size="large"
                       startIcon={<Delete />}
                       onClick={deleteRecording}
+                      disabled={isConverting || processRecording.isPending}
                       sx={{
-                        minWidth: 120,
-                        border: "1px solid #ff0080",
+                        py: 1.5,
+                        borderRadius: 2,
+                        border: "2px solid #ff0080",
                         color: "#ff0080",
-                        fontWeight: 800,
-                        letterSpacing: 1,
+                        fontWeight: 700,
+                        fontSize: "0.9rem",
+                        textTransform: "none",
                         "&:hover": {
-                          border: "1px solid #ff0080",
-                          background: "rgba(255, 0, 128, 0.12)",
-                          boxShadow: "0 0 15px rgba(255, 0, 128, 0.35)",
+                          bgcolor: "rgba(255,0,128,0.1)",
+                          transform: "translateY(-2px)",
+                          boxShadow: "0 6px 25px rgba(255,0,128,0.3)",
+                        },
+                        "&:disabled": {
+                          border: "2px solid #666",
+                          color: "#666",
                         },
                       }}
                     >
-                      DELETE
+                      삭제
                     </Button>
                   </Box>
                 </>
