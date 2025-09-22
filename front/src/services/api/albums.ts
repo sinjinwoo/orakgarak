@@ -13,6 +13,7 @@ import type {
   AlbumTrack,
   AlbumTracksResponse,
 } from "../../types/album";
+import { normalizeAlbum } from "../../utils/typeHelpers";
 
 export interface AlbumQueryParams extends SearchParams {
   isPublic?: boolean;
@@ -220,6 +221,34 @@ export const albumService = {
   },
 
   // === 소셜 기능 ===
+
+  // 공개 앨범 목록 조회 (소셜 피드용)
+  getPublicAlbums: async (
+    params?: { page?: number; size?: number; keyword?: string }
+  ): Promise<PaginatedResponse<Album>> => {
+    const response = await apiClient.get<PaginatedResponse<Album>>("/social/albums", {
+      params,
+    });
+    const data = response.data;
+    return {
+      ...data,
+      content: (data.content || []).map(normalizeAlbum).filter(Boolean),
+    };
+  },
+
+  // 팔로우한 사용자들의 공개 앨범 조회
+  getFollowedUsersAlbums: async (
+    params?: { page?: number; size?: number; keyword?: string }
+  ): Promise<PaginatedResponse<Album>> => {
+    const response = await apiClient.get<PaginatedResponse<Album>>("/social/albums/followed", {
+      params,
+    });
+    const data = response.data;
+    return {
+      ...data,
+      content: (data.content || []).map(normalizeAlbum).filter(Boolean),
+    };
+  },
 
   // 앨범 좋아요
   likeAlbum: async (albumId: number) => {

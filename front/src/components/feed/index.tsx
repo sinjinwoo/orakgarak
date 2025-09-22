@@ -57,12 +57,63 @@ export const AlbumFeedGrid: React.FC<AlbumFeedGridProps> = ({
             <Box
               sx={{
                 height: 200,
-                backgroundImage: `url(${album.coverImageUrl || '/images/default-album.png'})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
+                position: 'relative',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(196, 71, 233, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
               }}
               onClick={() => onAlbumClick?.(album)}
-            />
+            >
+              {album.coverImageUrl && album.coverImageUrl !== '/images/default-album.png' ? (
+                <Box
+                  component="img"
+                  src={album.coverImageUrl}
+                  alt={album.title}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                  onError={(e) => {
+                    // 이미지 로딩 실패 시 숨기기
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+              ) : null}
+              {/* 기본 커버 이미지 또는 이미지 로딩 실패 시 표시할 UI */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  background: (!album.coverImageUrl || album.coverImageUrl === '/images/default-album.png')
+                    ? 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 50%, #8B5CF6 100%)'
+                    : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: (!album.coverImageUrl || album.coverImageUrl === '/images/default-album.png') ? 1 : -1,
+                }}
+              >
+                {(!album.coverImageUrl || album.coverImageUrl === '/images/default-album.png') && (
+                  <Typography
+                    sx={{
+                      fontSize: '4rem',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                    }}
+                  >
+                    ♪
+                  </Typography>
+                )}
+              </Box>
+            </Box>
             <CardContent>
               <Typography variant="h6" noWrap>
                 {album.title}

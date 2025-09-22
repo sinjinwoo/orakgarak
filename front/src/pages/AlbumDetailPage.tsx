@@ -133,17 +133,17 @@ const AlbumDetailPage: React.FC = () => {
           id: '1', // 임시 ID
           title: albumData.title,
           description: albumData.description || '',
-          coverImage: albumData.coverImage || '',
+          coverImageUrl: albumData.coverImageUrl || '',
           userId: 'current-user',
           user: {
             nickname: '음악러버', // 실제로는 사용자 정보에서 가져와야 함
             profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
           },
           tracks: [
-            // 기본 더미 데이터 (트랙이 없는 경우)
-            { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45', audioUrl: '' },
-            { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12', audioUrl: '' },
-            { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23', audioUrl: '' },
+            // 기본 더미 데이터 (트랙이 없는 경우) - audioUrl을 undefined로 설정하여 재생 시도를 방지
+            { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45', audioUrl: undefined },
+            { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12', audioUrl: undefined },
+            { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23', audioUrl: undefined },
           ],
           isPublic: albumData.isPublic,
           tags: albumData.tags || ['K-POP', '발라드', '감성', '힐링'],
@@ -164,12 +164,12 @@ const AlbumDetailPage: React.FC = () => {
     loadAlbum();
   }, [albumId]);
 
-  // 앨범을 찾을 수 없으면 피드 페이지로 리다이렉트
-  useEffect(() => {
-    if (!loading && (!album || album.id !== albumId)) {
-      navigate('/feed', { replace: true });
-    }
-  }, [loading, album, albumId, navigate]);
+  // 앨범을 찾을 수 없으면 이전 페이지로 리다이렉트 (API 연동 전까지는 비활성화)
+  // useEffect(() => {
+  //   if (!loading && (!album || album.id !== albumId)) {
+  //     navigate(previousPage, { replace: true });
+  //   }
+  // }, [loading, album, albumId, navigate, previousPage]);
 
   // 이전 페이지 추적
   useEffect(() => {
@@ -461,7 +461,7 @@ const AlbumDetailPage: React.FC = () => {
           {/* 뒤로가기 버튼 */}
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(previousPage)}
             sx={{ 
               mb: 3, 
               color: 'rgba(255, 255, 255, 0.8)',
@@ -494,7 +494,7 @@ const AlbumDetailPage: React.FC = () => {
                   border: '3px solid rgba(196, 71, 233, 0.3)',
                   boxShadow: '0 0 20px rgba(196, 71, 233, 0.3)'
                 }}
-                image={album.coverImage}
+                image={album.coverImageUrl}
                 alt={album.title}
               />
               <Box sx={{ flex: 1 }}>
@@ -1090,7 +1090,7 @@ const AlbumDetailPage: React.FC = () => {
               audioUrl: track.audioUrl,
               duration: track.duration,
             })),
-            coverImage: album.coverImage,
+            coverImageUrl: album.coverImageUrl,
             description: album.description,
           }}
         />
