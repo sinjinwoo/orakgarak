@@ -135,14 +135,25 @@ export const useProcessRecording = () => {
 
         updateQueueItem(queueId, { status: "uploading" });
 
-        const presignedData = await getPresignedUrl.mutateAsync({
-          originalFilename: `${title}.${
-            audioBlob.type.split("/")[1] || "webm"
-          }`,
+        // 파일명에서 한국어 제거하고 안전한 파일명 생성
+        const safeFilename = `recording_${Date.now()}.wav`; // 항상 WAV로 저장
+        
+        console.log('Presigned URL 요청:', {
+          originalFilename: safeFilename,
           fileSize: audioBlob.size,
           contentType: audioBlob.type,
           durationSeconds,
         });
+
+        const presignedData = await getPresignedUrl.mutateAsync({
+          originalFilename: safeFilename,
+          fileSize: audioBlob.size,
+          contentType: audioBlob.type, // WAV 변환 후의 타입
+          durationSeconds,
+        });
+        
+        console.log('Presigned URL 응답:', presignedData);
+        console.log('S3 업로드 URL:', presignedData.presignedUrl);
 
         const uploadResult = await uploadToS3({
           presignedUrl: presignedData.presignedUrl,
@@ -194,6 +205,42 @@ export const useProcessRecording = () => {
     },
     onError: (error) => {
       toast.error(error.message || "녹음 처리에 실패했습니다.");
+    },
+  });
+};
+
+// 로컬 개발 환경을 위한 직접 업로드 훅 (CORS 회피)
+export const useDirectUpload = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<Recording, ApiError, ProcessRecordingParams>({
+    mutationFn: async ({ title, audioBlob, songId, durationSeconds }) => {
+      try {
+        validateAudioFile(audioBlob);
+
+        // 백엔드 프록시를 통한 직접 업로드
+        const recording = await recordingService.uploadRecordingDirect(
+          title,
+          audioBlob,
+          songId,
+          durationSeconds
+        );
+
+        return recording;
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "알 수 없는 오류가 발생했습니다.";
+        throw new Error(errorMessage);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: RECORDING_QUERY_KEYS.lists() });
+      toast.success("녹음이 성공적으로 저장되었습니다.");
+    },
+    onError: (error) => {
+      toast.error(error.message || "녹음 업로드에 실패했습니다.");
     },
   });
 };
