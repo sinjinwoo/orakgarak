@@ -5,7 +5,7 @@ import noisereduce as nr
 import os
 
 
-# mp3 -> wav 변환
+# 확장자 wav 변환
 def convert_to_wav(filepath, target_sr=16000):
     # 파일 확장자
     name, ext = os.path.splitext(filepath)
@@ -24,22 +24,28 @@ def convert_to_wav(filepath, target_sr=16000):
 
 # 전처리
 def preprocess_audio(filepath, sr=16000):
-    y, sr = librosa.load(filepath, sr=sr, mono=True)
+    try:
+        y, sr = librosa.load(filepath, sr=sr, mono=True)
+        if len(y) == 0:
+            raise ValueError("빈 오디오 파일입니다")
 
-    # 무음 제거 
-    y, _ = librosa.effects.trim(y, top_db=25) 
-    # 노이즈 제거
-    reduced = nr.reduce_noise(y=y, sr=sr)
-
-    return reduced, sr
+        # 무음 제거 
+        y, _ = librosa.effects.trim(y, top_db=30) 
+        
+        # 노이즈 제거
+        reduced = nr.reduce_noise(y=y, sr=sr)
+        return reduced, sr
+    
+    except Exception as e:
+        print(f"오디오 처리 중 오류: {e}")
+        return None, None
 
 # 특징 추출
 def extract_features(filepath, sr=16000):
     y, sr = preprocess_audio(filepath, sr=sr)
-    #y, sr = librosa.load(filepath, sr=sr)
 
     mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
-    mfcc_mean = np.mean(mfcc[:5])              
+    mfcc_mean = np.mean(mfcc[:5])
     mfcc_var = np.mean(np.var(mfcc, axis=1))   
 
     features = {
@@ -87,15 +93,15 @@ def classify_tone(f):
             desc.append("차분하고 포근한 톤")
     elif 1600 <= c < 1800:  
         if r > 3000 and z > 0.16:
-            desc.append("안정적이고 힘 있는 중음 톤")
+            desc.append("안정적이고 힘 있는 톤")
         else:
-            desc.append("따뜻하고 차분한 중음 톤")
+            desc.append("따뜻하고 차분한 톤")
 
     elif 1800 <= c <= 2100: 
         if r > 3000 and z > 0.16:
-            desc.append("밝고 힘 있는 중음 톤")
+            desc.append("밝고 힘 있는 톤")
         else:
-            desc.append("맑고 선명한 중음 톤")
+            desc.append("맑고 선명한 톤")
 
     else:
         desc.append("편안한 톤")
@@ -175,8 +181,7 @@ def analyze_voice(filepath):
 
 
 # 테스트
-if __name__ == "__main__":
-    filepath = "C:/min/special_pj/data/sample_data.wav"  
-
-    result = analyze_voice(filepath) # 사용자 목소리 파일 입력
+if __name__ == "__main__": 
+    filepath = "C:/SSAFY/data/sample_data.mp3" # 사용자 음성
+    result = analyze_voice(filepath) 
     print(result)
