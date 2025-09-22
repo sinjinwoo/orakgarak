@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { normalizeSong } from '../../utils/typeHelpers';
 import type {
   Song,
   SongSearchResponse,
@@ -29,7 +30,8 @@ export const songService = {
     const response = await apiClient.get<SongSearchResponse>('/songs/search/realtime', {
       params: { keyword, limit }
     });
-    return response.data;
+    // 검색 결과 정규화 적용
+    return (response.data || []).map(normalizeSong).filter(Boolean);
   },
 
   // 고급 검색 (추가 파라미터 지원)

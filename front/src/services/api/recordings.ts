@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { normalizeRecording } from '../../utils/typeHelpers';
 import type {
   Recording,
   PresignedUrlRequest,
@@ -52,7 +53,7 @@ export const recordingService = {
   // 특정 녹음본 조회
   getRecording: async (recordId: number): Promise<Recording> => {
     const response = await apiClient.get<Recording>(`/records/async/${recordId}`);
-    return response.data;
+    return normalizeRecording(response.data);
   },
 
   // 내 녹음본 목록 조회
@@ -60,7 +61,8 @@ export const recordingService = {
     const response = await apiClient.get<Recording[]>('/records/async/me', {
       params: filters
     });
-    return response.data;
+    // 응답 데이터 정규화 적용
+    return (response.data || []).map(normalizeRecording).filter(Boolean);
   },
 
   // 녹음본 삭제
