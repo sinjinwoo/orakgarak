@@ -1,13 +1,17 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { ApiError } from './types';
 
 // API 기본 설정
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13c103.p.ssafy.io/api';
 
-// Axios 인스턴스 생성
+// 통합 Axios 인스턴스 생성
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 15000,
   withCredentials: true, // refreshToken 쿠키를 위해 필요
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // 토큰 갱신 중인지 확인하는 플래그
@@ -31,10 +35,36 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+// 토큰 관리 유틸리티
+export const tokenManager = {
+  getToken: () => localStorage.getItem('auth-token'),
+  setToken: (token: string) => {
+    localStorage.setItem('auth-token', token);
+    localStorage.setItem('token-created-time', Date.now().toString());
+  },
+  removeToken: () => {
+    localStorage.removeItem('auth-token');
+    localStorage.removeItem('token-created-time');
+    localStorage.removeItem('userId'); // 기존 호환성을 위해
+    localStorage.removeItem('accessToken'); // 기존 호환성을 위해
+  },
+  isTokenExpired: () => {
+    const token = localStorage.getItem('auth-token');
+    const createdTime = localStorage.getItem('token-created-time');
+    
+    if (!token || !createdTime) return true;
+    
+    // 토큰이 1시간(3600초) 이상 지났으면 만료로 간주
+    const now = Date.now();
+    const created = parseInt(createdTime);
+    return (now - created) > 3600000; // 1시간
+  }
+};
+
 // 요청 인터셉터: 모든 요청에 Authorization 헤더 추가
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('auth-token');
+    const token = tokenManager.getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -50,8 +80,8 @@ apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as any;
 
     // 401 에러이고 아직 재시도하지 않은 요청인 경우
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -88,8 +118,7 @@ apiClient.interceptors.response.use(
         
         if (accessToken) {
           // 새 토큰 저장
-          localStorage.setItem('auth-token', accessToken);
-          localStorage.setItem('token-created-time', Date.now().toString());
+          tokenManager.setToken(accessToken);
           
           // 대기 중인 요청들에 새 토큰 전달
           processQueue(null, accessToken);
@@ -108,19 +137,15 @@ apiClient.interceptors.response.use(
         const errorCode = refreshError.response?.data?.code;
         
         if (status === 400 && errorCode === 'MISSING_REFRESH_TOKEN') {
-          // 400 BAD_REQUEST: 리프레시 토큰이 없는 경우
           console.log('리프레시 토큰이 없습니다. 로그인이 필요합니다.');
         } else if (status === 401 && errorCode === 'INVALID_REFRESH_TOKEN') {
-          // 401 UNAUTHORIZED: 리프레시 토큰이 만료되거나 유효하지 않은 경우
           console.log('리프레시 토큰이 만료되었습니다. 다시 로그인해주세요.');
         } else {
-          // 기타 에러
           console.log('토큰 갱신 중 알 수 없는 오류가 발생했습니다.');
         }
         
         // 모든 경우에 저장된 토큰 정보 삭제
-        localStorage.removeItem('auth-token');
-        localStorage.removeItem('token-created-time');
+        tokenManager.removeToken();
         
         // 대기 중인 요청들에 에러 전달
         processQueue(refreshError, null);
@@ -145,8 +170,15 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // API 에러 객체 생성
+    const apiError: ApiError = {
+      message: (error.response?.data as any)?.message || error.message || '알 수 없는 오류가 발생했습니다.',
+      statusCode: error.response?.status || 500,
+      details: error.response?.data,
+    };
+
     // 401이 아닌 다른 에러는 그대로 전달
-    return Promise.reject(error);
+    return Promise.reject(apiError);
   }
 );
 

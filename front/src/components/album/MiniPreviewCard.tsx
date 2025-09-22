@@ -42,8 +42,15 @@ const MiniPreviewCard: React.FC<MiniPreviewCardProps> = ({
 
   const defaultCover = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop';
 
-  // 선택된 커버 또는 파라미터 기반 미리보기 생성
+  // 커버 이미지 실시간 업데이트
   useEffect(() => {
+    // 앨범 스토어의 coverImage가 우선순위가 높음 (직접 업로드된 이미지 포함)
+    if (coverImageUrl) {
+      setPreviewImage(coverImageUrl);
+      return;
+    }
+
+    // 선택된 AI 생성 커버가 있다면 사용
     if (selectedCoverId) {
       const selectedCover = [...latest, ...history].find(c => c.id === selectedCoverId);
       if (selectedCover) {
@@ -52,9 +59,9 @@ const MiniPreviewCard: React.FC<MiniPreviewCardProps> = ({
       }
     }
 
-    // 파라미터 기반 실시간 미리보기 생성 (CSS 필터 적용)
+    // 기본 커버 이미지 사용
     setPreviewImage(null);
-  }, [selectedCoverId, latest, history, params]);
+  }, [coverImageUrl, selectedCoverId, latest, history]);
 
   // CSS 필터를 이용한 실시간 미리보기 스타일
   const getPreviewStyle = () => {

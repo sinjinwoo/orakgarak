@@ -1,8 +1,9 @@
 /**
  * 커버 생성 API 모듈
- * 실제 백엔드 연동 전까지는 mock 데이터 사용
+ * AI 기반 앨범 커버 생성 및 업로드 기능
  */
 
+import { apiClient } from '../services/api';
 import type { CoverParams, GeneratedCover } from '../types/cover';
 
 const mockImages = [
@@ -18,39 +19,62 @@ const mockImages = [
 
 export async function generateCovers(
   params: CoverParams,
+  trackIds: string[],
   count: number = 3
 ): Promise<GeneratedCover[]> {
-  // 600ms ~ 1200ms 랜덤 지연으로 실제 API 느낌 시뮬레이션
-  const delay = Math.random() * 600 + 600;
-  await new Promise(resolve => setTimeout(resolve, delay));
-
-  // 5% 확률로 에러 시뮬레이션
-  if (Math.random() < 0.05) {
-    throw new Error('AI 커버 생성에 실패했습니다. 다시 시도해주세요.');
-  }
-
-  const covers: GeneratedCover[] = [];
-  const now = new Date().toISOString();
-
-  for (let i = 0; i < count; i++) {
-    const imageIndex = Math.floor(Math.random() * mockImages.length);
-    covers.push({
-      id: `cover_${Date.now()}_${i}`,
-      imageUrl: mockImages[imageIndex],
-      params: { ...params },
-      createdAt: now,
-      favorite: false,
+  try {
+    // 백엔드 API로 AI 커버 생성 요청
+    const response = await apiClient.post('/albums/covers/generate', {
+      trackIds,
+      params,
+      count
     });
-  }
 
-  return covers;
+    return response.data.covers;
+  } catch (error) {
+    console.error('AI 커버 생성 실패:', error);
+
+    // 백엔드 연동 실패 시 fallback으로 mock 데이터 사용
+    const delay = Math.random() * 600 + 600;
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    const covers: GeneratedCover[] = [];
+    const now = new Date().toISOString();
+
+    for (let i = 0; i < count; i++) {
+      const imageIndex = Math.floor(Math.random() * mockImages.length);
+      covers.push({
+        id: `cover_${Date.now()}_${i}`,
+        imageUrl: mockImages[imageIndex],
+        params: { ...params },
+        createdAt: now,
+        favorite: false,
+      });
+    }
+
+    return covers;
+  }
 }
 
 export async function uploadCover(file: File): Promise<string> {
-  // 파일 업로드 시뮬레이션
-  const delay = Math.random() * 800 + 400;
-  await new Promise(resolve => setTimeout(resolve, delay));
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
 
-  // 실제로는 서버에 업로드하고 URL 받아옴
-  return URL.createObjectURL(file);
+    const response = await apiClient.post('/albums/covers/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data.imageUrl;
+  } catch (error) {
+    console.error('이미지 업로드 실패:', error);
+
+    // 백엔드 연동 실패 시 fallback으로 로컬 URL 사용
+    const delay = Math.random() * 800 + 400;
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    return URL.createObjectURL(file);
+  }
 }
