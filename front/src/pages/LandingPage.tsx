@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useSocialAuth } from '../hooks/useAuth';
+import { useSocialAuth, useAuth } from '../hooks/useAuth';
 import { ServiceExplainer } from '../components/ServiceExplainer';
 import LPRecord from '../components/LPRecord';
 import SimpleBackground from '../components/SimpleBackground';
@@ -10,10 +10,26 @@ import { Music, Mic, Target, Zap, Album, Heart } from 'lucide-react';
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { loginWithGoogle, isLoading } = useSocialAuth();
+  const { isAuthenticated } = useAuth();
+  const featuresRef = useRef<HTMLElement>(null);
 
-  const handleGoogleLogin = async () => {
-    const success = await loginWithGoogle();
-    if (success) navigate('/onboarding/range');
+  const handleEnterClick = async () => {
+    if (isAuthenticated) {
+      // 로그인된 상태면 피드페이지로 이동
+      navigate('/feed');
+    } else {
+      // 로그인되지 않은 상태면 구글 로그인
+      const success = await loginWithGoogle(); 
+      if (success) navigate('/onboarding/range');
+    }
+  };
+
+  const handleExploreClick = () => {
+    // Features 섹션으로 스크롤
+    featuresRef.current?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
   };
 
   const features = [
@@ -133,7 +149,7 @@ const LandingPage: React.FC = () => {
                     boxShadow: '0 0 50px rgba(251, 66, 212, 0.4)'
                   }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={handleGoogleLogin}
+                  onClick={handleEnterClick}
                   disabled={isLoading}
                 >
                   <span 
@@ -144,7 +160,7 @@ const LandingPage: React.FC = () => {
                       backgroundClip: 'text'
                     }}
                   >
-                    {isLoading ? 'Loading...' : 'Enter'}
+                    {isLoading ? 'Loading...' : (isAuthenticated ? 'Go to Feed' : 'Enter')}
                   </span>
                 </motion.button>
                 
@@ -171,6 +187,7 @@ const LandingPage: React.FC = () => {
                     boxShadow: '0 0 50px rgba(66, 253, 235, 0.4)'
                   }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={handleExploreClick}
                 >
                   <span 
                     style={{
@@ -212,7 +229,7 @@ const LandingPage: React.FC = () => {
 
 
       {/* Features Section */}
-      <section className="py-20 bg-black relative overflow-hidden">
+      <section ref={featuresRef} className="py-20 bg-black relative overflow-hidden">
         {/* 사이버펑크 배경 장식 요소들 */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-500/15 to-pink-500/15 rounded-full blur-3xl animate-pulse" style={{ boxShadow: '0 0 120px rgba(6, 182, 212, 0.2)' }}></div>
@@ -379,7 +396,7 @@ const LandingPage: React.FC = () => {
                   boxShadow: '0 0 60px rgba(251, 66, 212, 0.5)'
                 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleGoogleLogin}
+                onClick={handleEnterClick}
                 disabled={isLoading}
               >
                 <span 
@@ -390,7 +407,7 @@ const LandingPage: React.FC = () => {
                     backgroundClip: 'text'
                   }}
                 >
-                  {isLoading ? 'Loading...' : 'START NOW'}
+                  {isLoading ? 'Loading...' : (isAuthenticated ? 'GO TO FEED' : 'START NOW')}
                 </span>
               </motion.button>
             </motion.div>

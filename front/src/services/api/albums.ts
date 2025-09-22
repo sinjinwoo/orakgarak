@@ -53,7 +53,7 @@ export const albumService = {
   // 특정 앨범 조회
   getAlbum: async (albumId: number): Promise<Album> => {
     const response = await apiClient.get<Album>(`/albums/${albumId}`);
-    return response.data;
+    return normalizeAlbum(response.data);
   },
 
   // 새 앨범 생성
