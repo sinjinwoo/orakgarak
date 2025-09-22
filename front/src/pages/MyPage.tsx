@@ -288,6 +288,7 @@ const MyPage: React.FC = () => {
             params: { page: 0, size: 100 }
           });
           const albumsData: MyPageAlbumListResponse = albumsResponse.data;
+          console.log('앨범 데이터:', albumsData.albums);
           setMyAlbums(albumsData.albums);
         } catch (error) {
           console.error('앨범 데이터 로드 실패:', error);
@@ -834,16 +835,20 @@ const MyPage: React.FC = () => {
               ) : (
                 /* 3D Coverflow */
                 <AlbumCoverflow
-                  albums={myAlbums.map((album) => ({
-                    id: album.id.toString(),
-                    title: album.title,
-                    coverImage: '', // 실제 커버 이미지 URL이 없으므로 빈 문자열
-                    artist: '나',
-                    year: new Date(album.createdAt).getFullYear().toString(),
-                    trackCount: album.trackCount
-                  }))}
-                  onAlbumClick={(album) => navigate(`/albums/${album.id}`, { 
-                    state: { from: '/me' } 
+                  albums={myAlbums.map((album) => {
+                    const mappedAlbum = {
+                      id: album.id.toString(),
+                      title: album.title,
+                      coverImageUrl: album.coverImageUrl || '/images/default-album-cover.png',
+                      artist: '나',
+                      year: new Date(album.createdAt).getFullYear().toString(),
+                      trackCount: album.trackCount
+                    };
+                    console.log('앨범 매핑:', album.title, 'coverImageUrl:', album.coverImageUrl, 'mappedCoverImageUrl:', mappedAlbum.coverImageUrl);
+                    return mappedAlbum;
+                  })}
+                  onAlbumClick={(album) => navigate(`/albums/${album.id}`, {
+                    state: { from: '/me' }
                   })}
                   onPlayClick={(album) => {
                     // 재생 기능 구현
@@ -1052,21 +1057,20 @@ const MyPage: React.FC = () => {
                 </Typography>
               </Box>
             ) : (
-              <AlbumCoverflow 
+              <AlbumCoverflow
                 albums={likedAlbums.map(album => ({
-                  id: album.id,
+                  id: album.id.toString(),
                   title: album.title,
                   artist: 'Various Artists', // 좋아요한 앨범은 아티스트 정보가 없을 수 있음
-                  coverImage: album.coverImageUrl || '/images/default-album-cover.png',
-                  duration: album.totalDuration,
-                  trackCount: album.trackCount,
-                  isPublic: album.isPublic,
-                  createdAt: album.createdAt,
-                  year: new Date(album.createdAt).getFullYear().toString(), // year 속성 추가
+                  coverImageUrl: album.coverImageUrl || '/images/default-album-cover.png',
+                  year: new Date(album.createdAt).getFullYear().toString(),
+                  trackCount: album.trackCount
                 }))}
                 onAlbumClick={(album) => {
                   console.log('좋아요한 앨범 클릭:', album);
-                  // 앨범 상세 페이지로 이동
+                  navigate(`/albums/${album.id}`, {
+                    state: { from: '/me' }
+                  });
                 }}
               />
             )}

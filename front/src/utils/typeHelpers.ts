@@ -159,7 +159,7 @@ export const normalizeAlbum = (album: any): any => {
     // 연도 정보 추가 (UI 표시용)
     year: album.year || new Date(album.createdAt || Date.now()).getFullYear().toString(),
     
-    // 커버 이미지 기본값
-    coverImage: album.coverImage || album.coverImageUrl || '/images/default-album-cover.png',
+    // 커버 이미지 기본값 - coverImageUrl로 통일
+    coverImageUrl: album.coverImageUrl || '/images/default-album-cover.png',
   };
 };

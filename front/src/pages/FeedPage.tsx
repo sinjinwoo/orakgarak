@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
+import { albumService } from '../services/api/albums';
 import { theme } from '../styles/theme';
 import { motion } from 'framer-motion';
+import type { Album } from '../types/album';
 import { 
   Container, 
   Typography, 
@@ -32,30 +34,22 @@ import {
   MusicNote
 } from '@mui/icons-material';
 
-// 타입 정의
-interface FeedAlbum {
-  id: string;
-  albumId: string;
-  user: {
+// 타입 정의 - Album 타입 확장
+interface FeedAlbum extends Album {
+  user?: {
     nickname: string;
-    avatar: string;
+    avatar?: string;
   };
-  createdAt: string;
-  coverImage: string;
-  title: string;
-  description: string;
-  trackCount: number;
-  playCount: number;
-  tags: string[];
-  likeCount: number;
-  commentCount: number;
+  tags?: string[];
+  playCount?: number;
+  commentCount?: number;
 }
 
 interface MyAlbum {
   id: string;
   title: string;
   description: string;
-  coverImage: string;
+  coverImageUrl: string;
   trackCount: number;
   duration?: string;
   tags: string[];
@@ -126,55 +120,108 @@ const FeedPage: React.FC = () => {
   const [sortBy, setSortBy] = useState('latest');
   
   // 피드 데이터 상태
-  const [feedAlbums, setFeedAlbums] = useState(getFeedAlbums());
+  const [feedAlbums, setFeedAlbums] = useState<FeedAlbum[]>([]);
   const [myAlbums, setMyAlbums] = useState(getMyAlbums());
   const [followingUsers, setFollowingUsers] = useState(initializeDummyFollowing());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // API로 공개 앨범 데이터 로드
+  const loadPublicAlbums = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await albumService.getPublicAlbums({ page: 0, size: 20 });
+      const albums = response.content || [];
+
+      // Album 타입을 FeedAlbum으로 변환
+      const feedAlbums: FeedAlbum[] = albums.map(album => ({
+        ...album,
+        user: {
+          nickname: '음악러버', // 실제로는 사용자 정보에서 가져와야 함
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+        },
+        tags: ['캐주얼', '힐링'],
+        playCount: Math.floor(Math.random() * 1000),
+        commentCount: Math.floor(Math.random() * 50)
+      }));
+
+      setFeedAlbums(feedAlbums);
+    } catch (error) {
+      console.error('공개 앨범 로드 실패:', error);
+      setError('앨범을 불러오는데 실패했습니다.');
+      // 에러 시 localStorage 데이터로 폴백
+      setFeedAlbums(getFeedAlbums());
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 팔로우한 사용자들의 앨범 로드
+  const loadFollowedUsersAlbums = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await albumService.getFollowedUsersAlbums({ page: 0, size: 20 });
+      const albums = response.content || [];
+
+      const feedAlbums: FeedAlbum[] = albums.map(album => ({
+        ...album,
+        user: {
+          nickname: '팔로우 사용자',
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+        },
+        tags: ['커버', '감성'],
+        playCount: Math.floor(Math.random() * 1000),
+        commentCount: Math.floor(Math.random() * 50)
+      }));
+
+      setFeedAlbums(feedAlbums);
+    } catch (error) {
+      console.error('팔로우 사용자 앨범 로드 실패:', error);
+      setError('팔로우 사용자의 앨범을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // 피드 생성 모달 관련 상태
   const [createFeedModalOpen, setCreateFeedModalOpen] = useState(false);
   const [selectedAlbumId, setSelectedAlbumId] = useState('');
   const [feedDescription, setFeedDescription] = useState('');
 
-  // 컴포넌트 마운트 시 데이터 새로고침
+  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
-    setFeedAlbums(getFeedAlbums());
+    loadPublicAlbums();
     setMyAlbums(getMyAlbums());
   }, []);
 
-  // 페이지 이동 시 데이터 새로고침 (앨범 삭제 후 피드 업데이트)
+  // 탭 변경 시 데이터 로드
   useEffect(() => {
-    setFeedAlbums(getFeedAlbums());
-    setMyAlbums(getMyAlbums());
-    setFollowingUsers(getFollowingUsers());
-  }, [location.pathname]);
+    if (tabValue === 0) {
+      loadPublicAlbums(); // 전체 피드
+    } else {
+      loadFollowedUsersAlbums(); // 팔로우 피드
+    }
+  }, [tabValue]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  // 현재 탭에 따라 필터링된 피드 데이터
-  const getFilteredFeedAlbums = (): FeedAlbum[] => {
-    if (tabValue === 0) {
-      // 전체 피드
-      return feedAlbums;
-    } else {
-      // 팔로잉 피드 - 팔로잉하는 사용자들의 앨범만 표시
-      return feedAlbums.filter(album => followingUsers.includes(album.user.nickname));
-    }
-  };
-
-  const filteredFeedAlbums = getFilteredFeedAlbums();
+  // 현재 탭에 따라 필터링된 피드 데이터 (이미 API에서 필터링된 데이터를 사용)
+  const filteredFeedAlbums = feedAlbums;
 
   const handleSortChange = (event: any) => {
     setSortBy(event.target.value as string);
   };
 
   const handleAlbumClick = (feed: FeedAlbum) => {
-    // 피드에 albumId가 있으면 그것을 사용, 없으면 피드 ID 사용
-    const albumId = feed.albumId || feed.id;
+    // Album 타입에는 albumId가 없고 id만 있음
+    const albumId = feed.id;
     // 앨범 상세 페이지로 이동 (이전 페이지 정보 전달)
-    navigate(`/albums/${albumId}`, { 
-      state: { from: '/feed' } 
+    navigate(`/albums/${albumId}`, {
+      state: { from: '/feed' }
     });
   };
 
@@ -546,8 +593,8 @@ const FeedPage: React.FC = () => {
                       onClick={() => handleAlbumClick(album)}
                     >
                       {/* 앨범 커버 이미지 */}
-                      <Box sx={{ 
-                        position: 'relative', 
+                      <Box sx={{
+                        position: 'relative',
                         mb: 2,
                         width: '100%',
                         aspectRatio: '1',
@@ -562,17 +609,51 @@ const FeedPage: React.FC = () => {
                           boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
                         }
                       }}>
-                        <CardMedia
-                          component="img"
-                          sx={{ 
+                        {album.coverImageUrl ? (
+                          <CardMedia
+                            component="img"
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              transition: 'all 0.3s ease',
+                            }}
+                            image={album.coverImageUrl}
+                            alt={album.title}
+                            onError={(e) => {
+                              // 이미지 로딩 실패 시 기본 배경으로 변경
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        {/* 기본 커버 이미지 또는 이미지 로딩 실패 시 표시할 UI */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
                             width: '100%',
                             height: '100%',
-                            objectFit: 'cover',
-                            transition: 'all 0.3s ease',
+                            background: album.coverImageUrl
+                              ? 'none'
+                              : 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 50%, #8B5CF6 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: album.coverImageUrl ? -1 : 1,
                           }}
-                          image={album.coverImage}
-                          alt={album.title}
-                        />
+                        >
+                          {!album.coverImageUrl && (
+                            <MusicNote
+                              sx={{
+                                fontSize: '4rem',
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3))'
+                              }}
+                            />
+                          )}
+                        </Box>
                       </Box>
 
                       {/* 앨범 제목과 정보 */}
@@ -805,20 +886,62 @@ const FeedPage: React.FC = () => {
                            boxShadow: '0 0 15px rgba(196, 71, 233, 0.2)'
                          }
                        }}>
-                         <CardMedia
-                           component="img"
-                           sx={{ 
-                             width: 80, 
-                             height: 80, 
+                         <Box
+                           sx={{
+                             width: 80,
+                             height: 80,
                              borderRadius: 1,
-                             objectFit: 'cover',
                              mr: 2,
                              border: '2px solid rgba(196, 71, 233, 0.3)',
-                             boxShadow: '0 0 10px rgba(196, 71, 233, 0.3)'
+                             boxShadow: '0 0 10px rgba(196, 71, 233, 0.3)',
+                             position: 'relative',
+                             overflow: 'hidden',
+                             backgroundColor: 'rgba(255, 255, 255, 0.1)',
                            }}
-                           image={album.coverImage}
-                           alt={album.title}
-                         />
+                         >
+                           {album.coverImageUrl ? (
+                             <CardMedia
+                               component="img"
+                               sx={{
+                                 width: '100%',
+                                 height: '100%',
+                                 objectFit: 'cover',
+                               }}
+                               image={album.coverImageUrl}
+                               alt={album.title}
+                               onError={(e) => {
+                                 const target = e.target as HTMLImageElement;
+                                 target.style.display = 'none';
+                               }}
+                             />
+                           ) : null}
+                           {/* 기본 커버 이미지 */}
+                           <Box
+                             sx={{
+                               position: 'absolute',
+                               top: 0,
+                               left: 0,
+                               width: '100%',
+                               height: '100%',
+                               background: album.coverImageUrl
+                                 ? 'none'
+                                 : 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 50%, #8B5CF6 100%)',
+                               display: 'flex',
+                               alignItems: 'center',
+                               justifyContent: 'center',
+                               zIndex: album.coverImageUrl ? -1 : 1,
+                             }}
+                           >
+                             {!album.coverImageUrl && (
+                               <MusicNote
+                                 sx={{
+                                   fontSize: '2rem',
+                                   color: 'rgba(255, 255, 255, 0.8)',
+                                 }}
+                               />
+                             )}
+                           </Box>
+                         </Box>
                          <Box sx={{ flex: 1 }}>
                            <Typography variant="h6" sx={{ 
                              fontWeight: 600, 
