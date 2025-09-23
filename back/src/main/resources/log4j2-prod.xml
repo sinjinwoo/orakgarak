@@ -55,21 +55,13 @@
 
         <!-- Async Appender for better performance (운영환경 최적화) -->
         <AsyncAppender name="AsyncFileAppender" bufferSize="512"
-                       includeLocation="false" shutdownTimeout="3000"
-                       blocking="false">
+                       includeLocation="false" shutdownTimeout="3000">
             <AppenderRef ref="FileAppender"/>
-            <BlockingQueueFactory>
-                <LinkedTransferQueue/>
-            </BlockingQueueFactory>
         </AsyncAppender>
 
         <AsyncAppender name="AsyncErrorAppender" bufferSize="256"
-                       includeLocation="false" shutdownTimeout="3000"
-                       blocking="false">
+                       includeLocation="false" shutdownTimeout="3000">
             <AppenderRef ref="ErrorAppender"/>
-            <BlockingQueueFactory>
-                <LinkedTransferQueue/>
-            </BlockingQueueFactory>
         </AsyncAppender>
     </Appenders>
 
