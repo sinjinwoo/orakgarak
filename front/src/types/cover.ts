@@ -16,9 +16,12 @@ export interface CoverParams {
 export interface GeneratedCover {
   id: string;
   imageUrl: string;
-  params: CoverParams;
+  params: Partial<CoverParams>;
   createdAt: string;
   favorite?: boolean;
+  uploadId?: number;
+  s3Key?: string;
+  originalFileName?: string;
 }
 
 export interface Track {

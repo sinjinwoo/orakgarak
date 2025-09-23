@@ -9,33 +9,35 @@ import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
-interface Album {
+// AlbumCoverflow 전용 앨범 인터페이스 (UI 표시용)
+interface CoverflowAlbum {
   id: string;
   title: string;
-  coverImage: string;
+  coverImageUrl: string;
   artist: string;
   year: string;
   trackCount: number;
 }
 
 interface AlbumCoverflowProps {
-  albums: Album[];
-  onAlbumClick?: (album: Album) => void;
-  onPlayClick?: (album: Album) => void;
+  albums: CoverflowAlbum[];
+  onAlbumClick?: (album: CoverflowAlbum) => void;
+  onPlayClick?: (album: CoverflowAlbum) => void;
 }
 
-const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({ 
-  albums, 
+const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
+  albums,
   onAlbumClick
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
 
+
   const handleSlideChange = (swiper: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     setActiveIndex(swiper.activeIndex);
   };
 
-  const handleAlbumClick = (album: Album) => {
+  const handleAlbumClick = (album: CoverflowAlbum) => {
     if (onAlbumClick) {
       onAlbumClick(album);
     }
@@ -171,11 +173,25 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                     sx={{
                       width: '100%',
                       height: '100%',
-                      backgroundImage: `url(${album.coverImage})`,
+                      backgroundImage: album.coverImageUrl && album.coverImageUrl !== '/image/albumCoverImage.png'
+                        ? `url(${album.coverImageUrl})`
+                        : 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 50%, #8B5CF6 100%)',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       backgroundRepeat: 'no-repeat',
                       borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      '&::after': album.coverImageUrl && album.coverImageUrl !== '/image/albumCoverImage.png' ? {} : {
+                        content: '"♪"',
+                        position: 'absolute',
+                        fontSize: '4rem',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 'bold',
+                        textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                      }
                     }}
                   />
                 </Box>
@@ -191,7 +207,9 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                     overflow: 'hidden',
                     position: 'relative',
                     // 앨범 커버의 실제 이미지를 배경으로 설정
-                    backgroundImage: `url(${album.coverImage})`,
+                    backgroundImage: album.coverImageUrl
+                      ? `url(${album.coverImageUrl})`
+                      : 'linear-gradient(135deg, rgba(196, 71, 233, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat',

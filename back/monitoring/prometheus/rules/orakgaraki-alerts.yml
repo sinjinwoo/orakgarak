@@ -108,15 +108,29 @@ groups:
           summary: "Redis 서버가 중단되었습니다"
           description: "Redis 서버가 1분 이상 중단된 상태입니다."
 
-      # Redis 메모리 사용률 높음
+      # Redis 메모리 사용률 높음 (시스템 메모리 기준)
       - alert: RedisHighMemoryUsage
-        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        expr: redis_memory_used_bytes / (1024*1024*1024) > 0.5
         for: 5m
         labels:
           severity: warning
+          service: "redis"
+          metric_type: "memory"
         annotations:
-          summary: "Redis 메모리 사용률이 높습니다"
-          description: "Redis 메모리 사용률이 {{ $value | humanizePercentage }}로 5분 이상 지속되고 있습니다."
+          summary: "🚨 Redis 메모리 사용량 경고"
+          description: "Redis 메모리 사용량이 {{ $value | printf \"%.1f\" }}GB를 초과했습니다. 현재 사용량: {{ with query \"redis_memory_used_bytes\" }}{{ . | first | value | humanize1024 }}B{{ end }}"
+
+      # Redis 메모리 사용률 높음 (RSS 기준)
+      - alert: RedisHighMemoryUsageRSS
+        expr: redis_memory_rss_bytes / redis_memory_used_bytes > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          service: "redis"
+          metric_type: "memory_fragmentation"
+        annotations:
+          summary: "⚠️ Redis 메모리 단편화 경고"
+          description: "Redis 메모리 단편화가 심각합니다. RSS/Used 비율: {{ $value | printf \"%.2f\" }}배 (권장: 1.5배 이하)"
 
   # Kafka 관련 알림
   - name: orakgaraki.kafka

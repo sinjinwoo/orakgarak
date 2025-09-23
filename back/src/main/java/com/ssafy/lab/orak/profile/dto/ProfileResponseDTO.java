@@ -15,6 +15,7 @@ public class ProfileResponseDTO {
     private Long id;
     private Long userId;
     private String profileImageUrl;
+    private String backgroundImageUrl;
     private String nickname;
     private String gender;
     private String description;

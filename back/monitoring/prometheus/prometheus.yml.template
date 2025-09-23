@@ -13,11 +13,11 @@ rule_files:
   - "rules/*.yml"
 
 scrape_configs:
-  # Spring Boot 애플리케이션 (환경별 설정)
+  # Spring Boot 애플리케이션 (환경별 타겟)
   - job_name: 'orakgaraki-app'
     static_configs:
-      - targets: ['${SPRING_APP_TARGET}']  # 환경변수로 설정
-    metrics_path: '/actuator/prometheus'  # 별도 포트로 실행되므로 context-path 불포함
+      - targets: ['${SPRING_APP_TARGET}']
+    metrics_path: '/actuator/prometheus'
     scrape_interval: 10s
     # Basic auth for Actuator endpoints
     basic_auth:

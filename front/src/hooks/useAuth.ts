@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { authAPI } from '../services/backend';
+import { authService } from '../services/api';
 import type { User } from '../types/user';
 
 export interface LoginCredentials {
@@ -43,13 +43,10 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     
     try {
-      const response = await authAPI.login(credentials.email, credentials.password);
-      const { user: userData, token } = response.data;
+      const response = await authService.login(credentials);
+      const { user: userData } = response;
       
-      // 토큰 저장
-      localStorage.setItem('auth-token', token);
-      localStorage.setItem('token-created-time', Date.now().toString());
-      
+      // 토큰은 이미 authService에서 저장됨
       // 스토어 업데이트
       loginStore(userData);
       
@@ -69,13 +66,10 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     
     try {
-      const response = await authAPI.register(data.email, data.password, data.nickname);
-      const { user: userData, token } = response.data;
+      const response = await authService.register(data);
+      const { user: userData } = response;
       
-      // 토큰 저장
-      localStorage.setItem('auth-token', token);
-      localStorage.setItem('token-created-time', Date.now().toString());
-      
+      // 토큰은 이미 authService에서 저장됨
       // 스토어 업데이트
       loginStore(userData);
       
@@ -94,7 +88,7 @@ export function useAuth(): UseAuthReturn {
     setIsLoading(true);
     
     try {
-      await authAPI.logout();
+      await authService.logout();
     } catch (err) {
       console.error('로그아웃 API 호출 실패:', err);
     } finally {
@@ -134,12 +128,10 @@ export function useAuth(): UseAuthReturn {
   // 토큰 갱신
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const response = await authAPI.refreshToken();
-      const { accessToken } = response.data;
+      const response = await authService.refreshToken();
+      const { accessToken } = response;
       
-      // 새 토큰 저장
-      localStorage.setItem('auth-token', accessToken);
-      localStorage.setItem('token-created-time', Date.now().toString());
+      // 토큰은 이미 authService에서 저장됨
       
       return true;
     } catch (err) {
@@ -196,6 +188,7 @@ export function useRequireAuth() {
 
 // 소셜 로그인을 위한 훅
 export function useSocialAuth() {
+  const { login: loginStore } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -223,11 +216,11 @@ export function useSocialAuth() {
     
     try {
       // 카카오 로그인 로직 (구현 예정)
-      const response = await authAPI.loginWithKakao('kakao-token');
-      const { user, token } = response.data;
+      const response = await authService.loginWithKakao('kakao-token');
+      const { user: userData, accessToken } = response;
       
-      localStorage.setItem('auth-token', token);
-      loginStore(user);
+      // 토큰은 이미 authService에서 저장됨
+      loginStore(userData);
       
       return true;
     } catch (err: any) {

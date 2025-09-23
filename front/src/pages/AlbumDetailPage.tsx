@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAlbumStore } from '../stores/albumStore';
+import { useAlbum } from '../hooks/useAlbum';
+import { albumService } from '../services/api/albums';
+import { useAuth } from '../hooks/useAuth';
+import { recordingService } from '../services/api/recordings';
+import { useSocial } from '../hooks/useSocial';
 import ImmersivePlaybackModal from '../components/album/ImmersivePlaybackModal';
 import { theme } from '../styles/theme';
 import { motion } from 'framer-motion';
@@ -18,8 +23,6 @@ import {
   Paper,
   Avatar,
   Divider,
-  Menu,
-  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -31,81 +34,69 @@ import {
   PlayArrow,
   ExpandMore,
   Favorite,
-  Share,
-  MoreVert,
   Send,
   ArrowBack,
   Delete,
   Edit,
 } from '@mui/icons-material';
 
-// 더미 앨범 데이터
-const dummyAlbum = {
-  id: '1',
-  title: 'My Favorite Songs',
-  description: '내가 좋아하는 노래들을 모아서 만든 첫 번째 앨범입니다. 감성적인 발라드부터 신나는 댄스곡까지 다양한 장르를 담았어요.',
-  coverImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop',
-  userId: 'user1',
+// 앨범 상세 데이터 타입
+interface AlbumDetailData {
+  id: string;
+  title: string;
+  description: string;
+  coverImageUrl: string;
+  userId: string;
   user: {
-    nickname: '음악러버',
-    profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-  },
-  tracks: [
-    { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45', audioUrl: 'https://example.com/audio1.mp3' },
-    { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12', audioUrl: 'https://example.com/audio2.mp3' },
-    { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23', audioUrl: 'https://example.com/audio3.mp3' },
-  ],
-  isPublic: true,
-  tags: ['K-POP', '발라드', '감성', '힐링'],
-  likeCount: 42,
-  playCount: 156,
-  commentCount: 12,
-  createdAt: '2025-01-15T00:00:00Z',
-  updatedAt: '2025-01-15T00:00:00Z',
-};
+    nickname: string;
+    avatar?: string;
+  };
+  tracks: Array<{
+    id: string;
+    title: string;
+    artist: string;
+    score: number;
+    duration: string;
+    audioUrl?: string;
+  }>;
+  isPublic: boolean;
+  createdAt: string;
+  tags: string[];
+  likeCount: number;
+  playCount: number;
+  commentCount: number;
+}
 
-// 더미 댓글 데이터
-const dummyComments = [
-  {
-    id: '1',
-    userId: 'user2',
-    user: {
-      nickname: '뮤직팬',
-      profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-    },
-    content: '정말 좋은 선곡이네요! 특히 2번째 곡이 너무 감동적이었어요 👋',
-    createdAt: '2025-01-13T00:00:00Z',
-  },
-  {
-    id: '2',
-    userId: 'user3',
-    user: {
-      nickname: '노래왕',
-      profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-    },
-    content: '목소리가 정말 좋으시네요. 다음 앨범도 기대할게요!',
-    createdAt: '2025-01-14T00:00:00Z',
-  },
-];
+// 댓글 데이터 타입
+interface Comment {
+  id: string;
+  userId: string;
+  user: {
+    nickname: string;
+    avatar?: string;
+  };
+  content: string;
+  createdAt: string;
+  replies?: Comment[];
+}
 
 const AlbumDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { albumId } = useParams<{ albumId: string }>();
-  const { getAlbumById } = useAlbumStore();
+  const { user } = useAuth();
+  const { createComment, likeAlbum, unlikeAlbum } = useSocial();
+  // const { getAlbumById } = useAlbumStore(); // 사용하지 않음
+  const { data: albumData, isLoading, error } = useAlbum(parseInt(albumId || '0'));
   
   // 이전 페이지 추적을 위한 상태
   const [previousPage, setPreviousPage] = useState<string>('/feed');
-  const [album, setAlbum] = useState(dummyAlbum);
-  const [comments, setComments] = useState(dummyComments);
+  const [album, setAlbum] = useState<AlbumDetailData | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  
-  // 메뉴 상태
-  const [albumMenuAnchor, setAlbumMenuAnchor] = useState<null | HTMLElement>(null);
-  const [trackMenuAnchor, setTrackMenuAnchor] = useState<null | HTMLElement>(null);
   
   // 다이얼로그 상태
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -114,61 +105,104 @@ const AlbumDetailPage: React.FC = () => {
   
   // 수록곡 편집 상태
   const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
-  const [allRecordings, setAllRecordings] = useState<typeof dummyAlbum.tracks>([]);
+  const [allRecordings, setAllRecordings] = useState<Array<{
+    id: string;
+    title: string;
+    artist: string;
+    score: number;
+    duration: string;
+    audioUrl?: string;
+  }>>([]);
 
   // 앨범 데이터 로드
   useEffect(() => {
-    const loadAlbum = () => {
+    const loadAlbum = async () => {
       if (!albumId) {
         setLoading(false);
         return;
       }
 
-      const albumData = getAlbumById(albumId);
-      
-      if (albumData) {
-        // 앨범 데이터를 상세 페이지 형식으로 변환
-        const albumDetailData = {
-          id: albumData.id,
-          title: albumData.title,
-          description: albumData.description,
-          coverImage: albumData.coverImage,
-          userId: 'current-user',
-          user: {
-            nickname: '음악러버', // 실제로는 사용자 정보에서 가져와야 함
-            profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-          },
-          tracks: albumData.tracks || [
-            // 기본 더미 데이터 (트랙이 없는 경우)
-            { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45' },
-            { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 92, duration: '4:12' },
-            { id: '3', title: '밤편지', artist: '아이유', score: 88, duration: '3:23' },
-          ],
-          isPublic: albumData.isPublic,
-          tags: ['K-POP', '발라드', '감성', '힐링'], // 실제로는 앨범 데이터에서 가져와야 함
-          likeCount: albumData.likeCount,
-          playCount: albumData.playCount,
-          commentCount: 0, // 실제로는 댓글 데이터에서 가져와야 함
-          createdAt: albumData.createdAt,
-          updatedAt: albumData.createdAt,
-        };
+      try {
+        setLoading(true);
         
-        setAlbum(albumDetailData);
-        setLikeCount(albumData.likeCount);
+        // 실제 API에서 앨범 상세 정보 가져오기
+        const albumResponse = await albumService.getAlbum(parseInt(albumId));
+        
+        if (albumResponse) {
+          // 앨범 트랙 정보도 함께 가져오기
+          let tracksData = [];
+          try {
+            const tracksResponse = await albumService.getAlbumTracks(parseInt(albumId));
+            tracksData = tracksResponse.tracks.map(track => ({
+              id: track.id.toString(),
+              title: track.recordTitle,
+              artist: '아티스트', // TODO: 실제 아티스트 정보 가져오기
+              score: 0, // TODO: 실제 점수 정보 가져오기
+              duration: `${Math.floor(track.durationSeconds / 60)}:${(track.durationSeconds % 60).toString().padStart(2, '0')}`,
+              audioUrl: track.audioUrl,
+            }));
+          } catch (trackError) {
+            console.error('트랙 정보 로드 실패:', trackError);
+            tracksData = [];
+          }
+          
+          // 앨범 데이터를 상세 페이지 형식으로 변환
+          const albumDetailData: AlbumDetailData = {
+            id: albumResponse.id.toString(),
+            title: albumResponse.title,
+            description: albumResponse.description || '',
+            coverImageUrl: albumResponse.coverImageUrl || '',
+            userId: albumResponse.userId.toString(),
+            user: {
+              nickname: '사용자', // TODO: 실제 사용자 정보 API 연동 필요
+              avatar: undefined,
+            },
+            tracks: tracksData,
+            isPublic: albumResponse.isPublic,
+            tags: albumResponse.tags || [],
+            likeCount: albumResponse.likeCount || 0,
+            playCount: albumResponse.playCount || 0,
+            commentCount: albumResponse.commentCount || 0,
+            createdAt: albumResponse.createdAt || new Date().toISOString(),
+          };
+          
+          setAlbum(albumDetailData);
+          setLikeCount(albumDetailData.likeCount);
+          
+          // 댓글 데이터 로드
+          await loadComments(parseInt(albumId));
+        }
+      } catch (error) {
+        console.error('앨범 데이터 로드 실패:', error);
+        // 에러 시 기본 데이터로 폴백
+        setAlbum(null);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     loadAlbum();
-  }, [albumId, getAlbumById]);
+  }, [albumId]);
 
-  // 앨범을 찾을 수 없으면 피드 페이지로 리다이렉트
-  useEffect(() => {
-    if (!loading && (!album || album.id !== albumId)) {
-      navigate('/feed', { replace: true });
+  // 댓글 데이터 로드 함수
+  const loadComments = async (albumId: number) => {
+    try {
+      // TODO: 실제 댓글 API 연동 필요
+      // const commentsResponse = await commentService.getAlbumComments(albumId);
+      // setComments(commentsResponse);
+      setComments([]); // 임시로 빈 배열
+    } catch (error) {
+      console.error('댓글 데이터 로드 실패:', error);
+      setComments([]);
     }
-  }, [loading, album, albumId, navigate]);
+  };
+
+  // 앨범을 찾을 수 없으면 이전 페이지로 리다이렉트
+  useEffect(() => {
+    if (!loading && !album) {
+      navigate(previousPage, { replace: true });
+    }
+  }, [loading, album, navigate, previousPage]);
 
   // 이전 페이지 추적
   useEffect(() => {
@@ -220,25 +254,39 @@ const AlbumDetailPage: React.FC = () => {
     return date.toLocaleDateString('ko-KR');
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+  const handleLike = async () => {
+    if (!albumId) return;
+    
+    try {
+      if (isLiked) {
+        await unlikeAlbum(parseInt(albumId));
+        setLikeCount(prev => prev - 1);
+      } else {
+        await likeAlbum(parseInt(albumId));
+        setLikeCount(prev => prev + 1);
+      }
+      setIsLiked(!isLiked);
+    } catch (error) {
+      console.error('좋아요 처리 실패:', error);
+      // 에러 처리 (토스트 메시지 등)
+    }
   };
 
-  const handleCommentSubmit = () => {
-    if (newComment.trim()) {
-      const comment = {
-        id: Date.now().toString(),
-        userId: 'current-user',
-        user: {
-          nickname: '나',
-          profileImage: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-        },
-        content: newComment.trim(),
-        createdAt: new Date().toISOString(),
-      };
-      setComments(prev => [comment, ...prev]);
-      setNewComment('');
+  const handleCommentSubmit = async () => {
+    if (newComment.trim() && albumId && user) {
+      try {
+        // 실제 API를 통해 댓글 작성
+        await createComment(parseInt(albumId), newComment.trim());
+        
+        // 댓글 목록 새로고침
+        await loadComments(parseInt(albumId));
+        
+        // 입력 필드 초기화
+        setNewComment('');
+      } catch (error) {
+        console.error('댓글 작성 실패:', error);
+        // 에러 처리 (토스트 메시지 등)
+      }
     }
   };
 
@@ -249,105 +297,61 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
-  // 앨범 메뉴 핸들러
-  const handleAlbumMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAlbumMenuAnchor(event.currentTarget);
-  };
-
-  const handleAlbumMenuClose = () => {
-    setAlbumMenuAnchor(null);
-  };
-
   const handleDeleteAlbum = () => {
     setDeleteDialogOpen(true);
-    handleAlbumMenuClose();
   };
 
-  // 수록곡 메뉴 핸들러
-  const handleTrackMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setTrackMenuAnchor(event.currentTarget);
-  };
-
-  const handleTrackMenuClose = () => {
-    setTrackMenuAnchor(null);
-  };
-
-  const handleEditTracks = () => {
-    // 사용자의 모든 녹음 데이터 불러오기 (더미 데이터)
-    const dummyRecordings = [
-      {
-        id: '1',
-        title: '좋아',
-        artist: '윤종신',
-        score: 85,
-        duration: '3:45',
-        audioUrl: 'https://example.com/recording1.mp3',
-      },
-      {
-        id: '2',
-        title: '사랑은 은하수 다방에서',
-        artist: '10cm',
-        score: 78,
-        duration: '4:12',
-        audioUrl: 'https://example.com/recording2.mp3',
-      },
-      {
-        id: '3',
-        title: '밤편지',
-        artist: '아이유',
-        score: 92,
-        duration: '3:23',
-        audioUrl: 'https://example.com/recording3.mp3',
-      },
-      {
-        id: '4',
-        title: 'Spring Day',
-        artist: 'BTS',
-        score: 88,
-        duration: '3:54',
-        audioUrl: 'https://example.com/recording4.mp3',
-      },
-      {
-        id: '5',
-        title: 'Dynamite',
-        artist: 'BTS',
-        score: 90,
-        duration: '3:19',
-        audioUrl: 'https://example.com/recording5.mp3',
-      },
-    ];
-    
-    setAllRecordings(dummyRecordings);
-    setSelectedTracks(album.tracks.map((track: typeof dummyAlbum.tracks[0]) => track.id));
-    setEditTracksDialogOpen(true);
-    handleTrackMenuClose();
+  const handleEditTracks = async () => {
+    try {
+      // 실제 사용자의 녹음 데이터 가져오기
+      const recordings = await recordingService.getMyRecordings();
+      
+      // 녹음 데이터를 수록곡 형식으로 변환
+      const availableRecordings = recordings.map(recording => ({
+        id: recording.id.toString(),
+        title: recording.title || '제목 없음',
+        artist: recording.song?.artist || '아티스트 없음',
+        score: recording.analysis?.overallScore || 0,
+        duration: recording.durationSeconds ? 
+          `${Math.floor(recording.durationSeconds / 60)}:${(recording.durationSeconds % 60).toString().padStart(2, '0')}` : 
+          '0:00',
+        audioUrl: recording.audioUrl,
+      }));
+      
+      setAllRecordings(availableRecordings);
+      
+      // 현재 앨범의 수록곡 ID들을 선택된 상태로 설정
+      if (album) {
+        setSelectedTracks(album.tracks.map(track => track.id));
+      }
+      
+      setEditTracksDialogOpen(true);
+    } catch (error) {
+      console.error('녹음 데이터 로드 실패:', error);
+      // 에러 시 빈 배열로 설정
+      setAllRecordings([]);
+      setEditTracksDialogOpen(true);
+    }
   };
 
   // 앨범 삭제 확인
-  const handleConfirmDelete = () => {
-    // localStorage에서 앨범 삭제
-    const savedAlbums = localStorage.getItem('myAlbums');
-    if (savedAlbums) {
-      const albums = JSON.parse(savedAlbums);
-      const updatedAlbums = albums.filter((a: typeof dummyAlbum) => a.id !== albumId);
-      localStorage.setItem('myAlbums', JSON.stringify(updatedAlbums));
-    }
-    
-    // 피드 데이터에서도 삭제
-    const feedAlbums = localStorage.getItem('feedAlbums');
-    if (feedAlbums) {
-      const feeds = JSON.parse(feedAlbums);
-      const updatedFeeds = feeds.filter((f: { albumId: string; id: string }) => f.albumId !== albumId && f.id !== albumId);
-      localStorage.setItem('feedAlbums', JSON.stringify(updatedFeeds));
-    }
-    
-    setDeleteDialogOpen(false);
-    // 이전 페이지로 돌아가기 (브라우저 히스토리 사용)
-    if (window.history.length > 1) {
-      navigate(-1); // 브라우저의 뒤로가기
-    } else {
-      // 히스토리가 없으면 이전 페이지로 이동
-      navigate(previousPage);
+  const handleConfirmDelete = async () => {
+    try {
+      if (albumId) {
+        await albumService.deleteAlbum(parseInt(albumId));
+        // 삭제 성공 시 이전 페이지로 이동
+        if (window.history.length > 1) {
+          navigate(-1); // 브라우저의 뒤로가기
+        } else {
+          // 히스토리가 없으면 이전 페이지로 이동
+          navigate(previousPage);
+        }
+      }
+    } catch (error) {
+      console.error('앨범 삭제 실패:', error);
+      // 에러 처리 (토스트 메시지 등)
+    } finally {
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -368,32 +372,47 @@ const AlbumDetailPage: React.FC = () => {
     setSelectedTracks([]);
   };
 
-  const handleSaveTracks = () => {
-    // 선택된 녹음들을 트랙 형식으로 변환
-    const updatedTracks = allRecordings
-      .filter(recording => selectedTracks.includes(recording.id))
-      .map(recording => ({
-        id: recording.id,
-        title: recording.title,
-        artist: recording.artist,
-        score: recording.score,
-        duration: recording.duration,
-        audioUrl: recording.audioUrl,
-      }));
-    
-    // localStorage에서 앨범 업데이트
-    const savedAlbums = localStorage.getItem('myAlbums');
-    if (savedAlbums) {
-      const albums = JSON.parse(savedAlbums);
-      const updatedAlbums = albums.map((a: typeof dummyAlbum) => 
-        a.id === albumId ? { ...a, tracks: updatedTracks, trackCount: updatedTracks.length } : a
-      );
-      localStorage.setItem('myAlbums', JSON.stringify(updatedAlbums));
+  const handleSaveTracks = async () => {
+    try {
+      if (!albumId) return;
+      
+      // 선택된 녹음들을 트랙 형식으로 변환
+      const tracksToAdd = allRecordings
+        .filter(recording => selectedTracks.includes(recording.id))
+        .map((recording, index) => ({
+          recordId: parseInt(recording.id),
+          trackOrder: index + 1,
+        }));
+      
+      // API를 통해 앨범의 수록곡 업데이트
+      if (tracksToAdd.length > 0) {
+        await albumService.addTracks(parseInt(albumId), { tracks: tracksToAdd });
+        
+        // 앨범 트랙 목록 새로고침
+        const updatedTracks = await albumService.getAlbumTracks(parseInt(albumId));
+        
+        // 현재 앨범 상태 업데이트
+        if (album && updatedTracks) {
+          setAlbum(prev => prev ? {
+            ...prev,
+            tracks: updatedTracks.tracks.map(track => ({
+              id: track.id.toString(),
+              title: track.recordTitle,
+              artist: '아티스트', // TODO: 실제 아티스트 정보 가져오기
+              score: 0, // TODO: 실제 점수 정보 가져오기
+              duration: `${Math.floor(track.durationSeconds / 60)}:${(track.durationSeconds % 60).toString().padStart(2, '0')}`,
+              audioUrl: track.audioUrl,
+            })),
+            trackCount: updatedTracks.totalTracks
+          } : null);
+        }
+      }
+      
+      setEditTracksDialogOpen(false);
+    } catch (error) {
+      console.error('수록곡 저장 실패:', error);
+      // 에러 처리 (토스트 메시지 등)
     }
-    
-    // 현재 앨범 상태 업데이트
-    setAlbum(prev => ({ ...prev, tracks: updatedTracks }));
-    setEditTracksDialogOpen(false);
   };
 
   if (loading) {
@@ -404,7 +423,7 @@ const AlbumDetailPage: React.FC = () => {
     );
   }
 
-  if (!album || album.id !== albumId) {
+  if (!album) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ color: '#B3B3B3' }}>
@@ -460,7 +479,7 @@ const AlbumDetailPage: React.FC = () => {
           {/* 뒤로가기 버튼 */}
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(previousPage)}
             sx={{ 
               mb: 3, 
               color: 'rgba(255, 255, 255, 0.8)',
@@ -493,7 +512,7 @@ const AlbumDetailPage: React.FC = () => {
                   border: '3px solid rgba(196, 71, 233, 0.3)',
                   boxShadow: '0 0 20px rgba(196, 71, 233, 0.3)'
                 }}
-                image={album.coverImage}
+                image={album.coverImageUrl}
                 alt={album.title}
               />
               <Box sx={{ flex: 1 }}>
@@ -511,7 +530,7 @@ const AlbumDetailPage: React.FC = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                   <Avatar 
-                    src={album.user.profileImage} 
+                    src={album.user.avatar} 
                     sx={{ 
                       width: 32, 
                       height: 32,
@@ -531,10 +550,19 @@ const AlbumDetailPage: React.FC = () => {
                   color: 'rgba(255, 255, 255, 0.8)',
                   fontSize: '1.1rem'
                 }}>
-                  ♫ {album.tracks.length}곡 • {album.tracks.reduce((total, track) => {
-                    const [minutes, seconds] = track.duration.split(':').map(Number);
-                    return total + minutes * 60 + seconds;
-                  }, 0) / 60}분
+                  ♫ {album.tracks.length}곡 • {(() => {
+                    const totalSeconds = album.tracks.reduce((total, track) => {
+                      if (!track.duration) return total;
+                      const parts = track.duration.split(':');
+                      if (parts.length === 2) {
+                        const [minutes, seconds] = parts.map(Number);
+                        return total + (minutes * 60) + seconds;
+                      }
+                      return total;
+                    }, 0);
+                    const totalMinutes = Math.floor(totalSeconds / 60);
+                    return totalMinutes > 0 ? `${totalMinutes}분` : '0분';
+                  })()}
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                   {album.tags.map((tag) => (
@@ -567,7 +595,7 @@ const AlbumDetailPage: React.FC = () => {
                   },
                 }}
               >
-                ▷ 전체 재생
+                전체 재생
               </Button>
               <Button
                 variant="outlined"
@@ -590,18 +618,24 @@ const AlbumDetailPage: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 {likeCount}
               </Typography>
-              <IconButton sx={{ color: '#666' }}>
-                <Share />
-              </IconButton>
-              <Typography variant="body2" color="text.secondary">
-                공유
-              </Typography>
-              <IconButton 
-                sx={{ color: '#666' }}
-                onClick={handleAlbumMenuOpen}
+              <Button
+                variant="outlined"
+                startIcon={<Delete />}
+                onClick={handleDeleteAlbum}
+                sx={{
+                  borderColor: '#FF6B6B',
+                  color: '#FF6B6B',
+                  fontSize: '0.8rem',
+                  px: 2,
+                  py: 0.5,
+                  '&:hover': {
+                    borderColor: '#FF5252',
+                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                  },
+                }}
               >
-                <MoreVert />
-              </IconButton>
+                앨범 삭제
+              </Button>
             </Box>
           </Box>
         </Box>
@@ -642,18 +676,24 @@ const AlbumDetailPage: React.FC = () => {
             }}>
               ♪ 수록곡
             </Typography>
-            <IconButton 
-              sx={{ 
-                color: 'rgba(255, 255, 255, 0.7)',
+            <Button
+              variant="outlined"
+              startIcon={<Edit />}
+              onClick={handleEditTracks}
+              sx={{
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '0.8rem',
+                px: 2,
+                py: 0.5,
                 '&:hover': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#FFFFFF'
-                }
+                },
               }}
-              onClick={handleTrackMenuOpen}
             >
-              <MoreVert />
-            </IconButton>
+              수록곡 편집
+            </Button>
           </Box>
           <List>
             {album.tracks.map((track, index) => (
@@ -789,7 +829,7 @@ const AlbumDetailPage: React.FC = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {comments.map((comment) => (
               <Box key={comment.id} sx={{ display: 'flex', gap: 2 }}>
-                <Avatar src={comment.user.profileImage} sx={{ width: 40, height: 40 }} />
+                <Avatar src={comment.user.avatar} sx={{ width: 40, height: 40 }} />
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <Typography variant="body2" sx={{ 
@@ -815,54 +855,6 @@ const AlbumDetailPage: React.FC = () => {
             ))}
           </Box>
         </Paper>
-
-        {/* 앨범 메뉴 */}
-        <Menu
-          anchorEl={albumMenuAnchor}
-          open={Boolean(albumMenuAnchor)}
-          onClose={handleAlbumMenuClose}
-          PaperProps={{
-            sx: {
-              background: 'rgba(0, 0, 0, 0.9)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-            }
-          }}
-        >
-          <MenuItem onClick={handleDeleteAlbum} sx={{ 
-            color: '#FF6B6B',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 107, 107, 0.1)',
-            }
-          }}>
-            <Delete sx={{ mr: 1 }} />
-            이 앨범 삭제
-          </MenuItem>
-        </Menu>
-
-        {/* 수록곡 메뉴 */}
-        <Menu
-          anchorEl={trackMenuAnchor}
-          open={Boolean(trackMenuAnchor)}
-          onClose={handleTrackMenuClose}
-          PaperProps={{
-            sx: {
-              background: 'rgba(0, 0, 0, 0.9)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-            }
-          }}
-        >
-          <MenuItem onClick={handleEditTracks} sx={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            }
-          }}>
-            <Edit sx={{ mr: 1 }} />
-            수록곡 편집
-          </MenuItem>
-        </Menu>
 
         {/* 앨범 삭제 확인 다이얼로그 */}
         <Dialog
@@ -1083,13 +1075,13 @@ const AlbumDetailPage: React.FC = () => {
           albumData={{
             id: album.id,
             title: album.title,
-            tracks: album.tracks.map((track: typeof dummyAlbum.tracks[0]) => ({
+            tracks: album.tracks.map(track => ({
               id: track.id,
               title: track.title,
               audioUrl: track.audioUrl,
               duration: track.duration,
             })),
-            coverImage: album.coverImage,
+            coverImageUrl: album.coverImageUrl,
             description: album.description,
           }}
         />

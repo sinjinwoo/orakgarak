@@ -3,12 +3,10 @@ import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { MusicNote } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useSocialAuth } from '../../hooks/useAuth';
-import { useAuthStore } from '../../stores/authStore';
 
 const SimpleHeader: React.FC = () => {
   const navigate = useNavigate();
   const { loginWithGoogle, isLoading } = useSocialAuth();
-  const { tempLogin } = useAuthStore();
 
   const handleGoogleLogin = async () => {
     const success = await loginWithGoogle();
@@ -17,11 +15,6 @@ const SimpleHeader: React.FC = () => {
       navigate('/recommendations');
     }
     // 로그인 실패 시에는 현재 페이지에 그대로 머물러 있음
-  };
-
-  const handleTempLogin = () => {
-    tempLogin();
-    navigate('/recommendations');
   };
 
   return (
@@ -50,27 +43,8 @@ const SimpleHeader: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* 로그인 버튼들 */}
+        {/* 로그인 버튼 */}
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button 
-            color="inherit" 
-            onClick={handleTempLogin}
-            sx={{ 
-              color: 'white',
-              px: 2,
-              py: 1,
-              borderRadius: 2,
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              fontSize: '0.8rem',
-              '&:hover': {
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                border: '1px solid rgba(255,255,255,0.5)'
-              }
-            }}
-          >
-            임시 로그인
-          </Button>
           <Button 
             color="inherit" 
             onClick={handleGoogleLogin}

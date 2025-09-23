@@ -7,7 +7,7 @@
         <Property name="JSON_PATTERN">
             {"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%-5level","thread":"%thread","logger":"%logger{36}","message":"%msg","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","mdc":"%X"}%n
         </Property>
-        <Property name="LOG_DIR">./logs</Property>
+        <Property name="LOG_DIR">./back/logs</Property>
     </Properties>
 
     <Appenders>

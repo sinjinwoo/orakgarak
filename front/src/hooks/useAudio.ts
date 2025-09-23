@@ -140,9 +140,14 @@ export function useAudio(options: UseAudioOptions = {}): [AudioState, AudioContr
   }, []);
 
   const load = useCallback((src: string) => {
-    if (audioRef.current) {
-      audioRef.current.src = src;
-      setState(prev => ({ ...prev, isLoading: true }));
+    if (audioRef.current && src && src.trim() !== '') {
+      try {
+        audioRef.current.src = src;
+        setState(prev => ({ ...prev, isLoading: true }));
+      } catch (error) {
+        console.error('오디오 로드 중 오류가 발생했습니다:', error);
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
     }
   }, []);
 

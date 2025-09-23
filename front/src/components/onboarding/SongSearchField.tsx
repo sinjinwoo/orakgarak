@@ -1,45 +1,53 @@
-import React, { useState } from 'react';
-import { Autocomplete, TextField, Box, Typography } from '@mui/material';
-import { songAPI } from '../../services/backend';
+import React, { useState, useEffect } from "react";
+import { Autocomplete, TextField, Box, Typography } from "@mui/material";
+import { useSongSearch } from "../../hooks/useSong";
+import { Song } from "../../types/song";
 
 interface SongSearchFieldProps {
-  onSongSelect?: (song: any) => void;
+  onSongSelect?: (song: Song) => void;
   placeholder?: string;
 }
 
 const SongSearchField: React.FC<SongSearchFieldProps> = ({
   onSongSelect,
-  placeholder = '곡을 검색하세요...',
+  placeholder = "곡을 검색하세요...",
 }) => {
-  const [options, setOptions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [inputValue, setInputValue] = useState("");
 
-  const handleSearch = async (query: string) => {
-    if (query.length < 2) return;
-    
-    setLoading(true);
-    try {
-      const response = await songAPI.search(query, 10);
-      setOptions(response.data);
-    } catch (error) {
-      console.error('곡 검색 실패:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 디바운스를 위한 지연 처리
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputValue.length >= 2) {
+        setSearchKeyword(inputValue);
+      } else {
+        setSearchKeyword("");
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [inputValue]);
+
+  const {
+    data: songs = [],
+    isLoading,
+    error,
+  } = useSongSearch(searchKeyword, searchKeyword.length >= 2);
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 400 }}>
+    <Box sx={{ width: "100%", maxWidth: 400 }}>
       <Autocomplete
         freeSolo
-        options={options}
-        getOptionLabel={(option) => 
-          typeof option === 'string' ? option : `${option.title} - ${option.artist}`
+        options={songs}
+        getOptionLabel={(option) =>
+          typeof option === "string"
+            ? option
+            : `${option.songName} - ${option.artistName}`
         }
-        loading={loading}
-        onInputChange={(_, value) => handleSearch(value)}
+        loading={isLoading}
+        onInputChange={(_, value) => setInputValue(value)}
         onChange={(_, value) => {
-          if (value && typeof value !== 'string') {
+          if (value && typeof value !== "string") {
             onSongSelect?.(value);
           }
         }}
@@ -53,11 +61,20 @@ const SongSearchField: React.FC<SongSearchFieldProps> = ({
         )}
         renderOption={(props, option) => (
           <Box component="li" {...props}>
-            <Box>
-              <Typography variant="body1">{option.title}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {option.artist}
-              </Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              {option.albumCoverUrl && (
+                <img
+                  src={option.albumCoverUrl}
+                  alt={option.albumName}
+                  style={{ width: 40, height: 40, borderRadius: 4 }}
+                />
+              )}
+              <Box>
+                <Typography variant="body1">{option.songName}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {option.artistName} • {option.albumName}
+                </Typography>
+              </Box>
             </Box>
           </Box>
         )}

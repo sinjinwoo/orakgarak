@@ -1,274 +1,391 @@
 import { create } from 'zustand';
-import type { AlbumCreateData, AlbumTrack } from '../types/album';
+import { devtools, persist } from 'zustand/middleware';
+import { Album, AlbumQueryParams, AlbumTrack, CreateAlbumRequest } from '../types/album';
 
-interface AlbumCreationState {
-  // 앨범 메타데이터
-  title: string;
-  description: string;
-  coverImage?: string;
-  isPublic: boolean;
-  tags: string[];
-  
-  // 선택된 녹음들
-  selectedRecordings: string[];
-  
-  // 트랙 순서
-  tracks: AlbumTrack[];
-  
-  // 생성 단계
-  currentStep: 'recordings' | 'cover' | 'metadata' | 'preview' | 'completed';
-  
-  // 임시 저장된 데이터
-  isDraft: boolean;
-  lastSaved: string;
+interface AlbumFilters {
+  search: string;
+  isPublic?: boolean;
+  sortBy: 'createdAt' | 'updatedAt' | 'title' | 'likeCount';
+  sortOrder: 'asc' | 'desc';
 }
 
-interface AlbumStore extends AlbumCreationState {
-  // 앨범 메타데이터 관리
-  setTitle: (title: string) => void;
-  setDescription: (description: string) => void;
-  setCoverImage: (imageUrl: string) => void;
-  setIsPublic: (isPublic: boolean) => void;
-  setTags: (tags: string[]) => void;
+interface AlbumPagination {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
 
-  // 녹음 선택 관리
-  addRecording: (recordingId: string) => void;
-  removeRecording: (recordingId: string) => void;
-  setSelectedRecordings: (recordingIds: string[]) => void;
+// 앨범 생성 과정의 상태
+interface AlbumCreationState {
+  step: number;
+  selectedRecordIds: number[];
+  selectedCoverUploadId?: number;
+  albumInfo: Partial<CreateAlbumRequest>;
+  isComplete: boolean;
+}
 
-  // 트랙 관리
-  setTracks: (tracks: AlbumTrack[]) => void;
-  reorderTracks: (fromIndex: number, toIndex: number) => void;
-  updateTrackTitle: (trackId: string, title: string) => void;
+interface AlbumStore {
+  // 기본 앨범 관리
+  selectedAlbum: Album | null;
+  selectedAlbumIds: number[];
+  filters: AlbumFilters;
+  pagination: AlbumPagination;
 
-  // 단계 관리
-  setCurrentStep: (step: AlbumCreationState['currentStep']) => void;
-  goToStep: (stepName: string) => void;
+  // 앨범 생성 플로우
+  creationState: AlbumCreationState;
+
+  // 로딩 및 에러 상태
+  isCreating: boolean;
+  isUpdating: boolean;
+  isDeleting: boolean;
+  lastError: string | null;
+
+  // 기본 앨범 관리 액션
+  setSelectedAlbum: (album: Album | null) => void;
+  setSelectedAlbumIds: (ids: number[]) => void;
+  addSelectedAlbumId: (id: number) => void;
+  removeSelectedAlbumId: (id: number) => void;
+  toggleSelectedAlbumId: (id: number) => void;
+  clearSelectedAlbumIds: () => void;
+
+  // 필터 및 페이지네이션 액션
+  setFilters: (filters: Partial<AlbumFilters>) => void;
+  resetFilters: () => void;
+  getQueryParams: () => AlbumQueryParams;
+
+  setPagination: (pagination: Partial<AlbumPagination>) => void;
+  setPage: (page: number) => void;
+  setPageSize: (pageSize: number) => void;
+  resetPagination: () => void;
+
+  // 앨범 생성 플로우 액션
+  setCreationStep: (step: number) => void;
   nextStep: () => void;
   prevStep: () => void;
+  setSelectedRecordIds: (ids: number[]) => void;
+  addSelectedRecordId: (id: number) => void;
+  removeSelectedRecordId: (id: number) => void;
+  toggleSelectedRecordId: (id: number) => void;
+  setSelectedCoverUploadId: (uploadId?: number) => void;
+  setAlbumInfo: (info: Partial<CreateAlbumRequest>) => void;
+  updateAlbumInfo: (updates: Partial<CreateAlbumRequest>) => void;
+  resetCreationState: () => void;
+  getCompleteAlbumData: () => CreateAlbumRequest | null;
 
-  // 초기화 및 저장
-  resetAlbum: () => void;
-  saveDraft: () => void;
-  loadDraft: () => void;
+  // 상태 관리 액션
+  setCreating: (isCreating: boolean) => void;
+  setUpdating: (isUpdating: boolean) => void;
+  setDeleting: (isDeleting: boolean) => void;
+  setError: (error: string | null) => void;
 
-  // 앨범 생성 데이터 가져오기
-  getAlbumData: () => AlbumCreateData;
-
-  // 새 앨범 생성
-  createAlbum: (albumData: AlbumCreateData, recordings: any[]) => string;
-
-  // 앨범 상세 정보 가져오기
-  getAlbumById: (albumId: string) => any;
+  clearAll: () => void;
 }
 
-const initialData: AlbumCreationState = {
-  title: '',
-  description: '',
-  isPublic: false, // 기본값을 비공개로 변경
-  tags: [],
-  selectedRecordings: [],
-  tracks: [],
-  currentStep: 'recordings',
-  isDraft: false,
-  lastSaved: '',
+const defaultFilters: AlbumFilters = {
+  search: '',
+  isPublic: undefined,
+  sortBy: 'createdAt',
+  sortOrder: 'desc',
 };
 
-export const useAlbumStore = create<AlbumStore>((set, get) => ({
-  ...initialData,
-  
-  // 앨범 메타데이터 관리
-  setTitle: (title) => set({ title }),
-  
-  setDescription: (description) => set({ description }),
-  
-  setCoverImage: (coverImage) => set({ coverImage }),
-  
-  setIsPublic: (isPublic) => set({ isPublic }),
-  
-  setTags: (tags) => set({ tags }),
-  
-  // 녹음 선택 관리
-  addRecording: (recordingId) => {
-    set((state) => ({
-      selectedRecordings: [...state.selectedRecordings, recordingId]
-    }));
-  },
-  
-  removeRecording: (recordingId) => {
-    set((state) => ({
-      selectedRecordings: state.selectedRecordings.filter(id => id !== recordingId)
-    }));
-  },
-  
-  setSelectedRecordings: (selectedRecordings) => set({ selectedRecordings }),
-  
-  // 트랙 관리
-  setTracks: (tracks) => set({ tracks }),
-  
-  reorderTracks: (fromIndex, toIndex) => {
-    set((state) => {
-      const newTracks = [...state.tracks];
-      const [removed] = newTracks.splice(fromIndex, 1);
-      newTracks.splice(toIndex, 0, removed);
-      
-      // 트랙 번호 재정렬
-      const reorderedTracks = newTracks.map((track, index) => ({
-        ...track,
-        trackNumber: index + 1,
-      }));
-      
-      return { tracks: reorderedTracks };
-    });
-  },
-  
-  updateTrackTitle: (trackId, title) => {
-    set((state) => ({
-      tracks: state.tracks.map(track =>
-        track.id === trackId ? { ...track, title } : track
-      )
-    }));
-  },
-  
-  // 단계 관리
-  setCurrentStep: (currentStep) => set({ currentStep }),
+const defaultPagination: AlbumPagination = {
+  page: 1,
+  pageSize: 20,
+  totalCount: 0,
+  totalPages: 0,
+};
 
-  goToStep: (stepName: string) => {
-    const stepMap: Record<string, AlbumCreationState['currentStep']> = {
-      'recordings': 'recordings',
-      'cover': 'cover',
-      'metadata': 'metadata',
-      'preview': 'preview',
-    };
-    const targetStep = stepMap[stepName];
-    if (targetStep) {
-      set({ currentStep: targetStep });
-    }
-  },
-  
-  nextStep: () => {
-    const steps: AlbumCreationState['currentStep'][] = ['recordings', 'cover', 'metadata', 'preview', 'completed'];
-    const currentIndex = steps.indexOf(get().currentStep);
-    if (currentIndex < steps.length - 1) {
-      set({ currentStep: steps[currentIndex + 1] });
-    }
-  },
-  
-  prevStep: () => {
-    const steps: AlbumCreationState['currentStep'][] = ['recordings', 'cover', 'metadata', 'preview', 'completed'];
-    const currentIndex = steps.indexOf(get().currentStep);
-    if (currentIndex > 0) {
-      set({ currentStep: steps[currentIndex - 1] });
-    }
-  },
-  
-  // 초기화 및 저장
-  resetAlbum: () => set(initialData),
+const defaultCreationState: AlbumCreationState = {
+  step: 1,
+  selectedRecordIds: [],
+  selectedCoverUploadId: undefined,
+  albumInfo: {},
+  isComplete: false,
+};
 
-  saveDraft: () => {
-    const data = get().getAlbumData();
-    const draftData = {
-      ...data,
-      selectedRecordings: get().selectedRecordings,
-      currentStep: get().currentStep,
-      lastSaved: new Date().toISOString(),
-    };
-    localStorage.setItem('album.create.draft.v1', JSON.stringify(draftData));
-    set({
-      isDraft: true,
-      lastSaved: new Date().toISOString()
-    });
-  },
-  
-  loadDraft: () => {
-    const draft = localStorage.getItem('album.create.draft.v1');
-    if (draft) {
-      try {
-        const data = JSON.parse(draft);
-        set({
-          title: data.title || '',
-          description: data.description || '',
-          coverImage: data.coverImage,
-          isPublic: data.isPublic ?? false,
-          tags: data.tags || [],
-          selectedRecordings: data.selectedRecordings || data.recordingIds || [],
-          currentStep: data.currentStep || 'recordings',
-          isDraft: true,
-          lastSaved: data.lastSaved,
-        });
-      } catch (error) {
-        console.error('Failed to load draft:', error);
-        // Clear corrupted draft
-        localStorage.removeItem('album.create.draft.v1');
+export const useAlbumStore = create<AlbumStore>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        // 초기 상태
+        selectedAlbum: null,
+        selectedAlbumIds: [],
+        filters: defaultFilters,
+        pagination: defaultPagination,
+        creationState: defaultCreationState,
+        isCreating: false,
+        isUpdating: false,
+        isDeleting: false,
+        lastError: null,
+
+        // 기본 앨범 관리 액션
+        setSelectedAlbum: (album) => set({ selectedAlbum: album }),
+
+        setSelectedAlbumIds: (ids) => set({ selectedAlbumIds: ids }),
+
+        addSelectedAlbumId: (id) =>
+          set((state) => ({
+            selectedAlbumIds: state.selectedAlbumIds.includes(id)
+              ? state.selectedAlbumIds
+              : [...state.selectedAlbumIds, id],
+          })),
+
+        removeSelectedAlbumId: (id) =>
+          set((state) => ({
+            selectedAlbumIds: state.selectedAlbumIds.filter((albumId) => albumId !== id),
+          })),
+
+        toggleSelectedAlbumId: (id) =>
+          set((state) => ({
+            selectedAlbumIds: state.selectedAlbumIds.includes(id)
+              ? state.selectedAlbumIds.filter((albumId) => albumId !== id)
+              : [...state.selectedAlbumIds, id],
+          })),
+
+        clearSelectedAlbumIds: () => set({ selectedAlbumIds: [] }),
+
+        // 필터 및 페이지네이션 액션
+        setFilters: (newFilters) =>
+          set((state) => ({
+            filters: { ...state.filters, ...newFilters },
+            pagination: { ...state.pagination, page: 1 },
+          })),
+
+        resetFilters: () =>
+          set({
+            filters: defaultFilters,
+            pagination: { ...defaultPagination, page: 1 },
+          }),
+
+        getQueryParams: () => {
+          const { filters, pagination } = get();
+          return {
+            page: pagination.page,
+            pageSize: pagination.pageSize,
+            search: filters.search || undefined,
+            isPublic: filters.isPublic,
+            sortBy: filters.sortBy,
+            sortOrder: filters.sortOrder,
+          };
+        },
+
+        setPagination: (newPagination) =>
+          set((state) => ({
+            pagination: { ...state.pagination, ...newPagination },
+          })),
+
+        setPage: (page) =>
+          set((state) => ({
+            pagination: { ...state.pagination, page },
+          })),
+
+        setPageSize: (pageSize) =>
+          set((state) => ({
+            pagination: { ...state.pagination, pageSize, page: 1 },
+          })),
+
+        resetPagination: () => set({ pagination: defaultPagination }),
+
+        // 앨범 생성 플로우 액션
+        setCreationStep: (step) =>
+          set((state) => ({
+            creationState: { ...state.creationState, step },
+          })),
+
+        nextStep: () =>
+          set((state) => ({
+            creationState: { ...state.creationState, step: Math.min(state.creationState.step + 1, 4) },
+          })),
+
+        prevStep: () =>
+          set((state) => ({
+            creationState: { ...state.creationState, step: Math.max(state.creationState.step - 1, 1) },
+          })),
+
+        setSelectedRecordIds: (ids) =>
+          set((state) => ({
+            creationState: { ...state.creationState, selectedRecordIds: ids },
+          })),
+
+        addSelectedRecordId: (id) =>
+          set((state) => ({
+            creationState: {
+              ...state.creationState,
+              selectedRecordIds: state.creationState.selectedRecordIds.includes(id)
+                ? state.creationState.selectedRecordIds
+                : [...state.creationState.selectedRecordIds, id],
+            },
+          })),
+
+        removeSelectedRecordId: (id) =>
+          set((state) => ({
+            creationState: {
+              ...state.creationState,
+              selectedRecordIds: state.creationState.selectedRecordIds.filter((recordId) => recordId !== id),
+            },
+          })),
+
+        toggleSelectedRecordId: (id) =>
+          set((state) => ({
+            creationState: {
+              ...state.creationState,
+              selectedRecordIds: state.creationState.selectedRecordIds.includes(id)
+                ? state.creationState.selectedRecordIds.filter((recordId) => recordId !== id)
+                : [...state.creationState.selectedRecordIds, id],
+            },
+          })),
+
+        setSelectedCoverUploadId: (uploadId) =>
+          set((state) => ({
+            creationState: { ...state.creationState, selectedCoverUploadId: uploadId },
+          })),
+
+        setAlbumInfo: (info) =>
+          set((state) => ({
+            creationState: { ...state.creationState, albumInfo: info },
+          })),
+
+        updateAlbumInfo: (updates) =>
+          set((state) => ({
+            creationState: {
+              ...state.creationState,
+              albumInfo: { ...state.creationState.albumInfo, ...updates },
+            },
+          })),
+
+        resetCreationState: () =>
+          set({
+            creationState: defaultCreationState,
+          }),
+
+        getCompleteAlbumData: () => {
+          const { creationState } = get();
+          const { albumInfo, selectedCoverUploadId } = creationState;
+
+          if (!albumInfo.title || albumInfo.isPublic === undefined) {
+            return null;
+          }
+
+          return {
+            title: albumInfo.title,
+            description: albumInfo.description || '',
+            uploadId: selectedCoverUploadId,
+            isPublic: albumInfo.isPublic,
+          };
+        },
+
+        // 상태 관리 액션
+        setCreating: (isCreating) => set({ isCreating }),
+        setUpdating: (isUpdating) => set({ isUpdating }),
+        setDeleting: (isDeleting) => set({ isDeleting }),
+        setError: (error) => set({ lastError: error }),
+
+        clearAll: () =>
+          set({
+            selectedAlbum: null,
+            selectedAlbumIds: [],
+            filters: defaultFilters,
+            pagination: defaultPagination,
+            creationState: defaultCreationState,
+            isCreating: false,
+            isUpdating: false,
+            isDeleting: false,
+            lastError: null,
+          }),
+      }),
+      {
+        name: 'album-store',
+        partialize: (state) => ({
+          filters: state.filters,
+          pagination: {
+            ...state.pagination,
+            page: 1,
+          },
+          creationState: state.creationState,
+        }),
       }
+    ),
+    {
+      name: 'album-store',
     }
-  },
-  
-  // 앨범 생성 데이터 가져오기
-  getAlbumData: () => {
-    const state = get();
-    return {
-      title: state.title,
-      description: state.description,
-      coverImage: state.coverImage,
-      recordingIds: state.selectedRecordings,
-      isPublic: state.isPublic,
-      tags: state.tags,
-    };
-  },
-  
-  // 새 앨범 생성
-  createAlbum: (albumData: AlbumCreateData, recordings: any[]) => {
-    // 선택된 녹음들로 트랙 데이터 생성
-    const tracks = recordings
-      .filter(recording => albumData.recordingIds.includes(recording.id))
-      .map(recording => ({
-        id: recording.id,
-        title: recording.song.title,
-        artist: recording.song.artist,
-        score: recording.analysis?.overallScore || 0,
-        duration: `${Math.floor(recording.duration / 60)}:${(recording.duration % 60).toString().padStart(2, '0')}`,
-        audioUrl: recording.audioUrl,
-      }));
+  )
+);
 
-    // 총 재생 시간 계산
-    const totalSeconds = tracks.reduce((total, track) => {
-      const [minutes, seconds] = track.duration.split(':').map(Number);
-      return total + minutes * 60 + seconds;
-    }, 0);
-    const totalMinutes = Math.floor(totalSeconds / 60);
-    const remainingSeconds = totalSeconds % 60;
-    const duration = `${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+// 액션 훅들
+export const useAlbumActions = () => {
+  const store = useAlbumStore();
+  return {
+    setSelectedAlbum: store.setSelectedAlbum,
+    setSelectedAlbumIds: store.setSelectedAlbumIds,
+    addSelectedAlbumId: store.addSelectedAlbumId,
+    removeSelectedAlbumId: store.removeSelectedAlbumId,
+    toggleSelectedAlbumId: store.toggleSelectedAlbumId,
+    clearSelectedAlbumIds: store.clearSelectedAlbumIds,
+    setFilters: store.setFilters,
+    resetFilters: store.resetFilters,
+    setPagination: store.setPagination,
+    setPage: store.setPage,
+    setPageSize: store.setPageSize,
+    resetPagination: store.resetPagination,
+    setCreating: store.setCreating,
+    setUpdating: store.setUpdating,
+    setDeleting: store.setDeleting,
+    setError: store.setError,
+    clearAll: store.clearAll,
+  };
+};
 
-    const newAlbum = {
-      id: Date.now().toString(),
-      title: albumData.title,
-      description: albumData.description || '',
-      coverImage: albumData.coverImage || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
-      isPublic: albumData.isPublic,
-      trackCount: albumData.recordingIds.length,
-      duration: duration,
-      likeCount: 0,
-      playCount: 0,
-      tracks: tracks, // 실제 선택된 녹음 데이터 저장
-      createdAt: new Date().toISOString(),
-    };
-    
-    // localStorage에 저장
-    const existingAlbums = JSON.parse(localStorage.getItem('myAlbums') || '[]');
-    existingAlbums.unshift(newAlbum); // 최신 앨범이 맨 위에 오도록
-    localStorage.setItem('myAlbums', JSON.stringify(existingAlbums));
-    
-    return newAlbum.id;
-  },
-  
-  // 앨범 상세 정보 가져오기
-  getAlbumById: (albumId: string) => {
-    const savedAlbums = localStorage.getItem('myAlbums');
-    if (savedAlbums) {
-      const albums = JSON.parse(savedAlbums);
-      return albums.find((a: any) => a.id === albumId);
-    }
-    return null;
-  },
-}));
+export const useAlbumCreationActions = () => {
+  const store = useAlbumStore();
+  return {
+    setCreationStep: store.setCreationStep,
+    nextStep: store.nextStep,
+    prevStep: store.prevStep,
+    setSelectedRecordIds: store.setSelectedRecordIds,
+    addSelectedRecordId: store.addSelectedRecordId,
+    removeSelectedRecordId: store.removeSelectedRecordId,
+    toggleSelectedRecordId: store.toggleSelectedRecordId,
+    setSelectedCoverUploadId: store.setSelectedCoverUploadId,
+    setAlbumInfo: store.setAlbumInfo,
+    updateAlbumInfo: store.updateAlbumInfo,
+    resetCreationState: store.resetCreationState,
+    getCompleteAlbumData: store.getCompleteAlbumData,
+  };
+};
+
+// 셀렉터 훅들
+export const useAlbumSelectors = () => {
+  const store = useAlbumStore();
+  return {
+    selectedAlbum: store.selectedAlbum,
+    selectedAlbumIds: store.selectedAlbumIds,
+    filters: store.filters,
+    pagination: store.pagination,
+    isCreating: store.isCreating,
+    isUpdating: store.isUpdating,
+    isDeleting: store.isDeleting,
+    lastError: store.lastError,
+    queryParams: store.getQueryParams(),
+    hasSelectedAlbums: store.selectedAlbumIds.length > 0,
+    selectedCount: store.selectedAlbumIds.length,
+  };
+};
+
+export const useAlbumCreationSelectors = () => {
+  const store = useAlbumStore();
+  return {
+    creationState: store.creationState,
+    currentStep: store.creationState.step,
+    selectedRecordIds: store.creationState.selectedRecordIds,
+    selectedCoverUploadId: store.creationState.selectedCoverUploadId,
+    albumInfo: store.creationState.albumInfo,
+    isComplete: store.creationState.isComplete,
+    hasSelectedRecords: store.creationState.selectedRecordIds.length > 0,
+    selectedRecordCount: store.creationState.selectedRecordIds.length,
+    isValidForCreation: () => {
+      const { albumInfo, selectedRecordIds } = store.creationState;
+      return !!(albumInfo.title && albumInfo.isPublic !== undefined && selectedRecordIds.length > 0);
+    },
+  };
+};
