@@ -33,13 +33,18 @@ public class AlbumResponseDto {
 
     private Integer likeCount;
 
+    // 사용자 정보 필드 추가
+    private String userNickname;
+
+    private String userProfileImageUrl;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
     
-    public static AlbumResponseDto from(Album album, String coverImageUrl) {
+    public static AlbumResponseDto from(Album album, String coverImageUrl, String userNickname, String userProfileImageUrl) {
         return AlbumResponseDto.builder()
                 .id(album.getId())
                 .userId(album.getUserId())
@@ -47,6 +52,8 @@ public class AlbumResponseDto {
                 .description(album.getDescription())
                 .uploadId(album.getUploadId())
                 .coverImageUrl(coverImageUrl)
+                .userNickname(userNickname)
+                .userProfileImageUrl(userProfileImageUrl)
                 .isPublic(album.getIsPublic())
                 .trackCount(album.getTrackCount())
                 .totalDuration(album.getTotalDuration())

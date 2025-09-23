@@ -7,6 +7,8 @@ import com.ssafy.lab.orak.album.entity.Album;
 import com.ssafy.lab.orak.album.exception.AlbumAccessDeniedException;
 import com.ssafy.lab.orak.album.exception.AlbumNotFoundException;
 import com.ssafy.lab.orak.album.repository.AlbumRepository;
+import com.ssafy.lab.orak.profile.dto.ProfileResponseDTO;
+import com.ssafy.lab.orak.profile.service.ProfileService;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class AlbumService {
 
     private final AlbumRepository albumRepository;
     private final FileUploadService fileUploadService;
+    private final ProfileService profileService;
 
     // =========================
     // 앨범 생성
@@ -233,7 +236,7 @@ public class AlbumService {
     }
 
     // =========================
-    // 공용 변환 (uploadId → coverImageUrl)
+    // 공용 변환 (uploadId → coverImageUrl + 사용자 정보)
     // =========================
     private AlbumResponseDto convertToResponseDto(Album album) {
         String coverImageUrl;
@@ -248,6 +251,20 @@ public class AlbumService {
             coverImageUrl = getDefaultCoverImageUrl();
         }
 
+        // 사용자 프로필 정보 가져오기
+        String userNickname = "알 수 없는 사용자";
+        String userProfileImageUrl = null;
+        try {
+            ProfileResponseDTO profile = profileService.getProfileByUserId(album.getUserId());
+            if (profile != null) {
+                userNickname = profile.getNickname() != null ? profile.getNickname() : "사용자 " + album.getUserId();
+                userProfileImageUrl = profile.getProfileImageUrl();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get profile for userId: {}", album.getUserId(), e);
+            userNickname = "사용자 " + album.getUserId();
+        }
+
         return AlbumResponseDto.builder()
                 .id(album.getId())
                 .userId(album.getUserId())
@@ -255,6 +272,8 @@ public class AlbumService {
                 .description(album.getDescription())
                 .uploadId(album.getUploadId())
                 .coverImageUrl(coverImageUrl)
+                .userNickname(userNickname)
+                .userProfileImageUrl(userProfileImageUrl)
                 .isPublic(album.getIsPublic())
                 .trackCount(album.getTrackCount())
                 .totalDuration(album.getTotalDuration())

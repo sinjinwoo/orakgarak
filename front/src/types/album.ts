@@ -5,6 +5,8 @@ export interface Album {
   description?: string;
   uploadId?: number;
   coverImageUrl?: string;
+  userNickname?: string;
+  userProfileImageUrl?: string;
   isPublic: boolean;
   trackCount: number;
   totalDuration: number;

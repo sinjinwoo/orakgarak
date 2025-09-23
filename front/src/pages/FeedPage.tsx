@@ -150,6 +150,8 @@ const FeedPage: React.FC = () => {
           title: album.title,
           description: album.description,
           userId: album.userId,
+          userNickname: album.userNickname,
+          userProfileImageUrl: album.userProfileImageUrl,
           trackCount: album.trackCount,
           totalDuration: album.totalDuration,
           likeCount: album.likeCount,
@@ -161,8 +163,8 @@ const FeedPage: React.FC = () => {
         return {
           ...album,
           user: {
-            nickname: `사용자 ${album.userId}`, // 실제로는 사용자 정보에서 가져와야 함
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+            nickname: album.userNickname || `사용자 ${album.userId}`,
+            avatar: album.userProfileImageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
           },
           tags: ['캐주얼', '힐링'],
           playCount: Math.floor(Math.random() * 1000),
@@ -199,8 +201,8 @@ const FeedPage: React.FC = () => {
       const feedAlbums: FeedAlbum[] = albums.map(album => ({
         ...album,
         user: {
-          nickname: `사용자 ${album.userId}`,
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+          nickname: album.userNickname || `사용자 ${album.userId}`,
+          avatar: album.userProfileImageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
         },
         tags: ['커버', '감성'],
         playCount: Math.floor(Math.random() * 1000),
@@ -825,11 +827,11 @@ const FeedPage: React.FC = () => {
                           >
                             <Person sx={{ fontSize: 12 }} />
                           </Avatar>
-                          <Typography variant="body2" sx={{ 
+                          <Typography variant="body2" sx={{
                             fontSize: '0.8rem',
                             color: 'rgba(255, 255, 255, 0.7)'
                           }}>
-                            {album.user?.nickname || `사용자 ${album.userId}`}
+                            {album.userNickname || album.user?.nickname || `사용자 ${album.userId}`}
                           </Typography>
                         </Box>
 
