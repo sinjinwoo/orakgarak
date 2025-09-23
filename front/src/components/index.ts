@@ -34,6 +34,7 @@ export { default as SurveyForm } from './onboarding/SurveyForm';
 export { default as VoiceRangeGame } from './onboarding/VoiceRangeGame';
 
 // === Record 관련 ===
+export { default as AudioFileUpload } from './record/AudioFileUpload';
 export { default as CyberpunkSpeaker3D } from './record/CyberpunkSpeaker3D';
 export { default as KaraokePlayer } from './record/KaraokePlayer';
 export { default as LyricsPanel } from './record/LyricsPanel';

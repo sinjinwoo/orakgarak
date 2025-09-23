@@ -18,13 +18,17 @@ import {
   IconButton,
   TextField,
   CircularProgress,
+  Tabs,
+  Tab,
 } from "@mui/material";
-import { Mic, PlayArrow, Pause, Save, Delete } from "@mui/icons-material";
+import { Mic, PlayArrow, Pause, Save, Delete, CloudUpload } from "@mui/icons-material";
 import { useProcessRecording } from "../../hooks/useRecording";
 import { convertWebMToWAV } from "../../utils/fileUpload";
+import AudioFileUpload from "./AudioFileUpload";
 
 // 녹음 상태 타입 정의
 type RecordingState = "idle" | "recording" | "paused" | "completed" | "error";
+type RecordingMode = "microphone" | "file-upload";
 
 interface RecordingControlsProps {
   onRecordingChange?: (isRecording: boolean) => void;
@@ -35,6 +39,9 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
   onRecordingChange,
   selectedSongId,
 }) => {
+  // 모드 선택 상태
+  const [recordingMode, setRecordingMode] = useState<RecordingMode>("microphone");
+  
   // 녹음 관련 상태 관리
   const [recordingState, setRecordingState] = useState<RecordingState>("idle");
   const [recordingTime, setRecordingTime] = useState(0);
@@ -523,6 +530,15 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
     };
   }, [cleanupResources]);
 
+  // 모드 변경 핸들러
+  const handleModeChange = useCallback((event: React.SyntheticEvent, newMode: RecordingMode) => {
+    setRecordingMode(newMode);
+    // 모드 변경 시 상태 초기화
+    if (newMode === "file-upload") {
+      retakeRecording();
+    }
+  }, [retakeRecording]);
+
   return (
     <>
       {/* 네온 사이버펑크 애니메이션 스타일 */}
@@ -597,74 +613,145 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
           gap: 3,
         }}
       >
-        {/* 시간 표시 */}
-        <Typography
-          variant="h3"
+        {/* 모드 선택 탭 */}
+        <Paper
+          elevation={0}
           sx={{
-            fontFamily: "monospace",
-            color: recordingState === "recording" ? "#ff0080" : "#00ffff",
-            fontWeight: 700,
-            textShadow: "0 0 20px rgba(0, 255, 255, 0.5)",
-            fontSize: "3rem",
+            p: 1,
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, rgba(0,255,255,0.08), rgba(255,0,128,0.04))',
+            border: '1px solid rgba(0,255,255,0.3)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 0 20px rgba(0,255,255,0.2)',
           }}
         >
-          {formatTime(recordingTime)}
-        </Typography>
-
-        {/* 사이버펑크 마이크 버튼 */}
-        <Box
-          onClick={() => {
-            if (recordingState === "idle") {
-              startRecording();
-            } else if (recordingState === "recording") {
-              stopRecording();
-            } else if (recordingState === "completed") {
-              retakeRecording();
-            }
-          }}
-          sx={{
-            position: "relative",
-            width: 200,
-            height: 200,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.3s ease",
-            "&:hover": {
-              transform: "scale(1.05)",
-            },
-            "&:active": {
-              transform: "scale(0.95)",
-            },
-          }}
-        >
-          {/* 마이크 이미지 */}
-          <Box
-            component="img"
-            src="/images/mic/mico.png"
-            alt="Cyberpunk Microphone"
+          <Tabs
+            value={recordingMode}
+            onChange={handleModeChange}
             sx={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              filter:
-                recordingState === "recording"
-                  ? "hue-rotate(280deg) saturate(1.5) brightness(1.2) drop-shadow(0 0 20px #ff0080)"
-                  : recordingState === "completed"
-                  ? "hue-rotate(120deg) saturate(1.3) brightness(1.1) drop-shadow(0 0 15px #00ff00)"
-                  : "hue-rotate(180deg) saturate(1.2) brightness(1.1) drop-shadow(0 0 15px #00ffff)",
-              transition: "all 0.3s ease",
-              animation:
-                recordingState === "recording" ? "pulse 1s infinite" : "none",
+              '& .MuiTabs-indicator': {
+                background: 'linear-gradient(90deg, #00ffff, #ff0080)',
+                height: 3,
+                borderRadius: 2,
+                boxShadow: '0 0 10px rgba(0,255,255,0.5)',
+              },
+              '& .MuiTab-root': {
+                color: 'rgba(255,255,255,0.7)',
+                fontFamily: 'monospace',
+                fontWeight: 600,
+                textTransform: 'none',
+                minHeight: 48,
+                '&.Mui-selected': {
+                  color: '#00ffff',
+                  textShadow: '0 0 10px rgba(0,255,255,0.5)',
+                },
+                '&:hover': {
+                  color: '#00ffff',
+                  bgcolor: 'rgba(0,255,255,0.05)',
+                },
+              },
             }}
-          />
-        </Box>
+          >
+            <Tab
+              icon={<Mic />}
+              label="마이크 녹음"
+              value="microphone"
+              iconPosition="start"
+            />
+            <Tab
+              icon={<CloudUpload />}
+              label="파일 업로드"
+              value="file-upload"
+              iconPosition="start"
+            />
+          </Tabs>
+        </Paper>
 
-        {/* 녹음 미리보기 모달 */}
-        <Modal
-          open={showModal && !!audioBlob}
-          onClose={() => {}} // 외부 클릭으로 닫기 방지
+        {/* 모드에 따른 UI 렌더링 */}
+        {recordingMode === "microphone" ? (
+          <>
+            {/* 시간 표시 */}
+            <Typography
+              variant="h3"
+              sx={{
+                fontFamily: "monospace",
+                color: recordingState === "recording" ? "#ff0080" : "#00ffff",
+                fontWeight: 700,
+                textShadow: "0 0 20px rgba(0, 255, 255, 0.5)",
+                fontSize: "3rem",
+              }}
+            >
+              {formatTime(recordingTime)}
+            </Typography>
+
+            {/* 사이버펑크 마이크 버튼 */}
+            <Box
+              onClick={() => {
+                if (recordingState === "idle") {
+                  startRecording();
+                } else if (recordingState === "recording") {
+                  stopRecording();
+                } else if (recordingState === "completed") {
+                  retakeRecording();
+                }
+              }}
+              sx={{
+                position: "relative",
+                width: 200,
+                height: 200,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.05)",
+                },
+                "&:active": {
+                  transform: "scale(0.95)",
+                },
+              }}
+            >
+              {/* 마이크 이미지 */}
+              <Box
+                component="img"
+                src="/images/mic/mico.png"
+                alt="Cyberpunk Microphone"
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  filter:
+                    recordingState === "recording"
+                      ? "hue-rotate(280deg) saturate(1.5) brightness(1.2) drop-shadow(0 0 20px #ff0080)"
+                      : recordingState === "completed"
+                      ? "hue-rotate(120deg) saturate(1.3) brightness(1.1) drop-shadow(0 0 15px #00ff00)"
+                      : "hue-rotate(180deg) saturate(1.2) brightness(1.1) drop-shadow(0 0 15px #00ffff)",
+                  transition: "all 0.3s ease",
+                  animation:
+                    recordingState === "recording" ? "pulse 1s infinite" : "none",
+                }}
+              />
+            </Box>
+          </>
+        ) : (
+          /* 파일 업로드 UI */
+          <AudioFileUpload
+            onUploadComplete={(recording) => {
+              console.log('파일 업로드 완료:', recording);
+              setShowSnackbar(true);
+              setErrorMessage('파일이 성공적으로 업로드되었습니다!');
+            }}
+            selectedSongId={selectedSongId}
+            onUploadChange={onRecordingChange}
+          />
+        )}
+
+        {/* 녹음 미리보기 모달 (마이크 모드에서만) */}
+        {recordingMode === "microphone" && (
+          <Modal
+            open={showModal && !!audioBlob}
+            onClose={() => {}} // 외부 클릭으로 닫기 방지
           aria-labelledby="recording-preview-modal"
           sx={{
             display: "flex",
@@ -1397,6 +1484,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
             </Box>
           </Paper>
         </Modal>
+        )}
 
         {/* 오류 메시지 스낵바 */}
         <Snackbar
