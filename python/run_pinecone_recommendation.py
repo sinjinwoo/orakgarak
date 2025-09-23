@@ -52,13 +52,12 @@ def main():
         user_df=user_df,
         top_n=10,
         min_popularity=1000,
-        use_pitch_filter=True
     )
 
     if recommendations.empty:
         logging.warning("추천 결과가 없습니다.")
     else:
-        logging.info("✅ Pinecone 추천 결과:")
+        logging.info("Pinecone 추천 결과:")
         print(recommendations)
 
         # 인덱스 통계도 출력
