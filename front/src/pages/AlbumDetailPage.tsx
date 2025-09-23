@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -27,7 +27,8 @@ import {
   Stop as StopIcon,
   PlayArrow as PlayArrowIcon,
   Pause as PauseIcon,
-  ArrowForward as ArrowForwardIcon
+  ArrowForward as ArrowForwardIcon,
+  KeyboardBackspace as KeyboardBackspaceIcon
 } from '@mui/icons-material';
 import {
   Cloud as CloudIcon,
@@ -74,6 +75,13 @@ const AlbumDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [album, setAlbum] = useState<VinyListAlbum | null>(null);
+  const [albumUserId, setAlbumUserId] = useState<number | null>(null);
+  
+  // 현재 사용자가 앨범 소유자인지 확인 (앨범 데이터가 로드된 후 확인)
+  const isOwner = useMemo(() => {
+    if (!user || albumUserId === null) return false;
+    return user.id === albumUserId.toString();
+  }, [user, albumUserId]);
   const [selectedTab, setSelectedTab] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState('0:07');
@@ -84,6 +92,8 @@ const AlbumDetailPage: React.FC = () => {
   const [availableRecordings, setAvailableRecordings] = useState<any[]>([]);
   const [selectedRecordings, setSelectedRecordings] = useState<number[]>([]);
   const [loadingRecordings, setLoadingRecordings] = useState(false);
+  const [deletingAlbum, setDeletingAlbum] = useState(false);
+  const [likingAlbum, setLikingAlbum] = useState(false);
 
   // Load album data
   useEffect(() => {
@@ -96,6 +106,9 @@ const AlbumDetailPage: React.FC = () => {
         // Load album data
         const albumData = await albumService.getAlbum(parseInt(albumId));
         
+        // 앨범 소유자 ID 저장
+        setAlbumUserId(albumData.userId);
+        
         // Load tracks
         let tracksData: any[] = [];
         try {
@@ -103,13 +116,8 @@ const AlbumDetailPage: React.FC = () => {
           tracksData = tracksResponse.tracks || [];
         } catch (tracksError: any) {
           console.warn('트랙 정보 로드 실패:', tracksError);
-          // Fallback to dummy data for demo
-          tracksData = [
-            { id: 1, recordTitle: 'Fucks Given', durationSeconds: 168 },
-            { id: 2, recordTitle: 'No Small Talk (featuring Kari Faux)', durationSeconds: 388 },
-            { id: 3, recordTitle: 'Money Baby', durationSeconds: 296 },
-            { id: 4, recordTitle: 'U Don\'t Have to Call', durationSeconds: 354 }
-          ];
+          // 트랙이 없는 경우 빈 배열로 처리
+          tracksData = [];
         }
 
         // Convert to VinyList format
@@ -126,9 +134,9 @@ const AlbumDetailPage: React.FC = () => {
         const vinyListAlbum: VinyListAlbum = {
           id: albumData.id.toString(),
           title: albumData.title,
-          artist: `사용자 ${albumData.userId}`,
+          artist: albumData.userNickname || `사용자 ${albumData.userId}`,
           year: new Date(albumData.createdAt).getFullYear().toString(),
-          description: albumData.description || 'STN MTN / Kauai is the combined release of the seventh mixtape and second extended play (EP) by American recording artist Donald Glover, under his stage name Childish Gambino.',
+          description: albumData.description || '이 앨범에 대한 설명이 없습니다.',
           coverImage: albumData.coverImageUrl || '/placeholder-album.jpg',
           tracks: vinyListTracks
         };
@@ -182,13 +190,26 @@ const AlbumDetailPage: React.FC = () => {
     if (!albumId) return;
     
     try {
+      setLikingAlbum(true);
       // 좋아요 상태에 따라 API 호출
       // 실제 구현에서는 현재 좋아요 상태를 확인해야 함
       await albumService.likeAlbum(parseInt(albumId));
       showToast('앨범을 좋아요했습니다!', 'success');
     } catch (error: any) {
       console.error('좋아요 실패:', error);
-      showToast('좋아요 처리 중 오류가 발생했습니다.', 'error');
+      
+      // 서버 오류에 대한 더 구체적인 처리
+      if (error?.statusCode === 500) {
+        showToast('서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.', 'error');
+      } else if (error?.statusCode === 401) {
+        showToast('로그인이 필요합니다.', 'error');
+      } else if (error?.statusCode === 404) {
+        showToast('앨범을 찾을 수 없습니다.', 'error');
+      } else {
+        showToast('좋아요 처리 중 오류가 발생했습니다.', 'error');
+      }
+    } finally {
+      setLikingAlbum(false);
     }
   };
 
@@ -199,16 +220,31 @@ const AlbumDetailPage: React.FC = () => {
       setLoadingRecordings(true);
       // 사용자의 녹음 목록 가져오기
       const recordings = await recordingService.getMyRecordings();
-      setAvailableRecordings(recordings);
       
-      // 현재 앨범의 트랙 ID들을 선택된 상태로 설정
-      const currentTrackIds = album?.tracks.map(track => parseInt(track.id)) || [];
-      setSelectedRecordings(currentTrackIds);
+      if (!recordings || recordings.length === 0) {
+        showToast('사용 가능한 녹음이 없습니다. 먼저 녹음을 생성해주세요.', 'warning');
+        setAvailableRecordings([]);
+      } else {
+        setAvailableRecordings(recordings);
+        
+        // 현재 앨범의 트랙 ID들을 선택된 상태로 설정
+        const currentTrackIds = album?.tracks.map(track => parseInt(track.id)) || [];
+        setSelectedRecordings(currentTrackIds);
+      }
       
       setEditTracksOpen(true);
     } catch (error: any) {
       console.error('수록곡 편집 실패:', error);
-      showToast('수록곡 편집 중 오류가 발생했습니다.', 'error');
+      
+      if (error?.statusCode === 401) {
+        showToast('로그인이 필요합니다.', 'error');
+      } else if (error?.statusCode === 500) {
+        showToast('서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.', 'error');
+      } else {
+        showToast('수록곡 편집 중 오류가 발생했습니다.', 'error');
+      }
+      
+      setAvailableRecordings([]);
     } finally {
       setLoadingRecordings(false);
     }
@@ -217,14 +253,21 @@ const AlbumDetailPage: React.FC = () => {
   const handleSaveTracks = async () => {
     if (!albumId) return;
     
+    // 선택된 녹음이 있는지 확인
+    if (selectedRecordings.length === 0) {
+      showToast('최소 하나의 녹음을 선택해주세요.', 'warning');
+      return;
+    }
+    
     try {
-      // 기존 트랙들을 모두 삭제 (순서대로)
+      // 기존 트랙들을 모두 삭제 (순서대로) - 에러가 발생해도 계속 진행
       const currentTracks = album?.tracks || [];
       for (let i = currentTracks.length; i >= 1; i--) {
         try {
           await albumService.removeTrack(parseInt(albumId), i);
         } catch (error) {
           console.warn(`트랙 ${i} 삭제 실패:`, error);
+          // 개별 트랙 삭제 실패는 무시하고 계속 진행
         }
       }
       
@@ -253,26 +296,43 @@ const AlbumDetailPage: React.FC = () => {
       }
       
       // Album 타입을 VinyListAlbum으로 변환
+      const iconTypes: Array<'cloud' | 'zap' | 'dollar' | 'phone'> = ['cloud', 'zap', 'dollar', 'phone'];
       const vinyListAlbum: VinyListAlbum = {
         id: albumData.id.toString(),
         title: albumData.title,
-        artist: '사용자 1', // 기본값 사용
+        artist: albumData.userNickname || `사용자 ${albumData.userId}`,
         year: albumData.createdAt ? new Date(albumData.createdAt).getFullYear().toString() : '2025',
         coverImage: albumData.coverImageUrl || '/default-album.jpg',
-        description: albumData.description || '',
+        description: albumData.description || '이 앨범에 대한 설명이 없습니다.',
         tracks: updatedTracksData.map((track: any, index: number) => ({
           id: track.id.toString(),
-          position: (index + 1).toString(),
-          title: track.recordTitle || '제목 없음',
-          artist: '미지의 아티스트',
-          duration: track.duration || '0:00',
-          iconType: ['cloud', 'zap', 'dollar', 'phone'][index % 4] as 'cloud' | 'zap' | 'dollar' | 'phone'
+          position: String(index + 1).padStart(2, '0'),
+          title: track.recordTitle || `Track ${index + 1}`,
+          artist: 'Sample',
+          duration: track.durationSeconds ? 
+            `${Math.floor(track.durationSeconds / 60)}:${(track.durationSeconds % 60).toString().padStart(2, '0')}` :
+            (track.duration || '0:00'),
+          iconType: iconTypes[index % 4]
         }))
       };
       setAlbum(vinyListAlbum);
     } catch (error: any) {
       console.error('수록곡 저장 실패:', error);
-      showToast('수록곡 저장 중 오류가 발생했습니다.', 'error');
+      
+      // 구체적인 오류 메시지 처리
+      if (error?.statusCode === 404) {
+        if (error?.message?.includes('녹음 파일을 찾을 수 없습니다')) {
+          showToast('선택한 녹음 파일을 찾을 수 없습니다. 다른 녹음을 선택해주세요.', 'error');
+        } else {
+          showToast('앨범을 찾을 수 없습니다.', 'error');
+        }
+      } else if (error?.statusCode === 500) {
+        showToast('서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.', 'error');
+      } else if (error?.statusCode === 401) {
+        showToast('로그인이 필요합니다.', 'error');
+      } else {
+        showToast('수록곡 저장 중 오류가 발생했습니다.', 'error');
+      }
     }
   };
 
@@ -288,14 +348,32 @@ const AlbumDetailPage: React.FC = () => {
     if (!albumId) return;
     
     // 삭제 확인
-    if (window.confirm('정말로 이 앨범을 삭제하시겠습니까?')) {
+    if (window.confirm('정말로 이 앨범을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
       try {
+        setDeletingAlbum(true);
         await albumService.deleteAlbum(parseInt(albumId));
         showToast('앨범이 삭제되었습니다.', 'success');
-        navigate('/feed'); // 피드 페이지로 이동
+        
+        // 이전 페이지로 돌아가기 (피드 페이지 또는 마이 페이지)
+        const previousPage = window.history.state?.from || '/feed';
+        navigate(previousPage);
       } catch (error: any) {
         console.error('앨범 삭제 실패:', error);
-        showToast('앨범 삭제 중 오류가 발생했습니다.', 'error');
+        
+        // 구체적인 오류 메시지 처리
+        if (error?.statusCode === 500) {
+          showToast('서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.', 'error');
+        } else if (error?.statusCode === 401) {
+          showToast('로그인이 필요합니다.', 'error');
+        } else if (error?.statusCode === 403) {
+          showToast('이 앨범을 삭제할 권한이 없습니다.', 'error');
+        } else if (error?.statusCode === 404) {
+          showToast('앨범을 찾을 수 없습니다.', 'error');
+        } else {
+          showToast('앨범 삭제 중 오류가 발생했습니다.', 'error');
+        }
+      } finally {
+        setDeletingAlbum(false);
       }
     }
   };
@@ -369,6 +447,28 @@ const AlbumDetailPage: React.FC = () => {
 
         {/* Main Content */}
         <Container maxWidth={false} sx={{ maxWidth: '1400px', px: 5, py: 5 }}>
+          {/* 뒤로 가기 버튼 */}
+          <Box sx={{ mb: 3 }}>
+            <Button
+              startIcon={<KeyboardBackspaceIcon />}
+              onClick={() => {
+                const previousPage = window.history.state?.from || '/feed';
+                navigate(previousPage);
+              }}
+              sx={{
+                color: '#8A8A8A',
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#000'
+                }
+              }}
+            >
+              뒤로 가기
+            </Button>
+          </Box>
+          
           <Grid 
             container 
             sx={{ 
@@ -464,8 +564,18 @@ const AlbumDetailPage: React.FC = () => {
                 animate={{ opacity: 1 }}
                 transition={{ staggerChildren: 0.1 }}
               >
-                <Stack spacing={1}>
-                  {album.tracks.map((track, index) => (
+                {album.tracks.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4, color: '#8A8A8A' }}>
+                    <Typography variant="h6" sx={{ mb: 1 }}>
+                      수록곡이 없습니다
+                    </Typography>
+                    <Typography variant="body2">
+                      이 앨범에는 아직 수록곡이 추가되지 않았습니다.
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Stack spacing={1}>
+                    {album.tracks.map((track, index) => (
                     <motion.div
                       key={track.id}
                       initial={{ opacity: 0, x: -20 }}
@@ -552,8 +662,9 @@ const AlbumDetailPage: React.FC = () => {
                         </Typography>
                       </Box>
                     </motion.div>
-                  ))}
-                </Stack>
+                    ))}
+                  </Stack>
+                )}
               </motion.div>
             </Box>
 
@@ -662,10 +773,11 @@ const AlbumDetailPage: React.FC = () => {
 
               {/* Action Buttons */}
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {/* Like Button */}
+                {/* Like Button - 모든 사용자에게 표시 */}
                 <Button
                   variant="outlined"
                   onClick={() => handleLikeToggle()}
+                  disabled={likingAlbum}
                   sx={{
                     borderColor: '#4A6CF7',
                     color: '#4A6CF7',
@@ -676,51 +788,65 @@ const AlbumDetailPage: React.FC = () => {
                     '&:hover': {
                       bgcolor: '#4A6CF7',
                       color: 'white'
+                    },
+                    '&:disabled': {
+                      borderColor: 'rgba(74, 108, 247, 0.3)',
+                      color: 'rgba(74, 108, 247, 0.3)'
                     }
                   }}
                 >
-                  ❤️ 좋아요
+                  {likingAlbum ? '처리 중...' : '❤️ 좋아요'}
                 </Button>
 
-                {/* Edit Tracks Button */}
-                <Button
-                  variant="outlined"
-                  onClick={() => handleEditTracks()}
-                  sx={{
-                    borderColor: '#F4D03F',
-                    color: '#F4D03F',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: 2,
-                    py: 1.5,
-                    '&:hover': {
-                      bgcolor: '#F4D03F',
-                      color: 'white'
-                    }
-                  }}
-                >
-                  ✏️ 수록곡 편집
-                </Button>
+                {/* 소유자만 볼 수 있는 버튼들 */}
+                {isOwner && (
+                  <>
+                    {/* Edit Tracks Button */}
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleEditTracks()}
+                      sx={{
+                        borderColor: '#F4D03F',
+                        color: '#F4D03F',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        py: 1.5,
+                        '&:hover': {
+                          bgcolor: '#F4D03F',
+                          color: 'white'
+                        }
+                      }}
+                    >
+                      ✏️ 수록곡 편집
+                    </Button>
 
-                {/* Delete Album Button */}
-                <Button
-                  variant="outlined"
-                  onClick={() => handleDeleteAlbum()}
-                  sx={{
-                    borderColor: '#f44336',
-                    color: '#f44336',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: 2,
-                    py: 1.5,
-                    '&:hover': {
-                      bgcolor: '#f44336',
-                      color: 'white'
-                    }
-                  }}
-                >
-                  🗑️ 앨범 삭제
-                </Button>
+                    {/* Delete Album Button */}
+                    <Button
+                      variant="outlined"
+                      onClick={() => handleDeleteAlbum()}
+                      disabled={deletingAlbum}
+                      sx={{
+                        borderColor: '#f44336',
+                        color: '#f44336',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        py: 1.5,
+                        '&:hover': {
+                          bgcolor: '#f44336',
+                          color: 'white'
+                        },
+                        '&:disabled': {
+                          borderColor: 'rgba(244, 67, 54, 0.3)',
+                          color: 'rgba(244, 67, 54, 0.3)'
+                        }
+                      }}
+                    >
+                      {deletingAlbum ? '삭제 중...' : '🗑️ 앨범 삭제'}
+                    </Button>
+                  </>
+                )}
               </Box>
             </Box>
           </Grid>
@@ -909,8 +1035,11 @@ const AlbumDetailPage: React.FC = () => {
               
               {availableRecordings.length === 0 && (
                 <Box textAlign="center" py={4}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" mb={2}>
                     사용 가능한 녹음이 없습니다.
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    먼저 녹음을 생성한 후 앨범에 추가해보세요.
                   </Typography>
                 </Box>
               )}
@@ -928,9 +1057,9 @@ const AlbumDetailPage: React.FC = () => {
           <Button 
             onClick={handleSaveTracks}
             variant="contained"
-            disabled={loadingRecordings}
+            disabled={loadingRecordings || selectedRecordings.length === 0}
           >
-            저장
+            저장 ({selectedRecordings.length}개 선택됨)
           </Button>
         </DialogActions>
       </Dialog>
