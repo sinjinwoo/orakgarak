@@ -54,15 +54,13 @@
         </RollingFile>
 
         <!-- Async Appender for better performance (운영환경 최적화) -->
-        <AsyncAppender name="AsyncFileAppender" bufferSize="512"
-                       includeLocation="false" shutdownTimeout="3000">
+        <Async name="AsyncFileAppender" bufferSize="512">
             <AppenderRef ref="FileAppender"/>
-        </AsyncAppender>
+        </Async>
 
-        <AsyncAppender name="AsyncErrorAppender" bufferSize="256"
-                       includeLocation="false" shutdownTimeout="3000">
+        <Async name="AsyncErrorAppender" bufferSize="256">
             <AppenderRef ref="ErrorAppender"/>
-        </AsyncAppender>
+        </Async>
     </Appenders>
 
     <Loggers>
