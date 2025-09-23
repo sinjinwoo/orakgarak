@@ -158,6 +158,8 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: orakgaraki
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      # Base Path 설정으로 완전 격리
+      SERVER_SERVLET_CONTEXT_PATH: /kafka-ui
     depends_on:
       kafka:
         condition: service_healthy
@@ -203,8 +205,8 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
-      - '--web.external-url=/prometheus/'
-      - '--web.route-prefix=/'
+      - '--web.external-url=https://${EXTERNAL_DOMAIN:-localhost}/prometheus/'
+      - '--web.route-prefix=/prometheus'
     depends_on:
       - prometheus-config
     networks:
