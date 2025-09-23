@@ -7,9 +7,9 @@ def get_recommendations(user_df: pd.DataFrame,
                         all_songs_df: pd.DataFrame,
                         top_n: int = 10,
                         min_popularity: int = 1000,
-                        use_pitch_filter: bool = True) -> pd.DataFrame:
+                        allowed_genres: list = None) -> pd.DataFrame:
 
-    # 데이터 로드
+    # 사용할 feature 
     feature_cols = [f"mfcc_{i}" for i in range(13)] + ["pitch_low", "pitch_high", "pitch_avg"]
 
     # 데이터 준비
@@ -18,13 +18,7 @@ def get_recommendations(user_df: pd.DataFrame,
     popularity = all_songs_df["popularity"].values
     user_features = user_df[feature_cols].values
 
-
-    # pitch 정보
-    user_pitch_low = user_df["pitch_low"].iloc[0]
-    user_pitch_high = user_df["pitch_high"].iloc[0]
-    user_pitch_avg = user_df["pitch_avg"].iloc[0]
-
-    # 정규화 (MFCC, pitch)
+    # 정규화 (MFCC)
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     user_scaled = scaler.transform(user_features)
@@ -35,26 +29,21 @@ def get_recommendations(user_df: pd.DataFrame,
     # popularity 필터
     mask_popularity = popularity >= min_popularity
 
-    # pitch 조건 필터
-    if use_pitch_filter:
-        mask_pitch = (
-            (all_songs_df["pitch_low"] >= user_pitch_low) &
-            (all_songs_df["pitch_high"] <= user_pitch_high) &
-            (np.abs(all_songs_df["pitch_avg"] - user_pitch_avg) <= 20)
-        )
-        final_mask = mask_popularity & mask_pitch
+    # 장르 필터 
+    if allowed_genres:
+        mask_genre = all_songs_df["genre"].apply(
+            lambda g: any(ag in str(g) for ag in allowed_genres)
+        ).values
     else:
-        final_mask = mask_popularity
+        mask_genre = np.ones(len(all_songs_df), dtype=bool)
 
     # 후보 곡 추출
-    candidate_indices = np.where(final_mask)[0]
-    if len(candidate_indices) == 0:
-        candidate_indices = np.where(mask_popularity)[0]
+    candidate_indices = np.where(mask_popularity & mask_genre)[0]
 
     if len(candidate_indices) == 0:
         return pd.DataFrame()
 
-    # 6similarity 높은 순 정렬
+    # similarity 높은 순 정렬
     sorted_indices = candidate_indices[np.argsort(sims[candidate_indices])[::-1]]
 
     # 상위 N개 추출
@@ -67,17 +56,10 @@ def get_recommendations(user_df: pd.DataFrame,
         "popularity": popularity[top_indices],
         "pitch_low": all_songs_df["pitch_low"].iloc[top_indices].values,
         "pitch_high": all_songs_df["pitch_high"].iloc[top_indices].values,
-        "pitch_avg": all_songs_df["pitch_avg"].iloc[top_indices].values
+        "pitch_avg": all_songs_df["pitch_avg"].iloc[top_indices].values,
+        "genre": all_songs_df["genre"].iloc[top_indices].values  # 장르도 포함
     })
 
     return recommendations
 
 
-if __name__ == "__main__":
-    # 테스트 실행
-    result = get_recommendations(
-        all_features_csv="C:/Users/SSAFY/Desktop/output/all_features.csv",
-        user_features_csv="C:/Users/SSAFY/Desktop/output/user_features.csv",
-        top_n=10
-    )
-    print(result)

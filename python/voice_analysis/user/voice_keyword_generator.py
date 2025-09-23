@@ -4,6 +4,7 @@ from pydub import AudioSegment
 import noisereduce as nr
 import os
 
+from recommend.genre_mapping import map_desc_to_genres  
 
 # 확장자 wav 변환
 def convert_to_wav(filepath, target_sr=16000):
@@ -58,9 +59,9 @@ def extract_features(filepath, sr=16000):
     }
 
     # 디버깅 출력
-    print("[디버깅] 음성 특징값:")
-    for k, v in features.items():
-        print(f"  {k:12s}: {v:.2f}")
+    # print("[디버깅] 음성 특징값:")
+    # for k, v in features.items():
+    #     print(f"  {k:12s}: {v:.2f}")
 
     return features
 
@@ -125,7 +126,7 @@ def classify_tone(f):
     else:
         desc.append("담백한 음색")
 
-    # 분위기 (mfcc_mean)
+    # 분위기
     low_tone = (c < 1600 and r < 2800 and z < 0.15)
     high_tone = (c > 2100 and r > 3500 and z > 0.2)
 
@@ -176,8 +177,18 @@ def analyze_voice(filepath):
     wav_file = convert_to_wav(filepath)
     features = extract_features(wav_file)
     desc = classify_tone(features)
+
+    # 문장 생성
     summary = generate_sentence(desc)
-    return summary
+    
+    # 어울리는 장르 Top3 추출
+    allowed_genres = map_desc_to_genres(desc)
+
+    return {
+        "summary": summary,         
+        "desc": desc,               
+        "allowed_genres": allowed_genres  
+    }
 
 
 # 테스트
