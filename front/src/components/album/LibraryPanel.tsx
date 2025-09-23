@@ -159,17 +159,20 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
               <p>검색 결과가 없습니다</p>
             </div>
           ) : (
-            filteredAndSortedRecordings.map((recording) => (
-              <RecordingCard
-                key={recording.id}
-                recording={recording}
-                isSelected={selectedRecordings.includes(recording.id)}
-                isPlaying={currentPlayingId === recording.id}
-                variant="library"
-                onToggle={() => onToggleRecording(recording.id)}
-                onPlay={() => onPlayRecording(recording.id)}
-              />
-            ))
+            filteredAndSortedRecordings.map((recording) => {
+              const recordingId = String(recording.id);
+              return (
+                <RecordingCard
+                  key={recordingId}
+                  recording={recording}
+                  isSelected={selectedRecordings.includes(recordingId)}
+                  isPlaying={currentPlayingId === recordingId}
+                  variant="library"
+                  onToggle={() => onToggleRecording(recordingId)}
+                  onPlay={() => onPlayRecording(recordingId)}
+                />
+              );
+            })
           )}
         </div>
       </div>
