@@ -72,7 +72,7 @@ def main():
     logging.info(f"전체 곡 feature 불러오기 완료: {len(all_songs_df)}곡")
 
     ################################# 디버깅 용
-    # 곡명, 가수명까지 같이 출력
+    # # 곡명, 가수명까지 같이 출력
     # meta_csv = "C:/Users/SSAFY/Desktop/output/song_meta_simple.csv"
     # if not os.path.exists(meta_csv):
     #     logging.error(f"메타데이터 파일이 존재하지 않습니다: {meta_csv}")
@@ -80,13 +80,29 @@ def main():
     # song_meta_df = pd.read_csv(meta_csv)
     #################################
 
+    ################################# 싫어요 한 곡 불러오기 -> 현재는 CSV 불러와서 처리함
+    disliked_csv = "C:/Users/SSAFY/Desktop/output/disliked_songs.csv" 
+    disliked_song_ids = []
+    if os.path.exists(disliked_csv):
+        disliked_df = pd.read_csv(disliked_csv)
+        user_id = 1 # 현재 사용자 id = 1이라고 가정 (이부분 수정 필요!!!)
+        disliked_song_ids = disliked_df.loc[
+            disliked_df["user_id"] == user_id, "song_id"
+        ].tolist()
+        logging.info(f"불러온 disliked_song_ids: {disliked_song_ids}")
+    else:
+        logging.warning(f"disliked_songs.csv 파일이 존재하지 않습니다: {disliked_csv}")
+    # ============================================================================
+
     # 추천 실행
     logging.info("추천 곡 계산 시작")
     recommendations = get_recommendations(
         user_df,
         all_songs_df,
         top_n=10,
-        allowed_genres=voice_result["allowed_genres"]  # 장르 필터링 적용
+        allowed_genres=voice_result["allowed_genres"],
+        disliked_song_ids=disliked_song_ids,
+        penalty_factor=0.1
     )
 
     if recommendations.empty:
@@ -96,8 +112,7 @@ def main():
 
         print(recommendations)
 
-
-        # 곡명, 가수명까지 출력하고 싶을 때
+        # # 곡명, 가수명까지 출력하고 싶을 때 (디버깅 용)
         # recommendations_debug = recommendations.merge(
         #     song_meta_df[["song_id", "song_name", "artist_names"]],
         #     on="song_id",
