@@ -64,12 +64,12 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
       setUploadedImage(localUrl);
 
       // 실제 업로드 처리
-       const result = await uploadCover(file);
+      const result = await uploadCover(file);
       setCoverUpload(result.imageUrl, result.uploadId);
       onUploadComplete?.(result.imageUrl);
-    } catch (error) {
+    } catch (error: any) {
       console.error('업로드 실패:', error);
-      setError('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+      setError(`이미지 업로드에 실패했습니다: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsUploading(false);
     }

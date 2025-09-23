@@ -46,18 +46,8 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Get score color
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-400';
-    if (score >= 80) return 'text-blue-400';
-    if (score >= 70) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
-  const title = recording.song?.title || '';
-  const artist = recording.song?.artist || '';
-  const duration = recording.duration || 0;
-  const score = recording.analysis?.overallScore || 0;
+  const title = recording.song?.title || recording.title || '제목 없음';
+  const duration = recording.duration || recording.durationSeconds || 0;
 
   return (
     <div
@@ -74,7 +64,7 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
       onDoubleClick={onPlay}
       role="button"
       aria-pressed={isSelected}
-      aria-label={`${title} by ${artist}`}
+      aria-label={title}
       tabIndex={0}
       {...props}
     >
@@ -102,15 +92,9 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
         {/* Track info */}
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-white truncate">{title}</h3>
-          <p className="text-sm text-white/60 truncate">{artist}</p>
 
           <div className="flex items-center gap-3 mt-2 text-xs">
             <span className="text-white/50">{formatDuration(duration)}</span>
-            {score > 0 && (
-              <span className={`font-medium ${getScoreColor(score)}`}>
-                {score}점
-              </span>
-            )}
             <span className="text-white/40">
               {new Date(recording.createdAt).toLocaleDateString()}
             </span>
