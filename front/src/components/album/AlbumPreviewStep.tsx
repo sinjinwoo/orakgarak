@@ -1,451 +1,453 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from "react";
 import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  List,
-  ListItem,
-  IconButton,
-} from '@mui/material';
+    Box,
+    Typography,
+    Button,
+    Paper,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemAvatar,
+    Avatar,
+    IconButton,
+    Chip,
+    Divider,
+    Alert,
+    AlertTitle,
+    CircularProgress,
+    Skeleton,
+} from "@mui/material";
 import {
-  PlayArrow,
-  ExpandMore,
-  Send,
-} from '@mui/icons-material';
-import ImmersivePlaybackModal from './ImmersivePlaybackModal';
+    PlayArrow,
+    Pause,
+    Send,
+    ArrowBack,
+    MusicNote,
+    Public,
+    Lock,
+    Schedule,
+    AudioFile,
+    Error as ErrorIcon,
+} from "@mui/icons-material";
+import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
+
+// 타입 및 훅 import
+import { Recording } from "@/types/recording";
+import { Album, CreateAlbumRequest } from "@/types/album";
+import {
+    useAlbumCreationSelectors,
+    useAlbumCreationActions,
+} from "@/stores/albumStore";
+import {
+    useCreateCompleteAlbum,
+    useUploadCover,
+    useGenerateCover,
+} from "@/hooks/useAlbum";
 
 interface AlbumPreviewStepProps {
-  title: string;
-  description: string;
-  coverImage?: string;
-  isPublic: boolean;
-  selectedRecordings: string[];
-  onPublish: () => void;
-  onPrev: () => void;
+    title: string;
+    description: string;
+    coverImage: string | null;
+    isPublic: boolean;
+    selectedRecordings: string[];
+    recordings?: Recording[];
+    recordingsLoading?: boolean;
+    recordingsError?: string | null;
+    onPrev: () => void;
+    onPublish: () => void;
+    onComplete?: (createdAlbum: Album) => void;
 }
 
 const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
-  title,
-  description,
-  coverImage,
-  isPublic,
-  selectedRecordings,
-  onPublish,
-  onPrev,
-}) => {
-  const [isAlbumOpen, setIsAlbumOpen] = useState(false);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isImmersiveModalOpen, setIsImmersiveModalOpen] = useState(false);
-  // 더미 데이터
-  const dummyTracks = [
-    { id: '1', title: '좋아', artist: '윤종신', score: 85, duration: '3:45' },
-    { id: '2', title: '사랑은 은하수 다방에서', artist: '10cm', score: 78, duration: '4:12' },
-    { id: '3', title: '밤편지', artist: '아이유', score: 92, duration: '3:23' },
-    { id: '4', title: 'Spring Day', artist: 'BTS', score: 81, duration: '4:06' },
-    { id: '5', title: '너를 만나', artist: '폴킴', score: 88, duration: '3:58' },
-  ];
+                                                               title,
+                                                               description,
+                                                               coverImage,
+                                                               isPublic,
+                                                               selectedRecordings,
+                                                               recordings,
+                                                               recordingsLoading,
+                                                               recordingsError,
+                                                               onPrev,
+                                                               onPublish,
+                                                               onComplete,
+                                                           }) => {
+    // Zustand store hooks
+    const { selectedCoverUploadId } = useAlbumCreationSelectors();
+    const { updateAlbumInfo, getCompleteAlbumData, resetCreationState } =
+        useAlbumCreationActions();
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return '#4caf50';
-    if (score >= 80) return '#2196f3';
-    if (score >= 70) return '#ff9800';
-    return '#f44336';
-  };
+    // Props에서 받은 값들을 우선 사용
+    const selectedRecordIds = selectedRecordings.map(Number);
+    const isValidForCreation =
+        title.trim() !== "" &&
+        description.trim() !== "" &&
+        selectedRecordIds.length > 0;
 
-  const totalDuration = '20분'; // 더미 데이터
+    // React Query mutations
+    const createCompleteAlbum = useCreateCompleteAlbum();
 
-  return (
-    <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-      {/* 헤더 */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: 48, color: '#C147E9' }}>👁️</Typography>
-        </Box>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
-          새 앨범 만들기
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-          녹음본으로 나만의 앨범을 만들어보세요
-        </Typography>
-      </Box>
+    // Local state
+    const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+    const [isPublishing, setIsPublishing] = useState(false);
 
-      {/* 앨범 미리보기 */}
-      <Paper sx={{ 
-        p: 3, 
-        mb: 3,
-        background: 'transparent',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: 3
-      }}>
-        <Typography variant="h6" sx={{ 
-          fontWeight: 600, 
-          mb: 1, 
-          display: 'flex', 
-          alignItems: 'center',
-          color: '#FFFFFF'
-        }}>
-          ◎ 앨범 미리보기
-        </Typography>
-        <Typography variant="body2" sx={{ 
-          mb: 3,
-          color: 'rgba(255, 255, 255, 0.6)'
-        }}>
-          발행하기 전에 앨범이 어떻게 보일지 확인해보세요
-        </Typography>
+    // 선택된 녹음들 필터링
+    const filteredRecordings = useMemo(() => {
+        return (
+            recordings?.filter((recording) =>
+                selectedRecordIds.includes(Number(recording.id))
+            ) || []
+        );
+    }, [recordings, selectedRecordIds]);
 
-        {/* 사용법 안내 */}
-        <Box sx={{ textAlign: 'center', mb: 2 }}>
-          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '0.9rem' }}>
-            💡 클릭: 곡 넘기기 | 더블클릭: 앨범 닫기
-          </Typography>
-        </Box>
+    // 총 재생 시간 계산
+    const totalDuration = useMemo(() => {
+        return filteredRecordings.reduce((total, recording) => {
+            return total + (recording.duration || 0);
+        }, 0);
+    }, [filteredRecordings]);
 
-        {/* 3D 앨범 미리보기 */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          mb: 4,
-          perspective: '1000px'
-        }}>
-          <Box sx={{
-            position: 'relative',
-            width: '400px',
-            height: '450px',
-            transformStyle: 'preserve-3d',
-            // 성능 최적화: will-change 속성 추가 및 transition 간소화
-            willChange: 'transform',
-            transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-            transform: isAlbumOpen 
-              ? 'translate(40px, 0) rotateX(35deg) rotateY(0deg) rotateZ(35deg) scale(0.7)' 
-              : 'translate(0, 0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.7)',
-            cursor: 'pointer'
-          }}
-          onClick={() => {
-            if (isAlbumOpen) {
-              // 앨범이 열려있으면 다음 곡으로 넘기기
-              setCurrentTrackIndex((prev) => (prev + 1) % dummyTracks.length);
-            } else {
-              // 앨범이 닫혀있으면 열기
-              setIsAlbumOpen(true);
+    // 재생 시간 포맷팅
+    const formatDuration = (seconds: number): string => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+    };
+
+    // 점수 색상 결정
+    const getScoreColor = (score: number): string => {
+        if (score >= 90) return "#4caf50";
+        if (score >= 80) return "#ff9800";
+        if (score >= 70) return "#2196f3";
+        return "#f44336";
+    };
+
+    // 재생/일시정지 토글
+    const togglePlayback = (recordingId: string) => {
+        if (currentPlayingId === recordingId) {
+            setCurrentPlayingId(null);
+        } else {
+            setCurrentPlayingId(recordingId);
+        }
+    };
+
+    // 앨범 발행
+    const handlePublish = async () => {
+        try {
+            setIsPublishing(true);
+
+            const albumData = getCompleteAlbumData();
+            if (!albumData) {
+                toast.error("앨범 정보가 완전하지 않습니다.");
+                return;
             }
-          }}
-          onDoubleClick={() => {
-            // 더블클릭으로 앨범 닫기
-            setIsAlbumOpen(false);
-            setCurrentTrackIndex(0);
-          }}>
-            {/* 앨범 표지 */}
-            <Box sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              borderRadius: '8px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-              transformStyle: 'preserve-3d',
-              // 성능 최적화: transition 간소화
-              transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-              transform: isAlbumOpen ? 'rotateY(-180deg)' : 'rotateY(0deg)'
-            }}>
-              {/* 앨범 앞면 */}
-              <Box sx={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                backfaceVisibility: 'hidden',
-                borderRadius: '8px',
-                background: coverImage ? `url(${coverImage})` : 'linear-gradient(135deg, #0095a3 0%, #007e8a 100%)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }} />
-              
-              {/* 앨범 뒷면 */}
-              <Box sx={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                backfaceVisibility: 'hidden',
-                borderRadius: '8px',
-                background: '#e1e1e1',
-                transform: 'rotateY(180deg)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                p: 3
-              }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#333', textAlign: 'center' }}>
-                  {dummyTracks[currentTrackIndex]?.title || '곡 제목'}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1, color: '#666', textAlign: 'center' }}>
-                  {dummyTracks[currentTrackIndex]?.artist || '아티스트'}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1, color: '#666', textAlign: 'center' }}>
-                  {dummyTracks[currentTrackIndex]?.duration || '0:00'}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2, color: getScoreColor(dummyTracks[currentTrackIndex]?.score || 0), textAlign: 'center', fontWeight: 600 }}>
-                  {dummyTracks[currentTrackIndex]?.score || 0}점
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#999', textAlign: 'center' }}>
-                  {currentTrackIndex + 1} / {dummyTracks.length}
-                </Typography>
-              </Box>
-            </Box>
 
-            {/* 앨범 옆면 - 성능 최적화를 위해 transform 간소화 */}
-            <Box sx={{
-              position: 'absolute',
-              left: '-30px',
-              top: 0,
-              width: '30px',
-              height: '100%',
-              background: '#007e8a',
-              transformOrigin: '100% 100%',
-              transform: 'rotateY(-90deg)',
-              borderRadius: '6px 0 0 6px'
-            }} />
+            // 숫자 형태의 recordId로 변환
+            const recordIds = selectedRecordIds.map((id) => Number(id));
 
-            {/* 앨범 하단 - 성능 최적화를 위해 transform 간소화 */}
-            <Box sx={{
-              position: 'absolute',
-              bottom: '-30px',
-              left: 0,
-              width: '100%',
-              height: '30px',
-              background: '#d4d3d3',
-              transformOrigin: '100% 100%',
-              transform: 'rotateX(90deg)',
-              borderRadius: '0 0 6px 6px'
-            }} />
+            const createdAlbum = await createCompleteAlbum.mutateAsync({
+                albumData,
+                recordIds,
+            });
 
-            {/* 앨범 그림자 - 성능 최적화를 위해 box-shadow 대신 pseudo-element 사용 고려 */}
-            <Box sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              background: 'transparent',
-              transform: 'translateZ(-30px)',
-              boxShadow: '15px 15px 0px 0px #aaa',
-              zIndex: 1,
-              borderRadius: '8px'
-            }} />
-          </Box>
-          
-          {/* 앨범 정보 */}
-          <Box sx={{
-            mt: 3,
-            textAlign: 'center'
-          }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
-              {title || '앨범 제목'}
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.8)' }}>
-              ♫ {selectedRecordings.length}곡 • {totalDuration}
-            </Typography>
-            <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.8)' }}>
-              {description || '앨범 설명이 없습니다'}
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<PlayArrow />}
-              sx={{
-                background: 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 100%)',
-                color: 'white',
-                borderRadius: 2,
-                px: 2,
-                py: 1,
-                textTransform: 'none',
-                fontWeight: 500,
-                boxShadow: '0 4px 15px rgba(196, 71, 233, 0.4)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
-                  boxShadow: '0 6px 20px rgba(196, 71, 233, 0.6)',
-                  transform: 'translateY(-2px)'
-                },
-              }}
-            >
-              ▷ 전체 재생
-            </Button>
-          </Box>
-        </Box>
+            toast.success("앨범이 성공적으로 발행되었습니다!");
+            resetCreationState();
+            onComplete(createdAlbum);
+        } catch (error: any) {
+            console.error("앨범 발행 실패:", error);
+            toast.error(error.message || "앨범 발행에 실패했습니다.");
+        } finally {
+            setIsPublishing(false);
+        }
+    };
 
-        {/* 수록곡 */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center', color: '#FFFFFF' }}>
-            ♪ 수록곡
-          </Typography>
-          <List sx={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.05)', 
-            borderRadius: 2,
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)'
-          }}>
-            {dummyTracks.map((track, index) => (
-              <ListItem key={track.id} sx={{ py: 1 }}>
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
-                    <Typography variant="body2" sx={{ minWidth: 20, color: 'rgba(255, 255, 255, 0.6)' }}>
-                      {index + 1}.
-                    </Typography>
-                    <Typography variant="body1" sx={{ fontWeight: 500, color: '#FFFFFF' }}>
-                      {track.title}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                      - {track.artist}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: getScoreColor(track.score),
-                        fontWeight: 600,
-                      }}
-                    >
-                      {track.score}점
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                      {track.duration}
-                    </Typography>
-                  </Box>
+    // 로딩 상태
+    if (recordingsLoading) {
+        return (
+            <Box p={3}>
+                <Typography variant="h5" gutterBottom>
+                    앨범 미리보기
+                </Typography>
+                <Box mt={3}>
+                    <Skeleton variant="rectangular" height={200} />
+                    <Box mt={2}>
+                        <Skeleton height={40} />
+                        <Skeleton height={40} />
+                        <Skeleton height={40} />
+                    </Box>
                 </Box>
-                <IconButton size="small" sx={{
-                  '&:hover': {
-                    backgroundColor: 'rgba(196, 71, 233, 0.1)',
-                  }
-                }}>
-                  <PlayArrow sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-                </IconButton>
-              </ListItem>
-            ))}
-          </List>
-        </Box>
+            </Box>
+        );
+    }
 
-        {/* 앨범 설명 */}
-        {description && (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body1" sx={{ lineHeight: 1.6, color: 'rgba(255, 255, 255, 0.8)' }}>
-              {description}
-            </Typography>
-          </Box>
-        )}
+    // 에러 상태
+    if (recordingsError) {
+        return (
+            <Box p={3}>
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    <AlertTitle>녹음 데이터 로드 실패</AlertTitle>
+                    {recordingsError}
+                </Alert>
+                <Button variant="outlined" startIcon={<ArrowBack />} onClick={onPrev}>
+                    이전 단계로
+                </Button>
+            </Box>
+        );
+    }
 
+    // 유효성 검사
+    if (!isValidForCreation || selectedRecordings.length === 0) {
+        return (
+            <Box p={3}>
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                    <AlertTitle>앨범 생성 불가</AlertTitle>
+                    앨범 제목, 공개 설정, 그리고 최소 1개의 녹음이 필요합니다.
+                </Alert>
+                <Button variant="outlined" startIcon={<ArrowBack />} onClick={onPrev}>
+                    이전 단계로 돌아가기
+                </Button>
+            </Box>
+        );
+    }
 
-        {/* 액션 버튼들 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-          <Button
-            variant="outlined"
-            startIcon={<ExpandMore />}
-            onClick={() => setIsImmersiveModalOpen(true)}
-            sx={{
-              borderColor: 'rgba(255, 255, 255, 0.3)',
-              color: 'rgba(255, 255, 255, 0.7)',
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              textTransform: 'none',
-              fontWeight: 500,
-              '&:hover': {
-                borderColor: '#C147E9',
-                backgroundColor: 'rgba(196, 71, 233, 0.1)',
-                color: '#FFFFFF',
-              },
-            }}
-          >
-            몰입 재생
-          </Button>
-        </Box>
-      </Paper>
-
-      {/* 발행 준비 완료 */}
-      <Paper sx={{ 
-        p: 3, 
-        textAlign: 'center', 
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: 3
-      }}>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
-          앨범 발행 준비 완료!
-        </Typography>
-        <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.7)' }}>
-          {isPublic ? '공개 앨범으로 발행하면 다른 사용자들이 볼 수 있습니다.' : '비공개 앨범으로 발행하면 나만 볼 수 있습니다.'}
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Send />}
-          onClick={onPublish}
-          sx={{
-            background: 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 100%)',
-            color: 'white',
-            px: 4,
-            py: 1.5,
-            fontSize: '1rem',
-            fontWeight: 600,
-            borderRadius: 2,
-            textTransform: 'none',
-            boxShadow: '0 4px 15px rgba(196, 71, 233, 0.4)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)',
-              boxShadow: '0 6px 20px rgba(196, 71, 233, 0.6)',
-              transform: 'translateY(-2px)'
-            },
-          }}
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
         >
-          앨범 발행하기
-        </Button>
-      </Paper>
+            <Box p={3}>
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
+                    앨범 미리보기
+                </Typography>
 
-      {/* 네비게이션 버튼 */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-        <Button
-          variant="outlined"
-          onClick={onPrev}
-          sx={{
-            borderColor: 'rgba(255, 255, 255, 0.3)',
-            color: 'rgba(255, 255, 255, 0.7)',
-            borderRadius: 2,
-            px: 3,
-            py: 1.5,
-            textTransform: 'none',
-            fontWeight: 500,
-            '&:hover': {
-              borderColor: '#C147E9',
-              backgroundColor: 'rgba(196, 71, 233, 0.1)',
-              color: '#FFFFFF',
-            },
-          }}
-        >
-          ← 이전 단계
-        </Button>
-      </Box>
+                <Typography variant="body1" color="text.secondary" gutterBottom>
+                    생성할 앨범의 최종 확인 후 발행하세요.
+                </Typography>
 
-      {/* 몰입재생 모달 */}
-      <ImmersivePlaybackModal
-        open={isImmersiveModalOpen}
-        onClose={() => setIsImmersiveModalOpen(false)}
-        albumData={{
-          id: 'preview-album',
-          title: title || '앨범 제목',
-          tracks: dummyTracks.map(track => ({
-            id: track.id,
-            title: track.title,
-            audioUrl: '', // 실제 오디오 URL이 있다면 여기에 추가
-            duration: track.duration
-          })),
-          coverImage: coverImage || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
-          description: description || '앨범 설명이 없습니다'
-        }}
-      />
-    </Box>
-  );
+                {/* 앨범 정보 카드 */}
+                <Paper elevation={3} sx={{ p: 3, mt: 3, mb: 3 }}>
+                    <Box display="flex" alignItems="flex-start" gap={3}>
+                        {/* 앨범 커버 */}
+                        <Box
+                            sx={{
+                                width: 200,
+                                height: 200,
+                                bgcolor: "grey.200",
+                                borderRadius: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                            }}
+                        >
+                            {selectedCoverUploadId ? (
+                                <Avatar
+                                    sx={{ width: "100%", height: "100%", borderRadius: 2 }}
+                                    variant="rounded"
+                                >
+                                    <MusicNote sx={{ fontSize: 80 }} />
+                                </Avatar>
+                            ) : (
+                                <Box textAlign="center">
+                                    <MusicNote sx={{ fontSize: 60, color: "grey.400" }} />
+                                    <Typography variant="body2" color="grey.500">
+                                        기본 커버
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
+
+                        {/* 앨범 메타데이터 */}
+                        <Box flex={1}>
+                            <Typography variant="h5" fontWeight="bold" gutterBottom>
+                                {title}
+                            </Typography>
+
+                            {description && (
+                                <Typography variant="body1" color="text.secondary" paragraph>
+                                    {description}
+                                </Typography>
+                            )}
+
+                            <Box display="flex" gap={1} mb={2}>
+                                <Chip
+                                    icon={isPublic ? <Public /> : <Lock />}
+                                    label={isPublic ? "공개" : "비공개"}
+                                    color={isPublic ? "primary" : "default"}
+                                    size="small"
+                                />
+                                <Chip
+                                    icon={<AudioFile />}
+                                    label={`${filteredRecordings.length}곡`}
+                                    size="small"
+                                />
+                                <Chip
+                                    icon={<Schedule />}
+                                    label={formatDuration(totalDuration)}
+                                    size="small"
+                                />
+                            </Box>
+                        </Box>
+                    </Box>
+                </Paper>
+
+                {/* 트랙 리스트 */}
+                <Paper elevation={2} sx={{ mb: 3 }}>
+                    <Box p={2}>
+                        <Typography variant="h6" gutterBottom>
+                            트랙 목록 ({filteredRecordings.length}곡)
+                        </Typography>
+
+                        <List>
+                            {filteredRecordings.map((recording, index) => (
+                                <React.Fragment key={recording.id}>
+                                    <ListItem
+                                        sx={{
+                                            borderRadius: 1,
+                                            "&:hover": { bgcolor: "action.hover" },
+                                            transition: "background-color 0.2s",
+                                        }}
+                                    >
+                                        <ListItemAvatar>
+                                            <Box
+                                                sx={{
+                                                    width: 40,
+                                                    height: 40,
+                                                    borderRadius: "50%",
+                                                    bgcolor: "primary.main",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    color: "white",
+                                                    fontWeight: "bold",
+                                                }}
+                                            >
+                                                {index + 1}
+                                            </Box>
+                                        </ListItemAvatar>
+
+                                        <ListItemText
+                                            primary={
+                                                <Typography variant="subtitle1" fontWeight="medium">
+                                                    {recording.song?.title || `녹음 ${recording.id}`}
+                                                </Typography>
+                                            }
+                                            secondary={
+                                                <Box>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {recording.song?.artist || "알 수 없는 아티스트"}
+                                                    </Typography>
+                                                    <Box
+                                                        display="flex"
+                                                        alignItems="center"
+                                                        gap={1}
+                                                        mt={0.5}
+                                                    >
+                                                        <Typography variant="caption">
+                                                            {formatDuration(recording.duration)}
+                                                        </Typography>
+                                                        {recording.analysis && (
+                                                            <Chip
+                                                                label={`점수: ${recording.analysis.overallScore}`}
+                                                                size="small"
+                                                                sx={{
+                                                                    bgcolor: getScoreColor(
+                                                                        recording.analysis.overallScore
+                                                                    ),
+                                                                    color: "white",
+                                                                    fontWeight: "bold",
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </Box>
+                                                </Box>
+                                            }
+                                        />
+
+                                        <IconButton
+                                            onClick={() => togglePlayback(recording.id)}
+                                            color="primary"
+                                            size="large"
+                                        >
+                                            {currentPlayingId === recording.id ? (
+                                                <Pause />
+                                            ) : (
+                                                <PlayArrow />
+                                            )}
+                                        </IconButton>
+                                    </ListItem>
+
+                                    {index < filteredRecordings.length - 1 && (
+                                        <Divider variant="inset" />
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </List>
+                    </Box>
+                </Paper>
+
+                {/* 액션 버튼들 */}
+                <Box display="flex" justifyContent="space-between" mt={4}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<ArrowBack />}
+                        onClick={onPrev}
+                        disabled={isPublishing}
+                        size="large"
+                    >
+                        이전 단계
+                    </Button>
+
+                    <Button
+                        variant="contained"
+                        startIcon={
+                            isPublishing ? (
+                                <CircularProgress size={20} color="inherit" />
+                            ) : (
+                                <Send />
+                            )
+                        }
+                        onClick={onPublish}
+                        disabled={isPublishing || !isValidForCreation}
+                        size="large"
+                        sx={{
+                            minWidth: 140,
+                            fontWeight: "bold",
+                        }}
+                    >
+                        {isPublishing ? "발행 중..." : "앨범 발행"}
+                    </Button>
+                </Box>
+
+                {/* 발행 진행 상태 */}
+                <AnimatePresence>
+                    {isPublishing && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                        >
+                            <Alert severity="info" sx={{ mt: 3 }}>
+                                <AlertTitle>앨범을 발행하고 있습니다...</AlertTitle>
+                                잠시만 기다려주세요. 앨범 생성 및 트랙 추가가 진행 중입니다.
+                            </Alert>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* 오류 상태 */}
+                {createCompleteAlbum.isError && (
+                    <Alert severity="error" sx={{ mt: 3 }}>
+                        <AlertTitle>앨범 발행 실패</AlertTitle>
+                        {createCompleteAlbum.error?.message ||
+                            "알 수 없는 오류가 발생했습니다."}
+                    </Alert>
+                )}
+            </Box>
+        </motion.div>
+    );
 };
 
 export default AlbumPreviewStep;

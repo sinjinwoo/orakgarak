@@ -18,7 +18,8 @@
 
         <!-- File Appender for All Logs -->
         <RollingFile name="FileAppender" fileName="${LOG_DIR}/application.log"
-                     filePattern="${LOG_DIR}/application-%d{yyyy-MM-dd}-%i.log.gz">
+                     filePattern="${LOG_DIR}/application-%d{yyyy-MM-dd}-%i.log.gz"
+                     immediateFlush="false">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
@@ -29,8 +30,9 @@
 
         <!-- File Appender for Loki/Promtail (JSON 형태) -->
         <RollingFile name="LokiFileAppender" fileName="${LOG_DIR}/orakgaraki.log"
-                     filePattern="${LOG_DIR}/orakgaraki-%d{yyyy-MM-dd}-%i.log.gz">
-            <JsonTemplateLayout eventTemplateUri="classpath:EcsLayout.json"/>
+                     filePattern="${LOG_DIR}/orakgaraki-%d{yyyy-MM-dd}-%i.log.gz"
+                     immediateFlush="false">
+            <PatternLayout pattern="${JSON_PATTERN}"/>
             <Policies>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
                 <SizeBasedTriggeringPolicy size="100MB"/>
@@ -40,7 +42,8 @@
 
         <!-- File Appender for Error Logs -->
         <RollingFile name="ErrorAppender" fileName="${LOG_DIR}/error.log"
-                     filePattern="${LOG_DIR}/error-%d{yyyy-MM-dd}-%i.log.gz">
+                     filePattern="${LOG_DIR}/error-%d{yyyy-MM-dd}-%i.log.gz"
+                     immediateFlush="false">
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
             <Policies>
@@ -50,16 +53,14 @@
             <DefaultRolloverStrategy max="5"/>
         </RollingFile>
 
-        <!-- Async Appender for better performance -->
-        <AsyncAppender name="AsyncFileAppender">
+        <!-- Async Appender for better performance (운영환경 최적화) -->
+        <Async name="AsyncFileAppender" bufferSize="512">
             <AppenderRef ref="FileAppender"/>
-            <bufferSize>512</bufferSize>
-        </AsyncAppender>
+        </Async>
 
-        <AsyncAppender name="AsyncErrorAppender">
+        <Async name="AsyncErrorAppender" bufferSize="256">
             <AppenderRef ref="ErrorAppender"/>
-            <bufferSize>256</bufferSize>
-        </AsyncAppender>
+        </Async>
     </Appenders>
 
     <Loggers>

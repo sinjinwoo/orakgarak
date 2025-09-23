@@ -1,137 +1,127 @@
 /**
  * 새로운 커버 선택 단계 컴포넌트
- * 무드 기반 2분할 레이아웃으로 리팩토링된 버전
+ * AI 자동 생성과 직접 업로드 두 가지 방식 제공
  */
 
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { useCoverStore } from '../../stores/coverStore';
-import ControlsPanel from './ControlsPanel';
-import CoverGallery from './CoverGallery';
-import CompareLightbox from './CompareLightbox';
-import TracksSummary from './TracksSummary';
-import type { Track } from '../../types/cover';
+import React, { useState, useCallback, useEffect } from "react";
+import { motion } from "framer-motion";
+import CoverSelectionTab, {
+    type CoverSelectionMode,
+} from "./CoverSelectionTab";
+import AICoverSection from "./AICoverSection";
+import ImageUploadSection from "./ImageUploadSection";
+import { useAlbumCreationActions } from "@/stores/albumStore";
+import { useAlbumMetaStore } from "@/stores/albumMetaStore";
 
 interface NewCoverSelectionStepProps {
-  selectedRecordings: string[];
-  className?: string;
+    selectedRecordings: string[];
+    className?: string;
 }
 
-// 더미 녹음 데이터를 Track 타입으로 변환
-const mockTracks: Track[] = [
-  {
-    id: '1',
-    title: '좋아',
-    artist: '윤종신',
-    vibe: 'emotional',
-    duration: 225,
-  },
-  {
-    id: '2',
-    title: '사랑은 은하수 다방에서',
-    artist: '10cm',
-    vibe: 'pastel',
-    duration: 252,
-  },
-  {
-    id: '3',
-    title: '밤편지',
-    artist: '아이유',
-    vibe: 'emotional',
-    duration: 203,
-  },
-  {
-    id: '4',
-    title: 'Spring Day',
-    artist: 'BTS',
-    vibe: 'pastel',
-    duration: 246,
-  },
-  {
-    id: '5',
-    title: '너를 만나',
-    artist: '폴킴',
-    vibe: 'emotional',
-    duration: 238,
-  },
-];
-
 const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
-  selectedRecordings,
-  className = '',
-}) => {
-  const { loadFromStorage } = useCoverStore();
-  const [showCompareLightbox, setShowCompareLightbox] = useState(false);
+                                                                         selectedRecordings,
+                                                                         className = "",
+                                                                     }) => {
+    const [mode, setMode] = useState<CoverSelectionMode>("ai");
 
-  // 선택된 녹음들에 해당하는 트랙 필터링
-  const selectedTracks = mockTracks.filter(track =>
-    selectedRecordings.includes(track.id)
-  );
+    // Store hooks
+    const { setSelectedCoverUploadId, updateAlbumInfo } =
+        useAlbumCreationActions();
+    const { cover } = useAlbumMetaStore();
 
-  // 컴포넌트 마운트 시 저장된 데이터 불러오기
-  useEffect(() => {
-    loadFromStorage();
-  }, [loadFromStorage]);
+    // 이미지 업로드 완료 핸들러
+    const handleUploadComplete = useCallback(
+        (imageUrl: string) => {
+            // albumMetaStore에서 uploadId 가져와서 albumStore에 저장
+            if (cover.uploadId) {
+                setSelectedCoverUploadId(cover.uploadId);
+                updateAlbumInfo({ coverImageUrl: imageUrl });
+            }
+        },
+        [cover.uploadId, setSelectedCoverUploadId, updateAlbumInfo]
+    );
 
-  // 키보드 단축키 - 비교 모달 열기
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'c' && e.ctrlKey) {
-        e.preventDefault();
-        setShowCompareLightbox(true);
-      }
-    };
+    // AI 커버 선택 감지 및 처리
+    useEffect(() => {
+        // AI 커버가 선택되었고 uploadId가 있을 때
+        if (cover.variantId && cover.uploadId) {
+            const selectedVariant = cover.variants.find(v => v.id === cover.variantId);
+            if (selectedVariant) {
+                setSelectedCoverUploadId(cover.uploadId);
+                updateAlbumInfo({ coverImageUrl: selectedVariant.imageUrl });
+            }
+        }
+    }, [cover.variantId, cover.uploadId, cover.variants, setSelectedCoverUploadId, updateAlbumInfo]);
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    return (
+        <div className={`h-full ${className}`}>
+            <div className="max-w-4xl mx-auto space-y-6">
+                {/* 페이지 헤더 */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center"
+                >
+                    <h2 className="text-2xl font-bold text-white mb-3">커버 선택</h2>
+                    <p className="text-white/70">
+                        앨범 커버를 AI로 자동 생성하거나 직접 업로드할 수 있습니다
+                    </p>
+                </motion.div>
 
-  return (
-    <div className={`min-h-screen ${className}`}>
-      {/* 메인 2분할 레이아웃 */}
-      <div className="grid grid-cols-[360px_1fr] gap-6 min-h-[calc(100vh-8rem)]">
-        {/* 좌측 컨트롤 패널 */}
-        <ControlsPanel />
+                {/* 탭 선택 */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                >
+                    <CoverSelectionTab mode={mode} onModeChange={setMode} />
+                </motion.div>
 
-        {/* 우측 갤러리 및 정보 */}
-        <div className="flex flex-col space-y-6 min-w-0">
-          {/* 갤러리 섹션 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex-1"
-          >
-            <CoverGallery />
-          </motion.div>
+                {/* 콘텐츠 영역 */}
+                <motion.div
+                    key={mode}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10"
+                >
+                    {mode === "ai" ? (
+                        <AICoverSection selectedRecordings={selectedRecordings} />
+                    ) : (
+                        <div>
+                            <div className="mb-6">
+                                <h3 className="text-lg font-semibold text-white mb-1">
+                                    이미지 업로드
+                                </h3>
+                                <p className="text-white/60 text-sm">
+                                    원하는 이미지를 업로드해 앨범 커버로 사용하세요
+                                </p>
+                            </div>
+                            <ImageUploadSection onUploadComplete={handleUploadComplete} />
+                        </div>
+                    )}
+                </motion.div>
 
-          {/* 트랙 요약 섹션 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <TracksSummary tracks={selectedTracks} />
-          </motion.div>
+                {/* 선택된 트랙 개수 표시 */}
+                {selectedRecordings.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-center"
+                    >
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 backdrop-blur-sm rounded-full border border-purple-500/20">
+                            <div className="w-2 h-2 bg-purple-400 rounded-full" />
+                            <span className="text-purple-300 text-sm font-medium">
+                {selectedRecordings.length}곡 선택됨
+              </span>
+                        </div>
+                    </motion.div>
+                )}
+            </div>
         </div>
-      </div>
-
-      {/* 비교 라이트박스 */}
-      <CompareLightbox
-        isOpen={showCompareLightbox}
-        onClose={() => setShowCompareLightbox(false)}
-      />
-
-      {/* 키보드 단축키 안내 (개발 중에만 표시) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 text-xs text-white/80 space-y-1">
-          <div className="font-semibold mb-2">키보드 단축키:</div>
-          <div>Ctrl+C: 비교 모달 열기</div>
-          <div>Tab: 컨트롤 탐색</div>
-          <div>Enter/Space: 선택</div>
-        </div>
-      )}
-    </div>
-  );
+    );
 };
 
 export default NewCoverSelectionStep;

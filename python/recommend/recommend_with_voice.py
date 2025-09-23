@@ -2,12 +2,77 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import cosine_similarity
+import os
+import sys
+
+# Pinecone 추천 시스템 import
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
+try:
+    from vector_db import PineconeRecommender
+    PINECONE_AVAILABLE = True
+except ImportError:
+    PINECONE_AVAILABLE = False
+
+def get_recommendations_pinecone(user_df: pd.DataFrame,
+                               top_n: int = 10,
+                               min_popularity: int = 1000,
+                               use_pitch_filter: bool = True) -> pd.DataFrame:
+    """Pinecone 기반 추천 (새로운 방식)"""
+    if not PINECONE_AVAILABLE:
+        print("Pinecone이 설치되지 않았습니다. CSV 방식으로 실행합니다.")
+        return pd.DataFrame()
+
+    try:
+        recommender = PineconeRecommender()
+        if not recommender.connect():
+            print("Pinecone 연결 실패. CSV 방식으로 실행합니다.")
+            return pd.DataFrame()
+
+        return recommender.get_recommendations_by_user_df(
+            user_df=user_df,
+            top_n=top_n,
+            min_popularity=min_popularity,
+            use_pitch_filter=use_pitch_filter
+        )
+    except Exception as e:
+        print(f"Pinecone 추천 오류: {e}")
+        return pd.DataFrame()
+
 
 def get_recommendations(user_df: pd.DataFrame,
-                        all_songs_df: pd.DataFrame,
+                        all_songs_df: pd.DataFrame = None,
                         top_n: int = 10,
                         min_popularity: int = 1000,
-                        use_pitch_filter: bool = True) -> pd.DataFrame:
+                        use_pitch_filter: bool = True,
+                        use_pinecone: bool = True) -> pd.DataFrame:
+
+    """통합 추천 함수 - Pinecone 우선, 실패시 CSV 방식"""
+
+    # 1. Pinecone 방식 시도
+    if use_pinecone and PINECONE_AVAILABLE:
+        try:
+            pinecone_result = get_recommendations_pinecone(
+                user_df=user_df,
+                top_n=top_n,
+                min_popularity=min_popularity,
+                use_pitch_filter=use_pitch_filter
+            )
+            if not pinecone_result.empty:
+                print("✅ Pinecone 추천 성공")
+                return pinecone_result
+            else:
+                print("⚠️ Pinecone 추천 결과 없음, CSV 방식으로 전환")
+        except Exception as e:
+            print(f"⚠️ Pinecone 추천 오류: {e}, CSV 방식으로 전환")
+
+    # 2. CSV 방식 (기존 로직)
+    if all_songs_df is None:
+        print("❌ all_songs_df가 제공되지 않았습니다.")
+        return pd.DataFrame()
+
+    print("📊 CSV 기반 추천 실행")
 
     # 데이터 로드
     feature_cols = [f"mfcc_{i}" for i in range(13)] + ["pitch_low", "pitch_high", "pitch_avg"]
@@ -17,7 +82,6 @@ def get_recommendations(user_df: pd.DataFrame,
     song_ids = all_songs_df["song_id"].values
     popularity = all_songs_df["popularity"].values
     user_features = user_df[feature_cols].values
-
 
     # pitch 정보
     user_pitch_low = user_df["pitch_low"].iloc[0]
@@ -54,7 +118,7 @@ def get_recommendations(user_df: pd.DataFrame,
     if len(candidate_indices) == 0:
         return pd.DataFrame()
 
-    # 6similarity 높은 순 정렬
+    # similarity 높은 순 정렬
     sorted_indices = candidate_indices[np.argsort(sims[candidate_indices])[::-1]]
 
     # 상위 N개 추출

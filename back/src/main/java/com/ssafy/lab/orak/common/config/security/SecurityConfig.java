@@ -48,11 +48,27 @@ public class SecurityConfig {
     private String pythonServiceUrl;
 
     @Bean
-    @Order(0) // JWT 인증을 위한 Security FilterChain 설정
+    @Order(0) // Webhook을 위한 Security FilterChain 설정
+    public SecurityFilterChain webhookSecurity(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/webhook/**")
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll()
+                );
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(1) // JWT 인증을 위한 Security FilterChain 설정
     public SecurityFilterChain apiSecurity(HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-                .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator"))
+                .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator")
+                                         && !request.getRequestURI().startsWith("/api/webhook"))
                 // 세션 미사용 (JWT 기반 인증)
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -71,8 +87,7 @@ public class SecurityConfig {
                                 "/api-docs/**",
                                 "/api/records/async/upload-completed",
                                 "/api/images/**",
-                                "/images/**",
-                                "/api/webhook/**"
+                                "/images/**"
                         ).permitAll()
                         // API 경로는 JWT 인증 필요 (웹훅 제외)
                         .requestMatchers("/api/**").authenticated()
@@ -105,7 +120,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(1) // Basic auth를 위한 Security FilterChain 설정
+    @Order(2) // Basic auth를 위한 Security FilterChain 설정
     public SecurityFilterChain actuatorSecurity(HttpSecurity http) throws Exception {
         http
                 .securityMatcher("/actuator/**")

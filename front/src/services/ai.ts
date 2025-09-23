@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import { apiClient } from './api';
 
 export interface VoiceAnalysis {
   pitchAccuracy: number; // 0-100

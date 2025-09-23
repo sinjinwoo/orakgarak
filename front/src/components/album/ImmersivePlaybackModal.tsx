@@ -15,7 +15,7 @@ interface AlbumTrackCard {
   title: string;
   artist: string;
   description: string;
-  coverImage: string;
+  coverImageUrl: string;
   audioUrl?: string;
   duration: string;
   score: number;
@@ -36,7 +36,7 @@ interface ImmersivePlaybackModalProps {
       audioUrl?: string;
       duration?: string;
     }>;
-    coverImage: string;
+    coverImageUrl: string;
     description: string;
   };
 }
@@ -64,7 +64,7 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
       title: track.title,
       artist: 'Unknown Artist',
       description: `${track.title}의 감성적인 보컬 커버입니다. 내 목소리로 재해석한 이 곡은 특별한 의미를 담고 있습니다.`,
-      coverImage: albumData.coverImage,
+      coverImageUrl: albumData.coverImageUrlUrl,
       audioUrl: track.audioUrl,
       duration: track.duration || '0:00',
       score: Math.floor(Math.random() * 20) + 80, // 80-100점 랜덤
@@ -72,7 +72,7 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
       playCount: Math.floor(Math.random() * 200) + 50, // 50-250 재생
       trackNumber: index + 1,
     }));
-  }, [albumData.tracks, albumData.coverImage]);
+  }, [albumData.tracks, albumData.coverImageUrl]);
 
   // 오디오 훅 사용
   const [audioState, audioControls] = useAudio({
@@ -206,12 +206,18 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
 
   // 오디오 재생
   const playAudio = useCallback((audioUrl?: string, cardIndex?: number) => {
-    if (audioUrl) {
-      audioControls.load(audioUrl);
-      audioControls.play();
-      if (cardIndex !== undefined) {
-        setCurrentPlayingCardIndex(cardIndex);
+    if (audioUrl && audioUrl.trim() !== '') {
+      try {
+        audioControls.load(audioUrl);
+        audioControls.play();
+        if (cardIndex !== undefined) {
+          setCurrentPlayingCardIndex(cardIndex);
+        }
+      } catch (error) {
+        console.error('오디오 재생 중 오류가 발생했습니다:', error);
       }
+    } else {
+      console.warn('유효하지 않은 오디오 URL입니다:', audioUrl);
     }
   }, [audioControls]);
 
@@ -360,7 +366,7 @@ const ImmersivePlaybackModal: React.FC<ImmersivePlaybackModalProps> = ({
                       <h3>{card.title}</h3>
                       <div className="memory-image">
                         <img 
-                          src={card.coverImage} 
+                          src={card.coverImageUrl} 
                           alt={card.title}
                           style={{
                             width: '100%',

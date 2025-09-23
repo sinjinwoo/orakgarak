@@ -42,6 +42,12 @@ public class Profile extends BaseEntity {
     @JoinColumn(name = "profile_image_upload_id")
     private Upload profileImageUpload;
 
+    // Background image upload reference
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "background_image_upload_id")
+    private Upload backgroundImageUpload;
+
+
     // User nickname
     @Column(name = "nickname", length = 50, unique = true)
     private String nickname;
@@ -68,5 +74,10 @@ public class Profile extends BaseEntity {
         if (description != null && !description.isBlank()) {
             this.description = description;
         }
+    }
+
+    // Update background image
+    public void updateBackgroundImage(Upload backgroundImageUpload) {
+        this.backgroundImageUpload = backgroundImageUpload;
     }
 }
