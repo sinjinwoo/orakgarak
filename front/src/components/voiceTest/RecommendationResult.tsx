@@ -15,8 +15,6 @@ import { Recording } from '../../types/recording';
 import { recordingService } from '../../services/api/recordings';
 import CoverFlow from '../recommendation/CoverFlow';
 import type { RecommendedSong } from '../../types/recommendation';
-import type { Song } from '../../types/song';
-import { useReservation } from '../../hooks/useReservation';
 import '../../styles/cyberpunk-animations.css';
 
 interface RecommendationResultProps {
@@ -35,9 +33,6 @@ export default function RecommendationResult({
   const [selectedSong, setSelectedSong] = useState<RecommendedSong | undefined>();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  
-  // 예약 큐 Context 사용
-  const { addToQueue } = useReservation();
 
   // 추천 API 호출
   const { 
@@ -94,42 +89,28 @@ export default function RecommendationResult({
     });
   };
 
-  // 예약 핸들러 - ReservationContext 사용
+  // 예약 핸들러
   const handleReservation = (song: RecommendedSong) => {
     console.log('🎵 곡 예약:', song.title, song.artist);
     
-    // RecommendedSong을 Song 타입으로 변환
-    const songForQueue: Song = {
-      id: parseInt(song.id), // string을 number로 변환
+    // TODO: 실제 예약 API 호출
+    // 임시로 로컬 스토리지에 저장
+    const reservations = JSON.parse(localStorage.getItem('songReservations') || '[]');
+    const newReservation = {
+      id: Date.now(),
+      songId: song.id,
       title: song.title,
       artist: song.artist,
-      albumName: song.album || '',
-      duration: `${Math.floor(song.duration / 60)}:${(song.duration % 60).toString().padStart(2, '0')}`,
-      albumCoverUrl: song.imageUrl || song.coverImage || '',
-      youtubeId: song.youtubeUrl ? extractYouTubeId(song.youtubeUrl) : undefined,
-      lyrics: song.lyrics
+      album: song.album,
+      imageUrl: song.imageUrl,
+      reservedAt: new Date().toISOString()
     };
     
-    // 예약 큐에 추가
-    addToQueue(songForQueue);
+    reservations.push(newReservation);
+    localStorage.setItem('songReservations', JSON.stringify(reservations));
     
     setSnackbarMessage(`"${song.title}" - ${song.artist} 곡이 예약되었습니다!`);
     setSnackbarOpen(true);
-  };
-
-  // YouTube ID 추출 함수
-  const extractYouTubeId = (url: string): string | undefined => {
-    try {
-      const urlObj = new URL(url);
-      if (urlObj.hostname === 'www.youtube.com' || urlObj.hostname === 'youtube.com') {
-        return urlObj.searchParams.get('v') || undefined;
-      } else if (urlObj.hostname === 'youtu.be') {
-        return urlObj.pathname.slice(1) || undefined;
-      }
-    } catch {
-      return undefined;
-    }
-    return undefined;
   };
 
   // 로딩 상태
