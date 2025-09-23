@@ -99,6 +99,7 @@ services:
       - KAFKA_UI_PORT=${KAFKA_UI_PORT}
       - MYSQL_EXPORTER_USER=${MYSQL_EXPORTER_USER}
       - MYSQL_EXPORTER_PASSWORD=${MYSQL_EXPORTER_PASSWORD}
+      - LOG_FILE_PATH=${LOG_FILE_PATH}
     depends_on:
       mysql:
         condition: service_healthy
