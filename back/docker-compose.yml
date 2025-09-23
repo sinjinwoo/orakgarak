@@ -203,6 +203,8 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
       - '--web.enable-admin-api'
+      - '--web.external-url=/prometheus/'
+      - '--web.route-prefix=/'
     depends_on:
       - prometheus-config
     networks:
