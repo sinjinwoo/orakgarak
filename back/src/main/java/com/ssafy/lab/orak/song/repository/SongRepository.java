@@ -17,13 +17,20 @@ public interface SongRepository extends JpaRepository<Song, Long> {
     @Query("SELECT s FROM Song s WHERE s.lyrics IS NOT NULL AND s.lyrics != '' AND s.status = 'success'")
     List<Song> findSongsWithLyrics();
 
-    @Query("SELECT s FROM Song s WHERE s.songName LIKE %:keyword% OR s.artistName LIKE %:keyword% ORDER BY s.popularity DESC")
+    @Query(value = "SELECT * FROM songs WHERE MATCH(song_name, artist_name) AGAINST(:keyword IN BOOLEAN MODE) ORDER BY popularity DESC",
+           nativeQuery = true)
     List<Song> searchByKeyword(@Param("keyword") String keyword);
 
-    @Query("SELECT s FROM Song s WHERE (s.songName LIKE %:keyword% OR s.artistName LIKE %:keyword%) AND s.status = 'success' ORDER BY s.popularity DESC")
+    @Query(value = "SELECT * FROM songs WHERE MATCH(song_name, artist_name) AGAINST(:keyword IN BOOLEAN MODE) AND status = 'success' ORDER BY popularity DESC",
+           countQuery = "SELECT COUNT(*) FROM songs WHERE MATCH(song_name, artist_name) AGAINST(:keyword IN BOOLEAN MODE) AND status = 'success'",
+           nativeQuery = true)
     List<Song> searchByKeywordWithLimit(@Param("keyword") String keyword, org.springframework.data.domain.Pageable pageable);
 
-    List<Song> findByArtistNameContaining(String artistName);
+    @Query(value = "SELECT * FROM songs WHERE MATCH(artist_name) AGAINST(:artistName IN BOOLEAN MODE)",
+           nativeQuery = true)
+    List<Song> findByArtistNameContaining(@Param("artistName") String artistName);
 
-    List<Song> findBySongNameContaining(String songName);
+    @Query(value = "SELECT * FROM songs WHERE MATCH(song_name) AGAINST(:songName IN BOOLEAN MODE)",
+           nativeQuery = true)
+    List<Song> findBySongNameContaining(@Param("songName") String songName);
 }
