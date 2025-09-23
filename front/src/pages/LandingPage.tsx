@@ -1,11 +1,82 @@
 import React, { useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 import { useSocialAuth, useAuth } from "../hooks/useAuth";
-import { ServiceExplainer } from "../components/ServiceExplainer";
 import LPRecord from "../components/LPRecord";
 import SimpleBackground from "../components/SimpleBackground";
-import { Music, Mic, Target, Zap, Album, Heart } from "lucide-react";
+import { Target, Zap, Album, Heart, LucideProps } from "lucide-react";
+
+// ───────── Feature Item Component with Parallax ─────────
+interface Feature {
+  icon: React.ForwardRefExoticComponent<
+    Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
+  >;
+  title: string;
+  description: string;
+}
+
+const FeatureItem: React.FC<{ feature: Feature; isReversed: boolean }> = ({
+  feature,
+  isReversed,
+}) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+
+  // Move icon and text at different speeds
+  const iconY = useTransform(scrollYProgress, [0, 1], ["-15%", "15%"]);
+  const textY = useTransform(scrollYProgress, [0, 1], ["15%", "-15%"]);
+
+  const Icon = feature.icon;
+
+  return (
+    <motion.div
+      ref={ref}
+      className={`flex flex-col lg:flex-row items-center gap-12 ${
+        isReversed ? "lg:flex-row-reverse" : ""
+      }`}
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.7 }}
+    >
+      <motion.div
+        style={{ y: iconY }}
+        className="flex-1 lg:w-1/2 flex justify-center"
+      >
+        <div
+          className="bg-black/40 backdrop-blur-md rounded-2xl p-8 shadow-2xl border border-pink-500/30 hover:bg-black/60 hover:border-pink-400/50 transition-all duration-500 relative overflow-hidden w-80 h-80 flex items-center justify-center"
+          style={{ boxShadow: "0 0 40px rgba(251, 66, 212, 0.15)" }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-cyan-500/5 opacity-0 hover:opacity-100 transition-opacity duration-500"></div>
+          <Icon
+            className="w-32 h-32 text-pink-400"
+            style={{ filter: "drop-shadow(0 0 15px rgba(251, 66, 212, 0.7))" }}
+          />
+        </div>
+      </motion.div>
+
+      <motion.div
+        style={{ y: textY }}
+        className={`flex-1 lg:w-1/2 text-center ${
+          isReversed ? "lg:text-right" : "lg:text-left"
+        }`}
+      >
+        <h3
+          className="text-3xl font-bold text-white mb-4"
+          style={{ textShadow: "0 0 10px rgba(56, 189, 248, 0.4)" }}
+        >
+          {feature.title}
+        </h3>
+        <p className="text-xl text-white/80 leading-relaxed">
+          {feature.description}
+        </p>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,95 +86,66 @@ const LandingPage: React.FC = () => {
 
   const handleEnterClick = async () => {
     if (isAuthenticated) {
-      // 로그인된 상태면 피드페이지로 이동
       navigate("/feed");
     } else {
-      // 로그인되지 않은 상태면 구글 로그인
       const success = await loginWithGoogle();
       if (success) navigate("/onboarding/range");
     }
   };
 
   const handleExploreClick = () => {
-    // Features 섹션으로 스크롤
     featuresRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "start",
     });
   };
 
-  const features = [
+  const features: Feature[] = [
     {
       icon: Target,
       title: "맞춤형 노래 추천",
-      description: "내 음역대와 음색에 딱 맞는 노래를 추천받아보세요",
+      description: "내 음역대와 음색에 딱 맞는 노래를 추천받아보세요.",
     },
     {
       icon: Zap,
       title: "AI 보컬 코칭",
-      description: "피치, 박자, 강세를 분석해서 실시간 코칭을 받을 수 있어요",
+      description: "피치, 박자, 강세를 분석해서 실시간 코칭을 받을 수 있어요.",
     },
     {
       icon: Album,
       title: "나만의 앨범",
-      description: "녹음본으로 개인 앨범을 만들고 AI 커버까지 생성해보세요",
+      description: "녹음본으로 개인 앨범을 만들고 AI 커버까지 생성해보세요.",
     },
     {
       icon: Heart,
       title: "소셜 피드",
-      description: "다른 사용자들의 앨범을 듣고 피드백을 주고받아요",
+      description: "다른 사용자들의 앨범을 듣고 피드백을 주고받아요.",
     },
   ];
 
   return (
     <div className="min-h-screen bg-black">
-      {/* ───────── Hero: LP 2/3 visible + Bigger + Title closer to center ───────── */}
+      {/* ───────── Hero Section (Restored to Original) ───────── */}
       <section className="relative min-h-[92vh] overflow-hidden">
-        {/* 배경은 항상 뒤로 */}
         <div className="absolute inset-0 -z-0 pointer-events-none">
           <SimpleBackground />
         </div>
-
-        {/* (fixed 헤더면 여백) */}
         <div className="pt-20 md:pt-24" />
-
         <div className="mx-auto w-full max-w-[1600px] px-6 relative">
           <div className="grid grid-cols-12 items-center min-h-[60vh] relative">
-            {/* LPRecord: 화면의 1/3만 왼쪽으로 밀어내서 2/3 보이게 */}
             <motion.div
-              className="
-          absolute left-0 top-1/2 -translate-y-1/2 -translate-x-[33%]
-          z-[60] pointer-events-none
-        "
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-[33%] z-[60] pointer-events-none"
               initial={{ opacity: 0, x: -15 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <div
-                className="
-            origin-center
-            scale-[2.3] md:scale-[2.6] xl:scale-[3.0]
-            relative
-          "
-              >
-                {/* 은은한 광원(검은 배경에서 LP가 묻히지 않게) */}
-                <div
-                  className="absolute -inset-16 -z-10 rounded-full
-                          bg-[radial-gradient(circle,rgba(80,120,255,.25),rgba(80,120,255,0)_60%)]
-                          blur-2xl"
-                />
+              <div className="origin-center scale-[2.3] md:scale-[2.6] xl:scale-[3.0] relative">
+                <div className="absolute -inset-16 -z-10 rounded-full bg-[radial-gradient(circle,rgba(80,120,255,.25),rgba(80,120,255,0)_60%)] blur-2xl" />
                 <LPRecord />
               </div>
             </motion.div>
-
-            {/* 타이틀/버튼: 중앙 쪽으로 이동(왼쪽으로 조금 당김), LP 위에 겹치기 */}
             <motion.div
-              className="
-          col-span-12 md:col-span-6 md:col-start-6
-          relative z-[70] w-full md:w-[860px]
-          md:-ml-[3vw]   /* ← 중앙쪽으로 끌어당김 */
-          text-left      /* 너무 우측으로 붙지 않게 */
-        "
+              className="col-span-12 md:col-span-6 md:col-start-6 relative z-[70] w-full md:w-[860px] md:-ml-[3vw] text-left"
               initial={{ opacity: 0, x: 25 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -118,7 +160,7 @@ const LandingPage: React.FC = () => {
                     lineHeight: "0.9",
                     textShadow: "0 0 3vw #F40AD5",
                     position: "relative",
-                    left: "-1.2vw", // LP와 살짝 겹치도록
+                    left: "-1.2vw",
                     cursor: "default",
                     animation: "cyber 2.2s ease-in infinite",
                     letterSpacing: "0.04em",
@@ -126,7 +168,6 @@ const LandingPage: React.FC = () => {
                 >
                   ORAK
                 </motion.div>
-
                 <motion.div
                   className="font-bold"
                   style={{
@@ -136,7 +177,7 @@ const LandingPage: React.FC = () => {
                     lineHeight: "0.9",
                     textShadow: "0 0 3vw #23F6EF",
                     position: "relative",
-                    left: "0.8vw", // 두 줄 약간 어긋나게
+                    left: "0.8vw",
                     cursor: "default",
                     animation: "zone 3.2s ease-out infinite",
                     letterSpacing: "0.04em",
@@ -145,11 +186,7 @@ const LandingPage: React.FC = () => {
                   GARAK
                 </motion.div>
               </div>
-
-              {/* 버튼: 타이틀 아래 그대로 */}
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                {/* 기존 버튼 두 개 그대로 사용 */}
-                {/* 메인 버튼 */}
                 <motion.button
                   className="relative overflow-hidden"
                   style={{
@@ -190,8 +227,6 @@ const LandingPage: React.FC = () => {
                       : "Enter"}
                   </span>
                 </motion.button>
-
-                {/* 보조 버튼 */}
                 <motion.button
                   className="relative overflow-hidden"
                   style={{
@@ -233,50 +268,29 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Section */}
+      {/* ───────── Features Section with Parallax ───────── */}
       <section
         ref={featuresRef}
         className="py-20 bg-black relative overflow-hidden"
       >
-        {/* 사이버펑크 배경 장식 요소들 */}
         <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-500/12 to-pink-500/12 rounded-full blur-3xl animate-pulse"></div>
           <div
-            className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-500/15 to-pink-500/15 rounded-full blur-3xl animate-pulse"
-            style={{ boxShadow: "0 0 120px rgba(6, 182, 212, 0.2)" }}
-          ></div>
-          <div
-            className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-pink-500/15 to-purple-500/15 rounded-full blur-3xl animate-pulse"
-            style={{
-              animationDelay: "1s",
-              boxShadow: "0 0 120px rgba(236, 72, 153, 0.2)",
-            }}
-          ></div>
-          <div
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-cyan-400/8 to-pink-400/8 rounded-full blur-2xl animate-pulse"
-            style={{
-              animationDelay: "2s",
-              boxShadow: "0 0 100px rgba(34, 211, 238, 0.15)",
-            }}
+            className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-pink-500/12 to-purple-500/12 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
           ></div>
         </div>
-
-        {/* 사이버펑크 그리드 오버레이 */}
-        <div className="absolute inset-0 opacity-5">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `
-              linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(6, 182, 212, 0.1) 1px, transparent 1px)
-            `,
-              backgroundSize: "40px 40px",
-            }}
-          ></div>
-        </div>
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage: `linear-gradient(rgba(6, 182, 212, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(236, 72, 153, 0.1) 1px, transparent 1px)`,
+            backgroundSize: "45px 45px",
+          }}
+        ></div>
 
         <div className="container mx-auto px-6 relative z-10">
           <motion.div
-            className="text-center space-y-4 mb-16"
+            className="text-center space-y-4 mb-20"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -286,88 +300,27 @@ const LandingPage: React.FC = () => {
               className="text-4xl lg:text-5xl font-bold text-white"
               style={{
                 textShadow:
-                  "0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.6), 0 0 30px rgba(0,0,0,0.4)",
+                  "0 0 10px rgba(236, 72, 153, 0.3), 0 0 20px rgba(56, 189, 248, 0.3)",
               }}
             >
               오락가락의 특별한 기능들
             </h2>
-            <p
-              className="text-xl text-white/90 max-w-2xl mx-auto leading-relaxed"
-              style={{
-                textShadow: "0 0 5px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.6)",
-              }}
-            >
-              단순한 노래 검색을 넘어, 당신만을 위한 맞춤형 노래방 경험을
-              제공합니다.
-            </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="group"
-                >
-                  <div
-                    className="bg-black/40 backdrop-blur-md rounded-2xl p-8 h-full text-center space-y-6 shadow-2xl border border-pink-500/30 hover:shadow-3xl hover:bg-black/60 hover:border-pink-400/50 transition-all duration-500 group relative overflow-hidden"
-                    style={{ boxShadow: "0 0 30px rgba(251, 66, 212, 0.1)" }}
-                  >
-                    {/* 사이버펑크 글로우 효과 */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                    <motion.div
-                      className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-500/20 to-cyan-500/20 backdrop-blur-sm flex items-center justify-center mx-auto shadow-lg border border-pink-400/40 relative"
-                      whileHover={{
-                        scale: 1.1,
-                        rotate: 5,
-                      }}
-                      transition={{ duration: 0.3 }}
-                      style={{ boxShadow: "0 0 20px rgba(251, 66, 212, 0.3)" }}
-                    >
-                      <Icon
-                        className="w-10 h-10 text-pink-400 animate-pulse-slow"
-                        style={{
-                          filter:
-                            "drop-shadow(0 0 8px rgba(251, 66, 212, 0.8))",
-                        }}
-                      />
-                    </motion.div>
-                    <h3
-                      className="text-xl font-semibold text-white group-hover:text-pink-300 transition-colors duration-300 relative z-10"
-                      style={{
-                        textShadow:
-                          "0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(251, 66, 212, 0.3)",
-                      }}
-                    >
-                      {feature.title}
-                    </h3>
-                    <p
-                      className="text-white/80 leading-relaxed group-hover:text-white/90 transition-colors duration-300 relative z-10"
-                      style={{ textShadow: "0 0 5px rgba(0,0,0,0.8)" }}
-                    >
-                      {feature.description}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
+          <div className="space-y-24">
+            {features.map((feature, index) => (
+              <FeatureItem
+                key={index}
+                feature={feature}
+                isReversed={index % 2 !== 0}
+              />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Service Explainer */}
-      <ServiceExplainer />
-
       {/* CTA Section */}
-      {/* 사이버펑크 도시 배경이 있는 마지막 섹션 */}
       <section className="relative py-20 overflow-hidden">
-        {/* 사이버펑크 도시 배경 */}
         <div
           className="absolute inset-0 w-full h-full"
           style={{
@@ -375,8 +328,6 @@ const LandingPage: React.FC = () => {
             backgroundSize: "cover",
           }}
         ></div>
-
-        {/* 사이버펑크 글로우 효과 */}
         <div className="absolute inset-0 overflow-hidden">
           <div
             className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-pink-500/15 to-cyan-500/15 rounded-full blur-3xl animate-pulse"
@@ -390,21 +341,15 @@ const LandingPage: React.FC = () => {
             }}
           ></div>
         </div>
-
-        {/* 사이버펑크 그리드 오버레이 */}
         <div className="absolute inset-0 opacity-5">
           <div
             className="absolute inset-0"
             style={{
-              backgroundImage: `
-              linear-gradient(rgba(251, 66, 212, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(66, 253, 235, 0.1) 1px, transparent 1px)
-            `,
+              backgroundImage: `linear-gradient(rgba(251, 66, 212, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(66, 253, 235, 0.1) 1px, transparent 1px)`,
               backgroundSize: "50px 50px",
             }}
           ></div>
         </div>
-
         <div className="container mx-auto px-6 relative z-10">
           <motion.div
             className="text-center space-y-8 text-white"
@@ -438,14 +383,12 @@ const LandingPage: React.FC = () => {
               3분이면 당신의 음성을 분석하고 맞춤형 노래 추천을 받을 수
               있습니다.
             </motion.p>
-
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.4 }}
             >
-              {/* 사이버펑크 버튼 */}
               <motion.button
                 className="relative overflow-hidden"
                 style={{

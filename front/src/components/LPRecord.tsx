@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const LPRecord: React.FC = () => {
   return (
@@ -114,7 +114,7 @@ const LPRecord: React.FC = () => {
         }
         
         .lp-record::after {
-          content: "오락가락";
+          content: "";
           display: block;
           position: absolute;
           left: 50%;
