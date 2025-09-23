@@ -6,7 +6,13 @@ import logging
 from typing import List, Dict, Tuple
 import pickle
 import os
-from .pinecone_config import PineconeConfig
+import sys
+
+# 절대 경로로 import
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
+from vector_db.pinecone_config import PineconeConfig
 
 class VectorUploader:
     def __init__(self):
@@ -59,7 +65,8 @@ class VectorUploader:
                     "popularity": int(row.get("popularity", 0)),
                     "pitch_low": float(row["pitch_low"]),
                     "pitch_high": float(row["pitch_high"]),
-                    "pitch_avg": float(row["pitch_avg"])
+                    "pitch_avg": float(row["pitch_avg"]),
+                    "genre": str(row.get("genre", ""))  # 장르 정보 추가
                 }
                 metadata_list.append(metadata)
 

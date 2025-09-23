@@ -48,6 +48,7 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
 
   const title = recording.song?.title || recording.title || '제목 없음';
   const duration = recording.duration || recording.durationSeconds || 0;
+  const isPlayable = !!recording.url && (!recording.urlStatus || recording.urlStatus === 'SUCCESS');
 
   return (
     <div
@@ -107,15 +108,19 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onPlay?.();
+              if (isPlayable) {
+                onPlay?.();
+              }
             }}
-            className="w-8 h-8 bg-white/10 hover:bg-fuchsia-500/20 rounded-lg flex items-center justify-center transition-colors duration-200"
-            aria-label={isPlaying ? '일시정지' : '재생'}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200 ${isPlayable ? 'bg-white/10 hover:bg-fuchsia-500/20' : 'bg-white/5 opacity-50 cursor-not-allowed'}`}
+            aria-label={isPlaying ? '일시정지' : (isPlayable ? '재생' : '재생 불가')}
+            title={isPlayable ? '' : (recording.urlStatus === 'FAILED' ? '처리 실패로 재생 불가' : 'URL 준비 중')}
+            disabled={!isPlayable}
           >
             {isPlaying ? (
               <Pause className="w-4 h-4 text-fuchsia-400" />
             ) : (
-              <Play className="w-4 h-4 text-white/70" />
+              <Play className={`w-4 h-4 ${isPlayable ? 'text-white/70' : 'text-white/30'}`} />
             )}
           </button>
 
