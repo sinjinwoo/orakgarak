@@ -372,13 +372,12 @@ const AlbumCreatePage: React.FC = () => {
     // Set으로 중복 제거 후 매핑
     const uniqueSelectedSet = new Set(selectedRecordIds.map(String));
     const newTracks = recordings
-      .filter((recording) => uniqueSelectedSet.has(recording.id))
+      .filter((recording) => uniqueSelectedSet.has(String(recording.id)))
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
-        title: recording.song?.title || "",
-        artist: recording.song?.artist || "",
-        durationSec: recording.duration || 0,
+        title: recording.song?.title || recording.title || "제목 없음",
+        durationSec: recording.duration || recording.durationSeconds || 0,
       }));
     setTracks(newTracks);
   }, [recordings, selectedRecordIds]);
@@ -415,9 +414,9 @@ const AlbumCreatePage: React.FC = () => {
             error={recordingsError}
             onToggleRecording={(recordingId) => {
               const currentSelectedSet = new Set(selectedRecordIds.map(String));
-              if (currentSelectedSet.has(recordingId)) {
+              if (currentSelectedSet.has(String(recordingId))) {
                 // 이미 선택된 곡이면 선택 해제
-                removeRecording(recordingId);
+                removeRecording(String(recordingId));
               } else {
                 // 새로 선택하는 경우 10곡 제한 체크
                 if (currentSelectedSet.size >= 10) {
@@ -427,7 +426,7 @@ const AlbumCreatePage: React.FC = () => {
                   });
                   return;
                 }
-                addRecording(recordingId);
+                addRecording(String(recordingId));
               }
             }}
             onAddToast={addToast}
@@ -458,6 +457,9 @@ const AlbumCreatePage: React.FC = () => {
             coverImage={coverImage}
             isPublic={isPublic}
             selectedRecordings={selectedRecordings}
+            recordings={recordings}
+            recordingsLoading={recordingsLoading}
+            recordingsError={recordingsError}
             onPublish={handlePublish}
             onPrev={handlePrev}
           />

@@ -39,13 +39,14 @@ public class AlbumResponseDto {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
     
-    public static AlbumResponseDto from(Album album) {
+    public static AlbumResponseDto from(Album album, String coverImageUrl) {
         return AlbumResponseDto.builder()
                 .id(album.getId())
                 .userId(album.getUserId())
                 .title(album.getTitle())
                 .description(album.getDescription())
                 .uploadId(album.getUploadId())
+                .coverImageUrl(coverImageUrl)
                 .isPublic(album.getIsPublic())
                 .trackCount(album.getTrackCount())
                 .totalDuration(album.getTotalDuration())

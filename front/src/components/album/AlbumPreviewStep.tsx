@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -92,6 +92,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
   // Local state
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 선택된 녹음들 필터링
   const filteredRecordings = useMemo(() => {
@@ -124,14 +125,68 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
     return "#f44336";
   };
 
+  // 오디오 URL 유효성 검사
+  const getValidAudioUrl = (recording: Recording): string | null => {
+    const possibleUrls = [
+      recording.url,
+      recording.audioUrl,
+      recording.publicUrl
+    ].filter(url => url && url.trim() !== '' && !url.startsWith('/audio/'));
+
+    return possibleUrls.length > 0 ? possibleUrls[0] : null;
+  };
+
   // 재생/일시정지 토글
-  const togglePlayback = (recordingId: string) => {
+  const togglePlayback = (recording: Recording) => {
+    const recordingId = String(recording.id);
+
     if (currentPlayingId === recordingId) {
+      // 현재 재생 중인 트랙을 일시정지
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setCurrentPlayingId(null);
     } else {
-      setCurrentPlayingId(recordingId);
+      // 새 트랙 재생
+      const audioUrl = getValidAudioUrl(recording);
+      if (audioUrl) {
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          audioRef.current.play().catch(error => {
+            console.error('Audio playback error:', error);
+            toast.error('오디오 재생 중 오류가 발생했습니다.');
+            setCurrentPlayingId(null);
+          });
+        }
+        setCurrentPlayingId(recordingId);
+      } else {
+        toast.error('재생할 수 있는 오디오 파일이 없습니다.');
+      }
     }
   };
+
+  // 오디오 이벤트 핸들러
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleEnded = () => {
+      setCurrentPlayingId(null);
+    };
+
+    const handleError = () => {
+      setCurrentPlayingId(null);
+      toast.error('오디오 재생 중 오류가 발생했습니다.');
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+    };
+  }, []);
 
   // 앨범 발행
   const handlePublish = async () => {
@@ -304,19 +359,16 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
 
                 {/* 트랙 정보 */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-white font-medium text-base mb-1 truncate">
-                    {recording.song?.title || `녹음 ${recording.id}`}
+                  <h4 className="text-white font-medium text-base mb-2 truncate">
+                    {recording.title || recording.song?.title || `녹음 ${recording.id}`}
                   </h4>
-                  <p className="text-white/60 text-sm mb-2 truncate">
-                    {recording.song?.artist || "알 수 없는 아티스트"}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-white/50">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/60">
                       {formatDuration(recording.duration || 0)}
                     </span>
                     {recording.analysis && (
                       <div
-                        className="px-2 py-1 rounded-full text-white font-medium"
+                        className="px-2 py-1 rounded-full text-white font-medium text-xs"
                         style={{
                           backgroundColor: getScoreColor(recording.analysis.overallScore),
                         }}
@@ -329,13 +381,21 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
 
                 {/* 재생 버튼 */}
                 <button
-                  onClick={() => togglePlayback(recording.id)}
-                  className="flex-shrink-0 w-10 h-10 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full flex items-center justify-center transition-all duration-200"
+                  onClick={() => togglePlayback(recording)}
+                  disabled={!getValidAudioUrl(recording)}
+                  className={`flex-shrink-0 w-10 h-10 border border-white/20 rounded-full flex items-center justify-center transition-all duration-200 ${
+                    getValidAudioUrl(recording)
+                      ? 'bg-white/10 hover:bg-white/20 cursor-pointer'
+                      : 'bg-white/5 cursor-not-allowed opacity-50'
+                  }`}
                 >
-                  {currentPlayingId === recording.id ? (
+                  {currentPlayingId === String(recording.id) ? (
                     <Pause sx={{ fontSize: 20, color: '#C147E9' }} />
                   ) : (
-                    <PlayArrow sx={{ fontSize: 20, color: '#C147E9' }} />
+                    <PlayArrow sx={{
+                      fontSize: 20,
+                      color: getValidAudioUrl(recording) ? '#C147E9' : '#666'
+                    }} />
                   )}
                 </button>
               </div>
@@ -399,6 +459,9 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
           </Alert>
         )}
       </Box>
+
+      {/* 숨겨진 오디오 엘리먼트 */}
+      <audio ref={audioRef} preload="none" />
     </motion.div>
   );
 };
