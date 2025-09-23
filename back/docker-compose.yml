@@ -237,7 +237,7 @@ services:
       GF_FEATURE_TOGGLES_ENABLE: ""
       # 서브패스 설정 (현업 표준)
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
-      GF_SERVER_SERVE_FROM_SUB_PATH: true
+      GF_SERVER_SERVE_FROM_SUB_PATH: false
       GF_SERVER_DOMAIN: ${GRAFANA_DOMAIN}
       GF_PUBLIC_DASHBOARDS_ENABLED: false
     volumes:
