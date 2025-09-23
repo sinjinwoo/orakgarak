@@ -1,10 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUIStore } from '../stores/uiStore';
+import { useAuthStore } from '../stores/authStore';
 import { albumService } from '../services/api/albums';
 import { theme } from '../styles/theme';
 import { motion } from 'framer-motion';
-import type { Album } from '../types/album';
+import { 
+  FeedAlbum, 
+  getMyAlbums, 
+  getFeedAlbums,
+  clearDummyAlbums
+} from '../utils/feedUtils';
+import { getErrorMessage as getApiErrorMessage, logError, isRetryableError } from '../utils/errorHandler';
+import { API_CONSTANTS, WARNING_MESSAGES } from '../utils/constants';
 import { 
   Container, 
   Typography, 
@@ -35,171 +43,136 @@ import {
   Person
 } from '@mui/icons-material';
 
-// 타입 정의 - Album 타입 확장
-interface FeedAlbum extends Album {
-  user?: {
-    nickname: string;
-    avatar?: string;
-  };
-  tags?: string[];
-  playCount?: number;
-  commentCount?: number;
-}
+// 타입 정의는 feedUtils.ts로 이동됨
 
-interface MyAlbum {
-  id: string;
-  title: string;
-  description: string;
-  coverImageUrl: string;
-  trackCount: number;
-  duration?: string;
-  tags: string[];
-}
+// MyAlbum 타입은 feedUtils.ts에서 FeedAlbum로 통합됨
 
 // 더미 피드 데이터 제거 - 실제 데이터만 사용
 
-// 내 앨범 데이터를 localStorage에서 가져오는 함수
-const getMyAlbums = (): MyAlbum[] => {
-  const savedAlbums = localStorage.getItem('myAlbums');
-  if (savedAlbums) {
-    return JSON.parse(savedAlbums);
-  }
-  return [];
-};
+// 내 앨범 데이터를 localStorage에서 가져오는 함수는 feedUtils.ts로 이동됨
 
-// 팔로잉 데이터를 localStorage에서 가져오는 함수
-const getFollowingUsers = (): string[] => {
-  const savedFollowing = localStorage.getItem('followingUsers');
-  return savedFollowing ? JSON.parse(savedFollowing) : [];
-};
-
-// 팔로잉 데이터를 localStorage에 저장하는 함수
-const saveFollowingUsers = (followingUsers: string[]) => {
-  localStorage.setItem('followingUsers', JSON.stringify(followingUsers));
-};
-
-// 테스트용 더미 팔로잉 데이터 초기화 함수
-const initializeDummyFollowing = () => {
-  const existingFollowing = getFollowingUsers();
-  if (existingFollowing.length === 0) {
-    // 테스트용으로 몇 명의 사용자를 팔로잉 목록에 추가
-    const dummyFollowing = ['음악마스터', '멜로디킹', '비트메이커'];
-    saveFollowingUsers(dummyFollowing);
-    return dummyFollowing;
-  }
-  return existingFollowing;
-};
-
-// 피드 데이터를 localStorage에서 가져오는 함수
-const getFeedAlbums = (): FeedAlbum[] => {
-  const savedFeedAlbums = localStorage.getItem('feedAlbums');
-  if (savedFeedAlbums) {
-    const feedAlbums = JSON.parse(savedFeedAlbums);
-    
-    // 존재하는 앨범만 필터링
-    const myAlbums = getMyAlbums();
-    const validFeedAlbums = feedAlbums.filter((feed: FeedAlbum) => {
-      // 해당 앨범이 실제로 존재하는지 확인
-      return myAlbums.some(album => album.id === feed.albumId);
-    });
-    
-    // 유효하지 않은 피드 데이터가 있으면 localStorage 업데이트
-    if (validFeedAlbums.length !== feedAlbums.length) {
-      localStorage.setItem('feedAlbums', JSON.stringify(validFeedAlbums));
-    }
-    
-    return validFeedAlbums;
-  }
-  return []; // 더미 데이터 대신 빈 배열 반환
-};
+// 유틸리티 함수들은 feedUtils.ts로 이동됨
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { showToast } = useUIStore();
+  const { user } = useAuthStore();
   const [tabValue, setTabValue] = useState(0);
   const [sortBy, setSortBy] = useState('latest');
   
   // 피드 데이터 상태
   const [feedAlbums, setFeedAlbums] = useState<FeedAlbum[]>([]);
   const [myAlbums, setMyAlbums] = useState(getMyAlbums());
-  const [followingUsers, setFollowingUsers] = useState(initializeDummyFollowing());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // API로 공개 앨범 데이터 로드
-  const loadPublicAlbums = async () => {
+  const loadPublicAlbums = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await albumService.getPublicAlbums({ page: 0, size: 20 });
+      const response = await albumService.getPublicAlbums({ page: 0, size: API_CONSTANTS.DEFAULT_PAGE_SIZE });
       const albums = response.content || [];
 
       // Album 타입을 FeedAlbum으로 변환
-      const feedAlbums: FeedAlbum[] = albums.map(album => ({
-        ...album,
-        user: {
-          nickname: '음악러버', // 실제로는 사용자 정보에서 가져와야 함
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
-        },
-        tags: ['캐주얼', '힐링'],
-        playCount: Math.floor(Math.random() * 1000),
-        commentCount: Math.floor(Math.random() * 50)
-      }));
+      const feedAlbums: FeedAlbum[] = albums.map(album => {
+        const albumWithExtras = album as typeof album & {
+          user?: { nickname?: string; avatar?: string; profileImageUrl?: string; profileImage?: string };
+          tags?: string[];
+          playCount?: number;
+          commentCount?: number;
+        };
+        
+        return {
+          ...album,
+          user: {
+            nickname: albumWithExtras.user?.nickname || `사용자 ${album.userId}`,
+            avatar: albumWithExtras.user?.avatar || albumWithExtras.user?.profileImageUrl || albumWithExtras.user?.profileImage || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+          },
+          tags: albumWithExtras.tags || ['음악'],
+          playCount: albumWithExtras.playCount || Math.floor(Math.random() * 1000),
+          commentCount: albumWithExtras.commentCount || Math.floor(Math.random() * 50)
+        };
+      });
 
       setFeedAlbums(feedAlbums);
     } catch (error) {
-      console.error('공개 앨범 로드 실패:', error);
-      setError('앨범을 불러오는데 실패했습니다.');
+      logError(error, '공개 앨범 로드');
+      const errorMessage = getApiErrorMessage(error);
+      setError(errorMessage);
+      
       // 에러 시 localStorage 데이터로 폴백
       setFeedAlbums(getFeedAlbums());
+      
+      // 재시도 가능한 에러인 경우 사용자에게 알림
+      if (isRetryableError(error)) {
+        showToast(WARNING_MESSAGES.NETWORK_RETRY, 'warning');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   // 팔로우한 사용자들의 앨범 로드
-  const loadFollowedUsersAlbums = async () => {
+  const loadFollowedUsersAlbums = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await albumService.getFollowedUsersAlbums({ page: 0, size: 20 });
+      const response = await albumService.getFollowedUsersAlbums({ page: 0, size: API_CONSTANTS.DEFAULT_PAGE_SIZE });
       const albums = response.content || [];
 
-      const feedAlbums: FeedAlbum[] = albums.map(album => ({
-        ...album,
-        user: {
-          nickname: '팔로우 사용자',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
-        },
-        tags: ['커버', '감성'],
-        playCount: Math.floor(Math.random() * 1000),
-        commentCount: Math.floor(Math.random() * 50)
-      }));
+      const feedAlbums: FeedAlbum[] = albums.map(album => {
+        const albumWithExtras = album as typeof album & {
+          user?: { nickname?: string; avatar?: string; profileImageUrl?: string; profileImage?: string };
+          tags?: string[];
+          playCount?: number;
+          commentCount?: number;
+        };
+        
+        return {
+          ...album,
+          user: {
+            nickname: albumWithExtras.user?.nickname || `사용자 ${album.userId}`,
+            avatar: albumWithExtras.user?.avatar || albumWithExtras.user?.profileImageUrl || albumWithExtras.user?.profileImage || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+          },
+          tags: albumWithExtras.tags || ['음악'],
+          playCount: albumWithExtras.playCount || Math.floor(Math.random() * 1000),
+          commentCount: albumWithExtras.commentCount || Math.floor(Math.random() * 50)
+        };
+      });
 
       setFeedAlbums(feedAlbums);
     } catch (error) {
-      console.error('팔로우 사용자 앨범 로드 실패:', error);
-      setError('팔로우 사용자의 앨범을 불러오는데 실패했습니다.');
+      logError(error, '팔로우 사용자 앨범 로드');
+      const errorMessage = getApiErrorMessage(error);
+      setError(errorMessage);
+      
+      // 재시도 가능한 에러인 경우 사용자에게 알림
+      if (isRetryableError(error)) {
+        showToast(WARNING_MESSAGES.DATA_LOAD_FAILED, 'warning');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   // 로컬 상태 (모달 등)
   const [createFeedModalOpen, setCreateFeedModalOpen] = useState(false);
   const [selectedAlbumId, setSelectedAlbumId] = useState('');
   const [feedDescription, setFeedDescription] = useState('');
   
-  // 댓글 상태
-  const [commentDrawerOpen, setCommentDrawerOpen] = useState(false);
-  const [selectedAlbumForComment, setSelectedAlbumForComment] = useState<FeedAlbum | null>(null);
+  // 댓글 상태 (현재 사용하지 않음)
+  // const [commentDrawerOpen, setCommentDrawerOpen] = useState(false);
+  // const [selectedAlbumForComment, setSelectedAlbumForComment] = useState<FeedAlbum | null>(null);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
+    // 더미 데이터 제거
+    clearDummyAlbums();
+    
     loadPublicAlbums();
     setMyAlbums(getMyAlbums());
-  }, []);
+  }, [loadPublicAlbums]);
 
   // 탭 변경 시 데이터 로드
   useEffect(() => {
@@ -208,57 +181,39 @@ const FeedPage: React.FC = () => {
     } else {
       loadFollowedUsersAlbums(); // 팔로우 피드
     }
-  }, [tabValue]);
+  }, [tabValue, loadPublicAlbums, loadFollowedUsersAlbums]);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-  };
+  }, []);
 
   // 현재 탭에 따라 필터링된 피드 데이터 (이미 API에서 필터링된 데이터를 사용)
-  const filteredFeedAlbums = feedAlbums;
+  const filteredFeedAlbums = useMemo(() => feedAlbums, [feedAlbums]);
 
-  const handleSortChange = (event: any) => {
+  const handleSortChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setSortBy(event.target.value as string);
-  };
+  }, []);
 
-  // 좋아요 처리
-  const handleLikeToggle = async (albumId: number, isLiked: boolean) => {
-    try {
-      // TODO: 실제 API 호출로 교체 필요
-      showToast(isLiked ? '좋아요를 취소했습니다.' : '좋아요를 눌렀습니다.', 'success');
-      // 데이터 새로고침
-      if (tabValue === 0) {
-        loadPublicAlbums();
-      } else {
-        loadFollowedUsersAlbums();
-      }
-    } catch (error) {
-      showToast('좋아요 처리에 실패했습니다.', 'error');
-    }
-  };
+  // 좋아요 처리 (현재 사용하지 않음)
+  // const handleLikeToggle = useCallback(async (albumId: number, isLiked: boolean) => {
+  //   // 좋아요 처리 로직
+  // }, [showToast, tabValue, loadPublicAlbums, loadFollowedUsersAlbums]);
 
-  // 팔로우 처리
-  const handleFollowToggle = async (userId: number, isFollowing: boolean) => {
-    try {
-      // TODO: 실제 API 호출로 교체 필요
-      showToast(isFollowing ? '언팔로우했습니다.' : '팔로우했습니다.', 'success');
-      // 팔로잉 데이터 새로고침
-      loadFollowedUsersAlbums();
-    } catch (error) {
-      showToast('팔로우 처리에 실패했습니다.', 'error');
-    }
-  };
+  // 팔로우 처리 (현재 사용하지 않음)
+  // const handleFollowToggle = useCallback(async (userId: number, isFollowing: boolean) => {
+  //   // 팔로우 처리 로직
+  // }, [showToast, loadFollowedUsersAlbums]);
 
-  // 댓글 처리
-  const handleCommentClick = (album: FeedAlbum) => {
-    setSelectedAlbumForComment(album);
-    setCommentDrawerOpen(true);
-  };
+  // 댓글 처리 (현재 사용하지 않음)
+  // const handleCommentClick = (album: FeedAlbum) => {
+  //   setSelectedAlbumForComment(album);
+  //   setCommentDrawerOpen(true);
+  // };
 
-  const handleCommentDrawerClose = () => {
-    setCommentDrawerOpen(false);
-    setSelectedAlbumForComment(null);
-  };
+  // const handleCommentDrawerClose = () => {
+  //   setCommentDrawerOpen(false);
+  //   setSelectedAlbumForComment(null);
+  // };
 
   const handleAlbumClick = (feed: FeedAlbum) => {
     // Album 타입에는 albumId가 없고 id만 있음
@@ -301,33 +256,32 @@ const FeedPage: React.FC = () => {
     }
     
     // 선택된 앨범 정보 가져오기
-    const selectedAlbum = myAlbums.find((album: MyAlbum) => album.id === selectedAlbumId);
+    const selectedAlbum = myAlbums.find((album: FeedAlbum) => album.id.toString() === selectedAlbumId);
     if (!selectedAlbum) {
       showToast('선택된 앨범을 찾을 수 없습니다.', 'error');
       return;
     }
     
     // 새로운 피드 생성
-    const newFeed = {
-      id: Date.now().toString(),
-      albumId: selectedAlbum.id, // 실제 앨범 ID 저장
-      user: {
-        nickname: '나', // 현재 사용자 (나중에 실제 사용자 정보로 교체)
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-      },
-      createdAt: new Date().toLocaleDateString('ko-KR', { 
-        year: 'numeric', 
-        month: 'numeric', 
-        day: 'numeric' 
-      }).replace(/\./g, '.').replace(/\s/g, ''),
-      coverImage: selectedAlbum.coverImage,
+    const newFeed: FeedAlbum = {
+      id: selectedAlbum.id,
+      userId: selectedAlbum.userId,
       title: selectedAlbum.title,
       description: feedDescription,
+      coverImageUrl: selectedAlbum.coverImageUrl,
+      isPublic: selectedAlbum.isPublic,
       trackCount: selectedAlbum.trackCount,
-      playCount: 0,
-      tags: selectedAlbum.tags || [],
+      totalDuration: selectedAlbum.totalDuration,
       likeCount: 0,
+      playCount: 0,
       commentCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      user: {
+        nickname: user?.nickname || '사용자', // 실제 사용자 정보 사용
+        avatar: user?.profileImageUrl || user?.profileImage || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+      },
+      tags: selectedAlbum.tags || [],
     };
     
     // 상태 업데이트와 localStorage 저장을 동시에 처리
@@ -351,7 +305,7 @@ const FeedPage: React.FC = () => {
   return (
         <Box sx={{ 
       flex: 1, 
-      background: theme.colors.background.main,
+      background: '#FFFFFF',
       minHeight: '100vh',
       pt: { xs: 16, sm: 20 },
       position: 'relative',
@@ -644,9 +598,22 @@ const FeedPage: React.FC = () => {
               ) : !loading && !error && (
                 <Box sx={{ 
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' },
+                  gridTemplateColumns: { 
+                    xs: '1fr', 
+                    sm: '1fr', 
+                    md: '1fr 1fr', 
+                    lg: '1fr 1fr 1fr' 
+                  },
                   gap: 3,
+                  minWidth: '280px',
+                  '@media (min-width: 600px) and (max-width: 899px)': {
+                    gridTemplateColumns: '1fr'
+                  },
+                  '@media (min-width: 900px) and (max-width: 1199px)': {
+                    gridTemplateColumns: '1fr 1fr'
+                  },
                   '@media (min-width: 1200px)': {
+                    gridTemplateColumns: '1fr 1fr 1fr',
                     gap: 4
                   }
                 }}>
@@ -664,6 +631,7 @@ const FeedPage: React.FC = () => {
                         overflow: 'hidden',
                         borderRadius: 2,
                         p: 2,
+                        minWidth: '280px',
                         backgroundColor: 'rgba(255, 255, 255, 0.05)',
                         backdropFilter: 'blur(10px)',
                         border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -781,7 +749,11 @@ const FeedPage: React.FC = () => {
                           </Avatar>
                           <Typography variant="body2" sx={{ 
                             fontSize: '0.8rem',
-                            color: 'rgba(255, 255, 255, 0.7)'
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            flex: 1
                           }}>
                             {album.user?.nickname || `사용자 ${album.userId}`}
                           </Typography>
@@ -937,7 +909,7 @@ const FeedPage: React.FC = () => {
                    value={selectedAlbumId}
                    onChange={(e) => handleAlbumSelect(e.target.value)}
                  >
-                   {myAlbums.map((album: MyAlbum) => (
+                   {myAlbums.map((album: FeedAlbum) => (
                    <FormControlLabel
                      key={album.id}
                      value={album.id}
@@ -952,18 +924,18 @@ const FeedPage: React.FC = () => {
                          display: 'flex', 
                          alignItems: 'center', 
                          p: 2, 
-                         border: selectedAlbumId === album.id 
+                         border: selectedAlbumId === album.id.toString() 
                            ? '2px solid rgba(196, 71, 233, 0.5)' 
                            : '1px solid rgba(255, 255, 255, 0.2)',
                          borderRadius: 2,
                          ml: 1,
                          width: '100%',
-                         backgroundColor: selectedAlbumId === album.id 
+                         backgroundColor: selectedAlbumId === album.id.toString() 
                            ? 'rgba(196, 71, 233, 0.1)' 
                            : 'rgba(255, 255, 255, 0.05)',
                          backdropFilter: 'blur(10px)',
                          transition: 'all 0.3s ease-in-out',
-                         boxShadow: selectedAlbumId === album.id 
+                         boxShadow: selectedAlbumId === album.id.toString() 
                            ? '0 0 20px rgba(196, 71, 233, 0.3)' 
                            : 'none',
                          '&:hover': {
@@ -1041,7 +1013,7 @@ const FeedPage: React.FC = () => {
                                {album.trackCount || 0}곡
                              </Typography>
                              <Typography variant="body2" sx={{ color: '#B3B3B3' }}>
-                               {album.duration || '0분'}
+                               {album.totalDuration ? `${Math.floor(album.totalDuration / 60)}분` : '0분'}
                              </Typography>
                            </Box>
                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

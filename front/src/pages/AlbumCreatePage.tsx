@@ -25,94 +25,8 @@ import { recordingService } from "../services/api";
 import { useCreateAlbum } from "@/hooks/useAlbum";
 import { useAlbumMetaStore } from "@/stores/albumMetaStore";
 
-// 더미 녹음 데이터
-const dummyRecordings: Recording[] = [
-  {
-    id: "1",
-    userId: "user1",
-    songId: "song1",
-    song: { title: "좋아", artist: "윤종신" },
-    audioUrl: "", // 실제 오디오 파일이 없으므로 빈 문자열 사용
-    duration: 225, // 3:45
-    createdAt: "2025-01-15T00:00:00Z",
-    analysis: {
-      pitchAccuracy: 85,
-      tempoAccuracy: 80,
-      vocalRange: { min: 200, max: 800 },
-      toneAnalysis: { brightness: 70, warmth: 80, clarity: 75 },
-      overallScore: 85,
-      feedback: ["음정이 정확합니다", "리듬감이 좋습니다"],
-    },
-  },
-  {
-    id: "2",
-    userId: "user1",
-    songId: "song2",
-    song: { title: "사랑은 은하수 다방에서", artist: "10cm" },
-    audioUrl: "", // 실제 오디오 파일이 없으므로 빈 문자열 사용
-    duration: 252, // 4:12
-    createdAt: "2025-01-14T00:00:00Z",
-    analysis: {
-      pitchAccuracy: 75,
-      tempoAccuracy: 85,
-      vocalRange: { min: 180, max: 750 },
-      toneAnalysis: { brightness: 65, warmth: 85, clarity: 70 },
-      overallScore: 78,
-      feedback: ["감정 표현이 좋습니다", "발음을 더 명확히 해보세요"],
-    },
-  },
-  {
-    id: "3",
-    userId: "user1",
-    songId: "song3",
-    song: { title: "밤편지", artist: "아이유" },
-    audioUrl: "", // 실제 오디오 파일이 없으므로 빈 문자열 사용
-    duration: 203, // 3:23
-    createdAt: "2025-01-13T00:00:00Z",
-    analysis: {
-      pitchAccuracy: 95,
-      tempoAccuracy: 90,
-      vocalRange: { min: 220, max: 850 },
-      toneAnalysis: { brightness: 80, warmth: 90, clarity: 95 },
-      overallScore: 92,
-      feedback: ["완벽한 음정", "아름다운 음색"],
-    },
-  },
-  {
-    id: "4",
-    userId: "user1",
-    songId: "song4",
-    song: { title: "Spring Day", artist: "BTS" },
-    audioUrl: "/audio/sample4.mp3",
-    duration: 246, // 4:06
-    createdAt: "2025-01-12T00:00:00Z",
-    analysis: {
-      pitchAccuracy: 80,
-      tempoAccuracy: 75,
-      vocalRange: { min: 200, max: 780 },
-      toneAnalysis: { brightness: 75, warmth: 70, clarity: 80 },
-      overallScore: 81,
-      feedback: ["리듬감을 더 살려보세요", "음정은 좋습니다"],
-    },
-  },
-  {
-    id: "5",
-    userId: "user1",
-    songId: "song5",
-    song: { title: "너를 만나", artist: "폴킴" },
-    audioUrl: "/audio/sample5.mp3",
-    duration: 238, // 3:58
-    createdAt: "2025-01-11T00:00:00Z",
-    analysis: {
-      pitchAccuracy: 88,
-      tempoAccuracy: 85,
-      vocalRange: { min: 190, max: 820 },
-      toneAnalysis: { brightness: 85, warmth: 85, clarity: 88 },
-      overallScore: 88,
-      feedback: ["매우 좋은 연습입니다", "감정이 잘 전달됩니다"],
-    },
-  },
-];
+// 빈 녹음 데이터 배열 (실제 API에서 로드)
+const emptyRecordings: Recording[] = [];
 
 // New imports for the refactored components
 import StepperTimeline, {
@@ -356,9 +270,9 @@ const AlbumCreatePage: React.FC = () => {
 
         setRecordingsError(errorMessage);
 
-        // 더미 데이터로 fallback (개발 중)
-        console.warn("녹음 API 실패로 더미 데이터 사용");
-        setRecordings(dummyRecordings);
+        // API 실패 시 빈 배열로 초기화
+        console.warn("녹음 API 실패로 빈 배열 사용");
+        setRecordings(emptyRecordings);
       } finally {
         setRecordingsLoading(false);
       }
