@@ -18,8 +18,10 @@ except ImportError:
 def get_recommendations_pinecone(user_df: pd.DataFrame,
                                top_n: int = 10,
                                min_popularity: int = 1000,
-                               use_pitch_filter: bool = True) -> pd.DataFrame:
-    # Pinecone 기반 추천 
+                               use_pitch_filter: bool = True,
+                               allowed_genres: list = None) -> pd.DataFrame:
+    """Pinecone 기반 추천 (새로운 방식)"""
+
     if not PINECONE_AVAILABLE:
         print("Pinecone이 설치되지 않았습니다. CSV 방식으로 실행합니다.")
         return pd.DataFrame()
@@ -34,7 +36,8 @@ def get_recommendations_pinecone(user_df: pd.DataFrame,
             user_df=user_df,
             top_n=top_n,
             min_popularity=min_popularity,
-            use_pitch_filter=use_pitch_filter
+            use_pitch_filter=use_pitch_filter,
+            allowed_genres=allowed_genres
         )
     except Exception as e:
         print(f"Pinecone 추천 오류: {e}")
@@ -46,6 +49,7 @@ def get_recommendations(user_df: pd.DataFrame,
                         top_n: int = 10,
                         min_popularity: int = 1000,
                         allowed_genres: list = None,
+                        use_pitch_filter: bool = True,
                         disliked_song_ids: list = None,
                         penalty_factor: float = 0.1,
                         use_pinecone: bool = True) -> pd.DataFrame:
@@ -57,6 +61,8 @@ def get_recommendations(user_df: pd.DataFrame,
                 user_df=user_df,
                 top_n=top_n,
                 min_popularity=min_popularity,
+                use_pitch_filter=use_pitch_filter,
+                allowed_genres=allowed_genres
             )
             if not pinecone_result.empty:
                 print("Pinecone 추천 성공")
