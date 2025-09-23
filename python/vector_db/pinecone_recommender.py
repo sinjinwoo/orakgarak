@@ -6,7 +6,13 @@ import logging
 from typing import List, Dict, Optional
 import pickle
 import os
-from .pinecone_config import PineconeConfig
+import sys
+
+# 절대 경로로 import
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(PROJECT_ROOT)
+
+from vector_db.pinecone_config import PineconeConfig
 
 class PineconeRecommender:
     def __init__(self):
@@ -75,8 +81,9 @@ class PineconeRecommender:
     def get_recommendations(self,
                           user_features: Dict,
                           top_n: int = 10,
-                          min_popularity: int = 1000,
-                          use_pitch_filter: bool = True) -> pd.DataFrame:
+                          min_popularity: int = 0,
+                          use_pitch_filter: bool = True,
+                          allowed_genres: List[str] = None) -> pd.DataFrame:
         """Pinecone 기반 음악 추천"""
         try:
             if self.index is None or self.scaler is None:
@@ -106,10 +113,15 @@ class PineconeRecommender:
                     }
                 })
 
-            # Pinecone 유사도 검색
+            # 장르 필터 추가 (정확한 매칭 사용)
+            if allowed_genres:
+                # Pinecone은 $regex를 지원하지 않으므로 $in 연산자 사용
+                filter_conditions["genre"] = {"$in": allowed_genres}
+
+            # Pinecone 유사도 검색 (여유분 확보)
             search_results = self.index.query(
                 vector=user_vector.tolist(),
-                top_k=top_n * 2,  # 필터링 여유분
+                top_k=top_n * 3,  # 더 많이 가져와서 인기도로 정렬
                 filter=filter_conditions,
                 include_metadata=True
             )
@@ -123,16 +135,58 @@ class PineconeRecommender:
                     "popularity": match.metadata.get("popularity", 0),
                     "pitch_low": match.metadata.get("pitch_low", 0),
                     "pitch_high": match.metadata.get("pitch_high", 0),
-                    "pitch_avg": match.metadata.get("pitch_avg", 0)
+                    "pitch_avg": match.metadata.get("pitch_avg", 0),
+                    "genre": match.metadata.get("genre", "")  # 장르 정보 추가
                 }
                 recommendations.append(song_data)
 
-            # DataFrame 변환
-            result_df = pd.DataFrame(recommendations)
+            # voice analysis 기반 점수 계산 (기존 로직 반영)
+            for rec in recommendations:
+                vector_score = rec["similarity"]
 
-            # 상위 N개만 반환
-            if len(result_df) > top_n:
-                result_df = result_df.head(top_n)
+                # pitch 조건 체크 (기존 voice analysis 로직과 동일)
+                user_pitch_low = user_features.get("pitch_low", 0)
+                user_pitch_high = user_features.get("pitch_high", 1000)
+                user_pitch_avg = user_features.get("pitch_avg", 200)
+
+                pitch_condition_satisfied = (
+                    rec["pitch_low"] >= user_pitch_low and
+                    rec["pitch_high"] <= user_pitch_high and
+                    abs(rec["pitch_avg"] - user_pitch_avg) <= 20
+                )
+
+                # pitch 유사도 계산 (더 세밀한 계산)
+                pitch_diff_low = abs(rec["pitch_low"] - user_pitch_low)
+                pitch_diff_high = abs(rec["pitch_high"] - user_pitch_high)
+                pitch_diff_avg = abs(rec["pitch_avg"] - user_pitch_avg)
+
+                # pitch 점수 (기존 voice analysis 로직 참고)
+                pitch_score_low = max(0, 1 - (pitch_diff_low / 100))
+                pitch_score_high = max(0, 1 - (pitch_diff_high / 100))
+                pitch_score_avg = max(0, 1 - (pitch_diff_avg / 50))
+
+                pitch_score = (pitch_score_low + pitch_score_high + pitch_score_avg) / 3
+
+                # pitch 조건을 만족하지 않으면 패널티
+                if not pitch_condition_satisfied:
+                    pitch_score *= 0.5
+
+                # 최종 점수: 벡터 유사도와 pitch 유사도 가중 평균 (기존 로직 반영)
+                final_score = (vector_score * 0.6) + (pitch_score * 0.4)
+
+                # 인기도 보너스 (기존 voice analysis 로직 참고)
+                popularity_bonus = min(0.1, rec["popularity"] / 100000)  # 최대 10% 보너스
+                final_score += popularity_bonus
+
+                rec["final_score"] = final_score
+                rec["pitch_score"] = pitch_score
+                rec["pitch_condition_satisfied"] = pitch_condition_satisfied
+
+            # 최종 점수로 정렬 (기존 voice analysis와 동일한 우선순위)
+            recommendations.sort(key=lambda x: x["final_score"], reverse=True)
+
+            # DataFrame 변환 후 상위 N개 선택
+            result_df = pd.DataFrame(recommendations[:top_n])
 
             logging.info(f"추천 완료: {len(result_df)}곡")
             return result_df
@@ -144,8 +198,9 @@ class PineconeRecommender:
     def get_recommendations_by_user_df(self,
                                      user_df: pd.DataFrame,
                                      top_n: int = 10,
-                                     min_popularity: int = 1000,
-                                     use_pitch_filter: bool = True) -> pd.DataFrame:
+                                     min_popularity: int = 0,
+                                     use_pitch_filter: bool = True,
+                                     allowed_genres: List[str] = None) -> pd.DataFrame:
         """기존 인터페이스 호환성을 위한 래퍼"""
         try:
             if user_df.empty:
@@ -166,7 +221,8 @@ class PineconeRecommender:
                 user_features=user_features,
                 top_n=top_n,
                 min_popularity=min_popularity,
-                use_pitch_filter=use_pitch_filter
+                use_pitch_filter=use_pitch_filter,
+                allowed_genres=allowed_genres
             )
 
         except Exception as e:

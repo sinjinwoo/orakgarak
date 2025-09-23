@@ -286,13 +286,12 @@ const AlbumCreatePage: React.FC = () => {
     // Set으로 중복 제거 후 매핑
     const uniqueSelectedSet = new Set(selectedRecordIds.map(String));
     const newTracks = recordings
-      .filter((recording) => uniqueSelectedSet.has(recording.id))
+      .filter((recording) => uniqueSelectedSet.has(String(recording.id)))
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
-        title: recording.song?.title || "",
-        artist: recording.song?.artist || "",
-        durationSec: recording.duration || 0,
+        title: recording.song?.title || recording.title || "제목 없음",
+        durationSec: recording.duration || recording.durationSeconds || 0,
       }));
     setTracks(newTracks);
   }, [recordings, selectedRecordIds]);
@@ -329,9 +328,9 @@ const AlbumCreatePage: React.FC = () => {
             error={recordingsError}
             onToggleRecording={(recordingId) => {
               const currentSelectedSet = new Set(selectedRecordIds.map(String));
-              if (currentSelectedSet.has(recordingId)) {
+              if (currentSelectedSet.has(String(recordingId))) {
                 // 이미 선택된 곡이면 선택 해제
-                removeRecording(recordingId);
+                removeRecording(String(recordingId));
               } else {
                 // 새로 선택하는 경우 10곡 제한 체크
                 if (currentSelectedSet.size >= 10) {
@@ -341,7 +340,7 @@ const AlbumCreatePage: React.FC = () => {
                   });
                   return;
                 }
-                addRecording(recordingId);
+                addRecording(String(recordingId));
               }
             }}
             onAddToast={addToast}
@@ -372,6 +371,9 @@ const AlbumCreatePage: React.FC = () => {
             coverImage={coverImage}
             isPublic={isPublic}
             selectedRecordings={selectedRecordings}
+            recordings={recordings}
+            recordingsLoading={recordingsLoading}
+            recordingsError={recordingsError}
             onPublish={handlePublish}
             onPrev={handlePrev}
           />
@@ -427,21 +429,52 @@ const AlbumCreatePage: React.FC = () => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(196,71,233,0.2)_0%,transparent_40%)] pointer-events-none" />
 
       {/* Main container with 2-column grid */}
-      <div className="relative z-10 pt-20 pb-24">
+      <div className="relative z-10 pt-32 pb-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-[280px_1fr] gap-6 min-h-[calc(100vh-8rem)]">
-            {/* Left Column - Stepper Timeline */}
-            <StepperTimeline
-              currentStage={currentStage}
-              onStageChange={handleStageChange}
-              completedStages={completedStages}
-            />
+          <div className="grid grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr] lg:grid-cols-1 gap-6 min-h-[calc(100vh-8rem)]">
+            {/* Left Column - Stepper Timeline - Hidden on smaller screens */}
+            <div className="hidden xl:block">
+              <StepperTimeline
+                currentStage={currentStage}
+                onStageChange={handleStageChange}
+                completedStages={completedStages}
+              />
+            </div>
+
+            {/* Mobile Stepper - Show on smaller screens */}
+            <div className="xl:hidden mb-6">
+              <div className="bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-white">앨범 만들기</h2>
+                  <div className="text-sm text-white/60">
+                    {currentStage === 'recordings' ? '1' :
+                     currentStage === 'cover' ? '2' :
+                     currentStage === 'metadata' ? '3' : '4'} / 4
+                  </div>
+                </div>
+                <p className="text-sm text-white/60 mt-1">
+                  {currentStage === 'recordings' ? '녹음 선택' :
+                   currentStage === 'cover' ? '커버/스타일' :
+                   currentStage === 'metadata' ? '앨범 정보' : '미리보기'}
+                </p>
+                <div className="mt-3 bg-white/10 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-fuchsia-500 to-pink-500 h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: currentStage === 'recordings' ? '25%' :
+                             currentStage === 'cover' ? '50%' :
+                             currentStage === 'metadata' ? '75%' : '100%'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Right Column - Stage Content */}
-            <div className="relative flex flex-col min-w-[720px]">
-              {/* Mini Preview Card - Always show, but adjust position for cover stage */}
+            <div className="relative flex flex-col xl:min-w-[720px] min-w-0">
+              {/* Mini Preview Card - Hide on smaller screens (lg and below) */}
               <div
-                className={`absolute top-0 right-0 z-20 transition-transform duration-300 ${
+                className={`absolute top-0 right-0 z-20 transition-transform duration-300 hidden xl:block ${
                   currentStage === "cover" ? "translate-y-4 scale-90" : ""
                 }`}
               >
@@ -455,7 +488,7 @@ const AlbumCreatePage: React.FC = () => {
               {/* Stage Content */}
               <div
                 className={`flex-1 ${
-                  currentStage !== "cover" ? "pr-80" : "pr-72"
+                  currentStage !== "cover" ? "xl:pr-80 pr-0" : "xl:pr-72 pr-0"
                 }`}
               >
                 <motion.div

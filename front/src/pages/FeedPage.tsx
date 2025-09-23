@@ -74,24 +74,40 @@ const FeedPage: React.FC = () => {
       const response = await albumService.getPublicAlbums({ page: 0, size: API_CONSTANTS.DEFAULT_PAGE_SIZE });
       const albums = response.content || [];
 
+      // 디버깅: 실제 API 응답 데이터 구조 확인
+      console.log('API 응답 전체:', response);
+      console.log('앨범 배열:', albums);
+      if (albums.length > 0) {
+        console.log('첫 번째 앨범 데이터:', albums[0]);
+        console.log('첫 번째 앨범의 모든 키:', Object.keys(albums[0]));
+      }
+
       // Album 타입을 FeedAlbum으로 변환
-      const feedAlbums: FeedAlbum[] = albums.map(album => {
-        const albumWithExtras = album as typeof album & {
-          user?: { nickname?: string; avatar?: string; profileImageUrl?: string; profileImage?: string };
-          tags?: string[];
-          playCount?: number;
-          commentCount?: number;
-        };
-        
+      const feedAlbums: FeedAlbum[] = albums.map((album, index) => {
+        console.log(`앨범 ${index + 1} 상세 정보:`, {
+          id: album.id,
+          title: album.title,
+          description: album.description,
+          userId: album.userId,
+          userNickname: album.userNickname,
+          userProfileImageUrl: album.userProfileImageUrl,
+          trackCount: album.trackCount,
+          totalDuration: album.totalDuration,
+          likeCount: album.likeCount,
+          coverImageUrl: album.coverImageUrl,
+          createdAt: album.createdAt,
+          isPublic: album.isPublic
+        });
+
         return {
           ...album,
           user: {
-            nickname: albumWithExtras.user?.nickname || `사용자 ${album.userId}`,
-            avatar: albumWithExtras.user?.avatar || albumWithExtras.user?.profileImageUrl || albumWithExtras.user?.profileImage || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+            nickname: album.userNickname || `사용자 ${album.userId}`,
+            avatar: album.userProfileImageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
           },
-          tags: albumWithExtras.tags || ['음악'],
-          playCount: albumWithExtras.playCount || Math.floor(Math.random() * 1000),
-          commentCount: albumWithExtras.commentCount || Math.floor(Math.random() * 50)
+          tags: ['캐주얼', '힐링'],
+          playCount: Math.floor(Math.random() * 1000),
+          commentCount: Math.floor(Math.random() * 50)
         };
       });
 
@@ -121,25 +137,23 @@ const FeedPage: React.FC = () => {
       const response = await albumService.getFollowedUsersAlbums({ page: 0, size: API_CONSTANTS.DEFAULT_PAGE_SIZE });
       const albums = response.content || [];
 
-      const feedAlbums: FeedAlbum[] = albums.map(album => {
-        const albumWithExtras = album as typeof album & {
-          user?: { nickname?: string; avatar?: string; profileImageUrl?: string; profileImage?: string };
-          tags?: string[];
-          playCount?: number;
-          commentCount?: number;
-        };
-        
-        return {
-          ...album,
-          user: {
-            nickname: albumWithExtras.user?.nickname || `사용자 ${album.userId}`,
-            avatar: albumWithExtras.user?.avatar || albumWithExtras.user?.profileImageUrl || albumWithExtras.user?.profileImage || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
-          },
-          tags: albumWithExtras.tags || ['음악'],
-          playCount: albumWithExtras.playCount || Math.floor(Math.random() * 1000),
-          commentCount: albumWithExtras.commentCount || Math.floor(Math.random() * 50)
-        };
-      });
+      // 디버깅: 실제 API 응답 데이터 구조 확인
+      console.log('팔로우 사용자 앨범 API 응답:', response);
+      console.log('팔로우 사용자 앨범 배열:', albums);
+      if (albums.length > 0) {
+        console.log('첫 번째 팔로우 앨범 데이터:', albums[0]);
+      }
+
+      const feedAlbums: FeedAlbum[] = albums.map(album => ({
+        ...album,
+        user: {
+          nickname: album.userNickname || `사용자 ${album.userId}`,
+          avatar: album.userProfileImageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
+        },
+        tags: ['커버', '감성'],
+        playCount: Math.floor(Math.random() * 1000),
+        commentCount: Math.floor(Math.random() * 50)
+      }));
 
       setFeedAlbums(feedAlbums);
     } catch (error) {
@@ -725,13 +739,29 @@ const FeedPage: React.FC = () => {
                           {album.title || '제목 없음'}
                         </Typography>
                         
-                        <Typography variant="body2" sx={{ 
-                          fontSize: '0.85rem',
+                        {/* 앨범 설명 */}
+                        {album.description && album.description.trim() && (
+                          <Typography variant="body2" sx={{
+                            fontSize: '0.85rem',
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            mb: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                          }}>
+                            {album.description}
+                          </Typography>
+                        )}
+
+                        <Typography variant="body2" sx={{
+                          fontSize: '0.8rem',
                           fontWeight: 400,
-                          color: 'rgba(255, 255, 255, 0.6)',
+                          color: 'rgba(255, 255, 255, 0.5)',
                           mb: 1
                         }}>
-                          ({album.createdAt ? new Date(album.createdAt).getFullYear() : new Date().getFullYear()}년)
+                          {album.createdAt ? new Date(album.createdAt).toLocaleDateString('ko-KR') : '날짜 없음'}
                         </Typography>
 
                         {/* 사용자 정보 */}
@@ -747,7 +777,7 @@ const FeedPage: React.FC = () => {
                           >
                             <Person sx={{ fontSize: 12 }} />
                           </Avatar>
-                          <Typography variant="body2" sx={{ 
+                          <Typography variant="body2" sx={{
                             fontSize: '0.8rem',
                             color: 'rgba(255, 255, 255, 0.7)',
                             overflow: 'hidden',
@@ -755,14 +785,14 @@ const FeedPage: React.FC = () => {
                             whiteSpace: 'nowrap',
                             flex: 1
                           }}>
-                            {album.user?.nickname || `사용자 ${album.userId}`}
+                            {album.userNickname || album.user?.nickname || `사용자 ${album.userId}`}
                           </Typography>
                         </Box>
 
 
                         {/* 앨범 통계 */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                          <Typography variant="body2" sx={{ 
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, flexWrap: 'wrap' }}>
+                          <Typography variant="body2" sx={{
                             fontSize: '0.75rem',
                             color: 'rgba(255, 255, 255, 0.6)',
                             display: 'flex',
@@ -771,14 +801,25 @@ const FeedPage: React.FC = () => {
                           }}>
                             ♫ {album.trackCount || 0}곡
                           </Typography>
-                          <Typography variant="body2" sx={{ 
+                          {album.totalDuration > 0 && (
+                            <Typography variant="body2" sx={{
+                              fontSize: '0.75rem',
+                              color: 'rgba(255, 255, 255, 0.6)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.5
+                            }}>
+                              ⏱ {Math.floor((album.totalDuration || 0) / 60)}분 {(album.totalDuration || 0) % 60}초
+                            </Typography>
+                          )}
+                          <Typography variant="body2" sx={{
                             fontSize: '0.75rem',
                             color: 'rgba(255, 255, 255, 0.6)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 0.5
                           }}>
-                            ▶ {album.playCount || 0}회
+                            💗 {album.likeCount || 0}개
                           </Typography>
                         </Box>
                           

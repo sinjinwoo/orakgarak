@@ -9,7 +9,9 @@ import {
   FormControlLabel,
 } from '@mui/material';
 import { Lock } from '@mui/icons-material';
+import { FileText } from 'lucide-react';
 import { theme, buttonStyles } from '../../styles/theme';
+import StepHeader from './StepHeader';
 
 interface AlbumInfoStepProps {
   title: string;
@@ -36,17 +38,11 @@ const AlbumInfoStep: React.FC<AlbumInfoStepProps> = ({
   return (
     <Box sx={{ maxWidth: 800, mx: 'auto' }}>
       {/* 헤더 */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Box sx={{ mb: 2 }}>
-          <Typography sx={{ fontSize: 48, color: '#C147E9' }}>📄</Typography>
-        </Box>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, mb: 1, color: '#FFFFFF' }}>
-          새 앨범 만들기
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-          녹음본으로 나만의 앨범을 만들어보세요
-        </Typography>
-      </Box>
+      <StepHeader
+        title="앨범 정보"
+        description="앨범의 제목, 설명을 입력하고 공개 설정을 선택하세요"
+        icon={<FileText className="w-6 h-6 text-fuchsia-400" />}
+      />
 
       {/* 앨범 정보 폼 */}
       <Paper sx={{ 

@@ -18,8 +18,10 @@ except ImportError:
 def get_recommendations_pinecone(user_df: pd.DataFrame,
                                top_n: int = 10,
                                min_popularity: int = 1000,
-                               use_pitch_filter: bool = True) -> pd.DataFrame:
+                               use_pitch_filter: bool = True,
+                               allowed_genres: list = None) -> pd.DataFrame:
     """Pinecone 기반 추천 (새로운 방식)"""
+
     if not PINECONE_AVAILABLE:
         print("Pinecone이 설치되지 않았습니다. CSV 방식으로 실행합니다.")
         return pd.DataFrame()
@@ -34,7 +36,8 @@ def get_recommendations_pinecone(user_df: pd.DataFrame,
             user_df=user_df,
             top_n=top_n,
             min_popularity=min_popularity,
-            use_pitch_filter=use_pitch_filter
+            use_pitch_filter=use_pitch_filter,
+            allowed_genres=allowed_genres
         )
     except Exception as e:
         print(f"Pinecone 추천 오류: {e}")
@@ -45,36 +48,38 @@ def get_recommendations(user_df: pd.DataFrame,
                         all_songs_df: pd.DataFrame = None,
                         top_n: int = 10,
                         min_popularity: int = 1000,
+                        allowed_genres: list = None,
                         use_pitch_filter: bool = True,
+                        disliked_song_ids: list = None,
+                        penalty_factor: float = 0.1,
                         use_pinecone: bool = True) -> pd.DataFrame:
 
-    """통합 추천 함수 - Pinecone 우선, 실패시 CSV 방식"""
-
-    # 1. Pinecone 방식 시도
+    # Pinecone 방식 시도
     if use_pinecone and PINECONE_AVAILABLE:
         try:
             pinecone_result = get_recommendations_pinecone(
                 user_df=user_df,
                 top_n=top_n,
                 min_popularity=min_popularity,
-                use_pitch_filter=use_pitch_filter
+                use_pitch_filter=use_pitch_filter,
+                allowed_genres=allowed_genres
             )
             if not pinecone_result.empty:
-                print("✅ Pinecone 추천 성공")
+                print("Pinecone 추천 성공")
                 return pinecone_result
             else:
-                print("⚠️ Pinecone 추천 결과 없음, CSV 방식으로 전환")
+                print("Pinecone 추천 결과 없음, CSV 방식으로 전환")
         except Exception as e:
-            print(f"⚠️ Pinecone 추천 오류: {e}, CSV 방식으로 전환")
+            print(f"Pinecone 추천 오류: {e}, CSV 방식으로 전환")
 
-    # 2. CSV 방식 (기존 로직)
+    # CSV 방식 (기존 로직)
     if all_songs_df is None:
-        print("❌ all_songs_df가 제공되지 않았습니다.")
+        print("all_songs_df가 제공되지 않았습니다.")
         return pd.DataFrame()
 
-    print("📊 CSV 기반 추천 실행")
+    print("CSV 기반 추천 실행")
 
-    # 데이터 로드
+    # 사용할 feature 
     feature_cols = [f"mfcc_{i}" for i in range(13)] + ["pitch_low", "pitch_high", "pitch_avg"]
 
     # 데이터 준비
@@ -82,11 +87,6 @@ def get_recommendations(user_df: pd.DataFrame,
     song_ids = all_songs_df["song_id"].values
     popularity = all_songs_df["popularity"].values
     user_features = user_df[feature_cols].values
-
-    # pitch 정보
-    user_pitch_low = user_df["pitch_low"].iloc[0]
-    user_pitch_high = user_df["pitch_high"].iloc[0]
-    user_pitch_avg = user_df["pitch_avg"].iloc[0]
 
     # 정규화 (MFCC, pitch)
     scaler = StandardScaler()
@@ -99,24 +99,24 @@ def get_recommendations(user_df: pd.DataFrame,
     # popularity 필터
     mask_popularity = popularity >= min_popularity
 
-    # pitch 조건 필터
-    if use_pitch_filter:
-        mask_pitch = (
-            (all_songs_df["pitch_low"] >= user_pitch_low) &
-            (all_songs_df["pitch_high"] <= user_pitch_high) &
-            (np.abs(all_songs_df["pitch_avg"] - user_pitch_avg) <= 20)
-        )
-        final_mask = mask_popularity & mask_pitch
+    # 장르 필터 
+    if allowed_genres:
+        mask_genre = all_songs_df["genre"].apply(
+            lambda g: any(ag in str(g) for ag in allowed_genres)
+        ).values
     else:
-        final_mask = mask_popularity
+        mask_genre = np.ones(len(all_songs_df), dtype=bool)
 
     # 후보 곡 추출
-    candidate_indices = np.where(final_mask)[0]
-    if len(candidate_indices) == 0:
-        candidate_indices = np.where(mask_popularity)[0]
+    candidate_indices = np.where(mask_popularity & mask_genre)[0]
 
     if len(candidate_indices) == 0:
         return pd.DataFrame()
+    
+    # 싫어요 곡 페널티
+    if disliked_song_ids:
+        disliked_mask = all_songs_df["song_id"].isin(disliked_song_ids).values
+        sims[disliked_mask] *= penalty_factor
 
     # similarity 높은 순 정렬
     sorted_indices = candidate_indices[np.argsort(sims[candidate_indices])[::-1]]
@@ -131,17 +131,10 @@ def get_recommendations(user_df: pd.DataFrame,
         "popularity": popularity[top_indices],
         "pitch_low": all_songs_df["pitch_low"].iloc[top_indices].values,
         "pitch_high": all_songs_df["pitch_high"].iloc[top_indices].values,
-        "pitch_avg": all_songs_df["pitch_avg"].iloc[top_indices].values
+        "pitch_avg": all_songs_df["pitch_avg"].iloc[top_indices].values,
+        "genre": all_songs_df["genre"].iloc[top_indices].values  
     })
 
     return recommendations
 
 
-if __name__ == "__main__":
-    # 테스트 실행
-    result = get_recommendations(
-        all_features_csv="C:/Users/SSAFY/Desktop/output/all_features.csv",
-        user_features_csv="C:/Users/SSAFY/Desktop/output/user_features.csv",
-        top_n=10
-    )
-    print(result)

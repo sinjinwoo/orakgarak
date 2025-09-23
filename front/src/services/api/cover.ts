@@ -72,7 +72,6 @@ export async function uploadCover(file: File): Promise<{
     };
   } catch (error) {
     console.error("이미지 업로드 실패:", error);
-
     throw error;
   }
 }

@@ -16,6 +16,7 @@ import com.ssafy.lab.orak.profile.entity.Profile;
 import com.ssafy.lab.orak.profile.exception.ProfileNotFoundException;
 import com.ssafy.lab.orak.profile.repository.ProfileRepository;
 import com.ssafy.lab.orak.upload.entity.Upload;
+import com.ssafy.lab.orak.upload.service.FileUploadService;
 import org.springframework.web.multipart.MultipartFile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -36,6 +37,7 @@ public class ProfileServiceImpl implements ProfileService {
     private final FollowRepository followRepository;
     private final AlbumRepository albumRepository;
     private final LikeRepository likeRepository;
+    private final FileUploadService fileUploadService;
 
     @Override
     @Transactional(readOnly = true)
@@ -228,7 +230,34 @@ public class ProfileServiceImpl implements ProfileService {
     public LikedAlbumsResponseDTO getLikedAlbums(Long userId, Pageable pageable) {
         Pageable sortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         Page<Album> likedAlbums = likeRepository.findLikedAlbumsByUserId(userId, sortedPageable);
-        Page<AlbumResponseDto> albumDtos = likedAlbums.map(AlbumResponseDto::from);
+        Page<AlbumResponseDto> albumDtos = likedAlbums.map(album -> {
+            String coverImageUrl;
+            if (album.getUploadId() != null) {
+                try {
+                    coverImageUrl = fileUploadService.getFileUrl(album.getUploadId());
+                } catch (Exception e) {
+                    log.warn("Failed to get cover image URL for album: {}", album.getId(), e);
+                    coverImageUrl = null;
+                }
+            } else {
+                coverImageUrl = null;
+            }
+
+            String userNickname = "알 수 없는 사용자";
+            String userProfileImageUrl = null;
+            try {
+                ProfileResponseDTO profile = getProfileByUserId(album.getUserId());
+                if (profile != null) {
+                    userNickname = profile.getNickname() != null ? profile.getNickname() : "사용자 " + album.getUserId();
+                    userProfileImageUrl = profile.getProfileImageUrl();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get user profile for userId: {}", album.getUserId(), e);
+                userNickname = "사용자 " + album.getUserId();
+            }
+
+            return AlbumResponseDto.from(album, coverImageUrl, userNickname, userProfileImageUrl);
+        });
         return LikedAlbumsResponseDTO.from(albumDtos);
     }
 
@@ -236,7 +265,34 @@ public class ProfileServiceImpl implements ProfileService {
     @Transactional(readOnly = true)
     public UserAlbumsResponseDTO getMyAlbums(Long userId, Pageable pageable) {
         Page<Album> userAlbums = albumRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-        Page<AlbumResponseDto> albumDtos = userAlbums.map(AlbumResponseDto::from);
+        Page<AlbumResponseDto> albumDtos = userAlbums.map(album -> {
+            String coverImageUrl;
+            if (album.getUploadId() != null) {
+                try {
+                    coverImageUrl = fileUploadService.getFileUrl(album.getUploadId());
+                } catch (Exception e) {
+                    log.warn("Failed to get cover image URL for album: {}", album.getId(), e);
+                    coverImageUrl = null;
+                }
+            } else {
+                coverImageUrl = null;
+            }
+
+            String userNickname = "알 수 없는 사용자";
+            String userProfileImageUrl = null;
+            try {
+                ProfileResponseDTO profile = getProfileByUserId(album.getUserId());
+                if (profile != null) {
+                    userNickname = profile.getNickname() != null ? profile.getNickname() : "사용자 " + album.getUserId();
+                    userProfileImageUrl = profile.getProfileImageUrl();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get user profile for userId: {}", album.getUserId(), e);
+                userNickname = "사용자 " + album.getUserId();
+            }
+
+            return AlbumResponseDto.from(album, coverImageUrl, userNickname, userProfileImageUrl);
+        });
         return UserAlbumsResponseDTO.from(albumDtos);
     }
 

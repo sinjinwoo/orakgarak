@@ -72,7 +72,7 @@ export const recordingService = {
     return response.data;
   },
 
-  // 녹음본 기반 노래 추천 API
+  // 녹음본 기반 노래 추천 API (업데이트된 스키마)
   getRecommendations: async (uploadId: number): Promise<{
     status: string;
     message: string;
@@ -81,19 +81,39 @@ export const recordingService = {
       songId: number;
       songName: string;
       artistName: string;
-      albumName: string;
-      musicUrl: string;
-      lyrics: string;
       albumCoverUrl: string;
-      spotifyTrackId: string;
-      durationMs: number;
-      popularity: number;
-      status: string;
     }>;
-    voiceAnalysis: string;
+    voiceAnalysis: {
+      summary: string;
+      desc: string[];
+      allowedGenres: string[];
+    };
   }> => {
     console.log('🌐 API 요청: POST /recommendations/song', { uploadId });
     const response = await apiClient.post('/recommendations/song', { uploadId });
+    console.log('🌐 API 응답:', response.data);
+    return response.data;
+  },
+
+  // 유사 음색 사용자들이 많이 부른 곡 추천 API
+  getSimilarVoiceRecommendations: async (uploadId: number): Promise<{
+    status: string;
+    message: string;
+    recommendations: Array<{
+      id: number;
+      songId: number;
+      songName: string;
+      artistName: string;
+      albumCoverUrl: string;
+    }>;
+    voiceAnalysis: {
+      summary: string;
+      desc: string[];
+      allowedGenres: string[];
+    };
+  }> => {
+    console.log('🌐 API 요청: POST /recommendations/similar-voice', { uploadId });
+    const response = await apiClient.post('/recommendations/similar-voice', { uploadId });
     console.log('🌐 API 응답:', response.data);
     return response.data;
   },

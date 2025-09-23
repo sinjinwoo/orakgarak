@@ -343,7 +343,6 @@ const MyPage: React.FC = () => {
             params: { page: 0, size: 100 }
           });
           const albumsData: MyPageAlbumListResponse = albumsResponse.data;
-          console.log('앨범 데이터:', albumsData.albums);
           setMyAlbums(albumsData.albums);
         } catch (error) {
           console.error('앨범 데이터 로드 실패:', error);
@@ -905,7 +904,7 @@ const MyPage: React.FC = () => {
                   albums={myAlbums.map((album) => ({
                     id: album.id.toString(),
                   title: album.title,
-                    coverImage: '', // 실제 커버 이미지 URL이 없으므로 빈 문자열
+                    coverImageUrl: album.coverImageUrl || '/image/albumCoverImage.png', // 백엔드에서 제공하는 coverImageUrl 사용
                   artist: '나',
                   year: new Date(album.createdAt).getFullYear().toString(),
                     trackCount: album.trackCount
@@ -1151,7 +1150,7 @@ const MyPage: React.FC = () => {
                   id: album.id.toString(),
                   title: album.title,
                   artist: 'Various Artists', // 좋아요한 앨범은 아티스트 정보가 없을 수 있음
-                  coverImageUrl: album.coverImageUrl || '/images/default-album-cover.png',
+                  coverImageUrl: album.coverImageUrl || '/image/albumCoverImage.png',
                   year: new Date(album.createdAt).getFullYear().toString(),
                   trackCount: album.trackCount
                 }))}
@@ -1613,11 +1612,33 @@ const MyPage: React.FC = () => {
                     }
                   }}
                   onClick={() => {
-                    // 현재는 커버 이미지가 없으므로 기본 동작 비활성화
-                    showToast('앨범 커버 이미지가 설정되지 않았습니다.', 'info');
+                    if (album.coverImageUrl && album.coverImageUrl !== '/image/albumCoverImage.png') {
+                      // 실제 커버 이미지가 있으면 배경으로 설정
+                      localStorage.setItem('customBackground', `url(${album.coverImageUrl})`);
+                      setForceDefaultBackground(false);
+                      localStorage.removeItem('forceDefaultBackground');
+                      showToast('앨범 커버가 배경으로 설정되었습니다.', 'success');
+                      setIsBackgroundModalOpen(false);
+                      window.location.reload();
+                    } else {
+                      showToast('이 앨범에는 커버 이미지가 설정되지 않았습니다.', 'info');
+                    }
                   }}
                 >
-                  <Album sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.6)' }} />
+                  {album.coverImageUrl && album.coverImageUrl !== '/image/albumCoverImage.png' ? (
+                    <ImageWithFallback
+                      src={album.coverImageUrl}
+                      fallback="/image/albumCoverImage.png"
+                      alt={album.title}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  ) : (
+                    <Album sx={{ fontSize: 40, color: 'rgba(255, 255, 255, 0.6)' }} />
+                  )}
                 </Box>
               ))}
             </Box>

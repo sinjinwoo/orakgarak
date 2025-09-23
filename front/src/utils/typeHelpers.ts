@@ -143,13 +143,13 @@ export const normalizeSong = (song: any): any => {
  */
 export const normalizeAlbum = (album: any): any => {
   if (!album) return null;
-  
+
   return {
     ...album,
     // 연도 정보 추가 (UI 표시용)
     year: album.year || new Date(album.createdAt || Date.now()).getFullYear().toString(),
-    
-    // 커버 이미지 기본값 - coverImageUrl로 통일
-    coverImageUrl: album.coverImageUrl || '/images/default-album-cover.png',
+
+    // 커버 이미지: 없을 경우 null로 설정 (기본 그라데이션 표시를 위해)
+    coverImageUrl: album.coverImageUrl || null,
   };
 };

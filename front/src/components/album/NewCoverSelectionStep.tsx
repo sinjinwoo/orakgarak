@@ -10,8 +10,10 @@ import CoverSelectionTab, {
 } from "./CoverSelectionTab";
 import AICoverSection from "./AICoverSection";
 import ImageUploadSection from "./ImageUploadSection";
+import StepHeader from "./StepHeader";
 import { useAlbumCreationActions } from "@/stores/albumStore";
 import { useAlbumMetaStore } from "@/stores/albumMetaStore";
+import { Image } from "lucide-react";
 
 interface NewCoverSelectionStepProps {
   selectedRecordings: string[];
@@ -57,16 +59,11 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
     <div className={`h-full ${className}`}>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* 페이지 헤더 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <h2 className="text-2xl font-bold text-white mb-3">커버 선택</h2>
-          <p className="text-white/70">
-            앨범 커버를 AI로 자동 생성하거나 직접 업로드할 수 있습니다
-          </p>
-        </motion.div>
+        <StepHeader
+          title="커버 선택"
+          description="앨범 커버를 AI로 자동 생성하거나 직접 업로드할 수 있습니다"
+          icon={<Image className="w-6 h-6 text-fuchsia-400" />}
+        />
 
         {/* 탭 선택 */}
         <motion.div

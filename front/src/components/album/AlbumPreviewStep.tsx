@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -29,8 +29,10 @@ import {
   AudioFile,
   Error as ErrorIcon,
 } from "@mui/icons-material";
+import { Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-toastify";
+import StepHeader from './StepHeader';
 
 // 타입 및 훅 import
 import { Recording } from "@/types/recording";
@@ -90,6 +92,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
   // Local state
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 선택된 녹음들 필터링
   const filteredRecordings = useMemo(() => {
@@ -122,14 +125,68 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
     return "#f44336";
   };
 
+  // 오디오 URL 유효성 검사
+  const getValidAudioUrl = (recording: Recording): string | null => {
+    const possibleUrls = [
+      recording.url,
+      recording.audioUrl,
+      recording.publicUrl
+    ].filter(url => url && url.trim() !== '' && !url.startsWith('/audio/'));
+
+    return possibleUrls.length > 0 ? possibleUrls[0] : null;
+  };
+
   // 재생/일시정지 토글
-  const togglePlayback = (recordingId: string) => {
+  const togglePlayback = (recording: Recording) => {
+    const recordingId = String(recording.id);
+
     if (currentPlayingId === recordingId) {
+      // 현재 재생 중인 트랙을 일시정지
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setCurrentPlayingId(null);
     } else {
-      setCurrentPlayingId(recordingId);
+      // 새 트랙 재생
+      const audioUrl = getValidAudioUrl(recording);
+      if (audioUrl) {
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          audioRef.current.play().catch(error => {
+            console.error('Audio playback error:', error);
+            toast.error('오디오 재생 중 오류가 발생했습니다.');
+            setCurrentPlayingId(null);
+          });
+        }
+        setCurrentPlayingId(recordingId);
+      } else {
+        toast.error('재생할 수 있는 오디오 파일이 없습니다.');
+      }
     }
   };
+
+  // 오디오 이벤트 핸들러
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleEnded = () => {
+      setCurrentPlayingId(null);
+    };
+
+    const handleError = () => {
+      setCurrentPlayingId(null);
+      toast.error('오디오 재생 중 오류가 발생했습니다.');
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
+    };
+  }, []);
 
   // 앨범 발행
   const handlePublish = async () => {
@@ -218,208 +275,158 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
       transition={{ duration: 0.3 }}
     >
       <Box p={3}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold" }}>
-          앨범 미리보기
-        </Typography>
-
-        <Typography variant="body1" color="text.secondary" gutterBottom>
-          생성할 앨범의 최종 확인 후 발행하세요.
-        </Typography>
+        <StepHeader
+          title="미리보기"
+          description="생성할 앨범의 최종 확인 후 발행하세요"
+          icon={<Eye className="w-6 h-6 text-fuchsia-400" />}
+        />
 
         {/* 앨범 정보 카드 */}
-        <Paper elevation={3} sx={{ p: 3, mt: 3, mb: 3 }}>
-          <Box display="flex" alignItems="flex-start" gap={3}>
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-6">
+          <div className="flex flex-col lg:flex-row gap-6">
             {/* 앨범 커버 */}
-            <Box
-              sx={{
-                width: 200,
-                height: 200,
-                bgcolor: "grey.200",
-                borderRadius: 2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              {selectedCoverUploadId ? (
-                <Avatar
-                  sx={{ width: "100%", height: "100%", borderRadius: 2 }}
-                  variant="rounded"
-                >
-                  <MusicNote sx={{ fontSize: 80 }} />
-                </Avatar>
-              ) : (
-                <Box textAlign="center">
-                  <MusicNote sx={{ fontSize: 60, color: "grey.400" }} />
-                  <Typography variant="body2" color="grey.500">
-                    기본 커버
-                  </Typography>
-                </Box>
-              )}
-            </Box>
+            <div className="flex-shrink-0">
+              <div className="w-48 h-48 bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 rounded-xl border border-white/10 overflow-hidden">
+                {coverImage ? (
+                  <img
+                    src={coverImage}
+                    alt={title}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <MusicNote sx={{ fontSize: 48, color: 'rgba(255,255,255,0.4)' }} />
+                      <div className="text-white/40 text-sm mt-2">기본 커버</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* 앨범 메타데이터 */}
-            <Box flex={1}>
-              <Typography variant="h5" fontWeight="bold" gutterBottom>
-                {title}
-              </Typography>
+            <div className="flex-1">
+              <h2 className="text-2xl font-bold text-white mb-3">{title || '제목 없음'}</h2>
 
               {description && (
-                <Typography variant="body1" color="text.secondary" paragraph>
+                <p className="text-white/70 text-base mb-4 leading-relaxed">
                   {description}
-                </Typography>
+                </p>
               )}
 
-              <Box display="flex" gap={1} mb={2}>
-                <Chip
-                  icon={isPublic ? <Public /> : <Lock />}
-                  label={isPublic ? "공개" : "비공개"}
-                  color={isPublic ? "primary" : "default"}
-                  size="small"
-                />
-                <Chip
-                  icon={<AudioFile />}
-                  label={`${filteredRecordings.length}곡`}
-                  size="small"
-                />
-                <Chip
-                  icon={<Schedule />}
-                  label={formatDuration(totalDuration)}
-                  size="small"
-                />
-              </Box>
-            </Box>
-          </Box>
-        </Paper>
+              <div className="flex flex-wrap gap-2 mb-4">
+                <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${
+                  isPublic
+                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                    : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                }`}>
+                  {isPublic ? <Public sx={{ fontSize: 16 }} /> : <Lock sx={{ fontSize: 16 }} />}
+                  {isPublic ? '공개' : '비공개'}
+                </div>
+                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30">
+                  <AudioFile sx={{ fontSize: 16 }} />
+                  {filteredRecordings.length}곡
+                </div>
+                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  <Schedule sx={{ fontSize: 16 }} />
+                  {formatDuration(totalDuration)}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* 트랙 리스트 */}
-        <Paper elevation={2} sx={{ mb: 3 }}>
-          <Box p={2}>
-            <Typography variant="h6" gutterBottom>
-              트랙 목록 ({filteredRecordings.length}곡)
-            </Typography>
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-6">
+          <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+            <MusicNote sx={{ fontSize: 24, color: '#C147E9' }} />
+            트랙 목록 ({filteredRecordings.length}곡)
+          </h3>
 
-            <List>
-              {filteredRecordings.map((recording, index) => (
-                <React.Fragment key={recording.id}>
-                  <ListItem
-                    sx={{
-                      borderRadius: 1,
-                      "&:hover": { bgcolor: "action.hover" },
-                      transition: "background-color 0.2s",
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: "50%",
-                          bgcolor: "primary.main",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "white",
-                          fontWeight: "bold",
+          <div className="space-y-3">
+            {filteredRecordings.map((recording, index) => (
+              <div
+                key={recording.id}
+                className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all duration-200"
+              >
+                {/* 트랙 번호 */}
+                <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-fuchsia-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
+                  {index + 1}
+                </div>
+
+                {/* 트랙 정보 */}
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white font-medium text-base mb-2 truncate">
+                    {recording.title || recording.song?.title || `녹음 ${recording.id}`}
+                  </h4>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-white/60">
+                      {formatDuration(recording.duration || 0)}
+                    </span>
+                    {recording.analysis && (
+                      <div
+                        className="px-2 py-1 rounded-full text-white font-medium text-xs"
+                        style={{
+                          backgroundColor: getScoreColor(recording.analysis.overallScore),
                         }}
                       >
-                        {index + 1}
-                      </Box>
-                    </ListItemAvatar>
+                        점수: {recording.analysis.overallScore}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-                    <ListItemText
-                      primary={
-                        <Typography variant="subtitle1" fontWeight="medium">
-                          {recording.song?.title || `녹음 ${recording.id}`}
-                        </Typography>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            {recording.song?.artist || "알 수 없는 아티스트"}
-                          </Typography>
-                          <Box
-                            display="flex"
-                            alignItems="center"
-                            gap={1}
-                            mt={0.5}
-                          >
-                            <Typography variant="caption">
-                              {formatDuration(recording.duration)}
-                            </Typography>
-                            {recording.analysis && (
-                              <Chip
-                                label={`점수: ${recording.analysis.overallScore}`}
-                                size="small"
-                                sx={{
-                                  bgcolor: getScoreColor(
-                                    recording.analysis.overallScore
-                                  ),
-                                  color: "white",
-                                  fontWeight: "bold",
-                                }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                      }
-                    />
-
-                    <IconButton
-                      onClick={() => togglePlayback(recording.id)}
-                      color="primary"
-                      size="large"
-                    >
-                      {currentPlayingId === recording.id ? (
-                        <Pause />
-                      ) : (
-                        <PlayArrow />
-                      )}
-                    </IconButton>
-                  </ListItem>
-
-                  {index < filteredRecordings.length - 1 && (
-                    <Divider variant="inset" />
+                {/* 재생 버튼 */}
+                <button
+                  onClick={() => togglePlayback(recording)}
+                  disabled={!getValidAudioUrl(recording)}
+                  className={`flex-shrink-0 w-10 h-10 border border-white/20 rounded-full flex items-center justify-center transition-all duration-200 ${
+                    getValidAudioUrl(recording)
+                      ? 'bg-white/10 hover:bg-white/20 cursor-pointer'
+                      : 'bg-white/5 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  {currentPlayingId === String(recording.id) ? (
+                    <Pause sx={{ fontSize: 20, color: '#C147E9' }} />
+                  ) : (
+                    <PlayArrow sx={{
+                      fontSize: 20,
+                      color: getValidAudioUrl(recording) ? '#C147E9' : '#666'
+                    }} />
                   )}
-                </React.Fragment>
-              ))}
-            </List>
-          </Box>
-        </Paper>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* 액션 버튼들 */}
-        <Box display="flex" justifyContent="space-between" mt={4}>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBack />}
+        <div className="flex justify-between items-center mt-8">
+          <button
             onClick={onPrev}
             disabled={isPublishing}
-            size="large"
+            className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
+            <ArrowBack sx={{ fontSize: 20 }} />
             이전 단계
-          </Button>
+          </button>
 
-          <Button
-            variant="contained"
-            startIcon={
-              isPublishing ? (
-                <CircularProgress size={20} color="inherit" />
-              ) : (
-                <Send />
-              )
-            }
+          <button
             onClick={onPublish}
             disabled={isPublishing || !isValidForCreation}
-            size="large"
-            sx={{
-              minWidth: 140,
-              fontWeight: "bold",
-            }}
+            className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-600 hover:to-pink-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px] justify-center"
           >
+            {isPublishing ? (
+              <CircularProgress size={20} sx={{ color: 'white' }} />
+            ) : (
+              <Send sx={{ fontSize: 20 }} />
+            )}
             {isPublishing ? "발행 중..." : "앨범 발행"}
-          </Button>
-        </Box>
+          </button>
+        </div>
 
         {/* 발행 진행 상태 */}
         <AnimatePresence>
@@ -428,11 +435,17 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
+              className="mt-4"
             >
-              <Alert severity="info" sx={{ mt: 3 }}>
-                <AlertTitle>앨범을 발행하고 있습니다...</AlertTitle>
-                잠시만 기다려주세요. 앨범 생성 및 트랙 추가가 진행 중입니다.
-              </Alert>
+              <div className="bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CircularProgress size={16} sx={{ color: '#93c5fd' }} />
+                  <span className="font-semibold">앨범을 발행하고 있습니다...</span>
+                </div>
+                <p className="text-sm text-blue-200">
+                  잠시만 기다려주세요. 앨범 생성 및 트랙 추가가 진행 중입니다.
+                </p>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -446,6 +459,9 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
           </Alert>
         )}
       </Box>
+
+      {/* 숨겨진 오디오 엘리먼트 */}
+      <audio ref={audioRef} preload="none" />
     </motion.div>
   );
 };
