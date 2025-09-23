@@ -237,6 +237,8 @@ services:
       # Public Dashboard 비활성화 (보안)
       GF_FEATURE_TOGGLES_ENABLE: ""
       GF_PUBLIC_DASHBOARDS_ENABLED: false
+      # Grafana 메트릭 활성화
+      GF_METRICS_ENABLED: true
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro

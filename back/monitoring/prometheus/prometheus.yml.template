@@ -13,10 +13,10 @@ rule_files:
   - "rules/*.yml"
 
 scrape_configs:
-  # Spring Boot 애플리케이션 (로컬 개발환경 - IDE 실행)
+  # Spring Boot 애플리케이션 (환경별 자동 설정)
   - job_name: 'orakgaraki-app'
     static_configs:
-      - targets: ['host.docker.internal:8091']  # 로컬 IDE에서 실행 중인 앱
+      - targets: ['${SPRING_APP_TARGET}']  # 환경별 자동 설정
     metrics_path: '/actuator/prometheus'
     scrape_interval: 10s
     # Basic auth for Actuator endpoints
@@ -54,7 +54,8 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Grafana 모니터링
+  # Grafana 모니터링 (메트릭 활성화됨)
   - job_name: 'grafana'
     static_configs:
       - targets: ['grafana:3000']
+    metrics_path: '/metrics'

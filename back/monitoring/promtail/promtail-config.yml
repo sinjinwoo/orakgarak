@@ -7,6 +7,7 @@ positions:
 
 clients:
   - url: http://loki:3100/loki/api/v1/push
+    tenant_id: fake
 
 scrape_configs:
   # Docker 컨테이너 로그만 수집 (현업 방식)
