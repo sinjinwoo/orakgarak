@@ -6,7 +6,7 @@ positions:
   filename: /tmp/positions.yaml
 
 clients:
-  - url: http://loki:3100/loki/api/v1/push
+  - url: http://loki:${LOKI_PORT}/loki/api/v1/push
     tenant_id: fake
 
 scrape_configs:
@@ -70,6 +70,6 @@ scrape_configs:
             - labels:
                 level:
 
-# 현업에서는 간단한 설정을 선호
+# 현업에서는 간단한 설정을 선호 (환경별 설정)
 limits_config:
-  readline_rate: 10000
+  readline_rate: ${PROMTAIL_READLINE_RATE}
