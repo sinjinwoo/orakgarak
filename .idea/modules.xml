@@ -3,7 +3,9 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/S13P21C103.iml" filepath="$PROJECT_DIR$/.idea/S13P21C103.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/orak.iml" filepath="$PROJECT_DIR$/.idea/modules/orak.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/orak.main.iml" filepath="$PROJECT_DIR$/.idea/modules/orak.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/orak.test.iml" filepath="$PROJECT_DIR$/.idea/modules/orak.test.iml" />
     </modules>
   </component>
 </project>
