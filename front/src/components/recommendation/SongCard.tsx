@@ -1,304 +1,269 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Card, 
-  CardContent, 
   Typography, 
-  Box, 
-  IconButton
+  Box,
+  Button
 } from '@mui/material';
 import { 
-  PlayArrow, 
-  Bookmark, 
-  BookmarkBorder,
-  ThumbUp,
-  ThumbDown
+  BookmarkAdd
 } from '@mui/icons-material';
 import type { RecommendedSong } from '../../types/recommendation';
+import '../../styles/cyberpunk-animations.css';
 
 interface SongCardProps {
   song: RecommendedSong;
   isSelected?: boolean;
-  isBookmarked?: boolean;
   onSelect?: (song: RecommendedSong) => void;
-  onBookmark?: (song: RecommendedSong) => void;
-  onReserve?: (song: RecommendedSong) => void;
-  userFeedback?: 'like' | 'dislike' | null;
-  onFeedback?: (songId: string, feedback: 'like' | 'dislike') => void;
+  onReservation?: (song: RecommendedSong) => void;
 }
 
 const SongCard: React.FC<SongCardProps> = ({
   song,
   isSelected = false,
-  isBookmarked = false,
   onSelect,
-  onBookmark,
-  userFeedback = null,
-  onFeedback
+  onReservation
 }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  // 카드 클릭 핸들러 (뒤집기)
+  const handleCardClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('카드 클릭 - 뒤집기:', !isFlipped);
+    setIsFlipped(!isFlipped);
+    onSelect?.(song);
+  };
+
+  // 예약 버튼 핸들러
+  const handleReservation = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('예약 버튼 클릭:', song.title);
+    onReservation?.(song);
+  };
+
   return (
-     <Card 
+    <Box 
       sx={{ 
-        width: 240,
-        height: 320,
-       cursor: 'pointer',
-       background: isSelected 
-         ? 'linear-gradient(135deg, rgba(251, 66, 212, 0.2) 0%, rgba(66, 253, 235, 0.2) 100%)'
-         : 'linear-gradient(135deg, rgba(30, 10, 20, 0.8) 0%, rgba(10, 5, 15, 0.8) 100%)',
-       border: isSelected 
-         ? '3px solid rgba(251, 66, 212, 0.8)' 
-         : '2px solid rgba(66, 253, 235, 0.3)',
-       borderRadius: '20px',
-       backdropFilter: 'blur(10px)',
-       position: 'relative',
-       overflow: 'hidden',
-       transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-       transform: isSelected ? 'scale(1.05) translateY(-10px)' : 'scale(1)',
-       boxShadow: isSelected 
-         ? '0 20px 40px rgba(251, 66, 212, 0.4)' 
-         : '0 8px 25px rgba(0, 0, 0, 0.3)',
-       fontFamily: 'neon, monospace',
-       '&:hover': {
-         transform: 'scale(1.08) translateY(-15px)',
-         boxShadow: '0 25px 50px rgba(251, 66, 212, 0.5)',
-         border: '3px solid rgba(66, 253, 235, 0.6)',
-       }
-     }}
-      onClick={() => onSelect?.(song)}
+        width: 320,  // 가로 크기 증가 (통일)
+        height: 380, // 세로 크기 유지 (통일)
+        position: 'relative',
+        perspective: '1000px'
+      }}
     >
-      {/* 배경 패턴 */}
-      <Box sx={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: `
-          radial-gradient(circle at 20% 20%, rgba(251, 66, 212, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 80%, rgba(66, 253, 235, 0.1) 0%, transparent 50%)
-        `,
-        zIndex: 0
-      }} />
-      
-      <CardContent sx={{ 
-        p: 0, 
-        height: '100%', 
-        position: 'relative', 
-        zIndex: 1,
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-         {/* 앨범 커버 */}
-         <Box sx={{ 
-           position: 'relative',
-           height: 160,
-          backgroundImage: `url(${song.coverImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          borderRadius: '20px 20px 0 0',
-          overflow: 'hidden'
-        }}>
-          {/* 그라데이션 오버레이 */}
-          <Box sx={{
+      {/* 3D 카드 컨테이너 */}
+      <Box
+        sx={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          transformStyle: 'preserve-3d',
+          transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          cursor: 'pointer',
+          '&:hover': {
+            transform: isFlipped ? 'rotateY(180deg) scale(1.02)' : 'rotateY(0deg) scale(1.02)',
+          }
+        }}
+        onClick={handleCardClick}
+      >
+        {/* 앞면 - 앨범 커버 */}
+        <Card
+          sx={{
             position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)',
-            zIndex: 1
-          }} />
-          
-           {/* 재생 버튼 */}
-           <IconButton 
-             sx={{ 
-               position: 'absolute',
-               top: '50%',
-               left: '50%',
-               transform: 'translate(-50%, -50%)',
-               background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-               color: 'white',
-               width: 50,
-               height: 50,
-               borderRadius: '50%',
-               boxShadow: '0 8px 25px rgba(139, 92, 246, 0.4)',
-               zIndex: 2,
-               opacity: 0.9,
-               '&:hover': {
-                 background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                 transform: 'translate(-50%, -50%) scale(1.1)',
-                 boxShadow: '0 12px 30px rgba(139, 92, 246, 0.6)',
-                 opacity: 1
-               },
-               transition: 'all 0.3s ease'
-             }}
-           >
-             <PlayArrow sx={{ fontSize: '1.5rem' }} />
-           </IconButton>
-
-          {/* 매칭 점수 */}
-          <Box sx={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            background: 'rgba(0, 0, 0, 0.7)',
-            borderRadius: '20px',
-            px: 2,
-            py: 1,
-            zIndex: 2
-          }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                color: '#fff',
-                fontWeight: 'bold',
-                fontSize: '1rem'
-              }}
-            >
-              {song.matchScore}%
-            </Typography>
-          </Box>
-
-          {/* 북마크 버튼 */}
-          <IconButton 
-            sx={{ 
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              background: 'rgba(0, 0, 0, 0.5)',
-              color: isBookmarked ? '#ffd700' : '#fff',
-              width: 40,
-              height: 40,
-              borderRadius: '50%',
-              zIndex: 2,
-              '&:hover': {
-                background: 'rgba(0, 0, 0, 0.7)',
-                transform: 'scale(1.1)'
-              },
-              transition: 'all 0.3s ease'
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onBookmark?.(song);
+            width: '100%',
+            height: '100%',
+            backfaceVisibility: 'hidden',
+            border: isSelected 
+              ? '3px solid rgba(255,0,128,0.8)' 
+              : '2px solid rgba(0,255,255,0.3)',
+            borderRadius: 4,
+            overflow: 'hidden',
+            boxShadow: isSelected 
+              ? '0 0 40px rgba(255,0,128,0.4)' 
+              : '0 8px 32px rgba(0,0,0,0.4)',
+          }}
+        >
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              background: song.imageUrl || song.coverImage 
+                ? `url(${song.imageUrl || song.coverImage}) center/cover`
+                : 'linear-gradient(135deg, rgba(26,26,26,0.9), rgba(13,13,13,0.9))',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end',
+              position: 'relative'
             }}
           >
-            {isBookmarked ? <Bookmark sx={{ fontSize: '1.2rem' }} /> : <BookmarkBorder sx={{ fontSize: '1.2rem' }} />}
-          </IconButton>
-        </Box>
+            {/* 앨범 커버 오버레이 */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `
+                  linear-gradient(
+                    to bottom,
+                    transparent 0%,
+                    transparent 70%,
+                    rgba(0,0,0,0.8) 95%,
+                    rgba(0,0,0,0.95) 100%
+                  )
+                `
+              }}
+            />
 
-         {/* 곡 정보 */}
-         <Box sx={{ 
-           flex: 1, 
-           p: 2, 
-           display: 'flex', 
-           flexDirection: 'column',
-           justifyContent: 'center',
-           alignItems: 'center',
-           textAlign: 'center'
-         }}>
-           {/* 제목과 아티스트 */}
-           <Typography 
-             variant="h6" 
-             sx={{ 
-               fontWeight: 'bold',
-               mb: 1,
-               overflow: 'hidden',
-               textOverflow: 'ellipsis',
-               whiteSpace: 'nowrap',
-               color: '#fff',
-               fontSize: '1rem',
-               lineHeight: 1.2,
-               width: '100%'
-             }}
-           >
-             {song.title}
-           </Typography>
-           <Typography 
-             variant="body2" 
-             sx={{ 
-               overflow: 'hidden',
-               textOverflow: 'ellipsis',
-               whiteSpace: 'nowrap',
-               color: '#a78bfa',
-               fontWeight: 400,
-               fontSize: '0.85rem',
-               width: '100%'
-             }}
-           >
-             {song.artist}
-           </Typography>
+            {/* 앞면 하단 정보 */}
+            <Box sx={{ position: 'relative', zIndex: 2, p: 2 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: '#fff',
+                  fontFamily: "'Courier New', monospace",
+                  fontWeight: 700,
+                  textShadow: '0 0 10px rgba(0,255,255,0.8)',
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  mb: 0.5
+                }}
+              >
+                {song.title}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: 'rgba(255,255,255,0.8)',
+                  fontFamily: "'Courier New', monospace",
+                  textAlign: 'center',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {song.artist}
+              </Typography>
+            </Box>
+          </Box>
+        </Card>
 
-           {/* 선택 표시 */}
-           {isSelected && (
-             <Box sx={{
-               background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-               borderRadius: '8px',
-               p: 0.5,
-               mt: 1,
-               minWidth: 60
-             }}>
-               <Typography 
-                 variant="body2" 
-                 sx={{ 
-                   color: 'white',
-                   fontWeight: 'bold',
-                   fontSize: '0.7rem'
-                 }}
-               >
-                 SELECTED
-               </Typography>
-             </Box>
-           )}
+        {/* 뒷면 - 예약 버튼만 */}
+        <Card
+          sx={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            background: `
+              linear-gradient(135deg, 
+                rgba(26,26,26,0.98) 0%, 
+                rgba(13,13,13,0.99) 50%,
+                rgba(26,26,26,0.98) 100%
+              )
+            `,
+            border: '2px solid rgba(0,255,255,0.4)',
+            borderRadius: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: 4,
+            boxShadow: '0 0 40px rgba(0,255,255,0.2)'
+          }}
+          className="matrix-bg hologram-panel"
+        >
+          {/* 곡 정보 */}
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Typography 
+              variant="h4" 
+              className="hologram-text neon-text"
+              sx={{ 
+                fontFamily: "'Courier New', monospace",
+                fontWeight: 700,
+                letterSpacing: 2,
+                mb: 2
+              }}
+            >
+              {song.title}
+            </Typography>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                color: 'rgba(0,255,255,0.8)',
+                fontFamily: "'Courier New', monospace",
+                fontWeight: 600,
+                mb: 1,
+                letterSpacing: 1
+              }}
+            >
+              {song.artist}
+            </Typography>
+            {song.album && (
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255,255,255,0.6)',
+                  fontFamily: "'Courier New', monospace",
+                  letterSpacing: 0.5
+                }}
+              >
+                {song.album}
+              </Typography>
+            )}
+          </Box>
 
-           {/* 피드백 버튼들 */}
-           {onFeedback && (
-             <Box sx={{ 
-               display: 'flex', 
-               gap: 1, 
-               mt: 2,
-               justifyContent: 'center'
-             }}>
-               <IconButton
-                 size="small"
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   onFeedback(song.id, 'like');
-                 }}
-                 sx={{
-                   color: userFeedback === 'like' ? '#22c55e' : '#6b7280',
-                   backgroundColor: userFeedback === 'like' ? 'rgba(34, 197, 94, 0.1)' : 'transparent',
-                   '&:hover': {
-                     backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                     color: '#22c55e'
-                   },
-                   transition: 'all 0.2s ease'
-                 }}
-               >
-                 <ThumbUp fontSize="small" />
-               </IconButton>
-               
-               <IconButton
-                 size="small"
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   onFeedback(song.id, 'dislike');
-                 }}
-                 sx={{
-                   color: userFeedback === 'dislike' ? '#ef4444' : '#6b7280',
-                   backgroundColor: userFeedback === 'dislike' ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
-                   '&:hover': {
-                     backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                     color: '#ef4444'
-                   },
-                   transition: 'all 0.2s ease'
-                 }}
-               >
-                 <ThumbDown fontSize="small" />
-               </IconButton>
-             </Box>
-           )}
-         </Box>
-      </CardContent>
-    </Card>
+          {/* 예약 버튼 */}
+          <Button
+            onClick={handleReservation}
+            startIcon={<BookmarkAdd />}
+            className="cyberpunk-button"
+            sx={{
+              px: 8,
+              py: 3,
+              background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+              color: '#000',
+              fontFamily: "'Courier New', monospace",
+              fontWeight: 700,
+              letterSpacing: 2,
+              borderRadius: 3,
+              fontSize: '1.2rem',
+              minWidth: 200,
+              '&:hover': {
+                background: 'linear-gradient(45deg, #ff0080, #00ffff)',
+                transform: 'scale(1.1)',
+                boxShadow: '0 0 40px rgba(0,255,255,0.6)'
+              },
+              '&:active': {
+                transform: 'scale(0.95)',
+              }
+            }}
+          >
+            예약하기
+          </Button>
+
+          {/* 안내 텍스트 */}
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: 'rgba(255,255,255,0.5)',
+              fontFamily: "'Courier New', monospace",
+              textAlign: 'center',
+              mt: 3,
+              letterSpacing: 1,
+              lineHeight: 1.6
+            }}
+          >
+            Add to recording queue<br />
+            녹음 대기열에 추가됩니다
+          </Typography>
+        </Card>
+      </Box>
+    </Box>
   );
 };
 

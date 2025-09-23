@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from '../common/Modal';
+import { Modal, Box } from '@mui/material';
 
 interface GameResult {
     score: number;
@@ -39,8 +39,16 @@ const GameResultModal: React.FC<GameResultModalProps> = ({
     };
 
     return (
-        <Modal open={isOpen} onClose={onClose}>
-            <div style={{
+        <Modal 
+            open={isOpen} 
+            onClose={onClose}
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
+            <Box sx={{
                 background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
                 padding: '40px',
                 borderRadius: '16px',
@@ -189,7 +197,7 @@ const GameResultModal: React.FC<GameResultModalProps> = ({
                         🚪 나가기
                     </button>
                 </div>
-            </div>
+            </Box>
         </Modal>
     );
 };

@@ -22,17 +22,19 @@ import NewCoverSelectionStep from "../components/album/NewCoverSelectionStep";
 import AlbumInfoStep from "../components/album/AlbumInfoStep";
 import AlbumPreviewStep from "../components/album/AlbumPreviewStep";
 import { recordingService } from "../services/api";
+import { useCreateAlbum } from "@/hooks/useAlbum";
+import { useAlbumMetaStore } from "@/stores/albumMetaStore";
 
 // 더미 녹음 데이터
 const dummyRecordings: Recording[] = [
   {
-    id: "1",
-    userId: "user1",
-    songId: "song1",
-    song: { title: "좋아", artist: "윤종신" },
-    audioUrl: "", // 실제 오디오 파일이 없으므로 빈 문자열 사용
+    id: '1',
+    userId: 'user1',
+    songId: 'song1',
+    song: { title: '좋아', artist: '윤종신' },
+    audioUrl: '', // 실제 오디오 파일이 없으므로 빈 문자열 사용
     duration: 225, // 3:45
-    createdAt: "2025-01-15T00:00:00Z",
+    createdAt: '2025-01-15T00:00:00Z',
     analysis: {
       pitchAccuracy: 85,
       tempoAccuracy: 80,
@@ -127,7 +129,7 @@ interface Track extends Recording {
 
 const AlbumCreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentStep, selectedRecordIds, albumInfo } =
+  const { currentStep, selectedRecordIds, albumInfo, selectedCoverUploadId } =
     useAlbumCreationSelectors();
 
   const {
@@ -150,43 +152,62 @@ const AlbumCreatePage: React.FC = () => {
   );
   const coverImage = albumInfo.coverImageUrl || null; // 커버 이미지 URL
 
+  // Hooks
+  const createAlbumMutation = useCreateAlbum();
+  const { cover } = useAlbumMetaStore();
+
   // Handler functions for form updates
-  const setTitle = useCallback((newTitle: string) => {
-    updateAlbumInfo({ title: newTitle });
-  }, [updateAlbumInfo]);
+  const setTitle = useCallback(
+    (newTitle: string) => {
+      updateAlbumInfo({ title: newTitle });
+    },
+    [updateAlbumInfo]
+  );
 
-  const setDescription = useCallback((newDescription: string) => {
-    updateAlbumInfo({ description: newDescription });
-  }, [updateAlbumInfo]);
+  const setDescription = useCallback(
+    (newDescription: string) => {
+      updateAlbumInfo({ description: newDescription });
+    },
+    [updateAlbumInfo]
+  );
 
-  const setIsPublic = useCallback((newIsPublic: boolean) => {
-    updateAlbumInfo({ isPublic: newIsPublic });
-  }, [updateAlbumInfo]);
+  const setIsPublic = useCallback(
+    (newIsPublic: boolean) => {
+      updateAlbumInfo({ isPublic: newIsPublic });
+    },
+    [updateAlbumInfo]
+  );
 
   // Handler functions for recording selection with Set-based deduplication
-  const addRecording = useCallback((recordingId: string) => {
-    const currentSet = new Set(selectedRecordIds.map(String));
+  const addRecording = useCallback(
+    (recordingId: string) => {
+      const currentSet = new Set(selectedRecordIds.map(String));
 
-    // 중복 방지
-    if (currentSet.has(recordingId)) {
-      return;
-    }
+      // 중복 방지
+      if (currentSet.has(recordingId)) {
+        return;
+      }
 
-    // 최대 10곡 제한
-    if (currentSet.size >= 10) {
-      return;
-    }
+      // 최대 10곡 제한
+      if (currentSet.size >= 10) {
+        return;
+      }
 
-    // Set을 사용해서 중복 제거하고 추가
-    const newSet = new Set([...currentSet, recordingId]);
-    setSelectedRecordIds(Array.from(newSet));
-  }, [selectedRecordIds, setSelectedRecordIds]);
+      // Set을 사용해서 중복 제거하고 추가
+      const newSet = new Set([...currentSet, recordingId]);
+      setSelectedRecordIds(Array.from(newSet));
+    },
+    [selectedRecordIds, setSelectedRecordIds]
+  );
 
-  const removeRecording = useCallback((recordingId: string) => {
-    const currentSet = new Set(selectedRecordIds.map(String));
-    currentSet.delete(recordingId);
-    setSelectedRecordIds(Array.from(currentSet));
-  }, [selectedRecordIds, setSelectedRecordIds]);
+  const removeRecording = useCallback(
+    (recordingId: string) => {
+      const currentSet = new Set(selectedRecordIds.map(String));
+      currentSet.delete(recordingId);
+      setSelectedRecordIds(Array.from(currentSet));
+    },
+    [selectedRecordIds, setSelectedRecordIds]
+  );
 
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
@@ -228,10 +249,13 @@ const AlbumCreatePage: React.FC = () => {
   const goToStep = useCallback(
     (stage: StageId) => {
       const stepNumber =
-        stage === "recordings" ? 1 :
-        stage === "cover" ? 2 :
-        stage === "metadata" ? 3 :
-        4; // preview
+        stage === "recordings"
+          ? 1
+          : stage === "cover"
+          ? 2
+          : stage === "metadata"
+          ? 3
+          : 4; // preview
       setCreationStep(stepNumber);
     },
     [setCreationStep]
@@ -268,16 +292,9 @@ const AlbumCreatePage: React.FC = () => {
       title,
       description,
       isPublic,
-      coverImageUrl: coverImage,
+      uploadId: selectedCoverUploadId || cover.uploadId, // albumStore 우선, 없으면 albumMetaStore 사용
     };
-  }, [title, description, isPublic, coverImage]);
-
-  // 앨범 생성 함수 (임시)
-  const createAlbum = useCallback((albumData: any, recordings: Recording[]) => {
-    // TODO: 실제 앨범 생성 API 호출
-    console.log("앨범 생성:", albumData, recordings);
-    return Date.now(); // 임시 앨범 ID
-  }, []);
+  }, [title, description, isPublic, selectedCoverUploadId, cover.uploadId]);
 
   // Action bar handlers
   const handleNext = useCallback(() => {
@@ -359,8 +376,8 @@ const AlbumCreatePage: React.FC = () => {
       .map((recording, index) => ({
         ...recording,
         order: index + 1,
-        title: recording.song?.title || '',
-        artist: recording.song?.artist || '',
+        title: recording.song?.title || "",
+        artist: recording.song?.artist || "",
         durationSec: recording.duration || 0,
       }));
     setTracks(newTracks);
@@ -453,7 +470,8 @@ const AlbumCreatePage: React.FC = () => {
   const handlePublish = async () => {
     try {
       const albumData = getAlbumData();
-      const albumId = createAlbum(albumData, recordings);
+      // 실제 앨범 생성 API 호출
+      const album = await createAlbumMutation.mutateAsync(albumData);
 
       addToast({
         type: "success",

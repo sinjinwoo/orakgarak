@@ -10,6 +10,8 @@ interface CoverFlowProps {
   onClose?: () => void;
   userFeedback?: { [songId: string]: 'like' | 'dislike' | null };
   onSongFeedback?: (songId: string, feedback: 'like' | 'dislike') => void;
+  showMRButton?: boolean;
+  onReservation?: (song: RecommendedSong) => void;
 }
 
 const CoverFlow: React.FC<CoverFlowProps> = ({
@@ -19,7 +21,9 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
   isOpen = true,
   onClose,
   userFeedback = {},
-  onSongFeedback
+  onSongFeedback,
+  showMRButton = true,
+  onReservation
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -142,21 +146,21 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
           const distance = index - currentIndex;
           const absDistance = Math.abs(distance);
           
-          // 카드 위치와 회전 계산 - 중앙 기준으로 대칭 배치
+          // 카드 위치와 회전 계산 - 통일된 크기 (320x380)
           const getCardTransform = () => {
             if (distance === 0) {
-              // 중앙 카드
-              return 'translateX(0px) translateY(0px) translateZ(120px) rotateY(0deg) scale(1.1)';
+              // 중앙 카드 - 크기 완전 통일
+              return 'translateX(0px) translateY(0px) translateZ(120px) rotateY(0deg) scale(1.0)';
             }
             
-            // 좌우 대칭 배치를 위한 계산
-            const angle = distance * 20; // 각 카드당 20도 회전
-            const offsetX = distance * 120; // X축 오프셋을 줄임
-            const offsetZ = -absDistance * 60; // Z축 깊이를 줄임
-            const offsetY = absDistance * 10; // Y축 오프셋을 줄임
-            const scale = Math.max(0.5, 1.1 - absDistance * 0.15);
+            // 좌우 대칭 배치를 위한 계산 - 새로운 카드 크기 고려
+            const angle = distance * 15; // 각 카드당 15도 회전
+            const offsetX = distance * 160; // X축 오프셋 (카드 폭 320 고려)
+            const offsetZ = -absDistance * 80; // Z축 깊이
+            const offsetY = absDistance * 15; // Y축 오프셋
             
-            return `translateX(${offsetX}px) translateY(${offsetY}px) translateZ(${offsetZ}px) rotateY(${angle}deg) scale(${scale})`;
+            // 모든 카드 크기 완전 통일 (scale 고정)
+            return `translateX(${offsetX}px) translateY(${offsetY}px) translateZ(${offsetZ}px) rotateY(${angle}deg) scale(0.85)`;
           };
           
           // 카드 투명도 계산
@@ -211,11 +215,8 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
               <SongCard
                 song={song}
                 isSelected={distance === 0}
-                isBookmarked={false}
                 onSelect={onSongSelect}
-                onBookmark={() => {}}
-                userFeedback={userFeedback[song.id]}
-                onFeedback={onSongFeedback}
+                onReservation={onReservation}
               />
             </div>
           );
