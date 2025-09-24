@@ -1,6 +1,7 @@
 // 추천 관련 타입 정의
 export interface RecommendedSong {
   id: string;
+  songId: number; // 백엔드 songId
   title: string;
   artist: string;
   album?: string; // 앨범명
