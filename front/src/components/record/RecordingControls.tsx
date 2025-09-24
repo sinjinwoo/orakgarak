@@ -39,6 +39,10 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
   onRecordingChange,
   selectedSongId,
 }) => {
+  // selectedSongId 변경 감지 로그
+  React.useEffect(() => {
+    console.log("🎵 RecordingControls - selectedSongId 변경:", selectedSongId);
+  }, [selectedSongId]);
   // 모드 선택 상태
   const [recordingMode, setRecordingMode] = useState<RecordingMode>("microphone");
   
@@ -441,6 +445,13 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
       setIsConverting(false);
 
       // Presigned URL을 통한 S3 업로드
+      console.log("🎵 녹음 저장 시 songId 전달:", {
+        title,
+        songId: selectedSongId,
+        durationSeconds: recordingTime,
+        hasAudioBlob: !!finalAudioBlob
+      });
+      
       await processRecording.mutateAsync({
         title,
         audioBlob: finalAudioBlob,

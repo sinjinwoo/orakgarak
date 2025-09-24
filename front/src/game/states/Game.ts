@@ -264,15 +264,19 @@ export class GameState extends Phaser.State {
         fighter.alpha = fighter.hitpoints / 100;
         obstacle.kill();
         
-        // HP가 0 이하가 되면 게임 오버 처리
+        // HP가 0 이하가 되면 게임 오버 상태로 전환
         if (fighter.hitpoints <= 0) {
             console.log("🎮 Game Over! Player died.");
+            
+            // 게임 완전 정지
+            this.game.paused = true;
+            this.game.time.events.pause();
             
             // 게임 오버 상태로 전환
             (window as any).isGameOver = true;
             (window as any).gameState = { gameOver: true };
             
-            // 커스텀 이벤트 발생
+            // 즉시 이벤트 발생 (React 컴포넌트에서 감지할 수 있도록)
             const gameOverEvent = new CustomEvent('gameOver', {
                 detail: {
                     score: fighter.score,
@@ -281,15 +285,24 @@ export class GameState extends Phaser.State {
                 }
             });
             
-            console.log('🎮 게임 오버 이벤트 발생:', gameOverEvent.detail);
+            console.log('🎮 Game.ts에서 게임 오버 이벤트 발생:', gameOverEvent.detail);
+            console.log('🎮 전역 함수 존재 여부:', !!(window as any).onGameOver);
+            console.log('🎮 이벤트 리스너 등록 여부:', !!(window as any).gameOverHandler);
+            
             window.dispatchEvent(gameOverEvent);
             document.dispatchEvent(gameOverEvent);
             
-            // 잠시 후 게임 오버 상태로 전환 (이벤트가 처리될 시간을 줌)
-            setTimeout(() => {
-                console.log('🎮 GameOver 상태로 전환');
-                this.game.state.start("GameOver");
-            }, 100);
+            // 전역 함수 호출
+            if ((window as any).onGameOver) {
+                console.log('🎮 전역 함수 onGameOver 호출');
+                (window as any).onGameOver(gameOverEvent.detail);
+            } else {
+                console.log('🎮 전역 함수 onGameOver가 존재하지 않음');
+            }
+            
+            // 즉시 게임 오버 상태로 전환
+            console.log('🎮 GameOver 상태로 전환');
+            this.game.state.start("GameOver");
         }
         
         fighter.updateText();

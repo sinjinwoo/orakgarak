@@ -47,7 +47,15 @@ export const recordingService = {
 
   // 녹음본 메타데이터 생성 (파일 업로드 후)
   createRecording: async (request: CreateRecordingRequest): Promise<Recording> => {
+    console.log('🎵 /records/async 요청 데이터:', {
+      title: request.title,
+      uploadId: request.uploadId,
+      songId: request.songId,
+      durationSeconds: request.durationSeconds
+    });
+    
     const response = await apiClient.post<Recording>('/records/async', request);
+    console.log('🎵 /records/async 응답 데이터:', response.data);
     return response.data;
   },
 
