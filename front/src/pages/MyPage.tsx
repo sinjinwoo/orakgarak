@@ -48,6 +48,7 @@ import { recordingService } from '../services/api/recordings';
 import { motion } from 'framer-motion';
 import AlbumCoverflow from '../components/AlbumCoverflow';
 import { albumService, userService, apiClient } from '../services/api';
+import { clearAllDummyData } from '../utils/feedUtils';
 import type { 
   Album as AlbumType, 
   MyPageStats, 
@@ -315,6 +316,9 @@ const MyPage: React.FC = () => {
   useEffect(() => {
     const loadMyPageData = async () => {
       try {
+        // 더미 데이터 제거
+        clearAllDummyData();
+        
         // 통계 데이터 로드
         setStatsLoading(true);
         try {

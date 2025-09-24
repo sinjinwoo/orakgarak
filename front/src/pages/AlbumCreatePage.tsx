@@ -20,6 +20,10 @@ import { recordingService } from "../services/api";
 import { useCreateAlbum } from "@/hooks/useAlbum";
 import { useAlbumMetaStore } from "@/stores/albumMetaStore";
 
+// 빈 녹음 데이터 배열 (실제 API에서 로드)
+const emptyRecordings: Recording[] = [];
+
+// New imports for the refactored components
 import StepperTimeline, {
   type StageId,
 } from "../components/album/StepperTimeline";
@@ -212,7 +216,25 @@ const AlbumCreatePage: React.FC = () => {
         setRecordings(response || []);
       } catch (error: any) {
         console.error("녹음 목록 로드 실패:", error);
-        setRecordingsError("녹음 목록을 불러오는데 실패했습니다.");
+
+        // 에러 타입에 따른 적절한 메시지 설정
+        let errorMessage = "녹음 목록을 불러오는데 실패했습니다.";
+
+        if (error?.response?.status === 401) {
+          errorMessage = "로그인이 필요합니다.";
+        } else if (error?.response?.status === 403) {
+          errorMessage = "접근 권한이 없습니다.";
+        } else if (error?.response?.status >= 500) {
+          errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        } else if (error?.message?.includes("Network Error")) {
+          errorMessage = "네트워크 연결을 확인해주세요.";
+        }
+
+        setRecordingsError(errorMessage);
+
+        // API 실패 시 빈 배열로 초기화
+        console.warn("녹음 API 실패로 빈 배열 사용");
+        setRecordings(emptyRecordings);
       } finally {
         setRecordingsLoading(false);
       }

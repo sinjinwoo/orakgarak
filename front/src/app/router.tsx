@@ -62,15 +62,15 @@ export const AppRouter: React.FC = () => {
           </AuthGuard>
         } />
         
-        <Route path="/albums/:albumId" element={
-          <AuthGuard>
-            <AlbumDetailPage />
-          </AuthGuard>
-        } />
-        
         <Route path="/albums/:albumId/edit" element={
           <AuthGuard>
             <AlbumCreatePage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/albums/:albumId" element={
+          <AuthGuard>
+            <AlbumDetailPage />
           </AuthGuard>
         } />
         
