@@ -145,7 +145,7 @@ const Header: React.FC = () => {
           width: "100%",
         }}
       >
-        {/* 로고 */}
+        {/* 로고 (랜딩 페이지에서는 공간은 유지, 버튼은 숨김) */}
         <Box
           component="button"
           onClick={() => navigate("/")}
@@ -158,35 +158,32 @@ const Header: React.FC = () => {
             display: "flex",
             alignItems: "center",
             gap: 1,
+            visibility: isLandingPage ? 'hidden' : 'visible',
+            pointerEvents: isLandingPage ? 'none' : 'auto'
           }}
         >
-          <MusicNote
-            sx={{
-              color: theme.colors.text.primary,
-              fontSize: "32px",
-              filter:
-                isLandingPage && !isScrolled
-                  ? "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))"
-                  : "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))",
-              transition: "all 0.3s ease",
-            }}
-          />
-          <Typography
-            component="span"
-            sx={{
-              fontSize: { xs: "22px", sm: "24px" },
-              fontWeight: 700,
-              color: theme.colors.text.primary,
-              letterSpacing: "0.02em",
-              textShadow:
-                isLandingPage && !isScrolled
-                  ? theme.shadows.textStrong
-                  : theme.shadows.text,
-              transition: "all 0.3s ease",
-            }}
-          >
-            오락가락
-          </Typography>
+          {/* 로고 이미지 (front/public 경로 사용) - 랜딩 페이지에서는 숨김 */}
+          {!isLandingPage && (
+            <Box
+              component="img"
+              src="/assets/images/orakgrak_logo.png"
+              alt="오락가락 로고"
+              sx={{
+                width: 40,
+                height: 40,
+                objectFit: "contain",
+                filter:
+                  isLandingPage && !isScrolled
+                    ? "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))"
+                    : "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))",
+                transition: "all 0.3s ease",
+                // 레이아웃 높이는 유지하고 시각적으로만 확대
+                transform: 'scale(3.2)',
+                transformOrigin: 'center',
+                pointerEvents: 'none'
+              }}
+            />
+          )}
         </Box>
 
         {/* 네비게이션 메뉴 */}
