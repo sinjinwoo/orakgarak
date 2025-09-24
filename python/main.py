@@ -12,6 +12,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 # 경로 설정
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +30,7 @@ from voice_analysis.user.voice_keyword_generator import analyze_voice
 from vector_db.user_recording_manager import UserRecordingManager
 from vector_db.user_vector_manager import UserVectorManager
 from vector_db.pinecone_recommender import PineconeRecommender
+from database.mysql_manager import MySQLManager
 
 app = FastAPI(root_path="/data")
 
@@ -54,6 +59,7 @@ all_songs_df = None
 user_recording_manager = None
 user_vector_manager = None
 pinecone_recommender = None
+mysql_manager = None
 
 class VoiceRecommendationRequest(BaseModel):
     user_id: int
@@ -86,7 +92,7 @@ def load_all_songs_features():
 @app.on_event("startup")
 async def startup_event():
     """서버 시작시 DB 매칭된 곡 데이터 및 사용자 녹음 관리자 초기화"""
-    global user_recording_manager, user_vector_manager, pinecone_recommender
+    global user_recording_manager, user_vector_manager, pinecone_recommender, mysql_manager
 
     if not load_all_songs_features():
         logging.error("DB 매칭된 곡 데이터 로드 실패")
@@ -126,6 +132,18 @@ async def startup_event():
     except Exception as e:
         logging.error(f"Pinecone 추천 시스템 초기화 오류: {e}")
         pinecone_recommender = None
+
+    # MySQL 관리자 초기화
+    try:
+        mysql_manager = MySQLManager()
+        if mysql_manager.connect():
+            logging.info("MySQL 관리자 초기화 성공")
+        else:
+            logging.error("MySQL 관리자 연결 실패")
+            mysql_manager = None
+    except Exception as e:
+        logging.error(f"MySQL 관리자 초기화 오류: {e}")
+        mysql_manager = None
 
 @app.get("/health")
 # Request/Response 모델
@@ -241,13 +259,24 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
             stored_genres = target_record["user_genres"].split(", ")
             user_genres = [g.strip() for g in stored_genres if g.strip()]
 
-        # Pinecone 기반 추천 (voice analysis 로직 반영)
+        # 사용자가 싫어요한 곡 ID 목록 가져오기
+        disliked_song_ids = []
+        if mysql_manager:
+            try:
+                disliked_song_ids = mysql_manager.get_user_disliked_songs(request.user_id)
+                logging.info(f"사용자 {request.user_id}의 싫어요 곡 {len(disliked_song_ids)}개 조회")
+            except Exception as e:
+                logging.error(f"싫어요 곡 조회 오류: {e}")
+
+        # Pinecone 기반 추천 (voice analysis 로직 + dislike 페널티 반영)
         recommendations = pinecone_recommender.get_recommendations(
             user_features=user_features,
             top_n=request.top_n,
             min_popularity=1000,  # 기존 voice analysis의 인기도 필터 적용
             use_pitch_filter=True,
-            allowed_genres=user_genres  # 저장된 사용자 어울리는 장르 사용
+            allowed_genres=user_genres,  # 저장된 사용자 어울리는 장르 사용
+            disliked_song_ids=disliked_song_ids,  # 싫어요 곡 ID 목록
+            penalty_factor=0.1  # recommend_with_voice.py와 동일한 페널티 팩터
         )
 
         if recommendations.empty:

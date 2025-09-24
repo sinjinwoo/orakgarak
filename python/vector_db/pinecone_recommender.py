@@ -83,7 +83,9 @@ class PineconeRecommender:
                           top_n: int = 10,
                           min_popularity: int = 0,
                           use_pitch_filter: bool = True,
-                          allowed_genres: List[str] = None) -> pd.DataFrame:
+                          allowed_genres: List[str] = None,
+                          disliked_song_ids: List[int] = None,
+                          penalty_factor: float = 0.1) -> pd.DataFrame:
         """Pinecone 기반 음악 추천"""
         try:
             if self.index is None or self.scaler is None:
@@ -118,10 +120,19 @@ class PineconeRecommender:
                 # Pinecone은 $regex를 지원하지 않으므로 $in 연산자 사용
                 filter_conditions["genre"] = {"$in": allowed_genres}
 
-            # Pinecone 유사도 검색 (여유분 확보)
+            # Pinecone 유사도 검색 (여유분 확보 - dislike 패널티를 위해 더 많이 가져옴)
+            if disliked_song_ids:
+                # 싫어요 곡 수에 따라 동적으로 조정
+                dislike_count = len(disliked_song_ids)
+                # 기본 3배 + 싫어요 곡당 추가 2배, 최대 20배까지
+                multiplier = min(20, 3 + (dislike_count * 2))
+                search_k = top_n * multiplier
+                logging.info(f"싫어요 곡 {dislike_count}개로 인해 검색 결과를 {multiplier}배({search_k}개) 확대")
+            else:
+                search_k = top_n * 3
             search_results = self.index.query(
                 vector=user_vector.tolist(),
-                top_k=top_n * 3,  # 더 많이 가져와서 인기도로 정렬
+                top_k=search_k,
                 filter=filter_conditions,
                 include_metadata=True
             )
@@ -182,6 +193,14 @@ class PineconeRecommender:
                 rec["pitch_score"] = pitch_score
                 rec["pitch_condition_satisfied"] = pitch_condition_satisfied
 
+            # 싫어요 곡에 페널티 적용 (recommend_with_voice.py와 동일한 방식)
+            if disliked_song_ids:
+                for rec in recommendations:
+                    if rec["song_id"] in disliked_song_ids:
+                        rec["final_score"] *= penalty_factor
+                        rec["similarity"] *= penalty_factor  # 원래 유사도도 페널티 적용
+                        logging.debug(f"곡 ID {rec['song_id']}에 dislike 페널티({penalty_factor}) 적용")
+
             # 최종 점수로 정렬 (기존 voice analysis와 동일한 우선순위)
             recommendations.sort(key=lambda x: x["final_score"], reverse=True)
 
@@ -200,7 +219,9 @@ class PineconeRecommender:
                                      top_n: int = 10,
                                      min_popularity: int = 0,
                                      use_pitch_filter: bool = True,
-                                     allowed_genres: List[str] = None) -> pd.DataFrame:
+                                     allowed_genres: List[str] = None,
+                                     disliked_song_ids: List[int] = None,
+                                     penalty_factor: float = 0.1) -> pd.DataFrame:
         """기존 인터페이스 호환성을 위한 래퍼"""
         try:
             if user_df.empty:
@@ -222,7 +243,9 @@ class PineconeRecommender:
                 top_n=top_n,
                 min_popularity=min_popularity,
                 use_pitch_filter=use_pitch_filter,
-                allowed_genres=allowed_genres
+                allowed_genres=allowed_genres,
+                disliked_song_ids=disliked_song_ids,
+                penalty_factor=penalty_factor
             )
 
         except Exception as e:
