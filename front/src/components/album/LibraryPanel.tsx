@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { Search, Filter, SortAsc, Music, Calendar, Star } from 'lucide-react';
+import { Search, SortAsc, Music, Calendar } from 'lucide-react';
 import RecordingCard from './RecordingCard';
 import { type Recording } from '../../types/recording';
 
@@ -20,7 +20,7 @@ interface LibraryPanelProps {
   className?: string;
 }
 
-type SortField = 'title' | 'artist' | 'createdAt' | 'score' | 'duration';
+type SortField = 'title' | 'createdAt';
 type SortOrder = 'asc' | 'desc';
 
 const LibraryPanel: React.FC<LibraryPanelProps> = ({
@@ -36,7 +36,6 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
-  const [scoreFilter, setScoreFilter] = useState<number | null>(null);
 
   // Droppable for drag and drop
   const { setNodeRef, isOver } = useDroppable({
@@ -46,16 +45,10 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
   // Filter and sort recordings
   const filteredAndSortedRecordings = useMemo(() => {
     let filtered = recordings.filter((recording) => {
-      const title = recording.song?.title || '';
-      const artist = recording.song?.artist || '';
-      const matchesSearch =
-        title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        artist.toLowerCase().includes(searchQuery.toLowerCase());
+      const title = recording.song?.title || recording.title || '';
+      const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesScore = scoreFilter === null ||
-        (recording.analysis?.overallScore || 0) >= scoreFilter;
-
-      return matchesSearch && matchesScore;
+      return matchesSearch;
     });
 
     // Sort recordings
@@ -68,21 +61,9 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
           aValue = (a.song?.title || '').toLowerCase();
           bValue = (b.song?.title || '').toLowerCase();
           break;
-        case 'artist':
-          aValue = (a.song?.artist || '').toLowerCase();
-          bValue = (b.song?.artist || '').toLowerCase();
-          break;
         case 'createdAt':
           aValue = new Date(a.createdAt).getTime();
           bValue = new Date(b.createdAt).getTime();
-          break;
-        case 'score':
-          aValue = a.analysis?.overallScore || 0;
-          bValue = b.analysis?.overallScore || 0;
-          break;
-        case 'duration':
-          aValue = a.duration || 0;
-          bValue = b.duration || 0;
           break;
         default:
           return 0;
@@ -94,7 +75,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
     });
 
     return filtered;
-  }, [recordings, searchQuery, sortField, sortOrder, scoreFilter]);
+  }, [recordings, searchQuery, sortField, sortOrder]);
 
   const handleSortChange = (field: SortField) => {
     if (sortField === field) {
@@ -129,7 +110,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
           <input
             type="text"
-            placeholder="제목이나 아티스트로 검색..."
+            placeholder="제목으로 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 focus:border-transparent"
@@ -137,37 +118,14 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
         </div>
       </div>
 
-      {/* Filters and Sort */}
-      <div className="mb-4 space-y-3">
-        {/* Score Filter */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-white/60" />
-          <span className="text-xs text-white/60">점수:</span>
-          <div className="flex gap-1">
-            {[null, 90, 80, 70].map((score) => (
-              <button
-                key={score || 'all'}
-                onClick={() => setScoreFilter(score)}
-                className={`px-2 py-1 text-xs rounded-md transition-colors duration-200 ${
-                  scoreFilter === score
-                    ? 'bg-fuchsia-500 text-white'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20'
-                }`}
-              >
-                {score ? `${score}+` : '전체'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sort */}
+      {/* Sort */}
+      <div className="mb-4">
         <div className="flex items-center gap-2">
           <SortAsc className="w-4 h-4 text-white/60" />
           <span className="text-xs text-white/60">정렬:</span>
           <div className="flex gap-1">
             {[
               { field: 'createdAt' as SortField, label: '최신순', icon: Calendar },
-              { field: 'score' as SortField, label: '점수순', icon: Star },
               { field: 'title' as SortField, label: '제목순', icon: Music },
             ].map(({ field, label, icon: Icon }) => (
               <button
@@ -201,17 +159,20 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
               <p>검색 결과가 없습니다</p>
             </div>
           ) : (
-            filteredAndSortedRecordings.map((recording) => (
-              <RecordingCard
-                key={recording.id}
-                recording={recording}
-                isSelected={selectedRecordings.includes(recording.id)}
-                isPlaying={currentPlayingId === recording.id}
-                variant="library"
-                onToggle={() => onToggleRecording(recording.id)}
-                onPlay={() => onPlayRecording(recording.id)}
-              />
-            ))
+            filteredAndSortedRecordings.map((recording) => {
+              const recordingId = String(recording.id);
+              return (
+                <RecordingCard
+                  key={recordingId}
+                  recording={recording}
+                  isSelected={selectedRecordings.includes(recordingId)}
+                  isPlaying={currentPlayingId === recordingId}
+                  variant="library"
+                  onToggle={() => onToggleRecording(recordingId)}
+                  onPlay={() => onPlayRecording(recordingId)}
+                />
+              );
+            })
           )}
         </div>
       </div>

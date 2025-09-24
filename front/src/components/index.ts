@@ -34,6 +34,7 @@ export { default as SurveyForm } from './onboarding/SurveyForm';
 export { default as VoiceRangeGame } from './onboarding/VoiceRangeGame';
 
 // === Record 관련 ===
+export { default as AudioFileUpload } from './record/AudioFileUpload';
 export { default as CyberpunkSpeaker3D } from './record/CyberpunkSpeaker3D';
 export { default as KaraokePlayer } from './record/KaraokePlayer';
 export { default as LyricsPanel } from './record/LyricsPanel';
@@ -50,7 +51,6 @@ export { default as CoverFlow } from './recommendation/CoverFlow';
 export { default as SongCard } from './recommendation/SongCard';
 
 // === Voice Test 관련 ===
-export { default as AirplaneRecordingTest } from './voiceTest/AirplaneRecordingTest';
 export { default as ExistingRecordingSelection } from './voiceTest/ExistingRecordingSelection';
 export { default as GameExitModal } from './voiceTest/GameExitModal';
 export { default as GamePauseModal } from './voiceTest/GamePauseModal';
@@ -58,6 +58,7 @@ export { default as GameResultModal } from './voiceTest/GameResultModal';
 export { default as GameStartModal } from './voiceTest/GameStartModal';
 export { default as VoiceTestGame } from './voiceTest/VoiceTestGame';
 export { default as VoiceTestSelection } from './voiceTest/VoiceTestSelection';
+export { default as VoiceRangeResultModal } from './voiceTest/VoiceRangeResultModal';
 
 // === 기타 컴포넌트들 ===
 export { default as AlbumCoverflow } from './AlbumCoverflow';

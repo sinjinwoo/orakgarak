@@ -3,6 +3,7 @@ package com.ssafy.lab.orak.ai.service;
 import com.ssafy.lab.orak.ai.dto.RecordDataDto;
 import com.ssafy.lab.orak.ai.dto.VoiceImageGenerationRequestDto;
 import com.ssafy.lab.orak.ai.dto.VoiceImageGenerationResponseDto;
+import com.ssafy.lab.orak.ai.dto.PineconeMetadataGenerationRequestDto;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -81,12 +82,13 @@ public class PythonAiService {
                 .doOnError(error -> log.error("Error calling Python AI service at {}: {}", pythonServiceUrl, error.getMessage(), error));
     }
 
-    public Mono<JsonNode> getVoiceRecommendations(String s3Url, Integer topN) {
-        log.info("Requesting voice recommendations for S3 URL: {}, topN: {}", s3Url, topN);
+    public Mono<JsonNode> getVoiceRecommendations(Long userId, String uploadId, Integer topN) {
+        log.info("Requesting voice recommendations for user: {}, uploadId: {}, topN: {}", userId, uploadId, topN);
 
         var requestBody = java.util.Map.of(
-                "s3_url", s3Url,
-                "top_n", topN != null ? topN : 10
+                "user_id", userId,
+                "upload_id", uploadId,
+                "top_n", topN != null ? topN : 5
         );
 
         return webClient.post()
@@ -112,5 +114,79 @@ public class PythonAiService {
                 .bodyToMono(JsonNode.class)
                 .doOnNext(response -> log.info("Voice recommendation successful"))
                 .doOnError(error -> log.error("Error calling Python voice recommendation service at {}: {}", pythonServiceUrl, error.getMessage(), error));
+    }
+
+    public Mono<JsonNode> saveUserVector(String s3Url, Long userId, String uploadId, Long songId) {
+        log.info("Requesting save user vector for S3 URL: {}, userId: {}, uploadId: {}, songId: {}", s3Url, userId, uploadId, songId);
+
+        var requestBodyBuilder = java.util.Map.<String, Object>of(
+                "s3_url", s3Url,
+                "user_id", userId,
+                "upload_id", uploadId != null ? uploadId : ""
+        );
+
+        // songId가 있는 경우에만 추가
+        var requestBody = new java.util.HashMap<>(requestBodyBuilder);
+        if (songId != null) {
+            requestBody.put("song_id", songId);
+        }
+
+        return webClient.post()
+                .uri("/ai/save-user-vector")
+                .bodyValue(requestBody)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError(),
+                    clientResponse -> {
+                        log.error("Client error when calling Python save user vector service: {}",
+                            clientResponse.statusCode());
+                        return clientResponse.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("Error response body: {}", errorBody);
+                                    return Mono.error(new RuntimeException("Python save user vector service client error: " + errorBody));
+                                });
+                    })
+                .onStatus(status -> status.is5xxServerError(),
+                    clientResponse -> {
+                        log.error("Server error when calling Python save user vector service: {}",
+                            clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("Python save user vector service server error"));
+                    })
+                .bodyToMono(JsonNode.class)
+                .doOnNext(response -> log.info("Save user vector successful"))
+                .doOnError(error -> log.error("Error calling Python save user vector service at {}: {}", pythonServiceUrl, error.getMessage(), error));
+    }
+
+    public Mono<JsonNode> getSimilarVoiceRecommendations(Long userId, String uploadId, Integer topN) {
+        log.info("Requesting similar voice recommendations for user: {}, uploadId: {}, topN: {}", userId, uploadId, topN);
+
+        var requestBody = java.util.Map.of(
+                "user_id", userId,
+                "upload_id", uploadId,
+                "top_n", topN != null ? topN : 5
+        );
+
+        return webClient.post()
+                .uri("/ai/similar-voice-recommendation")
+                .bodyValue(requestBody)
+                .retrieve()
+                .onStatus(status -> status.is4xxClientError(),
+                    clientResponse -> {
+                        log.error("Client error when calling Python similar voice recommendation service: {}",
+                            clientResponse.statusCode());
+                        return clientResponse.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("Error response body: {}", errorBody);
+                                    return Mono.error(new RuntimeException("Python similar voice recommendation service client error: " + errorBody));
+                                });
+                    })
+                .onStatus(status -> status.is5xxServerError(),
+                    clientResponse -> {
+                        log.error("Server error when calling Python similar voice recommendation service: {}",
+                            clientResponse.statusCode());
+                        return Mono.error(new RuntimeException("Python similar voice recommendation service server error"));
+                    })
+                .bodyToMono(JsonNode.class)
+                .doOnNext(response -> log.info("Similar voice recommendation successful"))
+                .doOnError(error -> log.error("Error calling Python similar voice recommendation service at {}: {}", pythonServiceUrl, error.getMessage(), error));
     }
 }
