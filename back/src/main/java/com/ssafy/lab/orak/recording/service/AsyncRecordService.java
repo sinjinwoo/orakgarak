@@ -14,6 +14,7 @@ import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
+import com.ssafy.lab.orak.ai.service.VectorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class AsyncRecordService {
     private final FileUploadService fileUploadService;
     private final EventBridgeService eventBridgeService;
     private final RecordMapper recordMapper;
+    private final VectorService vectorService;
 
 
     /**
@@ -62,6 +64,19 @@ public class AsyncRecordService {
                 log.info("레코딩 업로드 완료 이벤트 발송 성공: uploadId={}", uploadId);
             } else {
                 log.error("레코딩 업로드 완료 이벤트 발송 실패: uploadId={}", uploadId);
+            }
+
+            // 벡터 DB에 사용자 음성 데이터 저장
+            try {
+                Record record = recordRepository.findByUploadId(uploadId);
+                if (record != null) {
+                    vectorService.processRecordVectorAsync(record.getUserId(), uploadId, record.getSongId());
+                    log.info("벡터 DB 비동기 저장 요청 완료: uploadId={}", uploadId);
+                } else {
+                    log.warn("Record를 찾을 수 없어 벡터 저장을 건너뜁니다: uploadId={}", uploadId);
+                }
+            } catch (Exception e) {
+                log.error("벡터 DB 저장 중 오류 발생: uploadId={}", uploadId, e);
             }
 
         } catch (Exception e) {

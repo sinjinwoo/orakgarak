@@ -8,7 +8,7 @@ import java.util.List;
 @Builder
 @Schema(description = "AI 앨범 커버 생성 요청")
 public record AlbumCoverGenerateRequestDto(
-        @Schema(description = "업로드 ID 리스트", required = true, example = "[1, 2, 3]")
+        @Schema(description = "업로드 ID 리스트 (Pinecone 메타데이터 기반)", required = true, example = "[1, 2, 3]")
         List<Long> uploadIds,
 
         @Schema(description = "이미지 비율", example = "1:1", defaultValue = "1:1")

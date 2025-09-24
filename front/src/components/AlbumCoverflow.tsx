@@ -32,8 +32,6 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
 
-  // 앨범 데이터 로깅
-  console.log('AlbumCoverflow 받은 앨범들:', albums);
 
   const handleSlideChange = (swiper: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     setActiveIndex(swiper.activeIndex);
@@ -175,7 +173,7 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                     sx={{
                       width: '100%',
                       height: '100%',
-                      backgroundImage: album.coverImageUrl && album.coverImageUrl !== '/images/default-album-cover.png'
+                      backgroundImage: album.coverImageUrl && album.coverImageUrl !== '/image/albumCoverImage.png'
                         ? `url(${album.coverImageUrl})`
                         : 'linear-gradient(135deg, #FF6B9D 0%, #C147E9 50%, #8B5CF6 100%)',
                       backgroundSize: 'cover',
@@ -186,7 +184,7 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       position: 'relative',
-                      '&::after': album.coverImageUrl && album.coverImageUrl !== '/images/default-album-cover.png' ? {} : {
+                      '&::after': album.coverImageUrl && album.coverImageUrl !== '/image/albumCoverImage.png' ? {} : {
                         content: '"♪"',
                         position: 'absolute',
                         fontSize: '4rem',

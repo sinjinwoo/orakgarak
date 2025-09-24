@@ -13,11 +13,11 @@ def connect_to_db():
     """MySQL 데이터베이스 연결"""
     try:
         connection = mysql.connect(
-            host=os.getenv('DB_HOST_LOCAL', 'localhost'),
-            port=int(os.getenv('DB_PORT_LOCAL', '3306')),
-            user=os.getenv('DB_USERNAME_LOCAL', 'ssafy'),
-            password=os.getenv('DB_PASSWORD_LOCAL', 'ssafy'),
-            database=os.getenv('DB_NAME_LOCAL', 'orakgaraki'),
+            host=os.getenv('DB_HOST', 'localhost'),
+            port=int(os.getenv('DB_PORT', '3306')),
+            user=os.getenv('DB_USERNAME', 'orakgaraki'),
+            password=os.getenv('DB_PASSWORD', ''),
+            database=os.getenv('DB_NAME', 'orakgaraki'),
             charset='utf8mb4'
         )
         return connection

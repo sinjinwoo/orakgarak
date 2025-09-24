@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import GameExitModal from './GameExitModal';
 import GameStartModal from './GameStartModal';
 import GamePauseModal from './GamePauseModal';
-import AirplaneRecordingTest from './AirplaneRecordingTest';
 import VoiceTestSelection from './VoiceTestSelection';
 import ExistingRecordingSelection from './ExistingRecordingSelection';
+import VoiceRangeResultModal from './VoiceRangeResultModal';
+import type { Recording } from '../../types/recording';
 
 // 원본 PitchCraft 게임을 그대로 가져와서 통합
 const VoiceTestGame: React.FC = () => {
@@ -14,16 +15,28 @@ const VoiceTestGame: React.FC = () => {
     const [showStartModal, setShowStartModal] = useState(true);
     const [showExitModal, setShowExitModal] = useState(false);
     const [showPauseModal, setShowPauseModal] = useState(false);
-    const [showAirplaneTest, setShowAirplaneTest] = useState(false);
     const [showVoiceTestSelection, setShowVoiceTestSelection] = useState(false);
     const [showExistingRecordingSelection, setShowExistingRecordingSelection] = useState(false);
     const [isGamePaused, setIsGamePaused] = useState(false);
+    const [showVoiceRangeResult, setShowVoiceRangeResult] = useState(false);
+    const [gameOverProcessed, setGameOverProcessed] = useState(false);
+    const [voiceRangeData, setVoiceRangeData] = useState<{
+        highestNote?: string;
+        lowestNote?: string;
+        highestFrequency?: number;
+        lowestFrequency?: number;
+    }>({});
 
-    const loadGame = () => {
+    const loadGameWithEventListeners = () => {
         if (!gameRef.current) return;
+        
+        console.log('🎮 게임 로드 및 이벤트 리스너 설정 시작');
         
         // 게임 컨테이너에 ID 설정 (원본 게임이 찾는 ID)
         gameRef.current.id = 'game';
+        
+        // 게임 이벤트 리스너 먼저 설정
+        setupGameEventListeners();
         
         // 게임 bundle.js 로드
         const gameScript = document.createElement('script');
@@ -32,9 +45,6 @@ const VoiceTestGame: React.FC = () => {
             console.log('🎮 게임 스크립트 로드 완료');
             setIsGameLoaded(true);
             gameInstanceRef.current = true;
-            
-            // 게임 이벤트 리스너 설정
-            setupGameEventListeners();
             
             console.log('🎮 게임 로드 완료, 이벤트 리스너 설정됨');
         };
@@ -48,6 +58,12 @@ const VoiceTestGame: React.FC = () => {
     const setupGameEventListeners = () => {
         console.log('🎮 게임 이벤트 리스너 설정 시작');
         
+        // 기존 리스너 제거 (중복 방지)
+        if ((window as any).gameOverHandler) {
+            window.removeEventListener('gameOver', (window as any).gameOverHandler);
+            document.removeEventListener('gameOver', (window as any).gameOverHandler);
+        }
+        
         // 커스텀 이벤트 리스너 등록
         const handleNextTestEvent = () => {
             console.log('🎮 다음 테스트 받기 이벤트 감지');
@@ -56,6 +72,10 @@ const VoiceTestGame: React.FC = () => {
         
         const handleRestartEvent = () => {
             console.log('🎮 다시하기 이벤트 감지');
+            // 게임 오버 상태 초기화
+            setGameOverProcessed(false);
+            setShowVoiceRangeResult(false);
+            setVoiceRangeData({});
             handleRestart();
         };
         
@@ -65,22 +85,96 @@ const VoiceTestGame: React.FC = () => {
         };
         
         const handleGameOverEvent = (event: CustomEvent) => {
-            console.log('🎮 게임 오버 이벤트 감지:', event.detail);
+            console.log('🎮 ===== 게임 오버 이벤트 감지 시작 =====');
+            console.log('🎮 이벤트 상세:', event.detail);
+            console.log('🎮 이벤트 타입:', event.type);
+            console.log('🎮 현재 상태:', { gameOverProcessed, showVoiceRangeResult });
+            console.log('🎮 전역 변수:', { 
+                isGameOver: (window as any).isGameOver,
+                gameState: (window as any).gameState 
+            });
+            console.log('🎮 React 상태 업데이트 시작');
+            
+            // 이미 게임 오버 처리가 완료되었으면 중복 처리 방지
+            if (gameOverProcessed || showVoiceRangeResult) {
+                console.log('🎮 이미 게임 오버 처리가 완료됨 - 중복 처리 방지');
+                return;
+            }
+            
+            // 게임 오버 처리 시작
+            setGameOverProcessed(true);
+            
+            // 게임 완전 정지 및 정리
+            if ((window as any).game) {
+                console.log('🎮 게임 인스턴스 정지 및 정리');
+                (window as any).game.paused = true;
+                (window as any).game.time.events.pause();
+                (window as any).game.world.setBounds(0, 0, 0, 0); // 월드 경계 제거
+            }
             
             // 게임 오버 상태 설정
             (window as any).isGameOver = true;
             (window as any).gameState = { gameOver: true };
             
-            // 게임 오버 상태로 전환
-            if ((window as any).game && (window as any).game.state) {
-                console.log('🎮 GameOver 상태로 전환');
-                (window as any).game.state.start('GameOver');
+            // 음역대 데이터 추출 (게임에서 전달된 데이터)
+            const gameData = event.detail || {};
+            const pitchScores = gameData.pitchScores || {};
+            
+            console.log('🎮 음역대 점수 데이터:', pitchScores);
+            
+            // 음역대 데이터 계산
+            const frequencies = Object.keys(pitchScores).map(note => {
+                // 음표를 주파수로 변환하는 간단한 매핑
+                const noteToFreq: { [key: string]: number } = {
+                    'C2': 65.41, 'C#2': 69.30, 'D2': 73.42, 'D#2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.50,
+                    'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'B2': 123.47,
+                    'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'D#3': 155.56, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00,
+                    'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'A#3': 233.08, 'B3': 246.94,
+                    'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99,
+                    'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+                    'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99,
+                    'G5': 783.99, 'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77,
+                    'C6': 1046.50, 'C#6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51, 'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98,
+                    'G6': 1567.98, 'G#6': 1661.22, 'A6': 1760.00
+                };
+                return { note, frequency: noteToFreq[note] || 0, score: pitchScores[note] };
+            }).filter(item => item.frequency > 0);
+            
+            console.log('🎮 계산된 주파수 데이터:', frequencies);
+            
+            if (frequencies.length > 0) {
+                const sortedFrequencies = frequencies.sort((a, b) => a.frequency - b.frequency);
+                const lowest = sortedFrequencies[0];
+                const highest = sortedFrequencies[sortedFrequencies.length - 1];
+                
+                console.log('🎮 최저/최고 음역대:', { lowest, highest });
+                
+                setVoiceRangeData({
+                    highestNote: highest.note,
+                    lowestNote: lowest.note,
+                    highestFrequency: highest.frequency,
+                    lowestFrequency: lowest.frequency,
+                });
             } else {
-                console.log('🎮 게임 인스턴스가 없음, 수동으로 모달 표시');
-                // 게임이 없으면 수동으로 모달 표시
-                setShowVoiceTestSelection(true);
+                // 기본값 설정
+                console.log('🎮 음역대 데이터가 없어 기본값 사용');
+                setVoiceRangeData({
+                    highestNote: 'C5',
+                    lowestNote: 'C3',
+                    highestFrequency: 523.25,
+                    lowestFrequency: 130.81,
+                });
             }
+            
+            // 음역대 결과 모달 표시
+            console.log('🎮 음역대 결과 모달 표시 시작');
+            console.log('🎮 setShowVoiceRangeResult(true) 호출');
+            setShowVoiceRangeResult(true);
+            console.log('🎮 ===== 게임 오버 이벤트 처리 완료 =====');
         };
+        
+        // 전역 변수로 핸들러 저장 (중복 방지용)
+        (window as any).gameOverHandler = handleGameOverEvent;
         
         // 이벤트 리스너 등록
         window.addEventListener('gameOver', handleGameOverEvent as EventListener);
@@ -88,7 +182,12 @@ const VoiceTestGame: React.FC = () => {
         window.addEventListener('restartGame', handleRestartEvent);
         window.addEventListener('exitGame', handleExitEvent);
         
+        // 전역 함수 등록 (GameOver.ts에서 호출할 수 있도록)
+        (window as any).onGameOver = handleGameOverEvent;
+        
         console.log('🎮 게임 이벤트 리스너 등록 완료');
+        console.log('🎮 등록된 전역 함수:', !!(window as any).onGameOver);
+        console.log('🎮 등록된 핸들러:', !!(window as any).gameOverHandler);
         
         // 전역 이벤트 리스너도 추가 (확실하게)
         document.addEventListener('gameOver', handleGameOverEvent as EventListener);
@@ -108,6 +207,10 @@ const VoiceTestGame: React.FC = () => {
             document.removeEventListener('nextTest', handleNextTestEvent);
             document.removeEventListener('restartGame', handleRestartEvent);
             document.removeEventListener('exitGame', handleExitEvent);
+            
+            // 전역 함수 제거
+            (window as any).onGameOver = null;
+            (window as any).gameOverHandler = null;
         };
     };
     
@@ -167,14 +270,14 @@ const VoiceTestGame: React.FC = () => {
 
         // Phaser가 이미 로드되어 있는지 확인
         if ((window as any).Phaser) {
-            loadGame();
+            loadGameWithEventListeners();
         } else {
             // Phaser 라이브러리를 먼저 로드 (로컬에서)
             const phaserScript = document.createElement('script');
             phaserScript.src = '/assets/js/phaser.min.js';
             
             phaserScript.onload = () => {
-                loadGame();
+                loadGameWithEventListeners();
             };
             
             phaserScript.onerror = () => {
@@ -233,10 +336,12 @@ const VoiceTestGame: React.FC = () => {
         (window as any).isGameOver = false;
         (window as any).gameState = null;
         
-        // 게임 오버 이벤트 리스너 설정
-        setupGameEventListeners();
+        // 게임 오버 상태 초기화
+        setGameOverProcessed(false);
+        setShowVoiceRangeResult(false);
+        setVoiceRangeData({});
         
-        console.log('🎮 게임 시작 완료, 이벤트 리스너 설정됨');
+        console.log('🎮 게임 시작 완료');
     };
 
     const handlePause = () => {
@@ -279,7 +384,7 @@ const VoiceTestGame: React.FC = () => {
         // 잠시 후 게임 다시 로드
         setTimeout(() => {
             if (gameRef.current) {
-                loadGame();
+                loadGameWithEventListeners();
             }
         }, 100);
     };
@@ -289,32 +394,40 @@ const VoiceTestGame: React.FC = () => {
         setShowVoiceTestSelection(true);
     };
 
-    const handleAirplaneTestComplete = (audioBlob: Blob) => {
-        console.log('비행기 테스트 완료:', audioBlob);
-        // 테스트 완료 후 추천 페이지로 이동
-        window.location.href = '/recommendations';
+    const handleVoiceRangeResultClose = () => {
+        setShowVoiceRangeResult(false);
+        // 게임 재시작
+        handleRestart();
     };
 
+    const handleVoiceRangeResultContinue = () => {
+        setShowVoiceRangeResult(false);
+        // 음역대 테스트 완료 후 선택 화면으로 돌아가기
+        setShowVoiceTestSelection(true);
+    };
+
+
     const handleBackToGame = () => {
-        setShowAirplaneTest(false);
         setShowVoiceTestSelection(false);
         setShowExistingRecordingSelection(false);
     };
 
-    const handleNewRecording = () => {
-        setShowVoiceTestSelection(false);
-        setShowAirplaneTest(true);
-    };
 
-    const handleUseExistingRecording = (audioBlob: Blob) => {
-        console.log('🎵 VoiceTestGame: 기존 녹음본 사용 함수 호출됨', audioBlob);
+    const handleGetRecommendations = () => {
+        console.log('🎵 VoiceTestGame: 추천받기 함수 호출됨');
         setShowVoiceTestSelection(false);
         setShowExistingRecordingSelection(true);
-        console.log('🎵 VoiceTestGame: 상태 변경 완료 - showVoiceTestSelection: false, showExistingRecordingSelection: true');
     };
 
-    const handleSelectExistingRecording = (audioBlob: Blob) => {
-        console.log('기존 녹음본 선택:', audioBlob);
+    const handleStartVoiceTest = () => {
+        console.log('🎵 VoiceTestGame: 음역대 테스트 시작 함수 호출됨');
+        setShowVoiceTestSelection(false);
+        // 게임 시작 모달 표시
+        setShowStartModal(true);
+    };
+
+    const handleSelectExistingRecording = (recording: Recording, uploadId?: number) => {
+        console.log('기존 녹음본 선택:', recording, uploadId);
         setShowExistingRecordingSelection(false);
         // 기존 녹음본으로 바로 추천 페이지로 이동
         window.location.href = '/recommendations';
@@ -354,22 +467,13 @@ const VoiceTestGame: React.FC = () => {
   if (showVoiceTestSelection) {
     return (
       <VoiceTestSelection
-        onNewRecording={handleNewRecording}
-        onUseExisting={handleUseExistingRecording}
+        onGetRecommendations={handleGetRecommendations}
+        onStartVoiceTest={handleStartVoiceTest}
         onBack={handleBackToGame}
       />
     );
   }
 
-  // 비행기 테스트 화면 표시
-  if (showAirplaneTest) {
-    return (
-      <AirplaneRecordingTest
-        onComplete={handleAirplaneTestComplete}
-        onBack={handleBackToGame}
-      />
-    );
-  }
 
   return (
         <>
@@ -705,66 +809,6 @@ const VoiceTestGame: React.FC = () => {
                                         ⏸️ PAUSE
                                     </button>
                                     
-                                    {/* 테스트 종료 버튼 */}
-                                    <button
-                                        onClick={() => {
-                                            console.log('🎮 테스트 종료 버튼 클릭');
-                                            
-                                            // 게임이 실행 중이면 GameOver 상태로 전환
-                                            if ((window as any).game && (window as any).game.state) {
-                                                console.log('🎮 게임 상태를 GameOver로 전환');
-                                                (window as any).game.state.start('GameOver');
-                                            } else {
-                                                console.log('🎮 게임이 없으므로 직접 선택 화면 표시');
-                                                setShowVoiceTestSelection(true);
-                                            }
-                                            
-                                            // 추가로 이벤트도 발생
-                                            const gameOverEvent = new CustomEvent('gameOver', {
-                                                detail: {
-                                                    score: 5000,
-                                                    hitpoints: 0,
-                                                    pitchScores: { 'C4': 1000, 'D4': 2000, 'E4': 1500 }
-                                                }
-                                            });
-                                            window.dispatchEvent(gameOverEvent);
-                                        }}
-                                        style={{
-                                            background: 'linear-gradient(45deg, #ff4444, #cc0000)',
-                                            color: '#ffffff',
-                                            border: '2px solid #ff4444',
-                                            padding: '8px 16px',
-                                            borderRadius: '20px',
-                                            fontSize: '12px',
-                                            fontWeight: 'bold',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.3s ease',
-                                            boxShadow: '0 0 15px rgba(255, 68, 68, 0.5)'
-                                        }}
-                                        onClick={() => {
-                                            console.log('🎮 TEST END 버튼 클릭');
-                                            // 게임 오버 이벤트 강제 발생
-                                            const gameOverEvent = new CustomEvent('gameOver', {
-                                                detail: {
-                                                    score: 1000,
-                                                    hitpoints: 0,
-                                                    pitchScores: {}
-                                                }
-                                            });
-                                            window.dispatchEvent(gameOverEvent);
-                                            document.dispatchEvent(gameOverEvent);
-                                        }}
-                                        onMouseOver={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 68, 68, 0.4)';
-                                        }}
-                                        onMouseOut={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(255, 68, 68, 0.3)';
-                                        }}
-                                    >
-                                        🎮 TEST END
-                                    </button>
                                 </>
                             )}
             </div>
@@ -783,7 +827,7 @@ const VoiceTestGame: React.FC = () => {
                     }}>
                         <div 
                             ref={gameRef} 
-            style={{
+                            style={{
                                 width: '900px', 
                                 height: '600px',
                                 display: 'flex',
@@ -791,8 +835,18 @@ const VoiceTestGame: React.FC = () => {
                                 alignItems: 'center',
                                 position: 'relative',
                                 overflow: 'hidden',
-                                background: '#000000'
-                            }} 
+                                background: '#000000',
+                                pointerEvents: showVoiceRangeResult ? 'none' : 'auto', // 모달이 표시되면 클릭 무시
+                            }}
+                            onClick={(e) => {
+                                // 게임 오버 상태에서는 클릭 무시
+                                if (showVoiceRangeResult || gameOverProcessed) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    console.log('🎮 게임 오버 상태 - 클릭 무시');
+                                    return;
+                                }
+                            }}
                         />
                         
                         {!isGameLoaded && (
@@ -1005,6 +1059,17 @@ const VoiceTestGame: React.FC = () => {
                 onClose={() => setShowExitModal(false)}
                 onConfirmExit={handleExitConfirm}
                 onCancel={handleExitCancel}
+            />
+
+            {/* 음역대 결과 모달 */}
+            <VoiceRangeResultModal
+                isOpen={showVoiceRangeResult}
+                onClose={handleVoiceRangeResultClose}
+                onContinue={handleVoiceRangeResultContinue}
+                highestNote={voiceRangeData.highestNote}
+                lowestNote={voiceRangeData.lowestNote}
+                highestFrequency={voiceRangeData.highestFrequency}
+                lowestFrequency={voiceRangeData.lowestFrequency}
             />
     </div>
         </>

@@ -16,7 +16,9 @@ import {
 } from '@dnd-kit/core';
 import LibraryPanel from './LibraryPanel';
 import TrackCanvas from './TrackCanvas';
+import StepHeader from './StepHeader';
 import { type Recording } from '../../types/recording';
+import { Music } from 'lucide-react';
 
 interface Track extends Recording {
   order: number;
@@ -47,6 +49,7 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
 }) => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   const normalizeId = (id: string | number): string => String(id).trim();
 
@@ -106,10 +109,73 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     });
   }, [selectedRecordings.length, onToggleRecording, onAddToast]);
 
-  // Handle play/pause
+  // 재생/일시정지 구현 (recording.url 사용)
   const handlePlayToggle = useCallback((recordingId: string) => {
-    setCurrentPlayingId(prev => prev === recordingId ? null : recordingId);
-    // TODO: Implement actual audio playback
+    const normalize = (id: string | number) => String(id);
+    const recording = recordings.find(r => normalize(r.id) === normalize(recordingId));
+    if (!recording) return;
+
+    const isPlayable = !!recording.url && (!recording.urlStatus || recording.urlStatus === 'SUCCESS');
+    if (!isPlayable) {
+      // 재생 불가 상태면 그냥 토글하지 않음
+      return;
+    }
+
+    // 오디오 인스턴스 준비
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.crossOrigin = 'anonymous';
+      audioRef.current.preload = 'auto';
+      audioRef.current.addEventListener('ended', () => {
+        setCurrentPlayingId(null);
+      });
+      audioRef.current.addEventListener('error', () => {
+        setCurrentPlayingId(null);
+      });
+    }
+
+    const audio = audioRef.current;
+
+    // 같은 트랙을 다시 누르면 정지
+    if (currentPlayingId === recordingId) {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {}
+      setCurrentPlayingId(null);
+      return;
+    }
+
+    // 새로운 트랙 재생
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {}
+
+    audio.src = recording.url!;
+    // content_type 힌트가 있으면 type 지정 (일부 브라우저 호환성 향상)
+    // HTMLAudioElement에는 type 속성이 없으므로, src만 설정
+
+    // 즉시 재생 (사용자 제스처 내에서 호출됨)
+    audio.play()
+      .then(() => {
+        setCurrentPlayingId(recordingId);
+      })
+      .catch(() => {
+        setCurrentPlayingId(null);
+      });
+  }, [recordings, currentPlayingId]);
+
+  // 언마운트 시 정리
+  React.useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+        } catch {}
+        audioRef.current = null;
+      }
+    };
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -138,13 +204,11 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     >
       <div className={`h-full ${className}`}>
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-2">녹음 선택</h1>
-          <p className="text-white/70">
-            앨범에 포함할 녹음을 선택하고 순서를 조정해보세요.
-            드래그앤드롭으로 쉽게 추가할 수 있습니다.
-          </p>
-        </div>
+        <StepHeader
+          title="녹음 선택"
+          description="앨범에 포함할 녹음을 선택하고 순서를 조정해보세요. 드래그앤드롭으로 쉽게 추가할 수 있습니다."
+          icon={<Music className="w-6 h-6 text-fuchsia-400" />}
+        />
 
         {/* Two-column layout */}
         <div className="grid grid-cols-[400px_1fr] gap-6 h-[calc(100%-120px)]">

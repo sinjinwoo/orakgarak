@@ -75,66 +75,66 @@
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Hibernate 초기화 로그들 숨김 (운영환경) -->
         <Logger name="org.hibernate.query.sqm.function.SqmFunctionRegistry" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.hibernate.persister" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.hibernate.tool.schema" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.hibernate.validator" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Hibernate 타입/ID 생성기 등록 로그 숨김 -->
         <Logger name="org.hibernate.type.BasicTypeRegistry" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.hibernate.orm.idgen.factory" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Hibernate 기타 초기화 로그들 -->
         <Logger name="org.hibernate.integrator" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.hibernate.cache" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.hibernate.boot" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <Logger name="org.hibernate.cfg" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- HikariCP 설정 로그 숨김 -->
         <Logger name="com.zaxxer.hikari.HikariConfig" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Hibernate HQL 함수 등록 로그 숨김 -->
         <Logger name="org.hibernate.HQL_FUNCTIONS" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
@@ -175,42 +175,42 @@
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Kafka Consumer 상세 로그 축소 (운영환경) -->
         <Logger name="org.apache.kafka.clients.consumer" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Kafka Producer 로그 축소 (운영환경) -->
         <Logger name="org.apache.kafka.clients.producer" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Kafka Network Client 로그 축소 (연결 실패 메시지들) -->
         <Logger name="org.apache.kafka.clients.NetworkClient" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Kafka Metadata 로그 축소 -->
         <Logger name="org.apache.kafka.clients.Metadata" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Kafka Consumer Coordinator 로그 축소 (가장 시끄러운 부분) -->
         <Logger name="org.apache.kafka.clients.consumer.internals.ConsumerCoordinator" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Spring Kafka 로그 축소 (운영환경) -->
         <Logger name="org.springframework.kafka" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
@@ -224,7 +224,7 @@
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Connection Pool 기타 로그들 (운영환경) -->
         <Logger name="com.zaxxer.hikari" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
@@ -237,14 +237,14 @@
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Redis Connection 관련 로그 축소 (운영환경) -->
         <Logger name="org.springframework.data.redis.core.RedisConnectionUtils" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="LokiFileAppender"/>
             <AppenderRef ref="AsyncFileAppender"/>
         </Logger>
-        
+
         <!-- Spring Security FilterChain 로그 축소 (운영환경) -->
         <Logger name="org.springframework.security.web.FilterChainProxy" level="ERROR" additivity="false">
             <AppenderRef ref="Console"/>

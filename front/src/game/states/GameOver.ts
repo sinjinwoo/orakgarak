@@ -13,6 +13,11 @@ export class GameOverState extends Phaser.State {
     create() {
         console.log('🎮 GameOver 상태 시작');
         
+        // 게임 완전 정지
+        this.game.paused = true;
+        this.game.time.events.pause();
+        this.game.world.setBounds(0, 0, 0, 0); // 월드 경계 제거
+        
         // 게임 데이터 가져오기
         this.getGameData();
         
@@ -31,23 +36,39 @@ export class GameOverState extends Phaser.State {
         // 애니메이션 효과
         this.createAnimations();
         
-        // 게임 오버 이벤트 강제 발생 (React 컴포넌트에서 감지할 수 있도록)
+        // GAME OVER 화면이 표시되자마자 React 모달을 띄우기 위해 이벤트 발생
         this.forceGameOverEvent();
         
         console.log('🎮 GameOver 상태 완료');
     }
     
     forceGameOverEvent() {
-        console.log('🎮 강제 게임 오버 이벤트 발생');
+        console.log('🎮 GAME OVER 화면 표시 - React 모달을 띄우기 위한 이벤트 발생');
+        
+        // 전역 변수에서 최신 게임 데이터 가져오기
+        const fighter = (window as any).fighter;
+        const pitchScores = (window as any).pitchScores || {};
+        
         const gameOverEvent = new CustomEvent('gameOver', {
             detail: {
-                score: this.score,
+                score: fighter ? fighter.score : this.score,
                 hitpoints: 0,
-                pitchScores: (window as any).pitchScores || {}
+                pitchScores: pitchScores
             }
         });
+        
+        console.log('🎮 게임 오버 이벤트 상세:', gameOverEvent.detail);
+        
+        // 여러 방법으로 이벤트 발생
         window.dispatchEvent(gameOverEvent);
         document.dispatchEvent(gameOverEvent);
+        
+        // 추가적으로 전역 함수 호출 (React 컴포넌트에서 감지할 수 있도록)
+        if ((window as any).onGameOver) {
+            (window as any).onGameOver(gameOverEvent.detail);
+        }
+        
+        console.log('🎮 게임 오버 이벤트 발생 완료');
     }
     
     getGameData() {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const LPRecord: React.FC = () => {
   return (
@@ -114,7 +114,7 @@ const LPRecord: React.FC = () => {
         }
         
         .lp-record::after {
-          content: "오락가락";
+          content: "";
           display: block;
           position: absolute;
           left: 50%;
@@ -133,6 +133,21 @@ const LPRecord: React.FC = () => {
             conic-gradient(rgb(77,67,145) 25%, rgb(207,75,145) 0 50%, rgb(77,67,145) 0 75%, rgb(207,75,145) 0);
           background-size: 100%, 3em 3em;
           animation: spin 1.79s linear infinite;
+        }
+
+        .album-cover {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 60%;
+          height: 60%;
+          margin-left: -30%;
+          margin-top: -30%;
+          border-radius: 100%;
+          object-fit: cover;
+          z-index: 2;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
       `}</style>
       <div className="lp-record"></div>

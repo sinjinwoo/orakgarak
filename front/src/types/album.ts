@@ -5,6 +5,8 @@ export interface Album {
   description?: string;
   uploadId?: number;
   coverImageUrl?: string;
+  userNickname?: string;
+  userProfileImageUrl?: string;
   isPublic: boolean;
   trackCount: number;
   totalDuration: number;
@@ -47,29 +49,33 @@ export interface AlbumTrack {
   id: number;
   albumId: number;
   recordId: number;
+  recordTitle: string;
   trackOrder: number;
-  title: string;
-  duration: number;
+  durationSeconds: number;
   audioUrl: string;
-  createdAt: string;
 }
 
 export interface AddTrackRequest {
   recordId: number;
-  trackOrder?: number;
+  trackOrder: number;
 }
 
 export interface BulkAddTracksRequest {
-  tracks: Array<{
-    recordId: number;
-    trackOrder?: number;
-  }>;
+  tracks: AddTrackRequest[];
+}
+
+export interface ReorderTrackRequest {
+  fromOrder: number;
+  toOrder: number;
 }
 
 export interface AlbumTracksResponse {
   albumId: number;
-  tracks: AlbumTrack[];
+  albumTitle: string;
+  coverImageUrl: string;
   totalTracks: number;
+  totalDuration: number;
+  tracks: AlbumTrack[];
 }
 
 export interface PlaybackResponse {
