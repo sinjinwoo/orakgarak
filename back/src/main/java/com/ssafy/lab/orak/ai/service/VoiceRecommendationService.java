@@ -3,6 +3,8 @@ package com.ssafy.lab.orak.ai.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.ssafy.lab.orak.ai.dto.VoiceRecommendationRequestDto;
 import com.ssafy.lab.orak.ai.dto.VoiceRecommendationResponseDto;
+import com.ssafy.lab.orak.ai.dto.RecommendationSongDto;
+import com.ssafy.lab.orak.ai.dto.VoiceAnalysisDto;
 import com.ssafy.lab.orak.song.dto.SongResponseDTO;
 import com.ssafy.lab.orak.song.entity.Song;
 import com.ssafy.lab.orak.song.repository.SongRepository;
@@ -14,6 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,22 +31,16 @@ public class VoiceRecommendationService {
         log.info("Processing voice recommendation for user: {} with upload ID: {}", userId, request.uploadId());
 
         try {
-            // 1. Upload ID로 파일 URL 조회
-            var upload = fileUploadService.getUpload(request.uploadId());
-            String fileUrl = fileUploadService.getFileUrl(upload);
-
-            log.info("Retrieved file URL for upload ID {}: {}", request.uploadId(), fileUrl != null ? fileUrl.substring(0, Math.min(50, fileUrl.length())) + "..." : "null");
-
-            // 2. Python AI 서비스 호출
-            return pythonAiService.getVoiceRecommendations(fileUrl, request.topN())
+            // Python AI 서비스 호출 (벡터 DB 기반)
+            return pythonAiService.getVoiceRecommendations(userId, String.valueOf(request.uploadId()), request.topN())
                     .flatMap(pythonResponse -> {
                         log.info("Received response from Python AI service");
 
-                        // 3. Python 응답에서 songId 목록 추출
+                        // Python 응답에서 songId 목록 추출
                         List<Long> songIds = extractSongIds(pythonResponse);
                         log.info("Extracted {} song IDs from Python response", songIds.size());
 
-                        // 4. DB에서 Song 엔티티들 조회
+                        // DB에서 Song 엔티티들 조회
                         List<SongResponseDTO> songDtos = new ArrayList<>();
                         for (Long songId : songIds) {
                             songRepository.findBySongId(songId)
@@ -56,19 +53,30 @@ public class VoiceRecommendationService {
                                     );
                         }
 
-                        // 5. 음성 분석 결과 추출
-                        String voiceAnalysis = extractVoiceAnalysis(pythonResponse);
+                        // 음성 분석 결과 추출
+                        VoiceAnalysisDto voiceAnalysis = extractVoiceAnalysis(pythonResponse);
 
-                        // 6. 응답 생성
-                        String status = songDtos.isEmpty() ? "no_results" : "success";
-                        String message = songDtos.isEmpty() ?
+                        // SongResponseDTO를 RecommendationSongDto로 변환
+                        List<RecommendationSongDto> recommendationDtos = songDtos.stream()
+                                .map(songDto -> RecommendationSongDto.builder()
+                                        .id(songDto.getId())
+                                        .songId(songDto.getSongId())
+                                        .songName(songDto.getSongName())
+                                        .artistName(songDto.getArtistName())
+                                        .albumCoverUrl(songDto.getAlbumCoverUrl())
+                                        .build())
+                                .collect(Collectors.toList());
+
+                        // 응답 생성
+                        String status = recommendationDtos.isEmpty() ? "no_results" : "success";
+                        String message = recommendationDtos.isEmpty() ?
                                 "추천할 수 있는 곡을 찾을 수 없습니다." :
-                                String.format("%d개의 곡을 추천합니다.", songDtos.size());
+                                String.format("%d개의 곡을 추천합니다.", recommendationDtos.size());
 
                         VoiceRecommendationResponseDto response = VoiceRecommendationResponseDto.builder()
                                 .status(status)
                                 .message(message)
-                                .recommendations(songDtos)
+                                .recommendations(recommendationDtos)
                                 .voiceAnalysis(voiceAnalysis)
                                 .build();
 
@@ -105,12 +113,35 @@ public class VoiceRecommendationService {
         return songIds;
     }
 
-    private String extractVoiceAnalysis(JsonNode pythonResponse) {
+    private VoiceAnalysisDto extractVoiceAnalysis(JsonNode pythonResponse) {
         try {
             // Python 응답에서 voice_analysis 필드 추출
             if (pythonResponse.has("voice_analysis")) {
-                String voiceAnalysis = pythonResponse.get("voice_analysis").asText();
-                log.info("Successfully extracted voice analysis: {}", voiceAnalysis);
+                JsonNode voiceAnalysisNode = pythonResponse.get("voice_analysis");
+
+                String summary = voiceAnalysisNode.has("summary") ? voiceAnalysisNode.get("summary").asText() : null;
+
+                List<String> desc = new ArrayList<>();
+                if (voiceAnalysisNode.has("desc") && voiceAnalysisNode.get("desc").isArray()) {
+                    for (JsonNode descNode : voiceAnalysisNode.get("desc")) {
+                        desc.add(descNode.asText());
+                    }
+                }
+
+                List<String> allowedGenres = new ArrayList<>();
+                if (voiceAnalysisNode.has("allowedGenres") && voiceAnalysisNode.get("allowedGenres").isArray()) {
+                    for (JsonNode genreNode : voiceAnalysisNode.get("allowedGenres")) {
+                        allowedGenres.add(genreNode.asText());
+                    }
+                }
+
+                VoiceAnalysisDto voiceAnalysis = VoiceAnalysisDto.builder()
+                        .summary(summary)
+                        .desc(desc)
+                        .allowedGenres(allowedGenres)
+                        .build();
+
+                log.info("Successfully extracted voice analysis with {} genres", allowedGenres.size());
                 return voiceAnalysis;
             }
 

@@ -16,6 +16,7 @@ import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.exception.FileUploadException;
 import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
+import com.ssafy.lab.orak.ai.service.VectorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;

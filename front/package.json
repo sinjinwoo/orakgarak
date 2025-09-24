@@ -28,6 +28,7 @@
     "@types/three": "^0.180.0",
     "@types/webfontloader": "^1.6.38",
     "axios": "^1.11.0",
+    "event-source-polyfill": "^1.0.31",
     "framer-motion": "^12.23.12",
     "google-auth-library": "^10.3.0",
     "isomorphic-fetch": "^3.0.0",
