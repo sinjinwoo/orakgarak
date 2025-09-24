@@ -33,6 +33,12 @@ public class WebhookController {
         log.info("Alertmanager 웹훅 수신 - 알림 개수: {}",
                 request.getAlerts() != null ? request.getAlerts().size() : 0);
 
+        // 로컬 환경에서 Mattermost URL이 비어있으면 스킵
+        if (mattermostWebhookUrl == null || mattermostWebhookUrl.trim().isEmpty()) {
+            log.info("로컬 환경 - Mattermost 알림 비활성화됨 (MATTERMOST_WEBHOOK_URL 없음)");
+            return ResponseEntity.ok("로컬 환경에서 Mattermost 알림이 비활성화됨");
+        }
+
         try {
             MattermostWebhookRequest mattermostRequest = convertToMattermostFormat(request);
             sendToMattermost(mattermostRequest);

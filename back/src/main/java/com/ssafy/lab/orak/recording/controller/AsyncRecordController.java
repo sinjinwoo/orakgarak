@@ -76,6 +76,7 @@ public class AsyncRecordController {
 
     /**
      * 2단계: S3 업로드 완료 웹훅 (EventBridge, SQS, 또는 클라이언트에서 호출)
+     * 환경별 S3 버킷 분리로 로컬에서는 자동 웹훅 발생하지 않음
      */
     @PostMapping("/upload-completed")
     public ResponseEntity<Map<String, String>> handleUploadCompleted(
@@ -140,6 +141,59 @@ public class AsyncRecordController {
             ));
         } catch (Exception e) {
             log.error("업로드 완료 처리 실패: uploadId={}, s3Key={}", uploadId, s3Key, e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "status", "error",
+                    "message", "업로드 처리 중 오류가 발생했습니다: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * 2-1단계: 클라이언트 테스트용 간단한 업로드 완료 API
+     * - uploadId만으로 간단하게 테스트 가능
+     * - 개발/테스트 환경에서 사용
+     */
+    @PostMapping("/upload-completed/test")
+    public ResponseEntity<Map<String, String>> testUploadCompleted(
+            @RequestParam("uploadId") @Positive Long uploadId,
+            @AuthenticationPrincipal CustomUserPrincipal principal) {
+
+        log.info("테스트용 업로드 완료 호출: uploadId={}, userId={}", uploadId, principal.getUserId());
+
+        try {
+            // 업로드 정보 조회하여 s3Key 생성
+            Upload upload = fileUploadService.getUpload(uploadId);
+            if (upload == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "status", "error",
+                        "message", "업로드 정보를 찾을 수 없습니다: " + uploadId
+                ));
+            }
+
+            // 권한 확인
+            if (!upload.getUploaderId().equals(principal.getUserId())) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "status", "error",
+                        "message", "업로드에 대한 권한이 없습니다"
+                ));
+            }
+
+            // S3 키 구성 (실제 S3 키 형식에 맞춰 생성)
+            String s3Key = String.format("recordings/%s/%s", upload.getUuid(), upload.getOriginalFilename());
+
+            // 업로드 완료 처리
+            asyncRecordService.handleS3UploadCompleted(uploadId, s3Key);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "success",
+                    "message", "테스트용 업로드 완료 처리됨",
+                    "uploadId", uploadId.toString(),
+                    "s3Key", s3Key,
+                    "source", "client-test"
+            ));
+
+        } catch (Exception e) {
+            log.error("테스트용 업로드 완료 처리 실패: uploadId={}", uploadId, e);
             return ResponseEntity.internalServerError().body(Map.of(
                     "status", "error",
                     "message", "업로드 처리 중 오류가 발생했습니다: " + e.getMessage()
