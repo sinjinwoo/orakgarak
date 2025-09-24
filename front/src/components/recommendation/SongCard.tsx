@@ -41,6 +41,13 @@ const SongCard: React.FC<SongCardProps> = ({
 
   // 카드 클릭 핸들러 (뒤집기)
   const handleCardClick = (e: React.MouseEvent) => {
+    // 싫어요 버튼 클릭인지 확인
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-dislike-button]')) {
+      console.log('싫어요 버튼 클릭 감지 - 카드 클릭 무시');
+      return;
+    }
+    
     e.stopPropagation();
     console.log('카드 클릭 - 뒤집기:', !isFlipped);
     setIsFlipped(!isFlipped);
@@ -131,6 +138,7 @@ const SongCard: React.FC<SongCardProps> = ({
             boxShadow: isSelected 
               ? '0 0 40px rgba(255,0,128,0.4)' 
               : '0 8px 32px rgba(0,0,0,0.4)',
+            pointerEvents: isFlipped ? 'none' : 'auto'
           }}
         >
           <Box
@@ -166,40 +174,6 @@ const SongCard: React.FC<SongCardProps> = ({
               }}
             />
 
-            {/* 싫어요 버튼 (우상단) */}
-            <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 3 }}>
-              <IconButton
-                onClick={handleDislike}
-                disabled={isLoading}
-                sx={{
-                  background: isDisliked 
-                    ? 'rgba(255, 0, 0, 0.8)' 
-                    : 'rgba(0, 0, 0, 0.6)',
-                  color: isDisliked ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-                  border: isDisliked 
-                    ? '2px solid rgba(255, 0, 0, 0.8)' 
-                    : '2px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '50%',
-                  width: 40,
-                  height: 40,
-                  backdropFilter: 'blur(10px)',
-                  '&:hover': {
-                    background: isDisliked 
-                      ? 'rgba(255, 0, 0, 0.9)' 
-                      : 'rgba(255, 0, 0, 0.7)',
-                    color: '#fff',
-                    border: '2px solid rgba(255, 0, 0, 0.9)',
-                    transform: 'scale(1.1)',
-                    boxShadow: '0 0 20px rgba(255, 0, 0, 0.5)'
-                  },
-                  '&:active': {
-                    transform: 'scale(0.95)'
-                  }
-                }}
-              >
-                {isDisliked ? <ThumbDown /> : <ThumbDownOffAlt />}
-              </IconButton>
-            </Box>
 
             {/* 앞면 하단 정보 */}
             <Box sx={{ position: 'relative', zIndex: 2, p: 2 }}>
@@ -236,7 +210,7 @@ const SongCard: React.FC<SongCardProps> = ({
           </Box>
         </Card>
 
-        {/* 뒷면 - 예약 버튼만 */}
+        {/* 뒷면 - 예약 버튼과 싫어요 버튼 */}
         <Card
           sx={{
             position: 'absolute',
@@ -258,10 +232,82 @@ const SongCard: React.FC<SongCardProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             p: 4,
-            boxShadow: '0 0 40px rgba(0,255,255,0.2)'
+            boxShadow: '0 0 40px rgba(0,255,255,0.2)',
+            pointerEvents: isFlipped ? 'auto' : 'none'
           }}
           className="matrix-bg hologram-panel"
         >
+          {/* 싫어요 버튼 (뒷면 좌하단, 안쪽으로 배치) */}
+          <Box 
+            data-dislike-button
+            sx={{ 
+              position: 'absolute', 
+              bottom: 16, 
+              left: 16, 
+              zIndex: 1000,
+              pointerEvents: 'auto'
+            }}
+            onClick={(e) => {
+              console.log('싫어요 버튼 Box 클릭');
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onMouseDown={(e) => {
+              console.log('싫어요 버튼 Box 마우스다운');
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <IconButton
+              data-dislike-button
+              onClick={(e) => {
+                console.log('싫어요 버튼 IconButton 클릭');
+                e.preventDefault();
+                e.stopPropagation();
+                handleDislike(e);
+              }}
+              onMouseDown={(e) => {
+                console.log('싫어요 버튼 IconButton 마우스다운');
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onMouseUp={(e) => {
+                console.log('싫어요 버튼 IconButton 마우스업');
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              disabled={isLoading}
+              sx={{
+                background: isDisliked 
+                  ? 'rgba(255, 0, 0, 0.8)' 
+                  : 'rgba(0, 0, 0, 0.6)',
+                color: isDisliked ? '#fff' : 'rgba(255, 255, 255, 0.7)',
+                border: isDisliked 
+                  ? '2px solid rgba(255, 0, 0, 0.8)' 
+                  : '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                backdropFilter: 'blur(10px)',
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                '&:hover': {
+                  background: isDisliked 
+                    ? 'rgba(255, 0, 0, 0.9)' 
+                    : 'rgba(255, 0, 0, 0.7)',
+                  color: '#fff',
+                  border: '2px solid rgba(255, 0, 0, 0.9)',
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 0 20px rgba(255, 0, 0, 0.5)'
+                },
+                '&:active': {
+                  transform: 'scale(0.95)'
+                }
+              }}
+            >
+              {isDisliked ? <ThumbDown /> : <ThumbDownOffAlt />}
+            </IconButton>
+          </Box>
           {/* 곡 정보 */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Typography 
