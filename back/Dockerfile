@@ -22,6 +22,12 @@ FROM eclipse-temurin:17-jdk
 
 WORKDIR /app
 
+# FFmpeg 설치
+RUN apt-get update && \
+    apt-get install -y ffmpeg curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # non-root 사용자 생성
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
