@@ -254,7 +254,7 @@ const FeedPage: React.FC = () => {
         avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
       },
       createdAt: new Date().toLocaleDateString('ko-KR'),
-      coverImage: selectedAlbum.coverImageUrl,
+      coverImageUrl: selectedAlbum.coverImageUrl,
       title: selectedAlbum.title,
       description: feedDescription,
       trackCount: selectedAlbum.trackCount,
@@ -448,7 +448,7 @@ const FeedPage: React.FC = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                             <Avatar src={album.user?.avatar} sx={{ width: 20, height: 20, mr: 1 }} />
                             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                              {album.userNickname || album.user?.nickname || `사용자 ${album.userId}`}
+                              {album.user?.nickname || `사용자 ${album.userId}`}
                             </Typography>
                           </Box>
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
