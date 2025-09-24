@@ -435,54 +435,64 @@ async def save_user_vector(request: SaveUserVectorRequest):
 @app.post("/ai/generate-voice-image", response_model=VoiceImageGenerationResponse)
 async def generate_voice_image(request: VoiceImageGenerationRequest):
     """
-    녹음 리스트 기반 AI 이미지 생성 API
+    Pinecone 메타데이터 기반 AI 이미지 생성 API (파일 다운로드 없이 처리)
     """
     try:
-        logging.info(f"Received voice image generation request with {len(request.records)} records")
+        logging.info(f"Received Pinecone metadata-based voice image generation request with {len(request.records)} records")
         logging.info(f"Request parameters: aspect_ratio={request.aspect_ratio}, safety_filter_level={request.safety_filter_level}, person_generation={request.person_generation}")
 
-        for i, record in enumerate(request.records):
-            logging.info(f"Record {i}: id={record.id}, userId={record.userId}, songId={record.songId}, title='{record.title}', url='{record.url[:50] if record.url else None}...'")
-
-        # 1. 녹음된 음성들에서 키워드 추출
+        # 1. Pinecone 메타데이터에서 음성 분석 정보 추출 (파일 다운로드 없이)
         voice_keywords = []
         song_titles = []
 
+        if user_vector_manager is None:
+            logging.error("사용자 벡터 관리자가 초기화되지 않았습니다.")
+            return VoiceImageGenerationResponse(
+                success=False,
+                error="벡터 관리 시스템을 사용할 수 없습니다."
+            )
+
         for record in request.records:
-            temp_audio_path = None
             try:
-                # S3 URL에서 파일 다운로드
-                logging.info(f"S3에서 음성 파일 다운로드 중... (ID: {record.id})")
-                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
-                    response = requests.get(record.url, timeout=30)
-                    response.raise_for_status()
-                    tmp_file.write(response.content)
-                    temp_audio_path = tmp_file.name
-                    logging.info(f"음성 파일 다운로드 완료: {len(response.content)} bytes")
+                # Pinecone 메타데이터에서 음성 분석 정보 조회 (파일 다운로드 없이)
+                upload_id = str(record.uploadId) if hasattr(record, 'uploadId') and record.uploadId else str(record.id)
+                user_id = str(record.userId)
 
-                # 음성 분석으로 키워드 추출
-                voice_analysis = analyze_voice(temp_audio_path)
-                # 분석 결과에서 요약 문장 추출
-                voice_summary = voice_analysis["summary"]
-                voice_keywords.append(voice_summary)
-                logging.info(f"음성 분석 성공 (ID: {record.id}): {voice_summary}")
+                logging.info(f"Pinecone에서 메타데이터 조회 중... (Upload ID: {upload_id}, User ID: {user_id})")
 
-                # 노래 제목도 수집
-                if record.title:
-                    song_titles.append(record.title)
+                # 사용자 기록에서 음성 분석 정보 조회
+                user_history = user_vector_manager.get_user_history(user_id)
+                target_record = None
 
-            except requests.exceptions.RequestException as e:
-                logging.error(f"S3 파일 다운로드 오류 (ID: {record.id}): {e}")
-                continue
+                for history_record in user_history:
+                    if history_record.get("upload_id") == upload_id:
+                        target_record = history_record
+                        break
+
+                if target_record:
+                    # Pinecone 메타데이터에서 음성 분석 결과 추출
+                    voice_summary = target_record.get("voice_analysis", "")
+                    if voice_summary:
+                        voice_keywords.append(voice_summary)
+                        logging.info(f"Pinecone 메타데이터에서 음성 분석 정보 조회 성공 (Upload ID: {upload_id}): {voice_summary}")
+
+                    # 노래 제목 수집
+                    if record.title:
+                        song_titles.append(record.title)
+                else:
+                    logging.warning(f"Pinecone 메타데이터에서 Upload ID {upload_id} 정보를 찾을 수 없음")
+                    # 기본값 사용
+                    if record.title:
+                        voice_keywords.append(f"음악적 표현: {record.title}")
+                        song_titles.append(record.title)
+
             except Exception as e:
-                logging.error(f"음성 분석 실패 (ID: {record.id}): {str(e)}")
-                import traceback
-                traceback.print_exc()
+                logging.error(f"Pinecone 메타데이터 조회 실패 (ID: {record.id}): {str(e)}")
+                # 기본값으로 대체
+                if record.title:
+                    voice_keywords.append(f"음악적 표현: {record.title}")
+                    song_titles.append(record.title)
                 continue
-            finally:
-                # 임시 파일 정리
-                if temp_audio_path and os.path.exists(temp_audio_path):
-                    os.unlink(temp_audio_path)
 
         # 2. 키워드와 노래 제목을 바탕으로 프롬프트 생성
         if not voice_keywords and not song_titles:

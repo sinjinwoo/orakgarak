@@ -61,27 +61,26 @@ public class AlbumCoverService {
     }
 
     public Mono<AlbumCoverUploadResponseDto> generateAlbumCover(Long userId, AlbumCoverGenerateRequestDto request) {
-        log.info("Starting AI album cover generation for user: {} with upload IDs: {}", userId, request.uploadIds());
+        log.info("Starting Pinecone metadata-based AI album cover generation for user: {} with upload IDs: {}", userId, request.uploadIds());
 
-        // 1. 업로드 ID로 직접 파일 정보 조회
+        // 1. 업로드 ID로 파일 정보 조회 (Pinecone 메타데이터 활용을 위해 간소화)
         List<RecordDataDto> recordDataList;
         try {
             recordDataList = request.uploadIds().stream()
                     .map(uploadId -> {
                         try {
-                            // Upload 엔티티에서 파일 정보 조회
+                            // Upload 엔티티에서 파일 정보 조회 (URL은 Pinecone에서 가져올 예정)
                             Upload upload = fileUploadService.getUpload(uploadId);
-                            String fileUrl = fileUploadService.getFileUrl(upload);
 
-                            // Upload 정보를 RecordDataDto로 변환 (간단한 형태)
+                            // Upload 정보를 RecordDataDto로 변환 (URL 없이 메타데이터만)
                             return RecordDataDto.builder()
-                                    .id(uploadId.intValue()) // Upload ID를 임시로 사용
+                                    .id(uploadId.intValue())
                                     .userId(upload.getUploaderId().intValue())
-                                    .title(upload.getOriginalFilename()) // 파일명을 title로 사용
+                                    .title(upload.getOriginalFilename())
                                     .extension(upload.getExtension())
                                     .contentType(upload.getContentType())
                                     .fileSize(upload.getFileSize() + " bytes")
-                                    .url(fileUrl)
+                                    .url("") // Pinecone 메타데이터 기반이므로 URL 불필요
                                     .urlStatus("SUCCESS")
                                     .uploadId(uploadId.intValue())
                                     .build();
@@ -92,19 +91,19 @@ public class AlbumCoverService {
                     })
                     .collect(Collectors.toList());
 
-            log.info("Successfully fetched {} upload(s) for AI album cover generation", recordDataList.size());
+            log.info("Successfully prepared {} upload(s) for Pinecone metadata-based AI album cover generation", recordDataList.size());
 
         } catch (Exception e) {
             log.error("Failed to prepare AI album cover generation for user: {}", userId, e);
             return Mono.error(new RuntimeException("AI 앨범 커버 생성 준비 실패: " + e.getMessage(), e));
         }
 
-        // 2. AI 서비스용 DTO 변환 (파라미터 고정)
+        // 2. AI 서비스용 DTO 변환 (기존 엔드포인트 사용)
         VoiceImageGenerationRequestDto aiRequest = VoiceImageGenerationRequestDto.builder()
                 .records(recordDataList)
-                .aspectRatio("1:1")                    // 고정값
-                .safetyFilterLevel("block_most")       // 고정값
-                .personGeneration("dont_allow")        // 고정값
+                .aspectRatio(request.aspectRatio() != null ? request.aspectRatio() : "1:1")
+                .safetyFilterLevel(request.safetyFilterLevel() != null ? request.safetyFilterLevel() : "block_most")
+                .personGeneration(request.personGeneration() != null ? request.personGeneration() : "dont_allow")
                 .build();
 
         return pythonAiService.generateVoiceImage(aiRequest)

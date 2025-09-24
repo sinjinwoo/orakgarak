@@ -3,6 +3,7 @@ package com.ssafy.lab.orak.ai.service;
 import com.ssafy.lab.orak.ai.dto.RecordDataDto;
 import com.ssafy.lab.orak.ai.dto.VoiceImageGenerationRequestDto;
 import com.ssafy.lab.orak.ai.dto.VoiceImageGenerationResponseDto;
+import com.ssafy.lab.orak.ai.dto.PineconeMetadataGenerationRequestDto;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
