@@ -61,6 +61,7 @@ public class ProcessingStatusController {
             // 모든 처리 중인 파일 조회 (완료/실패 제외)
             uploads = fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.PROCESSING);
             uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.CONVERTING));
+            uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.ANALYZING));
             uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.ANALYSIS_PENDING));
         }
         
