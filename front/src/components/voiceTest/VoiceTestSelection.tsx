@@ -1,25 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, Play, Upload, ArrowLeft, Zap, Database } from 'lucide-react';
+import React from 'react';
+import { ArrowLeft, Database } from 'lucide-react';
 
 interface VoiceTestSelectionProps {
-  onNewRecording: () => void;
-  onUseExisting: (recording: { id: string; title: string }) => void;
+  onGetRecommendations: () => void;
+  onStartVoiceTest: () => void;
   onBack: () => void;
 }
 
 const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({ 
-  onNewRecording, 
-  onUseExisting, 
+  onGetRecommendations,
+  onStartVoiceTest,
   onBack 
 }) => {
-  const handleNewRecording = () => {
-    onNewRecording();
+
+  const handleGetRecommendations = () => {
+    console.log('🎵 추천받기 버튼 클릭됨 - handleGetRecommendations 호출');
+    onGetRecommendations();
   };
 
-  const handleUseExisting = () => {
-    console.log('🎵 기존 녹음본 사용 버튼 클릭됨');
-    // 기존 녹음본 선택 화면으로 바로 이동 (mock 데이터 제거)
-    onUseExisting({ id: 'existing', title: 'Use Existing Recordings' });
+  const handleStartVoiceTest = () => {
+    console.log('🎵 음역대 테스트 버튼 클릭됨 - handleStartVoiceTest 호출');
+    onStartVoiceTest();
   };
 
   return (
@@ -112,7 +113,7 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
             fontFamily: 'neon, monospace',
             animation: 'cyber 2.2s ease-in infinite'
           }}>
-            🎤 음성 테스트 선택
+            🎵 추천 시스템
           </h1>
           <p style={{
             fontSize: '18px',
@@ -120,7 +121,7 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
             margin: 0,
             textShadow: '0 0 10px #23F6EF'
           }}>
-            새로운 녹음을 하거나 기존 녹음본을 사용하세요
+            추천받기 또는 음역대 테스트를 선택하세요
           </p>
         </div>
 
@@ -128,11 +129,19 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
         <div style={{
           display: 'flex',
           gap: '30px',
+          justifyContent: 'center',
           marginBottom: '30px'
         }}>
-          {/* 새로 녹음하기 */}
-          <div style={{
-            flex: 1,
+          {/* 추천받기 */}
+          <div 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🎵 추천받기 div 클릭됨');
+              handleGetRecommendations();
+            }}
+            style={{
+            width: '300px',
             background: 'rgba(30,10,20,.6)',
             border: '2px solid rgba(251, 66, 212, 0.3)',
             borderRadius: '15px',
@@ -142,9 +151,9 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
             transition: 'all 0.3s ease',
             position: 'relative',
             overflow: 'hidden',
-            boxShadow: '0 0 20px rgba(251, 66, 212, 0.2)'
+            boxShadow: '0 0 20px rgba(251, 66, 212, 0.2)',
+            userSelect: 'none'
           }}
-          onClick={handleNewRecording}
           onMouseOver={(e) => {
             e.currentTarget.style.background = 'rgba(251, 66, 212, 0.1)';
             e.currentTarget.style.transform = 'translateY(-5px)';
@@ -170,10 +179,10 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
               fontWeight: 'bold',
               textShadow: '0 0 10px #F40AD5'
             }}>
-              NEW
+              RECOMMEND
             </div>
             
-            <Mic size={60} color="#FB42D4" style={{ marginBottom: '20px' }} />
+            <Database size={60} color="#FB42D4" style={{ marginBottom: '20px' }} />
             <h3 style={{
               fontSize: '24px',
               color: '#FB42D4',
@@ -181,7 +190,7 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
               fontWeight: 'bold',
               textShadow: '0 0 10px #F40AD5'
             }}>
-              새로 녹음하기
+              추천받기
             </h3>
             <p style={{
               fontSize: '16px',
@@ -190,16 +199,21 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
               margin: 0,
               textShadow: '0 0 5px #23F6EF'
             }}>
-              마이크로 "떳다떳다 비행기"를<br />
-              새롭게 녹음합니다
+              기존 녹음본을 사용하여<br />
+              맞춤형 노래 추천을 받습니다
             </p>
           </div>
 
-          {/* 기존 녹음본 사용하기 */}
+          {/* 음역대 테스트 */}
           <div 
-            onClick={handleUseExisting}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🎵 음역대 테스트 div 클릭됨');
+              handleStartVoiceTest();
+            }}
             style={{
-            flex: 1,
+            width: '300px',
             background: 'rgba(30,10,20,.6)',
             border: '2px solid rgba(66, 253, 235, 0.3)',
             borderRadius: '15px',
@@ -209,7 +223,8 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
             transition: 'all 0.3s ease',
             position: 'relative',
             overflow: 'hidden',
-            boxShadow: '0 0 20px rgba(66, 253, 235, 0.2)'
+            boxShadow: '0 0 20px rgba(66, 253, 235, 0.2)',
+            userSelect: 'none'
           }}
           onMouseOver={(e) => {
             e.currentTarget.style.background = 'rgba(66, 253, 235, 0.1)';
@@ -236,7 +251,7 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
               fontWeight: 'bold',
               textShadow: '0 0 10px #23F6EF'
             }}>
-              EXISTING
+              TEST
             </div>
             
             <Database size={60} color="#42FDEB" style={{ marginBottom: '20px' }} />
@@ -247,7 +262,7 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
               fontWeight: 'bold',
               textShadow: '0 0 10px #23F6EF'
             }}>
-              기존 녹음본 사용
+              음역대 테스트
             </h3>
             <p style={{
               fontSize: '16px',
@@ -256,8 +271,8 @@ const VoiceTestSelection: React.FC<VoiceTestSelectionProps> = ({
               margin: 0,
               textShadow: '0 0 5px #F40AD5'
             }}>
-              이전에 녹음한<br />
-              "떳다떳다 비행기"를 사용합니다
+              간단한 게임을 통해<br />
+              나의 음역대를 측정합니다
             </p>
           </div>
         </div>

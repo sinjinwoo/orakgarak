@@ -71,6 +71,7 @@ export default function RecommendationResult({
     return apiRecommendations.map((item, index) => {
       return {
         id: item.songId?.toString?.() ?? String(item.id),
+        songId: item.songId ?? item.id, // 백엔드 songId 추가
         title: item.songName,
         artist: item.artistName,
         imageUrl: item.albumCoverUrl,
