@@ -58,7 +58,12 @@ public enum ErrorCode {
     EVENT_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1800, "이벤트 처리에 실패했습니다."),
     KAFKA_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1801, "카프카 메시지 전송에 실패했습니다."),
     EVENTBRIDGE_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1802, "EventBridge 이벤트 전송에 실패했습니다."),
-    BATCH_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1803, "배치 처리에 실패했습니다.");
+    BATCH_PROCESSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1803, "배치 처리에 실패했습니다."),
+
+    // AI Demo (1900-1999)
+    AI_DEMO_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, 1900, "AI 데모 신청을 찾을 수 없습니다."),
+    AI_DEMO_APPLICATION_OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, 1901, "AI 데모 신청 작업에 실패했습니다."),
+    DUPLICATE_AI_DEMO_APPLICATION(HttpStatus.CONFLICT, 1902, "이미 AI 데모 신청이 존재합니다.");
 
     private final HttpStatus httpStatus;
     private final int code;
