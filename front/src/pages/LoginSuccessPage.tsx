@@ -1,10 +1,63 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { GoogleAuthService } from '../services/googleAuth';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/api';
+
+// 사이버틱 테마를 위한 CSS 애니메이션
+const cyberpunkStyles = `
+  @keyframes neonGlow {
+    0%, 100% { 
+      text-shadow: 
+        0 0 20px #00ff88,
+        0 0 40px #00ff88,
+        0 0 60px #00ff88;
+    }
+    50% { 
+      text-shadow: 
+        0 0 10px #00ff88,
+        0 0 20px #00ff88,
+        0 0 30px #00ff88;
+    }
+  }
+  
+  @keyframes errorGlow {
+    0%, 100% { 
+      text-shadow: 
+        0 0 20px #ff0080,
+        0 0 40px #ff0080,
+        0 0 60px #ff0080;
+    }
+    50% { 
+      text-shadow: 
+        0 0 10px #ff0080,
+        0 0 20px #ff0080,
+        0 0 30px #ff0080;
+    }
+  }
+  
+  @keyframes hologramScan {
+    0% { transform: translateX(-100%) skewX(-15deg); }
+    100% { transform: translateX(200%) skewX(-15deg); }
+  }
+  
+  @keyframes cyberPulse {
+    0%, 100% { 
+      box-shadow: 
+        0 0 20px rgba(0, 255, 136, 0.3),
+        0 0 40px rgba(0, 255, 136, 0.2),
+        inset 0 0 20px rgba(0, 255, 136, 0.1);
+    }
+    50% { 
+      box-shadow: 
+        0 0 10px rgba(0, 255, 136, 0.2),
+        0 0 20px rgba(0, 255, 136, 0.1),
+        inset 0 0 10px rgba(0, 255, 136, 0.05);
+    }
+  }
+`;
 
 const LoginSuccessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -70,71 +123,148 @@ const LoginSuccessPage: React.FC = () => {
   const getStatusIcon = () => {
     switch (status) {
       case 'loading':
-        return <CircularProgress size={60} sx={{ color: '#00ffff' }} />;
+        return <CircularProgress size={40} sx={{ color: '#00ffff' }} />;
       case 'success':
-        return <CheckCircle sx={{ fontSize: 60, color: '#00ff00' }} />;
+        return <CheckCircle size={40} style={{ color: '#00ff00' }} />;
       case 'error':
-        return <ErrorIcon sx={{ fontSize: 60, color: '#ff0040' }} />;
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'loading':
-        return '#00ffff';
-      case 'success':
-        return '#00ff00';
-      case 'error':
-        return '#ff0040';
+        return <XCircle size={40} style={{ color: '#ff0040' }} />;
     }
   };
 
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      background: `
-        radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 40% 40%, rgba(0, 255, 0, 0.05) 0%, transparent 50%),
-        linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)
-      `,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px'
-    }}>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: cyberpunkStyles }} />
       <Box sx={{
-        textAlign: 'center',
-        background: 'rgba(26, 26, 26, 0.9)',
-        border: `2px solid ${getStatusColor()}`,
-        borderRadius: '15px',
-        padding: '40px',
-        boxShadow: `0 0 30px ${getStatusColor()}40`,
-        backdropFilter: 'blur(10px)',
-        maxWidth: '400px',
-        width: '100%'
+        minHeight: '100vh',
+        background: `
+          linear-gradient(-45deg, rgba(5, 15, 10, .35)15%, rgba(15, 5, 10, .85)),
+          url(https://images.unsplash.com/photo-1519608487953-e999c86e7455?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80) center 25% no-repeat fixed
+        `,
+        backgroundSize: 'cover',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `
+            radial-gradient(circle at 20% 80%, rgba(0, 255, 136, 0.2) 0%, transparent 60%),
+            radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.2) 0%, transparent 60%),
+            radial-gradient(circle at 40% 40%, rgba(0, 255, 255, 0.1) 0%, transparent 50%)
+          `,
+          zIndex: 1
+        }
       }}>
-        {/* 상태 아이콘 */}
-        <Box sx={{ mb: 3 }}>
-          {getStatusIcon()}
-        </Box>
+        <Box sx={{
+          textAlign: 'center',
+          background: `
+            linear-gradient(135deg, 
+              rgba(0, 0, 0, 0.95) 0%, 
+              rgba(20, 20, 40, 0.9) 50%, 
+              rgba(0, 0, 0, 0.95) 100%
+            )
+          `,
+          border: '2px solid transparent',
+          borderRadius: '16px',
+          padding: '24px 32px',
+          boxShadow: `
+            0 25px 50px rgba(0, 0, 0, 0.8),
+            0 15px 30px rgba(0, 0, 0, 0.6),
+            inset 0 2px 0 rgba(255, 255, 255, 0.1),
+            inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.05)
+          `,
+          backdropFilter: 'blur(30px)',
+          maxWidth: '320px',
+          minWidth: '280px',
+          width: 'fit-content',
+          position: 'relative',
+          zIndex: 2,
+          overflow: 'hidden',
+          transform: 'perspective(1200px) rotateX(8deg) rotateY(-2deg)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'perspective(1200px) rotateX(5deg) rotateY(-1deg) scale(1.02)',
+            boxShadow: `
+              0 30px 60px rgba(0, 0, 0, 0.9),
+              0 20px 40px rgba(0, 0, 0, 0.7),
+              inset 0 2px 0 rgba(255, 255, 255, 0.15),
+              inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.1)
+            `,
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: '-100%',
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent)',
+            animation: 'hologramScan 5s infinite',
+            zIndex: 1,
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.03) 0%, 
+                transparent 30%, 
+                transparent 70%, 
+                rgba(0, 0, 0, 0.15) 100%
+              )
+            `,
+            borderRadius: '16px',
+            zIndex: 0,
+          }
+        }}>
+          {/* 상태 아이콘 */}
+          <Box sx={{ 
+            mb: 2, 
+            position: 'relative', 
+            zIndex: 3,
+            '& svg': {
+              filter: 'drop-shadow(0 0 15px rgba(0, 255, 136, 0.6))'
+            }
+          }}>
+            {getStatusIcon()}
+          </Box>
 
         {/* 상태 메시지 */}
-        <Typography variant="h5" sx={{
-          color: getStatusColor(),
+        <Typography variant="body2" sx={{
+          color: status === 'success' ? '#00ff88' : '#ff4080',
           fontWeight: 'bold',
-          marginBottom: '16px',
-          textShadow: `0 0 10px ${getStatusColor()}`
+          marginBottom: '8px',
+          textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
+          position: 'relative',
+          zIndex: 3,
+          fontSize: '1rem'
         }}>
           {status === 'loading' && 'PROCESSING LOGIN...'}
           {status === 'success' && 'LOGIN SUCCESS!'}
           {status === 'error' && 'LOGIN FAILED!'}
         </Typography>
 
-        <Typography variant="body1" sx={{
+        <Typography variant="body2" sx={{
           color: '#ffffff',
-          marginBottom: '20px',
-          opacity: 0.9
+          marginBottom: '10px',
+          opacity: 0.9,
+          textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
+          position: 'relative',
+          zIndex: 3,
+          fontSize: '0.8rem'
         }}>
           {message}
         </Typography>
@@ -146,29 +276,16 @@ const LoginSuccessPage: React.FC = () => {
             justifyContent: 'center',
             alignItems: 'center',
             gap: 1,
-            mt: 2
+            mt: 2,
+            position: 'relative',
+            zIndex: 3
           }}>
-            <Box sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: '#00ffff',
-              animation: 'pulse 1.5s ease-in-out infinite'
-            }} />
-            <Box sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: '#00ffff',
-              animation: 'pulse 1.5s ease-in-out infinite 0.2s'
-            }} />
-            <Box sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: '#00ffff',
-              animation: 'pulse 1.5s ease-in-out infinite 0.4s'
-            }} />
+            <CircularProgress 
+              size={30}
+              sx={{
+                color: '#00ff88'
+              }}
+            />
           </Box>
         )}
 
@@ -176,7 +293,10 @@ const LoginSuccessPage: React.FC = () => {
         {status === 'success' && (
           <Typography variant="body2" sx={{
             color: 'rgba(255, 255, 255, 0.7)',
-            mt: 2
+            mt: 1,
+            position: 'relative',
+            zIndex: 3,
+            fontSize: '0.8rem'
           }}>
             잠시 후 자동으로 이동합니다...
           </Typography>
@@ -185,23 +305,17 @@ const LoginSuccessPage: React.FC = () => {
         {status === 'error' && (
           <Typography variant="body2" sx={{
             color: 'rgba(255, 255, 255, 0.7)',
-            mt: 2
+            mt: 1,
+            position: 'relative',
+            zIndex: 3,
+            fontSize: '0.8rem'
           }}>
             3초 후 메인 페이지로 이동합니다...
           </Typography>
         )}
       </Box>
-
-      {/* 애니메이션 스타일 */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes pulse {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
-          }
-        `
-      }} />
     </Box>
+    </>
   );
 };
 
