@@ -262,7 +262,7 @@ const SongSearchPanel: React.FC = () => {
             width: '35px',
             height: '35px',
             borderRadius: '8px',
-            background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+            background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -272,35 +272,37 @@ const SongSearchPanel: React.FC = () => {
           </div>
           <div>
             <h3 style={{
-              color: '#00ffff',
+              color: '#06b6d4',
               fontSize: '1.2rem',
               fontWeight: 'bold',
               margin: '0 0 4px 0',
-              textShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
+              textShadow: '0 0 10px rgba(6, 182, 212, 0.5)',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
             }}>
-              NEURAL SEARCH
+              노래 검색
             </h3>
             <p style={{
               color: '#888',
               fontSize: '0.8rem',
               margin: '0',
-              textTransform: 'uppercase'
+              fontFamily: 'system-ui, -apple-system, sans-serif'
             }}>
-              MUSIC DATABASE
+              실시간 검색
             </p>
           </div>
         </div>
 
         <span style={{
-          background: 'rgba(0, 255, 0, 0.2)',
-          color: '#00ff00',
-          border: '1px solid #00ff00',
+          background: 'rgba(6, 182, 212, 0.15)',
+          color: '#06b6d4',
+          border: '1px solid rgba(6, 182, 212, 0.6)',
           padding: '4px 8px',
           borderRadius: '10px',
           fontSize: '0.7rem',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
         }}>
-          LIVE
+          실시간
         </span>
       </div>
       
@@ -322,24 +324,25 @@ const SongSearchPanel: React.FC = () => {
             background: 'rgba(0, 0, 0, 0.4)',
             border: searchTerm.length > 0 && searchTerm.length < 2 
               ? '1px solid rgba(255, 165, 0, 0.6)' 
-              : '1px solid rgba(0, 255, 255, 0.3)',
+              : '1px solid rgba(6, 182, 212, 0.3)',
             borderRadius: '8px',
-            color: '#00ffff',
+            color: '#06b6d4',
             fontSize: '0.9rem',
             outline: 'none',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
           }}
           onFocus={(e) => {
             if (searchTerm.length >= 2 || searchTerm.length === 0) {
-            e.target.style.border = '1px solid #00ffff';
-            e.target.style.boxShadow = '0 0 10px rgba(0, 255, 255, 0.3)';
+            e.target.style.border = '1px solid #06b6d4';
+            e.target.style.boxShadow = '0 0 10px rgba(6, 182, 212, 0.3)';
             }
           }}
           onBlur={(e) => {
             if (searchTerm.length > 0 && searchTerm.length < 2) {
               e.target.style.border = '1px solid rgba(255, 165, 0, 0.6)';
             } else {
-            e.target.style.border = '1px solid rgba(0, 255, 255, 0.3)';
+            e.target.style.border = '1px solid rgba(6, 182, 212, 0.3)';
             }
             e.target.style.boxShadow = 'none';
           }}
@@ -408,7 +411,7 @@ const SongSearchPanel: React.FC = () => {
             overflow: 'auto',
             scrollBehavior: 'smooth',
             background: 'rgba(0, 0, 0, 0.3)',
-            border: '1px solid rgba(0, 255, 255, 0.3)',
+            border: '1px solid rgba(6, 182, 212, 0.3)',
             borderRadius: '8px',
             marginBottom: '10px'
             }}
@@ -417,23 +420,24 @@ const SongSearchPanel: React.FC = () => {
               <div style={{ 
                 padding: '40px 20px', 
                 textAlign: 'center', 
-                color: '#00ffff',
+                color: '#06b6d4',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: '10px'
               }}>
                 <div style={{ fontSize: '2rem' }}>⏳</div>
-                <p style={{ margin: '0', fontSize: '0.9rem' }}>검색 중...</p>
+                <p style={{ margin: '0', fontSize: '0.9rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>검색 중...</p>
               </div>
             ) : searchResults.length > 0 ? (
               <div>
                 <div style={{
                   padding: '12px',
                   borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-                  color: '#00ffff',
+                  color: '#06b6d4',
                   fontSize: '0.9rem',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  fontFamily: 'system-ui, -apple-system, sans-serif'
                 }}>
                   검색 결과 ({searchResults.length}곡)
                 </div>
@@ -464,7 +468,7 @@ const SongSearchPanel: React.FC = () => {
                       borderRadius: '8px',
                       background: song.albumCoverUrl 
                         ? `url(${song.albumCoverUrl})` 
-                        : 'linear-gradient(45deg, #00ffff, #ff0080)',
+                        : 'linear-gradient(45deg, #ec4899, #06b6d4)',
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       display: 'flex',
@@ -485,7 +489,8 @@ const SongSearchPanel: React.FC = () => {
                         margin: '0 0 6px 0',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        textOverflow: 'ellipsis',
+                        fontFamily: 'system-ui, -apple-system, sans-serif'
                       }}>
                         {song.title}
                       </h4>
@@ -497,9 +502,10 @@ const SongSearchPanel: React.FC = () => {
                         marginBottom: '4px'
                       }}>
                         <span style={{ 
-                          color: '#00ffff', 
+                          color: '#06b6d4', 
                           fontSize: '0.85rem',
-                          fontWeight: '500'
+                          fontWeight: '500',
+                          fontFamily: 'system-ui, -apple-system, sans-serif'
                         }}>
                           {song.artist}
                         </span>
@@ -511,9 +517,9 @@ const SongSearchPanel: React.FC = () => {
                           <>
                             <span style={{ color: '#666', fontSize: '0.8rem' }}>•</span>
                         <span style={{
-                          color: '#ff0080',
+                          color: '#ec4899',
                               fontSize: '0.7rem',
-                              background: 'rgba(255, 0, 128, 0.1)',
+                          background: 'rgba(236, 72, 153, 0.15)',
                           padding: '2px 6px',
                               borderRadius: '8px'
                         }}>
@@ -523,8 +529,8 @@ const SongSearchPanel: React.FC = () => {
                         )}
                       </div>
                       <div style={{
-                        background: 'rgba(255, 0, 128, 0.15)',
-                        color: '#ff0080',
+                        background: 'rgba(236, 72, 153, 0.15)',
+                        color: '#ec4899',
                         padding: '3px 8px',
                         borderRadius: '12px',
                         fontSize: '0.7rem',
@@ -543,7 +549,7 @@ const SongSearchPanel: React.FC = () => {
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: '#00ffff',
+                        color: '#06b6d4',
                         cursor: 'pointer',
                         padding: '6px',
                         fontSize: '16px',
@@ -568,10 +574,10 @@ const SongSearchPanel: React.FC = () => {
                 height: '100%'
               }}>
                 <div style={{ fontSize: '2rem', opacity: 0.5 }}>🚫</div>
-                <p style={{ margin: '0', fontSize: '0.9rem' }}>
+                <p style={{ margin: '0', fontSize: '0.9rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                   "{searchTerm}"에 대한 검색 결과가 없습니다.
                 </p>
-                <p style={{ margin: '0', fontSize: '0.8rem', color: '#666' }}>
+                <p style={{ margin: '0', fontSize: '0.8rem', color: '#666', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                   다른 검색어를 입력해보세요.
                 </p>
               </div>
@@ -593,17 +599,18 @@ const SongSearchPanel: React.FC = () => {
             <p style={{
               fontSize: '0.9rem',
               margin: '0',
-              color: '#666'
+              color: '#666',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
             }}>
               곡명, 아티스트로 검색하세요
             </p>
             <div style={{
-              background: 'rgba(0, 255, 255, 0.1)',
-              border: '1px solid rgba(0, 255, 255, 0.3)',
+              background: 'rgba(6, 182, 212, 0.1)',
+              border: '1px solid rgba(6, 182, 212, 0.3)',
               borderRadius: '6px',
               padding: '8px 12px',
               marginTop: '10px',
-              color: '#00ffff',
+              color: '#06b6d4',
               fontSize: '0.75rem'
             }}>
               ⚡ 2글자 이상 입력하면 자동으로 검색됩니다
