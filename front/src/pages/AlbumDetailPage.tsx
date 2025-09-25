@@ -522,7 +522,7 @@ const AlbumDetailPage: React.FC = () => {
           <Grid
             container
             sx={{
-              gridTemplateColumns: '1fr 400px 1fr',
+              gridTemplateColumns: '500px 400px 1fr',
               gap: 5,
               display: 'grid'
             }}
