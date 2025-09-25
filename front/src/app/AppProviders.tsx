@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { theme } from './theme';
 import ErrorBoundary from './ErrorBoundary';
+import { ReservationProvider } from '../contexts/ReservationContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +28,9 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
         <BrowserRouter>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            {children}
+            <ReservationProvider>
+              {children}
+            </ReservationProvider>
             <ReactQueryDevtools initialIsOpen={false} />
           </ThemeProvider>
         </BrowserRouter>

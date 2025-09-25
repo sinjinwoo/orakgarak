@@ -159,9 +159,7 @@ export const songService = {
     success: boolean;
     message: string;
   }> => {
-    const response = await apiClient.post('/songs/dislikes/toggle', {
-      songId
-    });
+    const response = await apiClient.post('/songs/dislikes/toggle', { songId });
     return response.data;
   }
 };

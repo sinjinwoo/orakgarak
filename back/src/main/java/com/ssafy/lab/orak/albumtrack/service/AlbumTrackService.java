@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -223,6 +224,35 @@ public class AlbumTrackService {
         updateAlbumStatistics(albumId);
     }
 
+    // 앨범 생성과 동시에 트랙들을 일괄 생성
+    @Transactional
+    public List<AlbumTrackResponseDTO> createAlbumTracksOnAlbumCreation(
+            Album album, List<Long> recordIds, List<Integer> trackOrders, Long userId) {
+
+        log.info("앨범 생성과 동시에 트랙 일괄 생성 - 앨범ID: {}, 트랙수: {}", album.getId(), recordIds.size());
+
+        // 입력 검증
+        validateTrackCreationInput(recordIds, trackOrders, userId);
+
+        // 녹음본들 조회 및 권한 검증
+        List<Record> records = validateAndGetRecords(recordIds, userId);
+
+        // AlbumTrack 엔티티들 생성 (recordIds와 trackOrders의 순서 매칭)
+        List<AlbumTrack> albumTracks = createAlbumTrackEntities(album, recordIds, records, trackOrders);
+
+        // 일괄 저장
+        List<AlbumTrack> savedTracks = albumTrackRepository.saveAll(albumTracks);
+
+        // 앨범 통계 업데이트
+        updateAlbumStatisticsFromTracks(album, savedTracks);
+
+        log.info("앨범 트랙 일괄 생성 완료 - 앨범ID: {}, 생성된 트랙수: {}", album.getId(), savedTracks.size());
+
+        return savedTracks.stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     // === Private Helper Methods ===
 
     private void updateAlbumStatistics(Long albumId) {
@@ -285,9 +315,100 @@ public class AlbumTrackService {
         albumTrackRepository.saveAll(allTracks);
     }
 
+    // === Helper Methods for Album Creation ===
+
+    private void validateTrackCreationInput(List<Long> recordIds, List<Integer> trackOrders, Long userId) {
+        // 기본적인 null/empty 체크는 AlbumCreateRequestDto에서 이미 완료
+        // 여기서는 비즈니스 로직 검증만 수행
+
+        // 중복 recordId 검사
+        if (recordIds.stream().distinct().count() != recordIds.size()) {
+            throw new AlbumTrackException("중복된 녹음본이 포함되어 있습니다");
+        }
+
+        // trackOrder 검증 (1부터 연속적이어야 함)
+        List<Integer> sortedOrders = trackOrders.stream().sorted().collect(Collectors.toList());
+        for (int i = 0; i < sortedOrders.size(); i++) {
+            if (!sortedOrders.get(i).equals(i + 1)) {
+                throw new AlbumTrackException("트랙 순서는 1부터 연속적이어야 합니다");
+            }
+        }
+    }
+
+    private List<Record> validateAndGetRecords(List<Long> recordIds, Long userId) {
+        List<Record> records = recordRepository.findAllById(recordIds);
+
+        if (records.size() != recordIds.size()) {
+            // 존재하지 않는 recordId 찾기
+            Set<Long> foundIds = records.stream()
+                    .map(Record::getId)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            Long missingId = recordIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .findFirst()
+                    .orElse(recordIds.get(0));
+
+            throw new RecordNotFoundException(missingId);
+        }
+
+        // 권한 검증
+        for (Record record : records) {
+            if (!record.getUserId().equals(userId)) {
+                throw new AlbumTrackException("권한이 없는 녹음본이 포함되어 있습니다: " + record.getId());
+            }
+        }
+
+        return records;
+    }
+
+    private List<AlbumTrack> createAlbumTrackEntities(Album album, List<Long> recordIds, List<Record> records, List<Integer> trackOrders) {
+        List<AlbumTrack> albumTracks = new java.util.ArrayList<>();
+
+        // Record ID를 키로 하는 Map 생성 (findAllById는 순서를 보장하지 않음)
+        java.util.Map<Long, Record> recordMap = records.stream()
+                .collect(java.util.stream.Collectors.toMap(Record::getId, record -> record));
+
+        // recordIds와 trackOrders의 순서대로 매칭
+        for (int i = 0; i < recordIds.size(); i++) {
+            Long recordId = recordIds.get(i);
+            Integer trackOrder = trackOrders.get(i);
+
+            Record record = recordMap.get(recordId);
+            if (record == null) {
+                throw new AlbumTrackException("녹음본을 찾을 수 없습니다: " + recordId);
+            }
+
+            AlbumTrack albumTrack = AlbumTrack.builder()
+                    .album(album)
+                    .record(record)
+                    .trackOrder(trackOrder)
+                    .build();
+
+            albumTracks.add(albumTrack);
+        }
+
+        return albumTracks;
+    }
+
+    private void updateAlbumStatisticsFromTracks(Album album, List<AlbumTrack> tracks) {
+        Integer trackCount = tracks.size();
+        Integer totalDuration = tracks.stream()
+                .mapToInt(track -> track.getRecord().getDurationSeconds() != null ?
+                    track.getRecord().getDurationSeconds() : 0)
+                .sum();
+
+        album.setTrackCount(trackCount);
+        album.setTotalDuration(totalDuration);
+        albumRepository.save(album);
+
+        log.info("앨범 통계 업데이트 (생성 시) - 앨범ID: {}, 트랙수: {}, 총재생시간: {}초",
+                album.getId(), trackCount, totalDuration);
+    }
+
     private AlbumTrackResponseDTO convertToResponseDTO(AlbumTrack albumTrack) {
         String audioUrl = fileUploadService.getFileUrl(albumTrack.getRecord().getUploadId());
-        
+
         return AlbumTrackResponseDTO.builder()
                 .id(albumTrack.getId())
                 .albumId(albumTrack.getAlbum().getId())

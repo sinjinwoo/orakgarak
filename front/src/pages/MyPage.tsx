@@ -618,7 +618,7 @@ const MyPage: React.FC = () => {
         flex: 1,
         background: theme.colors.background.main,
         minHeight: "100vh",
-        pt: { xs: 16, sm: 20 },
+        pt: { xs: 2, sm: 3 }, // 헤더에 더 가깝게 조정
         position: "relative",
         "&::before": {
           content: '""',
