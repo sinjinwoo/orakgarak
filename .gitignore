@@ -18,7 +18,7 @@
 logs/
 log/
 app_logs/
-
+.env.prod
 # AWS User-specific
 .idea/**/aws.xml
 
