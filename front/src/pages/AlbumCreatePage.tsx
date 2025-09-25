@@ -2,7 +2,6 @@ import React, {
   useEffect,
   useState,
   useCallback,
-  useRef,
   useMemo,
 } from "react";
 import { useNavigate } from "react-router-dom";
@@ -20,9 +19,6 @@ import { recordingService } from "../services/api";
 import { useCreateAlbum } from "@/hooks/useAlbum";
 import { useAlbumMetaStore } from "@/stores/albumMetaStore";
 
-// 빈 녹음 데이터 배열 (실제 API에서 로드)
-const emptyRecordings: Recording[] = [];
-
 // New imports for the refactored components
 import StepperTimeline, {
   type StageId,
@@ -31,7 +27,6 @@ import MiniPreviewCard from "../components/album/MiniPreviewCard";
 import ActionBar from "../components/album/ActionBar";
 import ToastContainer, { type Toast } from "../components/album/Toast";
 
-// ... (dummy data and types remain the same) ...
 
 const cyberpunkStyles = `
     @keyframes hologramScan {
@@ -42,10 +37,21 @@ const cyberpunkStyles = `
       0% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
       100% { text-shadow: 0 0 30px currentColor, 0 0 60px currentColor; }
     }
+    @keyframes neonFlicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.9; }
+    }
+    @keyframes cyberGlow {
+      0% { box-shadow: 0 0 30px rgba(236, 72, 153, 0.4), 0 0 50px rgba(6, 182, 212, 0.3); }
+      100% { box-shadow: 0 0 40px rgba(236, 72, 153, 0.6), 0 0 70px rgba(6, 182, 212, 0.4); }
+    }
+    @keyframes brightPulse {
+      0%, 100% { filter: brightness(1) saturate(1); }
+      50% { filter: brightness(1.2) saturate(1.3); }
+    }
   `;
 
 const AlbumCreatePage: React.FC = () => {
-  // ... (all hooks and state logic remains the same) ...
   const navigate = useNavigate();
   const { currentStep, selectedRecordIds, albumInfo, selectedCoverUploadId } =
     useAlbumCreationSelectors();
@@ -66,7 +72,13 @@ const AlbumCreatePage: React.FC = () => {
     () => Array.from(new Set(selectedRecordIds.map(String))),
     [selectedRecordIds]
   );
-  const coverImage = albumInfo.coverImageUrl || null;
+  // 타입 가드를 사용하여 안전하게 coverImageUrl 접근
+  const coverImage = (() => {
+    if (albumInfo && typeof albumInfo === 'object' && 'coverImageUrl' in albumInfo) {
+      return (albumInfo as { coverImageUrl?: string }).coverImageUrl || null;
+    }
+    return null;
+  })();
 
   const createAlbumMutation = useCreateAlbum();
   const { cover } = useAlbumMetaStore();
@@ -75,9 +87,7 @@ const AlbumCreatePage: React.FC = () => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
   const [recordingsError, setRecordingsError] = useState<string | null>(null);
-  const [tracks, setTracks] = useState<any[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
 
   const addToast = useCallback((toast: Omit<Toast, "id">) => {
     const id = Date.now().toString();
@@ -100,7 +110,7 @@ const AlbumCreatePage: React.FC = () => {
         return;
       }
       const newSet = new Set([...currentSet, recordingId]);
-      setSelectedRecordIds(Array.from(newSet));
+      setSelectedRecordIds(Array.from(newSet).map(Number));
     },
     [selectedRecordIds, setSelectedRecordIds, addToast]
   );
@@ -109,16 +119,23 @@ const AlbumCreatePage: React.FC = () => {
     (recordingId: string) => {
       const currentSet = new Set(selectedRecordIds.map(String));
       currentSet.delete(recordingId);
-      setSelectedRecordIds(Array.from(currentSet));
+      setSelectedRecordIds(Array.from(currentSet).map(Number));
+      
+      // 녹음 제거 시 토스트 알림
+      addToast({ type: 'info', message: '녹음이 제거되었습니다.' });
     },
-    [selectedRecordIds, setSelectedRecordIds]
+    [selectedRecordIds, setSelectedRecordIds, addToast]
   );
 
-  const currentStage: StageId = useMemo(() => 
-    currentStep === 1 ? "recordings" :
-    currentStep === 2 ? "cover" :
-    currentStep === 3 ? "metadata" : "preview",
-  [currentStep]);
+  const currentStage: StageId = useMemo(() => {
+    const stageMap: Record<number, StageId> = {
+      1: "recordings",
+      2: "cover", 
+      3: "metadata",
+      4: "preview"
+    };
+    return stageMap[currentStep] || "recordings";
+  }, [currentStep]);
 
   const completedStages: StageId[] = useMemo(() => {
       const stages: StageId[] = [];
@@ -127,6 +144,20 @@ const AlbumCreatePage: React.FC = () => {
       if (title && description) stages.push("metadata");
       return stages;
   }, [selectedRecordings.length, coverImage, title, description]);
+
+  // 선택된 녹음들을 트랙으로 변환
+  const tracks = useMemo(() => {
+    const uniqueSelectedSet = new Set(selectedRecordIds.map(String));
+    return recordings
+      .filter((recording) => uniqueSelectedSet.has(String(recording.id)))
+      .map((recording, index) => ({
+        id: String(recording.id),
+        order: index + 1,
+        title: recording.song?.title || "제목 없음",
+        artist: recording.song?.artist || "아티스트 없음",
+        durationSec: recording.duration || 0,
+      }));
+  }, [recordings, selectedRecordIds]);
 
   const handleStageChange = useCallback((stage: StageId) => {
     const stepNumber = stage === "recordings" ? 1 : stage === "cover" ? 2 : stage === "metadata" ? 3 : 4;
@@ -139,13 +170,12 @@ const AlbumCreatePage: React.FC = () => {
       return;
     }
     nextStep();
-  }, [currentStage, selectedRecordIds.length, nextStep, addToast]);
+  }, [currentStage, selectedRecordings.length, nextStep, addToast]);
 
   const handlePrev = useCallback(() => prevStep(), [prevStep]);
 
   const resetAlbum = useCallback(() => {
     resetCreationState();
-    setTracks([]);
   }, [resetCreationState]);
 
   const getAlbumData = useCallback(() => {
@@ -165,7 +195,7 @@ const AlbumCreatePage: React.FC = () => {
   const handlePublish = async () => {
     try {
       const albumData = getAlbumData();
-      const album = await createAlbumMutation.mutateAsync(albumData);
+      await createAlbumMutation.mutateAsync(albumData);
 
       addToast({
         type: "success",
@@ -185,24 +215,6 @@ const AlbumCreatePage: React.FC = () => {
     }
   };
 
-  const handleSaveDraft = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      console.log("임시저장:", { title, description, selectedRecordIds, coverImage });
-      addToast({
-        type: "success",
-        message: "임시저장이 완료되었습니다.",
-      });
-    } catch (error) {
-      addToast({
-        type: "error",
-        message: "임시저장에 실패했습니다.",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }, [title, description, selectedRecordIds, coverImage, addToast]);
-
   const setTitle = useCallback((newTitle: string) => updateAlbumInfo({ title: newTitle }), [updateAlbumInfo]);
   const setDescription = useCallback((newDescription: string) => updateAlbumInfo({ description: newDescription }), [updateAlbumInfo]);
   const setIsPublic = useCallback((newIsPublic: boolean) => updateAlbumInfo({ isPublic: newIsPublic }), [updateAlbumInfo]);
@@ -219,19 +231,22 @@ const AlbumCreatePage: React.FC = () => {
         setRecordingsError(null);
         const response = await recordingService.getMyRecordings();
         setRecordings(response || []);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("녹음 목록 로드 실패:", error);
 
         // 에러 타입에 따른 적절한 메시지 설정
         let errorMessage = "녹음 목록을 불러오는데 실패했습니다.";
 
-        if (error?.response?.status === 401) {
+        // 에러 객체의 타입을 확인하여 안전하게 접근
+        const errorObj = error as { response?: { status: number }; message?: string };
+        
+        if (errorObj?.response?.status === 401) {
           errorMessage = "로그인이 필요합니다.";
-        } else if (error?.response?.status === 403) {
+        } else if (errorObj?.response?.status === 403) {
           errorMessage = "접근 권한이 없습니다.";
-        } else if (error?.response?.status >= 500) {
+        } else if (errorObj?.response?.status >= 500) {
           errorMessage = "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-        } else if (error?.message?.includes("Network Error")) {
+        } else if (errorObj?.message?.includes("Network Error")) {
           errorMessage = "네트워크 연결을 확인해주세요.";
         }
 
@@ -239,7 +254,7 @@ const AlbumCreatePage: React.FC = () => {
 
         // API 실패 시 빈 배열로 초기화
         console.warn("녹음 API 실패로 빈 배열 사용");
-        setRecordings(emptyRecordings);
+        setRecordings([]);
       } finally {
         setRecordingsLoading(false);
       }
@@ -250,19 +265,6 @@ const AlbumCreatePage: React.FC = () => {
   useEffect(() => {
     resetCreationState();
   }, [resetCreationState]);
-
-  useEffect(() => {
-    const uniqueSelectedSet = new Set(selectedRecordIds.map(String));
-    const newTracks = recordings
-      .filter((recording) => uniqueSelectedSet.has(String(recording.id)))
-      .map((recording, index) => ({
-        ...recording,
-        order: index + 1,
-        title: recording.song?.title || "제목 없음",
-        durationSec: recording.duration || 0,
-      }));
-    setTracks(newTracks);
-  }, [recordings, selectedRecordIds]);
 
   const renderCurrentStage = () => {
     switch (currentStage) {
@@ -331,12 +333,15 @@ const AlbumCreatePage: React.FC = () => {
     <div style={{
       minHeight: '100vh',
       background: `
-          radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%),
-          linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)
+          radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.25) 0%, transparent 60%),
+          radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.25) 0%, transparent 60%),
+          radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 80%),
+          radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.15) 0%, transparent 70%),
+          linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
         `,
       color: '#fff',
-      paddingTop: '100px', // 헤더 높이만큼 상단 패딩 추가
+      paddingTop: '100px',
+      overflowX: 'hidden',
     }}>
       <style dangerouslySetInnerHTML={{ __html: cyberpunkStyles }} />
       <div style={{
@@ -347,18 +352,19 @@ const AlbumCreatePage: React.FC = () => {
         {/* The original component content starts here, but without its own background */}
         <div className="relative pt-20 pb-32">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr] lg:grid-cols-1 gap-6 min-h-[calc(100vh-8rem)]">
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(280px,300px)_1fr] gap-6 min-h-[calc(100vh-8rem)]">
               {/* Left Column - Stepper Timeline */}
               <div className="hidden xl:block w-full">
                 <div style={{
-                    background: 'rgba(15, 23, 42, 0.7)',
-                    border: '1px solid rgba(0, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '4px solid rgba(6, 182, 212, 0.8)',
                     borderRadius: '15px',
                     padding: '0',
-                    backdropFilter: 'blur(10px)',
+                    backdropFilter: 'blur(15px)',
                     height: '100%',
                     width: '100%',
-                    maxWidth: '300px'
+                    maxWidth: '300px',
+                    boxShadow: '0 0 50px rgba(6, 182, 212, 0.7), inset 0 0 50px rgba(236, 72, 153, 0.4)'
                 }}>
                   <StepperTimeline
                     currentStage={currentStage}
@@ -371,11 +377,12 @@ const AlbumCreatePage: React.FC = () => {
               {/* Mobile Stepper */}
               <div className="xl:hidden mb-6">
                 <div style={{
-                    background: 'rgba(15, 23, 42, 0.7)',
-                    border: '1px solid rgba(0, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '4px solid rgba(6, 182, 212, 0.8)',
                     borderRadius: '15px',
                     padding: '16px',
-                    backdropFilter: 'blur(10px)',
+                    backdropFilter: 'blur(15px)',
+                    boxShadow: '0 0 50px rgba(6, 182, 212, 0.7), inset 0 0 50px rgba(236, 72, 153, 0.4)'
                 }}>
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white">앨범 만들기</h2>
@@ -398,18 +405,19 @@ const AlbumCreatePage: React.FC = () => {
               </div>
 
               {/* Right Column - Stage Content */}
-              <div className="relative flex flex-col xl:min-w-[720px] min-w-0">
+              <div className="relative flex flex-col min-w-0">
                 <div style={{
-                    background: 'rgba(15, 23, 42, 0.7)',
-                    border: '1px solid rgba(0, 255, 255, 0.2)',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '4px solid rgba(236, 72, 153, 0.8)',
                     borderRadius: '15px',
                     padding: '20px',
-                    backdropFilter: 'blur(10px)',
+                    backdropFilter: 'blur(15px)',
                     height: '100%',
-                    position: 'relative' // For MiniPreviewCard positioning
+                    position: 'relative',
+                    boxShadow: '0 0 50px rgba(236, 72, 153, 0.7), inset 0 0 50px rgba(6, 182, 212, 0.4)'
                 }}>
                   <div
-                    className={`absolute top-0 right-0 z-20 transition-transform duration-300 hidden xl:block ${
+                    className={`absolute top-4 right-4 z-20 transition-transform duration-300 hidden xl:block ${
                       currentStage === "cover" ? "translate-y-4 scale-90" : ""
                     }`}
                   >
@@ -422,7 +430,7 @@ const AlbumCreatePage: React.FC = () => {
 
                   <div
                     className={`flex-1 ${
-                      currentStage !== "cover" ? "xl:pr-72 pr-0" : "xl:pr-64 pr-0"
+                      currentStage !== "cover" ? "xl:pr-60 pr-0" : "xl:pr-52 pr-0"
                     }`}
                   >
                     <motion.div
@@ -446,10 +454,8 @@ const AlbumCreatePage: React.FC = () => {
           currentStage={currentStage}
           onPrev={handlePrev}
           onNext={handleNext}
-          onSaveDraft={handleSaveDraft}
           canGoNext={canGoNext}
           canGoPrev={canGoPrev}
-          isSaving={isSaving}
         />
 
         <ToastContainer toasts={toasts} onRemove={removeToast} />

@@ -3,15 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  IconButton,
-  Chip,
-  Divider,
   Alert,
   AlertTitle,
   CircularProgress,
@@ -27,7 +18,6 @@ import {
   Lock,
   Schedule,
   AudioFile,
-  Error as ErrorIcon,
 } from "@mui/icons-material";
 import { Eye } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,16 +26,7 @@ import StepHeader from './StepHeader';
 
 // 타입 및 훅 import
 import { Recording } from "@/types/recording";
-import { Album, CreateAlbumRequest } from "@/types/album";
-import {
-  useAlbumCreationSelectors,
-  useAlbumCreationActions,
-} from "@/stores/albumStore";
-import {
-  useCreateCompleteAlbum,
-  useUploadCover,
-  useGenerateCover,
-} from "@/hooks/useAlbum";
+import { Album } from "@/types/album";
 
 interface AlbumPreviewStepProps {
   title: string;
@@ -72,13 +53,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
   recordingsError,
   onPrev,
   onPublish,
-  onComplete,
 }) => {
-  // Zustand store hooks
-  const { selectedCoverUploadId } = useAlbumCreationSelectors();
-  const { updateAlbumInfo, getCompleteAlbumData, resetCreationState } =
-    useAlbumCreationActions();
-
   // Props에서 받은 값들을 우선 사용
   const selectedRecordIds = selectedRecordings.map(Number);
   const isValidForCreation =
@@ -86,12 +61,8 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
     description.trim() !== "" &&
     selectedRecordIds.length > 0;
 
-  // React Query mutations
-  const createCompleteAlbum = useCreateCompleteAlbum();
-
   // Local state
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
-  const [isPublishing, setIsPublishing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 선택된 녹음들 필터링
@@ -188,36 +159,6 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
     };
   }, []);
 
-  // 앨범 발행
-  const handlePublish = async () => {
-    try {
-      setIsPublishing(true);
-
-      const albumData = getCompleteAlbumData();
-      if (!albumData) {
-        toast.error("앨범 정보가 완전하지 않습니다.");
-        return;
-      }
-
-      // 숫자 형태의 recordId로 변환
-      const recordIds = selectedRecordIds.map((id) => Number(id));
-
-      const createdAlbum = await createCompleteAlbum.mutateAsync({
-        albumData,
-        recordIds,
-      });
-
-      toast.success("앨범이 성공적으로 발행되었습니다!");
-      resetCreationState();
-      onComplete(createdAlbum);
-    } catch (error: any) {
-      console.error("앨범 발행 실패:", error);
-      toast.error(error.message || "앨범 발행에 실패했습니다.");
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
   // 로딩 상태
   if (recordingsLoading) {
     return (
@@ -278,11 +219,11 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
         <StepHeader
           title="미리보기"
           description="생성할 앨범의 최종 확인 후 발행하세요"
-          icon={<Eye className="w-6 h-6 text-fuchsia-400" />}
+          icon={<Eye className="w-6 h-6 text-cyan-300" />}
         />
 
         {/* 앨범 정보 카드 */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-6">
+        <div className="bg-white/5 backdrop-blur-xl border-2 border-cyan-300/80 rounded-2xl p-6 mb-6 shadow-2xl shadow-cyan-300/60">
           <div className="flex flex-col lg:flex-row gap-6">
             {/* 앨범 커버 */}
             <div className="flex-shrink-0">

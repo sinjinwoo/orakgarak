@@ -62,7 +62,7 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
         <StepHeader
           title="커버 선택"
           description="앨범 커버를 AI로 자동 생성하거나 직접 업로드할 수 있습니다"
-          icon={<Image className="w-6 h-6 text-fuchsia-400" />}
+          icon={<Image className="w-6 h-6 text-cyan-400" />}
         />
 
         {/* 탭 선택 */}

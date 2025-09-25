@@ -26,4 +26,11 @@ public interface RecordRepository extends JpaRepository<Record, Long> {
     @Query("SELECT r FROM Record r JOIN FETCH r.upload u WHERE u.processingStatus = :status ORDER BY r.createdAt ASC")
     List<Record> findPendingRecordsWithUpload(@Param("status") ProcessingStatus status, org.springframework.data.domain.Pageable pageable);
 
+    // AI 데모용 디렉토리별 조회 메서드들
+    @Query("SELECT r FROM Record r JOIN FETCH r.upload u WHERE r.userId = :userId AND u.directory = :directory")
+    List<Record> findByUserIdAndUploadDirectoryWithUpload(@Param("userId") Long userId, @Param("directory") String directory);
+
+    @Query("SELECT r FROM Record r JOIN FETCH r.upload u WHERE u.directory = :directory")
+    List<Record> findByUploadDirectoryWithUpload(@Param("directory") String directory);
+
 }

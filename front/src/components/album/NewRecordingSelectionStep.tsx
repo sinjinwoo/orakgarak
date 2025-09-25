@@ -7,7 +7,6 @@ import React, { useState, useCallback } from 'react';
 import {
   DndContext,
   DragEndEvent,
-  DragOverEvent,
   PointerSensor,
   KeyboardSensor,
   useSensor,
@@ -79,7 +78,6 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
   const handleTracksReorder = useCallback((reorderedTracks: Track[]) => {
     setTracks(reorderedTracks);
     // Update selected recordings order
-    const newSelectedRecordings = reorderedTracks.map(track => track.id);
     // This would need to be implemented in the parent component to maintain order
     // For now, we'll just keep the tracks state in sync
   }, []);
@@ -141,7 +139,9 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
       try {
         audio.pause();
         audio.currentTime = 0;
-      } catch {}
+      } catch (error) {
+        console.warn('Audio pause failed:', error);
+      }
       setCurrentPlayingId(null);
       return;
     }
@@ -150,7 +150,9 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     try {
       audio.pause();
       audio.currentTime = 0;
-    } catch {}
+    } catch (error) {
+      console.warn('Audio pause failed:', error);
+    }
 
     audio.src = recording.url!;
     // content_type 힌트가 있으면 type 지정 (일부 브라우저 호환성 향상)
@@ -172,7 +174,9 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
       if (audioRef.current) {
         try {
           audioRef.current.pause();
-        } catch {}
+        } catch (error) {
+          console.warn('Audio pause failed:', error);
+        }
         audioRef.current = null;
       }
     };
@@ -191,7 +195,7 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
     }
   }, [tracks, recordings, selectedRecordings, handleTrackAdd]);
 
-  const handleDragOver = useCallback((event: DragOverEvent) => {
+  const handleDragOver = useCallback(() => {
     // Handle drag over events if needed
   }, []);
 
@@ -206,8 +210,8 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
         {/* Header */}
         <StepHeader
           title="녹음 선택"
-          description="앨범에 포함할 녹음을 선택하고 순서를 조정해보세요. 드래그앤드롭으로 쉽게 추가할 수 있습니다."
-          icon={<Music className="w-6 h-6 text-fuchsia-400" />}
+          description="앨범에 포함할 녹음을 선택하세요"
+          icon={<Music className="w-6 h-6 text-cyan-400" />}
         />
 
         {/* Two-column layout */}
@@ -233,19 +237,6 @@ const NewRecordingSelectionStep: React.FC<NewRecordingSelectionStepProps> = ({
             currentPlayingId={currentPlayingId}
             maxTracks={10}
           />
-        </div>
-
-        {/* Quick Stats */}
-        <div className="mt-4 flex items-center justify-between text-sm text-white/60">
-          <div className="flex items-center gap-4">
-            <span>선택된 트랙: {new Set(selectedRecordings).size}/10</span>
-            <span>
-              총 길이: {Math.floor(tracks.reduce((sum, track) => sum + (track.duration || track.durationSec || 0), 0) / 60)}분
-            </span>
-          </div>
-          <div className="text-xs text-white/40">
-            💡 팁: 트랙을 드래그해서 순서를 바꿀 수 있습니다
-          </div>
         </div>
       </div>
     </DndContext>

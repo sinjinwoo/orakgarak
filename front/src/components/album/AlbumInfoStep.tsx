@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { Lock } from '@mui/icons-material';
 import { FileText } from 'lucide-react';
-import { theme, buttonStyles } from '../../styles/theme';
+import { theme } from '../../styles/theme';
 import StepHeader from './StepHeader';
 
 interface AlbumInfoStepProps {

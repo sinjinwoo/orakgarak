@@ -45,7 +45,6 @@ const TrackCanvas: React.FC<TrackCanvasProps> = ({
   tracks,
   onTracksReorder,
   onTrackRemove,
-  onTrackAdd,
   onPlayTrack,
   currentPlayingId,
   maxTracks = 10,
@@ -139,7 +138,7 @@ const TrackCanvas: React.FC<TrackCanvasProps> = ({
     }
   };
 
-  const activeTrack = tracks.find(track => track.id === activeId);
+  const activeTrack = tracks.find(track => String(track.id) === activeId);
 
   // Calculate total duration
   const totalDuration = tracks.reduce((sum, track) => sum + (track.duration || 0), 0);
@@ -162,19 +161,19 @@ const TrackCanvas: React.FC<TrackCanvasProps> = ({
     >
       <div
         ref={setNodeRef}
-        className={`bg-gray-900/30 backdrop-blur-xl border-2 border-dashed transition-all duration-300 rounded-2xl p-6 h-full flex flex-col ${
+        className={`bg-gray-900/30 backdrop-blur-xl border-2 border-solid transition-all duration-300 rounded-2xl p-6 h-full flex flex-col shadow-2xl ${
           isOver
-            ? 'border-fuchsia-400 bg-fuchsia-500/10'
+            ? 'border-yellow-300 bg-yellow-500/10 shadow-2xl shadow-yellow-300/70'
             : tracks.length === 0
-            ? 'border-white/20'
-            : 'border-white/10 bg-gray-900/50'
+            ? 'border-cyan-300/70 shadow-2xl shadow-cyan-300/60'
+            : 'border-pink-300/70 bg-gray-900/50 shadow-2xl shadow-pink-300/60'
         } ${className}`}
       >
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Music className="w-5 h-5 text-fuchsia-400" />
+              <Music className="w-5 h-5 text-cyan-300" />
               트랙 구성
             </h2>
             <div className="text-sm text-white/60">
@@ -192,7 +191,7 @@ const TrackCanvas: React.FC<TrackCanvasProps> = ({
         </div>
 
         {/* Canvas Content */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-hidden">
           {tracks.length === 0 ? (
             /* Empty State */
             <div className="h-full flex flex-col items-center justify-center text-center">
@@ -212,56 +211,48 @@ const TrackCanvas: React.FC<TrackCanvasProps> = ({
           ) : (
             /* Track List */
             <SortableContext items={tracks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3">
+              <div className="space-y-3 p-1">
                 {tracks.map((track) => (
                   <SortableRecordingCard
                     key={track.id}
                     id={track.id}
                     recording={track}
                     order={track.order}
-                    isPlaying={currentPlayingId === track.id}
+                    isPlaying={currentPlayingId === String(track.id)}
                     showRemove={true}
-                    onPlay={() => onPlayTrack(track.id)}
-                    onRemove={() => onTrackRemove(track.id)}
-                    data-track-id={track.id}
+                    onPlay={() => onPlayTrack(String(track.id))}
+                    onRemove={() => onTrackRemove(String(track.id))}
+                    data-track-id={String(track.id)}
                   />
                 ))}
               </div>
             </SortableContext>
           )}
         </div>
-
-        {/* Footer Instructions */}
-        {tracks.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-white/10">
-            <div className="grid grid-cols-2 gap-4 text-xs text-white/50">
-              <div>
-                <span className="font-medium">드래그:</span> 순서 변경
-              </div>
-              <div>
-                <span className="font-medium">Del 키:</span> 트랙 삭제
-              </div>
-              <div>
-                <span className="font-medium">더블클릭:</span> 미리 듣기
-              </div>
-              <div>
-                <span className="font-medium">X 버튼:</span> 트랙 제거
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Drag Overlay */}
       <DragOverlay>
         {activeTrack ? (
-          <div className="transform scale-105 opacity-90">
-            <SortableRecordingCard
-              id={activeTrack.id}
-              recording={activeTrack}
-              order={activeTrack.order}
-              isDragging={true}
-            />
+                <div className="transform scale-105 opacity-90 rotate-2 shadow-2xl">
+                  <div className="bg-gray-800/90 backdrop-blur-sm border-2 border-yellow-300/70 rounded-xl p-4 min-w-[300px] shadow-lg shadow-yellow-300/50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-yellow-300 to-yellow-200 rounded-full flex items-center justify-center text-black font-bold text-sm shadow-lg shadow-yellow-300/70">
+                        {activeTrack.order}
+                      </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-medium truncate">
+                    {activeTrack.song?.title || '제목 없음'}
+                  </div>
+                  <div className="text-white/60 text-sm">
+                    {activeTrack.song?.artist || '아티스트 없음'}
+                  </div>
+                </div>
+                <div className="text-white/60 text-sm">
+                  {Math.floor((activeTrack.duration || 0) / 60)}:{(activeTrack.duration || 0) % 60 < 10 ? '0' : ''}{(activeTrack.duration || 0) % 60}
+                </div>
+              </div>
+            </div>
           </div>
         ) : null}
       </DragOverlay>
