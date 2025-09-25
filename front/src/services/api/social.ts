@@ -116,12 +116,30 @@ export const socialService = {
 
   // 팔로우 관련 API
   follow: {
-    // 사용자 팔로우
+    // 팔로우 토글 (새로운)
+    toggleFollow: async (userId: number): Promise<{ success: boolean; isFollowing: boolean; message: string }> => {
+      const response = await apiClient.post(`/social/follow/${userId}/toggle`);
+      return response.data;
+    },
+
+    // 팔로우 여부 확인
+    checkFollowStatus: async (userId: number): Promise<{ success: boolean; isFollowing: boolean }> => {
+      const response = await apiClient.get(`/social/follow/${userId}/check`);
+      return response.data;
+    },
+
+    // 팔로우 수 조회
+    getFollowCount: async (userId: number): Promise<{ success: boolean; followerCount: number; followingCount: number }> => {
+      const response = await apiClient.get(`/social/follow/${userId}/count`);
+      return response.data;
+    },
+
+    // 사용자 팔로우 (기존)
     followUser: async (userId: number): Promise<void> => {
       await apiClient.post(`/social/follow/${userId}`);
     },
 
-    // 사용자 언팔로우
+    // 사용자 언팔로우 (기존)
     unfollowUser: async (userId: number): Promise<void> => {
       await apiClient.delete(`/social/follow/${userId}`);
     },
@@ -170,14 +188,44 @@ export const socialService = {
       }
     },
 
-    // 앨범 좋아요
+    // 좋아요 토글 (새로운)
+    toggleLike: async (albumId: number): Promise<{ success: boolean; isLiked: boolean; message: string }> => {
+      const response = await apiClient.post(`/social/albums/${albumId}/like/toggle`);
+      return response.data;
+    },
+
+    // 좋아요 여부 확인
+    checkLikeStatus: async (albumId: number): Promise<{ success: boolean; isLiked: boolean }> => {
+      const response = await apiClient.get(`/social/albums/${albumId}/like/check`);
+      return response.data;
+    },
+
+    // 좋아요 수 조회
+    getLikeCount: async (albumId: number): Promise<{ success: boolean; count: number }> => {
+      const response = await apiClient.get(`/social/albums/${albumId}/like/count`);
+      return response.data;
+    },
+
+    // 앨범 좋아요 (기존)
     likeAlbum: async (albumId: number): Promise<void> => {
       await apiClient.post(`/social/albums/${albumId}/like`);
     },
 
-    // 앨범 좋아요 취소
+    // 앨범 좋아요 취소 (기존)
     unlikeAlbum: async (albumId: number): Promise<void> => {
       await apiClient.delete(`/social/albums/${albumId}/like`);
+    },
+
+    // 앨범 좋아요 상태 확인 (기존 호환용)
+    checkAlbumLikeStatus: async (albumId: number): Promise<{ isLiked: boolean; likeCount: number }> => {
+      const [likeStatus, likeCount] = await Promise.all([
+        apiClient.get(`/social/albums/${albumId}/like/check`),
+        apiClient.get(`/social/albums/${albumId}/like/count`)
+      ]);
+      return {
+        isLiked: likeStatus.data.isLiked,
+        likeCount: likeCount.data.count
+      };
     },
   },
 };

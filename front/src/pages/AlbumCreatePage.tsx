@@ -342,16 +342,18 @@ const AlbumCreatePage: React.FC = () => {
         {/* The original component content starts here, but without its own background */}
         <div className="relative pt-20 pb-32">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr] lg:grid-cols-1 gap-6 min-h-[calc(100vh-8rem)]">
+            <div className="grid grid-cols-[300px_1fr] xl:grid-cols-[300px_1fr] lg:grid-cols-1 gap-6 min-h-[calc(100vh-8rem)]">
               {/* Left Column - Stepper Timeline */}
-              <div className="hidden xl:block">
+              <div className="hidden xl:block w-full">
                 <div style={{
                     background: 'rgba(15, 23, 42, 0.7)',
                     border: '1px solid rgba(0, 255, 255, 0.2)',
                     borderRadius: '15px',
-                    padding: '20px',
+                    padding: '0',
                     backdropFilter: 'blur(10px)',
-                    height: '100%'
+                    height: '100%',
+                    width: '100%',
+                    maxWidth: '300px'
                 }}>
                   <StepperTimeline
                     currentStage={currentStage}
@@ -415,7 +417,7 @@ const AlbumCreatePage: React.FC = () => {
 
                   <div
                     className={`flex-1 ${
-                      currentStage !== "cover" ? "xl:pr-80 pr-0" : "xl:pr-72 pr-0"
+                      currentStage !== "cover" ? "xl:pr-72 pr-0" : "xl:pr-64 pr-0"
                     }`}
                   >
                     <motion.div

@@ -150,6 +150,42 @@ export function useFollow() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const toggleFollow = async (userId: number): Promise<{ success: boolean; isFollowing: boolean; message?: string }> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await socialService.follow.toggleFollow(userId);
+      return { success: true, isFollowing: result.isFollowing, message: result.message };
+    } catch (err: any) {
+      setError(err.message || '팔로우 처리에 실패했습니다.');
+      return { success: false, isFollowing: false };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkFollowStatus = async (userId: number): Promise<{ isFollowing: boolean } | null> => {
+    setError(null);
+    try {
+      const result = await socialService.follow.checkFollowStatus(userId);
+      return { isFollowing: result.isFollowing };
+    } catch (err: any) {
+      setError(err.message || '팔로우 상태 확인에 실패했습니다.');
+      return null;
+    }
+  };
+
+  const getFollowCount = async (userId: number): Promise<{ followerCount: number; followingCount: number } | null> => {
+    setError(null);
+    try {
+      const result = await socialService.follow.getFollowCount(userId);
+      return { followerCount: result.followerCount, followingCount: result.followingCount };
+    } catch (err: any) {
+      setError(err.message || '팔로우 수 조회에 실패했습니다.');
+      return null;
+    }
+  };
+
   const followUser = async (userId: number): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
@@ -181,6 +217,9 @@ export function useFollow() {
   return {
     isLoading,
     error,
+    toggleFollow,
+    checkFollowStatus,
+    getFollowCount,
     followUser,
     unfollowUser,
   };
@@ -290,39 +329,109 @@ export function useAlbumLike() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const likeAlbum = async (albumId: number): Promise<boolean> => {
+  const toggleLike = async (albumId: number): Promise<{ success: boolean; isLiked: boolean; message?: string }> => {
     setIsLoading(true);
     setError(null);
     try {
-      await socialService.albums.likeAlbum(albumId);
-      return true;
+      const result = await socialService.albums.toggleLike(albumId);
+      return { success: true, isLiked: result.isLiked, message: result.message };
     } catch (err: any) {
-      setError(err.message || '좋아요에 실패했습니다.');
-      return false;
+      setError(err.message || '좋아요 처리에 실패했습니다.');
+      return { success: false, isLiked: false };
     } finally {
       setIsLoading(false);
     }
   };
 
-  const unlikeAlbum = async (albumId: number): Promise<boolean> => {
+  const checkLikeStatus = async (albumId: number): Promise<{ isLiked: boolean } | null> => {
+    setError(null);
+    try {
+      const result = await socialService.albums.checkLikeStatus(albumId);
+      return { isLiked: result.isLiked };
+    } catch (err: any) {
+      setError(err.message || '좋아요 상태 확인에 실패했습니다.');
+      return null;
+    }
+  };
+
+  const getLikeCount = async (albumId: number): Promise<{ count: number } | null> => {
+    setError(null);
+    try {
+      const result = await socialService.albums.getLikeCount(albumId);
+      return { count: result.count };
+    } catch (err: any) {
+      setError(err.message || '좋아요 수 조회에 실패했습니다.');
+      return null;
+    }
+  };
+
+  const likeAlbum = async (albumId: number): Promise<{ success: boolean; status?: { isLiked: boolean; likeCount: number } }> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await socialService.albums.likeAlbum(albumId);
+      // 좋아요 후 최신 상태 확인
+      const status = await socialService.albums.checkAlbumLikeStatus(albumId);
+      return { success: true, status };
+    } catch (err: any) {
+      setError(err.message || '좋아요에 실패했습니다.');
+
+      // 에러 발생 시에도 현재 상태를 확인해서 반환
+      try {
+        const status = await socialService.albums.checkAlbumLikeStatus(albumId);
+        return { success: false, status };
+      } catch {
+        return { success: false };
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const unlikeAlbum = async (albumId: number): Promise<{ success: boolean; status?: { isLiked: boolean; likeCount: number } }> => {
     setIsLoading(true);
     setError(null);
     try {
       await socialService.albums.unlikeAlbum(albumId);
-      return true;
+      // 좋아요 취소 후 최신 상태 확인
+      const status = await socialService.albums.checkAlbumLikeStatus(albumId);
+      return { success: true, status };
     } catch (err: any) {
       setError(err.message || '좋아요 취소에 실패했습니다.');
-      return false;
+
+      // 에러 발생 시에도 현재 상태를 확인해서 반환
+      try {
+        const status = await socialService.albums.checkAlbumLikeStatus(albumId);
+        return { success: false, status };
+      } catch {
+        return { success: false };
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 기존 호환성을 위한 메서드 (deprecated)
+  const checkLikeStatusLegacy = async (albumId: number): Promise<{ isLiked: boolean; likeCount: number } | null> => {
+    setError(null);
+    try {
+      const result = await socialService.albums.checkAlbumLikeStatus(albumId);
+      return result;
+    } catch (err: any) {
+      setError(err.message || '좋아요 상태 확인에 실패했습니다.');
+      return null;
     }
   };
 
   return {
     isLoading,
     error,
+    toggleLike,
+    checkLikeStatus,
+    getLikeCount,
     likeAlbum,
     unlikeAlbum,
+    checkLikeStatusLegacy, // 기존 호환성 (deprecated)
   };
 }
 

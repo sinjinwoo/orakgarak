@@ -108,9 +108,13 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
   return (
     <div
       ref={timelineRef}
-      className={`sticky top-20 h-[calc(100vh-5rem)] overflow-auto bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 ${className}`}
+      className={`sticky top-20 h-[calc(100vh-5rem)] overflow-auto rounded-2xl px-5 py-6 w-full ${className}`}
       role="navigation"
       aria-label="앨범 생성 단계"
+      style={{
+        background: 'transparent',
+        border: 'none'
+      }}
     >
       {/* 헤더 */}
       <div className="mb-8">
@@ -134,9 +138,7 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
           return (
             <div
               key={step.id}
-              className={`relative flex items-start mb-8 last:mb-0 cursor-pointer group transition-all duration-200 ${
-                isCurrent ? 'scale-105' : ''
-              }`}
+              className={`relative flex items-start mb-8 last:mb-0 cursor-pointer group transition-all duration-200 overflow-hidden`}
               onClick={() => handleStepClick(step.id)}
               onKeyDown={handleKeyDown}
               tabIndex={isCurrent ? 0 : -1}
@@ -163,7 +165,7 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
               </div>
 
               {/* 콘텐츠 */}
-              <div className="ml-4 flex-1">
+              <div className="ml-4 flex-1 min-w-0">
                 <h3
                   className={`font-semibold transition-colors duration-200 ${
                     isCurrent
@@ -189,7 +191,7 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
 
                 {/* 현재 단계 인디케이터 */}
                 {isCurrent && (
-                  <div className="mt-2 px-2 py-1 bg-fuchsia-500/20 border border-fuchsia-400/30 rounded-lg text-xs text-fuchsia-300 font-medium">
+                  <div className="mt-2 px-2 py-1 bg-fuchsia-500/20 border border-fuchsia-400/30 rounded-lg text-xs text-fuchsia-300 font-medium inline-block max-w-full">
                     진행 중
                   </div>
                 )}
