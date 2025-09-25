@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Typography, Button, Box, Avatar, Menu, MenuItem, Fade } from "@mui/material";
-import { MusicNote, Person, Logout, Settings, AccountCircle } from "@mui/icons-material";
+import { Person, Logout, Settings, AccountCircle } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth, useSocialAuth } from "../../hooks/useAuth";
 
@@ -178,6 +178,9 @@ const Header: React.FC = () => {
             justifyContent: "space-between",
             padding: { xs: "12px 16px", sm: "16px 20px" },
             width: "100%",
+            height: "60px", // navbar 높이 고정
+            minHeight: "60px", // 최소 높이 보장
+            maxHeight: "60px", // 최대 높이 제한
           }}
         >
           {/* 로고 */}
@@ -186,13 +189,14 @@ const Header: React.FC = () => {
             onClick={handleLogoClick}
             sx={{
               ...styles.baseButton,
-              padding: "6px 10px",
+              padding: "0", // 패딩 제거로 로고가 navbar 높이를 넘지 않도록
               backgroundColor: "transparent",
               border: "none",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
-              gap: 1,
+              justifyContent: "flex-start", // 좌측 정렬로 변경
+              height: "100%", // navbar 높이에 맞춤
               outline: "none",
               visibility: isLandingPage ? 'hidden' : 'visible',
               pointerEvents: isLandingPage ? 'none' : 'auto',
@@ -205,22 +209,26 @@ const Header: React.FC = () => {
               },
             }}
           >
-             <MusicNote
+             <Box
+               component="img"
+               src="/assets/images/orakgrak_logo.png"
+               alt="오락가락 로고"
                sx={{
-                 color: "#ffffff",
-                 fontSize: "24px",
+                 width: 40,
+                 height: 40,
+                 objectFit: "contain",
+                 filter:
+                   isLandingPage && !isScrolled
+                     ? "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))"
+                     : "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))",
+                 transition: "all 0.3s ease",
+                 // 레이아웃 높이는 유지하고 시각적으로만 확대
+                 transform: 'scale(2.5)',
+                 transformOrigin: 'center',
+                 pointerEvents: 'none',
+                 marginLeft: '-120px' // 더 좌측으로 이동
                }}
              />
-             <Typography
-               component="span"
-               sx={{
-                 fontSize: "18px",
-                 fontWeight: 700,
-                 color: "#ffffff",
-               }}
-             >
-              오락가락
-            </Typography>
           </Box>
 
            {/* 네비게이션 메뉴 */}
