@@ -22,13 +22,15 @@ interface SongCardProps {
   isSelected?: boolean;
   onSelect?: (song: RecommendedSong) => void;
   onReservation?: (song: RecommendedSong) => void;
+  showDislike?: boolean;
 }
 
 const SongCard: React.FC<SongCardProps> = ({
   song,
   isSelected = false,
   onSelect,
-  onReservation
+  onReservation,
+  showDislike = true
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
@@ -238,6 +240,7 @@ const SongCard: React.FC<SongCardProps> = ({
           className="matrix-bg hologram-panel"
         >
           {/* 싫어요 버튼 (뒷면 좌하단, 안쪽으로 배치) */}
+          {showDislike && (
           <Box 
             data-dislike-button
             sx={{ 
@@ -308,6 +311,7 @@ const SongCard: React.FC<SongCardProps> = ({
               {isDisliked ? <ThumbDown /> : <ThumbDownOffAlt />}
             </IconButton>
           </Box>
+          )}
           {/* 곡 정보 */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Typography 

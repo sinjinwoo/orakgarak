@@ -11,11 +11,31 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class LikeService {
 
     private final LikeRepository likeRepository;
 
+    @Transactional
+    public boolean toggleLike(Long userId, Long albumId) {
+        if (likeRepository.existsByUserIdAndAlbumId(userId, albumId)) {
+            Like like = likeRepository.findByUserIdAndAlbumId(userId, albumId)
+                    .orElseThrow(() -> new IllegalStateException("좋아요가 존재하지 않습니다."));
+            likeRepository.delete(like);
+            log.info("사용자 {}가 앨범 {}의 좋아요를 취소했습니다.", userId, albumId);
+            return false;
+        } else {
+            Like like = Like.builder()
+                    .userId(userId)
+                    .albumId(albumId)
+                    .build();
+            likeRepository.save(like);
+            log.info("사용자 {}가 앨범 {}에 좋아요를 추가했습니다.", userId, albumId);
+            return true;
+        }
+    }
+
+    @Transactional
     public void addLike(Long userId, LikeDto.Request request) {
         Long albumId = request.getAlbumId();
 
@@ -33,6 +53,7 @@ public class LikeService {
 
     }
 
+    @Transactional
     public void removeLike(Long userId, Long albumId) {
         Like like = likeRepository.findByUserIdAndAlbumId(userId, albumId)
                 .orElseThrow(() -> new IllegalStateException("좋아요가 존재하지 않습니다."));
@@ -40,6 +61,14 @@ public class LikeService {
         likeRepository.delete(like);
 
         log.info("사용자 {}가 앨범 {}의 좋아요를 삭제했습니다.", userId, albumId);
+    }
+
+    public boolean isLiked(Long userId, Long albumId) {
+        return likeRepository.existsByUserIdAndAlbumId(userId, albumId);
+    }
+
+    public long getLikeCount(Long albumId) {
+        return likeRepository.countByAlbumId(albumId);
     }
 
 }

@@ -23,6 +23,41 @@ public class FollowService {
     private final ProfileRepository profileRepository;
 
     /**
+     * 팔로우 토글 (팔로우/언팔로우)
+     * @param followerId 팔로우하는 사용자 ID
+     * @param followingId 팔로우당하는 사용자 ID
+     * @return true: 팔로우됨, false: 언팔로우됨
+     */
+    @Transactional
+    public boolean toggleFollow(Long followerId, Long followingId) {
+        // 자기 자신을 팔로우하는 경우 예외 처리
+        if (followerId.equals(followingId)) {
+            throw new IllegalArgumentException("자기 자신을 팔로우할 수 없습니다.");
+        }
+
+        // 이미 팔로우 중인지 확인
+        if (followRepository.existsByFollowerIdAndFollowingId(followerId, followingId)) {
+            // 이미 팔로우 중이면 언팔로우
+            Follow follow = followRepository.findByFollowerIdAndFollowingId(followerId, followingId)
+                    .orElseThrow(() -> new IllegalArgumentException("팔로우 관계가 존재하지 않습니다."));
+            followRepository.delete(follow);
+            log.info("사용자 언팔로우 완료: follower={}, following={}", followerId, followingId);
+            return false;
+        } else {
+            // 팔로우하지 않았다면 팔로우
+            Profile follower = profileRepository.findById(followerId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 프로필입니다. ID: " + followerId));
+            Profile following = profileRepository.findById(followingId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 프로필입니다. ID: " + followingId));
+
+            Follow follow = Follow.of(follower, following);
+            followRepository.save(follow);
+            log.info("사용자 팔로우 완료: follower={}, following={}", followerId, followingId);
+            return true;
+        }
+    }
+
+    /**
      * 사용자 팔로우
      * @param followerId 팔로우하는 사용자 ID
      * @param followingId 팔로우당하는 사용자 ID
@@ -112,5 +147,33 @@ public class FollowService {
                     .isFollowingBack(isFollowingBack)
                     .build();
         });
+    }
+
+    /**
+     * 팔로우 여부 확인
+     * @param followerId 팔로우하는 사용자 ID
+     * @param followingId 팔로우당하는 사용자 ID
+     * @return 팔로우 여부
+     */
+    public boolean isFollowing(Long followerId, Long followingId) {
+        return followRepository.existsByFollowerIdAndFollowingId(followerId, followingId);
+    }
+
+    /**
+     * 팔로워 수 조회
+     * @param userId 사용자 ID
+     * @return 팔로워 수
+     */
+    public long getFollowerCount(Long userId) {
+        return followRepository.countByFollowingId(userId);
+    }
+
+    /**
+     * 팔로잉 수 조회
+     * @param userId 사용자 ID
+     * @return 팔로잉 수
+     */
+    public long getFollowingCount(Long userId) {
+        return followRepository.countByFollowerId(userId);
     }
 }

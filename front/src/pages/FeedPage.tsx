@@ -325,32 +325,6 @@ const FeedPage: React.FC = () => {
           transition: "all 0.6s ease",
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: "30px" }}>
-          <h1
-            style={{
-              fontSize: "2.5rem",
-              fontWeight: "bold",
-              background: "linear-gradient(45deg, #00ffff, #ff0080)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              margin: "0 0 10px 0",
-              textShadow: "0 0 20px rgba(0, 255, 255, 0.5)",
-            }}
-          >
-            ORAK GRAK FEED
-          </h1>
-          <p
-            style={{
-              color: "#00ffff",
-              fontSize: "1rem",
-              margin: "0",
-              textTransform: "uppercase",
-              letterSpacing: "2px",
-            }}
-          >
-            EXPLORE THE COMMUNITY'S CREATIONS
-          </p>
-        </div>
 
         <Container
           maxWidth="lg"

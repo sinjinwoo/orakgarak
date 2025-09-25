@@ -96,8 +96,8 @@ public class RecordingBatchProcessor {
             // 세마포어로 동시 처리 개수 제한
             semaphore.acquire();
 
-            log.debug("Recording 처리 시작: uploadId={}", uploadId);
-            asyncRecordService.processRecordingAsync(uploadId);
+            log.debug("Recording 처리 시작: uploadId={} (Kafka ProcessingJob에서 이미 처리됨)", uploadId);
+            // processRecordingAsync 제거 - 이미 EventBridge → Kafka로 자동 처리됨
             log.debug("Recording 처리 완료: uploadId={}", uploadId);
 
             return CompletableFuture.completedFuture(null);
