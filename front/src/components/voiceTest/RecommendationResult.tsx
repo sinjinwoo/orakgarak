@@ -70,6 +70,15 @@ export default function RecommendationResult({
   const [tab, setTab] = useState<'ai' | 'similar'>('ai');
   const handleTabChange = (_: React.SyntheticEvent, value: 'ai' | 'similar') => setTab(value);
 
+  // 예약된 노래 보기 상태
+  const [showReservedSongs, setShowReservedSongs] = useState(false);
+  const [reservedSongs, setReservedSongs] = useState<RecommendedSong[]>([]);
+  
+  // 예약된 노래 보기 토글 함수
+  const handleShowReservedSongs = () => {
+    setShowReservedSongs(!showReservedSongs);
+  };
+
   // API 응답을 RecommendedSong 형식으로 변환 (업데이트된 스키마 반영)
   const convertToRecommendedSongs = (apiRecommendations: any[]): RecommendedSong[] => {
     return apiRecommendations.map((item, index) => {
@@ -125,6 +134,16 @@ export default function RecommendationResult({
       };
 
       addToQueue(mapped);
+      
+      // 예약된 노래를 reservedSongs에 추가 (중복 방지)
+      setReservedSongs(prev => {
+        const exists = prev.some(reservedSong => reservedSong.id === song.id);
+        if (!exists) {
+          return [...prev, song];
+        }
+        return prev;
+      });
+      
       setSnackbarMessage(`"${song.title}" - ${song.artist} 곡이 예약되었습니다!`);
       setSnackbarOpen(true);
     } catch (e) {
@@ -137,34 +156,126 @@ export default function RecommendationResult({
   // 로딩 상태
   if (isLoading) {
     return (
-      <Box className="matrix-bg" sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Fade in timeout={1000}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Box className="cyberpunk-spinner" sx={{ mx: 'auto', mb: 3 }} />
+      <Box sx={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: `
+          radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 1) 100%)
+        `,
+        color: '#fff',
+        position: 'relative'
+      }}>
+        {/* 네온 간판 */}
+        <Box sx={{
+          position: 'relative',
+          display: 'inline-block',
+          px: 8,
+          py: 3,
+          border: '3px solid transparent',
+          borderRadius: 2,
+          background: 'rgba(0, 0, 0, 0.8)',
+          borderImage: 'linear-gradient(45deg, #ec4899, #06b6d4) 1',
+          animation: 'neonPowerOn 3s ease-in-out forwards, neonFlicker 2s ease-in-out 3s infinite',
+          '@keyframes neonPowerOn': {
+            '0%': {
+              boxShadow: 'none',
+              borderColor: 'transparent'
+            },
+            '20%': {
+              boxShadow: '0 0 5px #ec4899, inset 0 0 5px rgba(236, 72, 153, 0.1)',
+              borderColor: '#ec4899'
+            },
+            '40%': {
+              boxShadow: '0 0 10px #ec4899, 0 0 20px rgba(236, 72, 153, 0.3), inset 0 0 10px rgba(236, 72, 153, 0.1)',
+              borderColor: '#ec4899'
+            },
+            '60%': {
+              boxShadow: '0 0 15px #ec4899, 0 0 30px rgba(236, 72, 153, 0.4), 0 0 40px rgba(6, 182, 212, 0.2), inset 0 0 15px rgba(236, 72, 153, 0.1)',
+              borderColor: 'rgba(236, 72, 153, 0.8)'
+            },
+            '80%': {
+              boxShadow: '0 0 20px #ec4899, 0 0 40px rgba(236, 72, 153, 0.5), 0 0 60px rgba(6, 182, 212, 0.3), 0 0 80px rgba(236, 72, 153, 0.2), inset 0 0 20px rgba(236, 72, 153, 0.1)',
+              borderColor: 'rgba(236, 72, 153, 0.9)'
+            },
+            '100%': {
+              boxShadow: '0 0 25px #ec4899, 0 0 50px rgba(236, 72, 153, 0.6), 0 0 80px rgba(6, 182, 212, 0.4), 0 0 120px rgba(236, 72, 153, 0.3), inset 0 0 25px rgba(236, 72, 153, 0.1)',
+              borderColor: '#ec4899'
+            }
+          },
+          '@keyframes neonFlicker': {
+            '0%, 18%, 22%, 25%, 53%, 57%, 100%': {
+              boxShadow: '0 0 25px #ec4899, 0 0 50px rgba(236, 72, 153, 0.6), 0 0 80px rgba(6, 182, 212, 0.4), 0 0 120px rgba(236, 72, 153, 0.3), inset 0 0 25px rgba(236, 72, 153, 0.1)'
+            },
+            '20%, 24%, 55%': {
+              boxShadow: '0 0 10px #ec4899, 0 0 20px rgba(236, 72, 153, 0.3), 0 0 30px rgba(6, 182, 212, 0.2), inset 0 0 10px rgba(236, 72, 153, 0.05)'
+            }
+          }
+        }}>
+          {/* 네온 텍스트 */}
             <Typography 
-              variant="h4" 
-              className="hologram-text neon-text"
+            variant="h2" 
               sx={{ 
                 fontFamily: "'Courier New', monospace",
-                fontWeight: 700,
-                letterSpacing: 2,
-                mb: 2
-              }}
-            >
-              ANALYZING VOICE...
-            </Typography>
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                color: 'rgba(0,255,255,0.7)',
-                fontFamily: "'Courier New', monospace",
-                letterSpacing: 1
-              }}
-            >
-              Neural networks processing your vocal patterns
+              fontWeight: 900,
+              fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4rem' },
+              background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textShadow: 'none',
+              animation: 'textPowerOn 3s ease-in-out forwards, textFlicker 2s ease-in-out 3s infinite',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              '@keyframes textPowerOn': {
+                '0%': {
+                  opacity: 0.1,
+                  filter: 'brightness(0.2)'
+                },
+                '20%': {
+                  opacity: 0.3,
+                  filter: 'brightness(0.4)',
+                  textShadow: '0 0 5px rgba(236, 72, 153, 0.5)'
+                },
+                '40%': {
+                  opacity: 0.6,
+                  filter: 'brightness(0.7)',
+                  textShadow: '0 0 10px rgba(236, 72, 153, 0.7), 0 0 20px rgba(236, 72, 153, 0.5)'
+                },
+                '60%': {
+                  opacity: 0.8,
+                  filter: 'brightness(0.9)',
+                  textShadow: '0 0 15px rgba(236, 72, 153, 0.8), 0 0 30px rgba(236, 72, 153, 0.6), 0 0 40px rgba(6, 182, 212, 0.4)'
+                },
+                '80%': {
+                  opacity: 0.95,
+                  filter: 'brightness(1.1)',
+                  textShadow: '0 0 20px rgba(236, 72, 153, 0.9), 0 0 40px rgba(236, 72, 153, 0.7), 0 0 60px rgba(6, 182, 212, 0.5), 0 0 80px rgba(236, 72, 153, 0.3)'
+                },
+                '100%': {
+                  opacity: 1,
+                  filter: 'brightness(1.2)',
+                  textShadow: '0 0 25px rgba(236, 72, 153, 1), 0 0 50px rgba(236, 72, 153, 0.8), 0 0 80px rgba(6, 182, 212, 0.6), 0 0 120px rgba(236, 72, 153, 0.4)'
+                }
+              },
+              '@keyframes textFlicker': {
+                '0%, 18%, 22%, 25%, 53%, 57%, 100%': {
+                  opacity: 1,
+                  filter: 'brightness(1.2)',
+                  textShadow: '0 0 25px rgba(236, 72, 153, 1), 0 0 50px rgba(236, 72, 153, 0.8), 0 0 80px rgba(6, 182, 212, 0.6), 0 0 120px rgba(236, 72, 153, 0.4)'
+                },
+                '20%, 24%, 55%': {
+                  opacity: 0.8,
+                  filter: 'brightness(0.8)',
+                  textShadow: '0 0 10px rgba(236, 72, 153, 0.6), 0 0 20px rgba(236, 72, 153, 0.4), 0 0 30px rgba(6, 182, 212, 0.3)'
+                }
+              }
+            }}
+          >
+            ORAKGARAK
             </Typography>
           </Box>
-        </Fade>
       </Box>
     );
   }
@@ -228,189 +339,176 @@ export default function RecommendationResult({
   const currentAnalysis = tab === 'ai' ? recommendationData?.voiceAnalysis : similarVoiceData?.voiceAnalysis;
 
   return (
-    <Box className="matrix-bg cyberpunk-scrollbar" sx={{ minHeight: '100vh' }}>
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+    <Box sx={{ 
+      minHeight: '120vh',
+      background: `
+        radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.25) 0%, transparent 60%),
+        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.25) 0%, transparent 60%),
+        radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 80%),
+        radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.15) 0%, transparent 70%),
+        linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
+      `,
+      color: '#fff',
+      position: 'relative'
+    }}>
+      <Container maxWidth="xl" sx={{ py: 3, pb: 8 }}>
         {/* 헤더 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          mb: 3,
+          flexWrap: 'wrap',
+          gap: 2
+        }}>
           <Button
             startIcon={<ArrowBack />}
             onClick={onBack}
-            className="cyberpunk-button"
             sx={{
-              mr: 3,
               px: 3,
               py: 1.5,
-              background: 'rgba(0,0,0,0.6)',
-              border: '1px solid rgba(0,255,255,0.3)',
-              color: '#00ffff',
-              borderRadius: 3,
-              fontFamily: "'Courier New', monospace",
-              fontWeight: 600,
-              letterSpacing: 1,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#fff',
+              borderRadius: 2,
+              fontWeight: 500,
+              fontSize: '0.9rem',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
               '&:hover': {
-                background: 'rgba(0,255,255,0.1)',
-                border: '1px solid rgba(0,255,255,0.6)',
-                boxShadow: '0 0 20px rgba(0,255,255,0.3)'
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                transform: 'translateY(-1px)'
               }
             }}
           >
-            BACK
+            뒤로가기
           </Button>
 
-          <Box sx={{ flexGrow: 1 }}>
+          <Box sx={{ textAlign: { xs: 'center', sm: 'left' }, flex: 1, px: 2 }}>
             <Typography 
-              variant="h3" 
-              className="hologram-text neon-text"
+              variant="h4" 
               sx={{ 
-                fontFamily: "'Courier New', monospace",
                 fontWeight: 700,
-                letterSpacing: 3,
-                mb: 1
+                mb: 1,
+                background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: { xs: '1.5rem', sm: '2rem' }
               }}
             >
-              NEURAL RECOMMENDATIONS
+              AI 추천 결과
             </Typography>
             <Typography 
               variant="body1"
               sx={{ 
-                color: 'rgba(0,255,255,0.7)',
-                fontFamily: "'Courier New', monospace",
-                letterSpacing: 1
+                color: 'rgba(255, 255, 255, 0.7)',
+                fontWeight: 400,
+                fontSize: { xs: '0.9rem', sm: '1rem' }
               }}
             >
-              Based on analysis of "{recording.title}"
+              "{recording.title}" 분석 기반
             </Typography>
           </Box>
         </Box>
 
-        {/* 탭: AI 추천 / 유사 음색 추천 (유사 음색 데이터가 있을 때만 표시) */}
+        {/* 탭: AI 추천 / 유사 음색 추천 */}
         {hasSimilarTab && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Tabs
-              value={tab}
-              onChange={handleTabChange}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                onClick={() => setTab('ai')}
+                variant={tab === 'ai' ? 'contained' : 'outlined'}
               sx={{
-                '& .MuiTabs-indicator': { background: 'linear-gradient(90deg, #00ffff, #ff0080)', height: 3, borderRadius: 2 },
-                '& .MuiTab-root': {
-                  color: 'rgba(255,255,255,0.7)',
-                  fontFamily: "'Courier New', monospace",
+                  px: 3,
+                  py: 1,
+                  fontSize: '0.9rem',
                   fontWeight: 600,
+                  borderRadius: 2,
                   textTransform: 'none',
-                  minHeight: 42,
-                  '&.Mui-selected': { color: '#00ffff' }
-                }
-              }}
-            >
-              <Tab value="ai" label={`AI 추천 (${aiCount})`} />
-              <Tab 
-                value="similar" 
-                label={
-                  isLoadingSimilar ? '비슷한 목소리 추천 (로딩중)' : 
-                  (isErrorSimilar ? '비슷한 목소리 추천 (오류)' : `비슷한 목소리 추천 (${similarCount})`)
-                }
-              />
-            </Tabs>
+                  ...(tab === 'ai' ? {
+                    background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                    color: '#fff',
+                    boxShadow: '0 2px 8px rgba(236, 72, 153, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #06b6d4, #ec4899)',
+                    }
+                  } : {
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    color: 'rgba(255,255,255,0.7)',
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.5)',
+                      color: '#fff'
+                    }
+                  })
+                }}
+              >
+                AI 추천
+              </Button>
+              <Button
+                onClick={() => setTab('similar')}
+                disabled={!similarSongs || similarSongs.length === 0}
+                variant={tab === 'similar' ? 'contained' : 'outlined'}
+                    sx={{
+                  px: 3,
+                  py: 1,
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                          borderRadius: 2,
+                  textTransform: 'none',
+                  ...(tab === 'similar' ? {
+                    background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                    color: '#fff',
+                    boxShadow: '0 2px 8px rgba(236, 72, 153, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(45deg, #06b6d4, #ec4899)',
+                    }
+                  } : {
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    color: 'rgba(255,255,255,0.7)',
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.5)',
+                      color: '#fff'
+                    },
+                    '&.Mui-disabled': {
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255,255,255,0.3)',
+                      opacity: 0.5
+                    }
+                  })
+                }}
+              >
+                {isLoadingSimilar ? '비슷한 목소리 (로딩중)' : 
+                 (isErrorSimilar ? '비슷한 목소리 (오류)' : '비슷한 목소리')}
+              </Button>
+            </Box>
           </Box>
         )}
 
-        {/* 음성 분석 결과 */}
-        {currentAnalysis && (
-          <Fade in timeout={800}>
-            <Box 
-              className="neon-card hologram-panel"
-              sx={{ 
-                p: 4, 
-                mb: 4,
-                background: `
-                  linear-gradient(135deg, 
-                    rgba(26,26,26,0.95) 0%, 
-                    rgba(13,13,13,0.98) 50%,
-                    rgba(26,26,26,0.95) 100%
-                  )
-                `,
-                border: '2px solid rgba(0,255,255,0.4)',
-                borderRadius: 4,
-                backdropFilter: 'blur(20px)',
-                boxShadow: '0 0 40px rgba(0,255,255,0.2)',
-                textAlign: 'center'
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-                <MusicNote sx={{ fontSize: 32, color: '#00ffff', mr: 2 }} />
-                <Typography 
-                  variant="h5" 
-                  className="hologram-text"
-                  sx={{ 
-                    fontFamily: "'Courier New', monospace",
-                    fontWeight: 700,
-                    letterSpacing: 2
-                  }}
-                >
-                  VOICE ANALYSIS RESULT
-                </Typography>
-              </Box>
-              
-              {/* summary */}
-              <Typography 
-                variant="h6"
-                sx={{ 
-                  color: 'rgba(255,255,255,0.9)',
-                  fontFamily: "'Courier New', monospace",
-                  lineHeight: 1.8,
-                  letterSpacing: 1,
-                  maxWidth: 800,
-                  mx: 'auto',
-                  mb: 2
-                }}
-              >
-                {typeof currentAnalysis === 'string' 
-                  ? currentAnalysis 
-                  : currentAnalysis.summary}
-              </Typography>
-
-              {/* allowedGenres */}
-              {typeof currentAnalysis !== 'string' && currentAnalysis.allowedGenres?.length > 0 && (
-                <Box sx={{ mt: 1 }}>
-                  <Typography 
-                    variant="subtitle1"
-                    sx={{
-                      color: '#00ffff',
-                      fontFamily: "'Courier New', monospace",
-                      mb: 1
-                    }}
-                  >
-                    어울리는 장르
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    {currentAnalysis.allowedGenres.map((g: string) => (
-                      <Box
-                        key={g}
-                        sx={{
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: 2,
-                          border: '1px solid rgba(0,255,255,0.4)',
-                          color: '#00ffff',
-                          background: 'rgba(0,255,255,0.08)',
-                          fontFamily: "'Courier New', monospace",
-                          fontSize: 14
-                        }}
-                      >
-                        {g}
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          </Fade>
-        )}
-
+        {/* 좌우 2분할 레이아웃 */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 4,
+          flexDirection: { xs: 'column', lg: 'row' },
+          minHeight: 'calc(100vh - 100px)',
+          paddingBottom: 6
+        }}>
+          
+          {/* 좌측: CoverFlow (3분의 2) */}
+          <Box sx={{ 
+            flex: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
+          }}>
         {/* 추천 곡 CoverFlow */}
         {tab === 'similar' && isLoadingSimilar && (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <CircularProgress sx={{ color: '#00ffff', mb: 2 }} />
-            <Typography sx={{ color: 'rgba(0,255,255,0.8)', fontFamily: "'Courier New', monospace" }}>비슷한 목소리 추천을 불러오는 중...</Typography>
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress sx={{ color: '#06b6d4', mb: 2 }} />
+                <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem' }}>비슷한 목소리 추천을 불러오는 중...</Typography>
           </Box>
         )}
 
@@ -421,7 +519,8 @@ export default function RecommendationResult({
               background: 'rgba(255,165,0,0.1)',
               border: '1px solid rgba(255,165,0,0.4)',
               color: '#ffb74d',
-              mb: 3
+                  mb: 2,
+                  fontSize: '0.85rem'
             }}
           >
             비슷한 목소리 추천을 가져올 수 없습니다. (사유: {errorSimilar?.message || '알 수 없음'})
@@ -431,19 +530,36 @@ export default function RecommendationResult({
         {currentSongs.length > 0 && (
           <Fade in timeout={1200}>
             <Box>
+                  {/* 추천 곡 섹션 제목 */}
+                  <Box sx={{ textAlign: 'center', mb: 3 }}>
               <Typography 
-                variant="h4" 
-                className="hologram-text"
+                      variant="h5" 
                 sx={{ 
-                  fontFamily: "'Courier New', monospace",
                   fontWeight: 700,
-                  letterSpacing: 2,
-                  textAlign: 'center',
-                  mb: 4
-                }}
-              >
-                {tab === 'ai' ? 'RECOMMENDED TRACKS' : 'SIMILAR VOICE PICKS'} ({currentSongs.length})
+                        mb: 1,
+                        background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        fontSize: { xs: '1.2rem', sm: '1.4rem' }
+                      }}
+                    >
+                      {tab === 'ai' ? '추천 곡' : '비슷한 목소리 추천'}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontWeight: 400,
+                        fontSize: { xs: '0.8rem', sm: '0.9rem' }
+                      }}
+                    >
+                      {tab === 'ai' 
+                        ? 'AI가 분석한 당신에게 어울리는 곡들입니다' 
+                        : '비슷한 음색을 가진 사람들이 많이 부르는 곡들입니다'
+                      }
               </Typography>
+                  </Box>
 
               <CoverFlow
                 songs={currentSongs}
@@ -454,30 +570,335 @@ export default function RecommendationResult({
                 showDislike={tab === 'ai'}
               />
 
-              {/* 녹음 페이지로 이동 버튼 */}
+                </Box>
+              </Fade>
+            )}
+
+            {/* 추천 곡이 없는 경우 */}
+            {currentSongs.length === 0 && !isLoading && !isLoadingSimilar && (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 700,
+                    mb: 2,
+                    color: '#fff',
+                    fontSize: { xs: '1rem', sm: '1.1rem' }
+                  }}
+                >
+                  {tab === 'ai' ? '추천 곡을 찾을 수 없습니다' : (isErrorSimilar ? '비슷한 목소리 서비스 오류' : '비슷한 목소리 추천이 없습니다')}
+                </Typography>
+                <Typography 
+                  variant="body2"
+                  sx={{ 
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: { xs: '0.8rem', sm: '0.9rem' }
+                  }}
+                >
+                  {tab === 'ai' 
+                    ? '이 녹음본으로는 추천을 생성할 수 없습니다'
+                    : (isErrorSimilar ? '비슷한 목소리 서비스에서 오류가 발생했습니다' : '비슷한 음색의 사람들이 자주 부르는 곡이 없습니다')}
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* 우측: 음성 분석 결과 (3분의 1) */}
+          <Box sx={{ 
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'flex-start'
+          }}>
+            {currentAnalysis && (
+              <Fade in timeout={800}>
+                <Box 
+                  sx={{ 
+                    width: '100%',
+                    height: '400px',
+                    position: 'relative',
+                    perspective: '1000px',
+                    mt: 3
+                  }}
+                >
+                  {/* 3D 카드 컨테이너 */}
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      position: 'relative',
+                      transformStyle: 'preserve-3d',
+                      transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transform: showReservedSongs ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      cursor: 'pointer'
+                    }}
+                    onClick={handleShowReservedSongs}
+                  >
+                    {/* 앞면 - 음성 분석 결과 */}
+                    <Box 
+                      sx={{ 
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%',
+                        backfaceVisibility: 'hidden',
+                        p: 3, 
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: 3,
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                        textAlign: 'left',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 700,
+                          background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                          backgroundClip: 'text',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                          mb: 2
+                        }}
+                      >
+                        음성 분석 결과
+                      </Typography>
+                    
+                    {/* 분석 요약 */}
+                    <Typography 
+                      variant="body2"
+                      sx={{ 
+                        color: 'rgba(255,255,255,0.9)',
+                        lineHeight: 1.5,
+                        mb: 2,
+                        fontWeight: 400,
+                        fontSize: { xs: '0.85rem', sm: '0.9rem' }
+                      }}
+                    >
+                      {typeof currentAnalysis === 'string' 
+                        ? currentAnalysis 
+                        : currentAnalysis.summary}
+                    </Typography>
+
+                    {/* 어울리는 장르 */}
+                    {typeof currentAnalysis !== 'string' && currentAnalysis.allowedGenres?.length > 0 && (
+                      <Box>
+                        <Typography 
+                          variant="subtitle2"
+                          sx={{
+                            color: '#fff',
+                            mb: 1.5,
+                            fontWeight: 600,
+                            fontSize: { xs: '0.9rem', sm: '1rem' }
+                          }}
+                        >
+                          어울리는 장르
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {currentAnalysis.allowedGenres.map((g: string) => (
+                            <Box
+                              key={g}
+                              sx={{
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 1.5,
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                color: '#fff',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                fontWeight: 500,
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                  background: 'rgba(255, 255, 255, 0.2)',
+                                  transform: 'translateY(-1px)'
+                                }
+                              }}
+                            >
+                              {g}
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
+                    
+                    {/* 예약 곡 보기 버튼 */}
+                    <Box sx={{ textAlign: 'center', mt: 3 }}>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShowReservedSongs();
+                        }}
+                        variant="outlined"
+                        sx={{
+                          px: 3,
+                          py: 1,
+                          border: '1px solid rgba(236, 72, 153, 0.5)',
+                          color: '#ec4899',
+                          borderRadius: 2,
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            border: '1px solid rgba(236, 72, 153, 0.8)',
+                            background: 'rgba(236, 72, 153, 0.1)',
+                            transform: 'translateY(-1px)'
+                          }
+                        }}
+                      >
+                        {showReservedSongs ? '음성 분석 보기' : '예약 곡 보기'}
+                      </Button>
+                    </Box>
+                    </Box>
+
+                    {/* 뒷면 - 예약된 노래 목록 */}
+                    <Box 
+                      sx={{ 
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%',
+                        backfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        p: 3, 
+                        background: `
+                          linear-gradient(135deg, 
+                            rgba(45, 20, 45, 0.95) 0%, 
+                            rgba(35, 15, 55, 0.98) 30%,
+                            rgba(25, 30, 65, 0.95) 70%,
+                            rgba(45, 20, 45, 0.95) 100%
+                          ) !important
+                        `,
+                        border: '2px solid rgba(236, 72, 153, 0.4)',
+                        borderRadius: 3,
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: '0 0 40px rgba(236, 72, 153, 0.3)',
+                        textAlign: 'left',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                    >
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 700,
+                          background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                          backgroundClip: 'text',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                          mb: 3,
+                          textAlign: 'center'
+                        }}
+                      >
+                        예약된 노래 목록
+                      </Typography>
+                      
+                      {reservedSongs.length === 0 ? (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          height: '100%',
+                          color: 'rgba(255,255,255,0.6)',
+                          fontSize: '0.9rem'
+                        }}>
+                          아직 예약된 노래가 없습니다
+                        </Box>
+                      ) : (
+                        <Box sx={{ 
+                          flex: 1,
+                          overflow: 'auto',
+                          '&::-webkit-scrollbar': {
+                            width: '6px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '3px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: 'rgba(236, 72, 153, 0.5)',
+                            borderRadius: '3px',
+                          },
+                        }}>
+                          {reservedSongs.map((song, index) => (
+                            <Box
+                              key={song.id}
+                              sx={{
+                                p: 2,
+                                mb: 1,
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: 2,
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  transform: 'translateY(-1px)'
+                                }
+                              }}
+                            >
+                              <Typography 
+                                variant="subtitle1"
+                                sx={{ 
+                                  color: '#fff',
+                                  fontWeight: 600,
+                                  fontSize: '0.95rem',
+                                  mb: 0.5,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {song.title}
+                              </Typography>
+                              <Typography 
+                                variant="body2"
+                                sx={{ 
+                                  color: 'rgba(6, 182, 212, 0.9)',
+                                  fontSize: '0.85rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {song.artist}
+                              </Typography>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+                </Box>
+              </Fade>
+            )}
+
+
+            {/* 노래 부르러 가기 버튼 */}
               {onGoToRecord && (
-                <Box sx={{ textAlign: 'center', mt: 6 }}>
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
                   <Button
                     onClick={onGoToRecord}
                     startIcon={<Mic />}
-                    className="cyberpunk-button"
                     sx={{
-                      px: 6,
-                      py: 2,
-                      background: 'linear-gradient(45deg, #ff0080, #00ffff)',
-                      color: '#000',
-                      fontFamily: "'Courier New', monospace",
-                      fontWeight: 700,
-                      letterSpacing: 2,
-                      borderRadius: 3,
-                      fontSize: '1.1rem',
+                    px: 4,
+                    py: 1.5,
+                    background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                    color: '#fff',
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                    boxShadow: '0 2px 8px rgba(236, 72, 153, 0.3)',
+                    transition: 'all 0.3s ease',
                       '&:hover': {
-                        background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-                        transform: 'scale(1.05)',
-                        boxShadow: '0 0 40px rgba(255,0,128,0.5)'
+                      background: 'linear-gradient(45deg, #06b6d4, #ec4899)',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4)'
                       },
                       '&:active': {
-                        transform: 'scale(0.98)',
+                      transform: 'translateY(0px)',
                       }
                     }}
                   >
@@ -486,38 +907,7 @@ export default function RecommendationResult({
                 </Box>
               )}
             </Box>
-          </Fade>
-        )}
-
-        {/* 추천 곡이 없는 경우 */}
-        {currentSongs.length === 0 && !isLoading && !isLoadingSimilar && (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography 
-              variant="h5" 
-              className="hologram-text"
-              sx={{ 
-                fontFamily: "'Courier New', monospace",
-                fontWeight: 700,
-                letterSpacing: 2,
-                mb: 2
-              }}
-            >
-              {tab === 'ai' ? 'NO RECOMMENDATIONS FOUND' : (isErrorSimilar ? 'SIMILAR VOICE UNAVAILABLE' : 'NO SIMILAR VOICE PICKS')}
-            </Typography>
-            <Typography 
-              variant="body1"
-              sx={{ 
-                color: 'rgba(255,255,255,0.7)',
-                fontFamily: "'Courier New', monospace",
-                letterSpacing: 1
-              }}
-            >
-              {tab === 'ai' 
-                ? 'Unable to generate recommendations from this recording'
-                : (isErrorSimilar ? 'The similar-voice service responded with an error' : 'No frequently sung tracks found among similar voices')}
-            </Typography>
           </Box>
-        )}
       </Container>
 
       {/* 예약 성공 알림 */}
