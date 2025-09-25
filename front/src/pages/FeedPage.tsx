@@ -734,8 +734,7 @@ const FeedPage: React.FC = () => {
                                     flex: 1,
                                   }}
                                 >
-                                  {album.userNickname ||
-                                    album.user?.nickname ||
+                                  {album.user?.nickname ||
                                     `사용자 ${album.userId}`}
                                 </Typography>
                               </Box>

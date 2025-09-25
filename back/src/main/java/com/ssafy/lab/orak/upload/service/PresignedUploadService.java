@@ -10,7 +10,6 @@ import com.ssafy.lab.orak.upload.exception.InvalidFileException;
 import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,13 +31,10 @@ public class PresignedUploadService {
     private final Counter uploadFailedCounter;
     private final Timer uploadDurationTimer;
     private final AtomicLong activeUploadCount;
-    private final MeterRegistry meterRegistry;
 
     public PresignedUploadResponse generatePresignedUploadUrl(PresignedUploadRequest request, Long userId) {
         Timer.Sample sample = Timer.start();
-        // 파일 타입 추출 (미리 계산)
-        String fileType = getFileType(request.getOriginalFilename());
-        meterRegistry.counter("upload_started_total", "file_type", fileType, "application", "orakgaraki").increment();
+        uploadStartedCounter.increment();
         activeUploadCount.incrementAndGet();
 
         try {
@@ -85,7 +81,7 @@ public class PresignedUploadService {
                     savedUpload.getId(), uuid);
 
             // 성공 메트릭 기록
-            meterRegistry.counter("upload_completed_total", "file_type", fileType, "application", "orakgaraki").increment();
+            uploadCompletedCounter.increment();
             sample.stop(uploadDurationTimer);
             activeUploadCount.decrementAndGet();
 
@@ -100,7 +96,7 @@ public class PresignedUploadService {
 
         } catch (Exception e) {
             // 실패 메트릭 기록
-            meterRegistry.counter("upload_failed_total", "file_type", fileType, "application", "orakgaraki").increment();
+            uploadFailedCounter.increment();
             sample.stop(uploadDurationTimer);
             activeUploadCount.decrementAndGet();
 

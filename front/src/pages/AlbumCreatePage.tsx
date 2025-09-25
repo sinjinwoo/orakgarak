@@ -179,13 +179,18 @@ const AlbumCreatePage: React.FC = () => {
   }, [resetCreationState]);
 
   const getAlbumData = useCallback(() => {
+    const recordIds = tracks.map(track => track.id);
+    const trackOrders = tracks.map(track => track.order);
+
     return {
       title,
       description,
       isPublic,
       uploadId: selectedCoverUploadId || cover.uploadId,
+      recordIds,
+      trackOrders,
     };
-  }, [title, description, isPublic, selectedCoverUploadId, cover.uploadId]);
+  }, [title, description, isPublic, selectedCoverUploadId, cover.uploadId, tracks]);
 
   const handlePublish = async () => {
     try {

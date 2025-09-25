@@ -46,5 +46,9 @@ public class CommentDto {
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
         private List<Response> replies;
+
+        // 사용자 정보 필드 추가
+        private String userNickname;
+        private String userProfileImageUrl;
     }
 }

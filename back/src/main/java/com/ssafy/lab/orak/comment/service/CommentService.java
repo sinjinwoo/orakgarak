@@ -1,6 +1,8 @@
 package com.ssafy.lab.orak.comment.service;
 
 
+import com.ssafy.lab.orak.auth.entity.User;
+import com.ssafy.lab.orak.auth.service.UserService;
 import com.ssafy.lab.orak.comment.dto.CommentDto;
 import com.ssafy.lab.orak.comment.entity.Comment;
 import com.ssafy.lab.orak.comment.exception.CommentAccessDeniedException;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class CommentService {
 
     private final CommentRepository commentRepository;
+    private final UserService userService;
 
     @Transactional(readOnly = true)
     public Page<CommentDto.Response> getCommentsByAlbumId(Long albumId, Pageable pageable) {
@@ -42,6 +45,30 @@ public class CommentService {
     }
 
     private CommentDto.Response convertToResponseDto(Comment comment) {
+        // 사용자 정보 가져오기
+        User user = null;
+        String userNickname = null;
+        String userProfileImageUrl = null;
+
+        try {
+            user = userService.findById(comment.getUserId());
+            userNickname = user.getNickname();
+            userProfileImageUrl = user.getProfileImage();
+        } catch (Exception e) {
+            log.warn("사용자 정보를 가져올 수 없습니다. userId: {}", comment.getUserId(), e);
+            userNickname = "사용자 " + comment.getUserId();
+            userProfileImageUrl = null;
+        }
+
+        // 대댓글 처리
+        List<CommentDto.Response> replies = null;
+        if (comment.getParentCommentId() == null) {
+            List<Comment> replyComments = commentRepository.findRepliesByParentCommentId(comment.getId());
+            replies = replyComments.stream()
+                    .map(this::convertToResponseDto)
+                    .collect(Collectors.toList());
+        }
+
         return CommentDto.Response.builder()
                 .id(comment.getId())
                 .userId(comment.getUserId())
@@ -50,6 +77,9 @@ public class CommentService {
                 .content(comment.getContent())
                 .createdAt(convertToLocalDateTime(comment.getCreatedAt()))
                 .updatedAt(convertToLocalDateTime(comment.getUpdatedAt()))
+                .userNickname(userNickname)
+                .userProfileImageUrl(userProfileImageUrl)
+                .replies(replies)
                 .build();
     }
 

@@ -57,10 +57,12 @@ public class ProcessingStatusResponseDTO {
             case UPLOADED -> 10.0;
             case PROCESSING -> 30.0;
             case CONVERTING -> 70.0;
+            case ANALYZING -> 80.0;
             case ANALYSIS_PENDING -> 90.0;
             case IMAGE_OPTIMIZING -> 60.0;
             case THUMBNAIL_GENERATING -> 80.0;
-            case COMPLETED -> 100.0;
+            case COMPLETED -> 95.0;
+            case VECTOR_COMPLETED -> 100.0;
             case FAILED -> 0.0;
         };
     }
@@ -71,10 +73,12 @@ public class ProcessingStatusResponseDTO {
             case UPLOADED -> "처리 대기 중";
             case PROCESSING -> "약 3-5분";
             case CONVERTING -> "약 1-2분";
+            case ANALYZING -> "약 2-3분";
             case ANALYSIS_PENDING -> "약 1분 이내";
             case IMAGE_OPTIMIZING -> "약 30초";
             case THUMBNAIL_GENERATING -> "약 10초";
-            case COMPLETED -> "완료";
+            case COMPLETED -> "거의 완료";
+            case VECTOR_COMPLETED -> "완료";
             case FAILED -> "처리 실패";
         };
     }

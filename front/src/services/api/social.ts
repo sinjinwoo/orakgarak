@@ -10,6 +10,9 @@ export interface Comment {
   createdAt: string;
   updatedAt: string;
   replies?: Comment[];
+  // 사용자 정보 추가
+  userNickname?: string;
+  userProfileImageUrl?: string;
 }
 
 export interface Album {
