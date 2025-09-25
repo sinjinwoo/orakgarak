@@ -23,6 +23,73 @@ import {
   TextField,
   InputAdornment,
 } from "@mui/material";
+
+// 네온 사이버펑크 테마를 위한 CSS 애니메이션
+const neonStyles = `
+  @keyframes neonGlow {
+    0%, 100% { 
+      text-shadow: 
+        0 0 5px #ec4899,
+        0 0 10px #ec4899,
+        0 0 15px #ec4899,
+        0 0 20px #ec4899;
+    }
+    50% { 
+      text-shadow: 
+        0 0 2px #ec4899,
+        0 0 5px #ec4899,
+        0 0 8px #ec4899,
+        0 0 12px #ec4899;
+    }
+  }
+  
+  @keyframes cyanGlow {
+    0%, 100% { 
+      text-shadow: 
+        0 0 5px #06b6d4,
+        0 0 10px #06b6d4,
+        0 0 15px #06b6d4,
+        0 0 20px #06b6d4;
+    }
+    50% { 
+      text-shadow: 
+        0 0 2px #06b6d4,
+        0 0 5px #06b6d4,
+        0 0 8px #06b6d4,
+        0 0 12px #06b6d4;
+    }
+  }
+  
+  @keyframes neonBorder {
+    0%, 100% { 
+      box-shadow: 
+        0 0 5px #ec4899,
+        0 0 10px #ec4899,
+        inset 0 0 5px rgba(236, 72, 153, 0.1);
+    }
+    50% { 
+      box-shadow: 
+        0 0 2px #ec4899,
+        0 0 5px #ec4899,
+        inset 0 0 2px rgba(236, 72, 153, 0.1);
+    }
+  }
+  
+  @keyframes cyanBorder {
+    0%, 100% { 
+      box-shadow: 
+        0 0 5px #06b6d4,
+        0 0 10px #06b6d4,
+        inset 0 0 5px rgba(6, 182, 212, 0.1);
+    }
+    50% { 
+      box-shadow: 
+        0 0 2px #06b6d4,
+        0 0 5px #06b6d4,
+        inset 0 0 2px rgba(6, 182, 212, 0.1);
+    }
+  }
+`;
 import { theme } from "../styles/theme";
 import {
   Add,
@@ -55,6 +122,30 @@ import type {
   MyPageAlbumListResponse,
   MyPageLikedAlbumListResponse,
 } from "../types/album";
+
+// 사이버펑크 스타일 정의
+const cyberpunkStyles = `
+  @keyframes hologramScan {
+    0% { transform: translateX(-100%) skewX(-15deg); }
+    100% { transform: translateX(200%) skewX(-15deg); }
+  }
+  @keyframes pulseGlow {
+    0% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+    100% { text-shadow: 0 0 30px currentColor, 0 0 60px currentColor; }
+  }
+  @keyframes neonFlicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.9; }
+  }
+  @keyframes cyberGlow {
+    0% { box-shadow: 0 0 30px rgba(236, 72, 153, 0.4), 0 0 50px rgba(6, 182, 212, 0.3); }
+    100% { box-shadow: 0 0 40px rgba(236, 72, 153, 0.6), 0 0 70px rgba(6, 182, 212, 0.4); }
+  }
+  @keyframes brightPulse {
+    0%, 100% { filter: brightness(1) saturate(1); }
+    50% { filter: brightness(1.2) saturate(1.3); }
+  }
+`;
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -126,59 +217,79 @@ const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const cardStyles = {
     display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    gap: 0.8,
-    px: 1.2,
-    py: 0.8,
-    background: "rgba(255, 255, 255, 0.05)",
-    backdropFilter: "blur(8px)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
-    borderRadius: 1.5,
-    boxShadow: "0 3px 12px rgba(0, 0, 0, 0.2)",
+    gap: 1,
+    px: 2,
+    py: 1.5,
+    background: "rgba(0, 0, 0, 0.8)",
+    backdropFilter: "blur(12px)",
+    border: "2px solid #ec4899",
+    borderRadius: 2,
+    boxShadow: "0 0 15px #ec4899, inset 0 0 10px rgba(236, 72, 153, 0.1)",
+    animation: "neonBorder 2s ease-in-out infinite",
     transition: "all 0.3s ease",
-    minWidth: "fit-content",
+    minWidth: "80px",
+    flex: "1 1 0",
+    maxWidth: "120px",
+    position: "relative",
+    overflow: "hidden",
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      left: "-100%",
+      width: "100%",
+      height: "100%",
+      background: "linear-gradient(90deg, transparent, rgba(236, 72, 153, 0.2), transparent)",
+      animation: "hologramScan 3s infinite",
+    },
     "&:hover": {
-      background: "rgba(255, 255, 255, 0.08)",
-      transform: "translateY(-1px)",
-      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3)",
+      transform: "translateY(-2px)",
+      boxShadow: "0 0 25px #ec4899, 0 0 50px rgba(6, 182, 212, 0.3), inset 0 0 15px rgba(236, 72, 153, 0.2)",
+      border: "2px solid #06b6d4",
+      animation: "cyanBorder 1.5s ease-in-out infinite",
     },
   };
 
   const iconStyles = {
-    color,
-    fontSize: 16,
-    filter:
-      color === "#FFFFFF"
-        ? "drop-shadow(0 0 4px rgba(255, 255, 255, 0.3))"
-        : `drop-shadow(0 0 4px ${color}50)`,
+    color: "#ec4899",
+    fontSize: 20,
+    textShadow: "0 0 10px #ec4899",
+    animation: "neonGlow 2s ease-in-out infinite",
   };
 
   return (
     <Box sx={cardStyles}>
       <Icon sx={iconStyles} />
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-        <Typography
-          variant="h6"
-          sx={{
-            fontWeight: 600,
-            color: "#FFFFFF",
-            fontSize: "0.9rem",
-            lineHeight: 1,
-          }}
-        >
-          {value}
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            color: "rgba(255, 255, 255, 0.7)",
-            fontSize: "0.65rem",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {label}
-        </Typography>
-      </Box>
+      <Typography
+        variant="h6"
+        sx={{
+          fontWeight: 700,
+          color: "#FFFFFF",
+          fontSize: "1.1rem",
+          lineHeight: 1,
+          textAlign: "center",
+          textShadow: "0 0 10px #ec4899",
+          animation: "neonGlow 2s ease-in-out infinite",
+        }}
+      >
+        {value}
+      </Typography>
+      <Typography
+        variant="caption"
+        sx={{
+          color: "rgba(255, 255, 255, 0.8)",
+          fontSize: "0.7rem",
+          whiteSpace: "nowrap",
+          textAlign: "center",
+          fontWeight: 500,
+          textShadow: "0 0 8px #06b6d4",
+          animation: "cyanGlow 2s ease-in-out infinite",
+        }}
+      >
+        {label}
+      </Typography>
     </Box>
   );
 };
@@ -186,7 +297,7 @@ const StatCard: React.FC<StatCardProps> = ({
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useUIStore();
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, isAuthenticated } = useAuth();
   const {
     profile,
     updateProfile: updateMyProfile,
@@ -225,21 +336,38 @@ const MyPage: React.FC = () => {
 
   // 배경 이미지 - 실제 프로필에서 가져오기
   const backgroundImage = useMemo(() => {
+    console.log("배경 이미지 계산 중...");
+    console.log("forceDefaultBackground:", forceDefaultBackground);
+    console.log("profile?.backgroundImageUrl:", profile?.backgroundImageUrl);
+    
     // 강제 기본 배경 플래그가 설정된 경우
     if (forceDefaultBackground) {
+      console.log("강제 기본 배경 사용");
       return "url(https://images.unsplash.com/photo-1519608487953-e999c86e7455?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80)";
     }
 
-    // 1순위: 실제 프로필 API에서 가져온 배경화면
-    if (profile?.backgroundImageUrl) {
+    // 1순위: localStorage에 저장된 커스텀 배경 (앨범 커버 선택 등)
+    const customBg = localStorage.getItem("customBackground");
+    console.log("localStorage customBackground:", customBg);
+    if (customBg && customBg !== "null" && customBg !== "") {
+      // customBg가 이미 url() 형태인지 확인
+      if (customBg.startsWith('url(')) {
+        console.log("커스텀 배경 사용 (URL 형태):", customBg);
+        return customBg;
+      } else {
+        console.log("커스텀 배경 사용 (일반 URL):", customBg);
+        return `url(${customBg})`;
+      }
+    }
+
+    // 2순위: 실제 프로필 API에서 가져온 배경화면 (기본 배경이 아닌 경우만)
+    if (profile?.backgroundImageUrl && !profile.backgroundImageUrl.includes('default-background')) {
+      console.log("프로필 배경 사용:", profile.backgroundImageUrl);
       return `url(${profile.backgroundImageUrl})`;
     }
-    // 2순위: localStorage에 저장된 커스텀 배경
-    const customBg = localStorage.getItem("customBackground");
-    if (customBg) {
-      return `url(${customBg})`;
-    }
-    // 3순위: 기본 배경화면
+    
+    // 3순위: 기본 배경화면 (첫 로그인 시에도 표시)
+    console.log("기본 배경 사용");
     return "url(https://images.unsplash.com/photo-1519608487953-e999c86e7455?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2070&q=80)";
   }, [profile?.backgroundImageUrl, forceDefaultBackground]);
 
@@ -280,7 +408,8 @@ const MyPage: React.FC = () => {
     followerCount: 0,
     followingCount: 0,
     albumCount: 0,
-    // likedAlbumCount: 0 // 사용하지 않는 속성 제거
+    recordingCount: 0,
+    totalLikes: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -310,16 +439,86 @@ const MyPage: React.FC = () => {
     albums: 0,
     recordings: 0,
     likes: 0,
-    totalPlays: 0,
     followers: 0,
     following: 0,
   });
 
   // 더미 데이터 제거됨 - 실제 API 데이터 사용
 
+  // 앨범 로딩 재시도 함수
+  const loadAlbumsWithRetry = async (retryCount = 0) => {
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1초
+
+    setAlbumsLoading(true);
+    setAlbumsError(null);
+
+    try {
+      const albumsResponse = await apiClient.get("/profiles/mypage/albums", {
+        params: { page: 0, size: 100 },
+      });
+      const albumsData: MyPageAlbumListResponse = albumsResponse.data;
+      setMyAlbums(albumsData.albums);
+      console.log("앨범 데이터 로드 성공:", albumsData.albums.length, "개");
+    } catch (error) {
+      console.error(`앨범 데이터 로드 실패 (시도 ${retryCount + 1}/${maxRetries + 1}):`, error);
+      
+      if (retryCount < maxRetries) {
+        console.log(`${retryDelay}ms 후 재시도합니다...`);
+        setTimeout(() => {
+          loadAlbumsWithRetry(retryCount + 1);
+        }, retryDelay);
+      } else {
+        setAlbumsError("앨범을 불러오는데 실패했습니다. 새로고침을 시도해주세요.");
+        setMyAlbums([]);
+        showToast("앨범을 불러오는데 실패했습니다.", "error");
+      }
+    } finally {
+      setAlbumsLoading(false);
+    }
+  };
+
+  // 좋아요한 앨범 로딩 재시도 함수
+  const loadLikedAlbumsWithRetry = async (retryCount = 0) => {
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1초
+
+    setLikedAlbumsLoading(true);
+    setLikedAlbumsError(null);
+
+    try {
+      const likedAlbumsResponse = await apiClient.get("/profiles/mypage/liked-albums", {
+        params: { page: 0, size: 100 },
+      });
+      const likedAlbumsData: MyPageLikedAlbumListResponse = likedAlbumsResponse.data;
+      setLikedAlbums(likedAlbumsData.albums || likedAlbumsData.content || []);
+      console.log("좋아요한 앨범 데이터 로드 성공:", (likedAlbumsData.albums || likedAlbumsData.content || []).length, "개");
+    } catch (error) {
+      console.error(`좋아요한 앨범 데이터 로드 실패 (시도 ${retryCount + 1}/${maxRetries + 1}):`, error);
+      
+      if (retryCount < maxRetries) {
+        console.log(`${retryDelay}ms 후 재시도합니다...`);
+        setTimeout(() => {
+          loadLikedAlbumsWithRetry(retryCount + 1);
+        }, retryDelay);
+      } else {
+        setLikedAlbumsError("좋아요한 앨범을 불러오는데 실패했습니다.");
+        setLikedAlbums([]);
+      }
+    } finally {
+      setLikedAlbumsLoading(false);
+    }
+  };
+
   // 마이페이지 데이터 로드
   useEffect(() => {
     const loadMyPageData = async () => {
+      // 인증 상태 확인
+      if (!isAuthenticated) {
+        console.log("인증되지 않은 상태입니다. 데이터 로딩을 건너뜁니다.");
+        return;
+      }
+
       try {
         // 더미 데이터 제거
         clearAllDummyData();
@@ -336,48 +535,17 @@ const MyPage: React.FC = () => {
             followerCount: followersData?.totalElements || 0,
             followingCount: followingData?.totalElements || 0,
             albumCount: myAlbums.length,
+            recordingCount: recordings.length,
+            totalLikes: 0,
           });
           showToast("통계 데이터를 개별 API로 로드했습니다.", "info");
         }
 
-        // 내 앨범 목록 로드
-        setAlbumsLoading(true);
-        setAlbumsError(null);
-        try {
-          const albumsResponse = await apiClient.get(
-            "/profiles/mypage/albums",
-            {
-              params: { page: 0, size: 100 },
-            }
-          );
-          const albumsData: MyPageAlbumListResponse = albumsResponse.data;
-          setMyAlbums(albumsData.albums);
-        } catch (error) {
-          console.error("앨범 데이터 로드 실패:", error);
-          setAlbumsError("앨범을 불러오는데 실패했습니다.");
-          setMyAlbums([]);
-        }
+        // 내 앨범 목록 로드 (재시도 로직 포함)
+        await loadAlbumsWithRetry();
 
-        // 좋아요한 앨범 목록 로드
-        setLikedAlbumsLoading(true);
-        setLikedAlbumsError(null);
-        try {
-          const likedAlbumsResponse = await apiClient.get(
-            "/profiles/mypage/liked-albums",
-            {
-              params: { page: 0, size: 100 },
-            }
-          );
-          const likedAlbumsData: MyPageLikedAlbumListResponse =
-            likedAlbumsResponse.data;
-          setLikedAlbums(
-            likedAlbumsData.albums || likedAlbumsData.content || []
-          );
-        } catch (error) {
-          console.error("좋아요한 앨범 데이터 로드 실패:", error);
-          setLikedAlbumsError("좋아요한 앨범을 불러오는데 실패했습니다.");
-          setLikedAlbums([]);
-        }
+        // 좋아요한 앨범 목록 로드 (재시도 로직 포함)
+        await loadLikedAlbumsWithRetry();
 
         // 내 녹음 목록 로드
         setRecordingsLoading(true);
@@ -400,7 +568,7 @@ const MyPage: React.FC = () => {
     };
 
     loadMyPageData();
-  }, []);
+  }, [isAuthenticated]);
 
   // 통계 데이터 계산 (API 데이터 사용)
   useEffect(() => {
@@ -408,7 +576,6 @@ const MyPage: React.FC = () => {
       albums: myPageStats.albumCount,
       recordings: recordings.length, // 실제 녹음 데이터 사용
       likes: myPageStats.totalLikes || 0,
-      totalPlays: 0, // totalPlays는 현재 API에 없으므로 0으로 설정
       followers: safeFollowersCount, // 안전한 팔로워 수
       following: safeFollowingCount, // 안전한 팔로잉 수
     });
@@ -613,44 +780,31 @@ const MyPage: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        background: theme.colors.background.main,
-        minHeight: "100vh",
-        pt: { xs: 2, sm: 3 }, // 헤더에 더 가깝게 조정
-        position: "relative",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `
-            radial-gradient(circle at 30% 30%, rgba(255, 107, 157, 0.15) 0%, transparent 40%),
-            radial-gradient(circle at 70% 70%, rgba(196, 71, 233, 0.2) 0%, transparent 40%),
-            radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 30%)
-          `,
-          pointerEvents: "none",
-          zIndex: 1,
-        },
-        "&::after": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `
-            radial-gradient(circle at 80% 20%, rgba(255, 107, 157, 0.1) 0%, transparent 30%),
-            radial-gradient(circle at 20% 80%, rgba(196, 71, 233, 0.15) 0%, transparent 30%)
-          `,
-          pointerEvents: "none",
-          zIndex: 1,
-        },
-      }}
-    >
+    <>
+      <style dangerouslySetInnerHTML={{ __html: neonStyles }} />
+      <div style={{
+        minHeight: '100vh',
+        background: `
+          radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.3) 0%, transparent 60%),
+          radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.3) 0%, transparent 60%),
+          radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.15) 0%, transparent 80%),
+          radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.2) 0%, transparent 70%),
+          linear-gradient(135deg, #000000 0%, #0a0a0a 30%, #1a0a1a 70%, #000000 100%)
+        `,
+        color: '#fff',
+        paddingTop: '100px',
+        overflowX: 'hidden',
+        position: 'relative',
+      }}>
+      <style dangerouslySetInnerHTML={{ __html: cyberpunkStyles }} />
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: "100vh",
+          pt: { xs: 2, sm: 3 },
+          position: "relative",
+        }}
+      >
       <Container maxWidth="lg" sx={{ py: 3, position: "relative", zIndex: 1 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -660,16 +814,20 @@ const MyPage: React.FC = () => {
           <Paper
             elevation={0}
             sx={{
-              background: "transparent",
+              background: "rgba(0, 0, 0, 0.8)",
+              backdropFilter: "blur(20px)",
               borderRadius: 3,
               overflow: "hidden",
+              border: "2px solid #ec4899",
+              boxShadow: "0 0 20px #ec4899, inset 0 0 20px rgba(236, 72, 153, 0.1)",
+              animation: "neonBorder 3s ease-in-out infinite",
             }}
           >
             {/* 프로필 섹션 */}
             <Box
               sx={{
                 p: 4,
-                borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                borderBottom: "2px solid #ec4899",
                 position: "relative",
                 overflow: "hidden",
                 backgroundImage,
@@ -684,7 +842,7 @@ const MyPage: React.FC = () => {
                   right: 0,
                   bottom: 0,
                   background:
-                    "linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.2) 100%)",
+                    "linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(6, 182, 212, 0.15) 50%, rgba(0, 0, 0, 0.3) 100%)",
                   pointerEvents: "none",
                   zIndex: 0,
                 },
@@ -838,7 +996,7 @@ const MyPage: React.FC = () => {
               <Box
                 sx={{
                   display: "flex",
-                  gap: 1,
+                  gap: 2,
                   mb: 3,
                   justifyContent: "center",
                   flexWrap: "wrap",
@@ -862,12 +1020,6 @@ const MyPage: React.FC = () => {
                   label="좋아요"
                   color="#FF6B9D"
                 />
-                <StatCard
-                  icon={PlayArrow}
-                  value={userStats.totalPlays}
-                  label="총 재생"
-                  color="#8B5CF6"
-                />
               </Box>
             </Box>
 
@@ -875,9 +1027,10 @@ const MyPage: React.FC = () => {
             <Box
               sx={{
                 borderBottom: 1,
-                borderColor: "rgba(255, 255, 255, 0.1)",
-                background: "rgba(0, 0, 0, 0.2)",
+                borderColor: "rgba(236, 72, 153, 0.3)",
+                background: "rgba(26, 26, 46, 0.3)",
                 backdropFilter: "blur(10px)",
+                boxShadow: "0 0 20px rgba(236, 72, 153, 0.1)",
               }}
             >
               <Tabs
@@ -885,15 +1038,29 @@ const MyPage: React.FC = () => {
                 onChange={handleTabChange}
                 sx={{
                   "& .MuiTab-root": {
-                    color: "rgba(255, 255, 255, 0.7)",
+                    color: "#ec4899",
+                    fontWeight: "bold",
+                    textTransform: "none",
+                    fontSize: "1rem",
+                    textShadow: "0 0 10px #ec4899",
+                    animation: "neonGlow 2s ease-in-out infinite",
                     "&.Mui-selected": {
-                      color: "#C147E9",
+                      color: "#06b6d4",
+                      textShadow: "0 0 15px #06b6d4",
+                      animation: "cyanGlow 2s ease-in-out infinite",
+                    },
+                    "&:hover": {
+                      color: "#06b6d4",
+                      textShadow: "0 0 15px #06b6d4",
+                      animation: "cyanGlow 1.5s ease-in-out infinite",
                     },
                   },
                   "& .MuiTabs-indicator": {
-                    backgroundColor: "#C147E9",
+                    backgroundColor: "#06b6d4",
                     height: 3,
                     borderRadius: "3px 3px 0 0",
+                    boxShadow: "0 0 15px #06b6d4",
+                    animation: "cyanBorder 2s ease-in-out infinite",
                   },
                 }}
               >
@@ -968,7 +1135,7 @@ const MyPage: React.FC = () => {
                       {albumsError}
                     </Typography>
                     <Button
-                      onClick={() => window.location.reload()}
+                      onClick={() => loadAlbumsWithRetry()}
                       variant="outlined"
                       sx={{ color: "#FFFFFF", borderColor: "#FFFFFF" }}
                     >
@@ -1140,32 +1307,46 @@ const MyPage: React.FC = () => {
                   </Typography>
                 </Box>
               ) : (
-                <TableContainer>
+                <TableContainer
+                  sx={{
+                    background: "rgba(0, 0, 0, 0.6)",
+                    backdropFilter: "blur(10px)",
+                    borderRadius: 2,
+                    border: "2px solid #ec4899",
+                    boxShadow: "0 0 15px #ec4899, inset 0 0 10px rgba(236, 72, 153, 0.1)",
+                    animation: "neonBorder 2s ease-in-out infinite",
+                  }}
+                >
                   <Table>
                     <TableHead>
                       <TableRow>
                         <TableCell
-                          sx={{ color: "#FFFFFF", fontWeight: "bold" }}
+                          sx={{ 
+                            color: "#FFFFFF", 
+                            fontWeight: "bold",
+                            textShadow: "0 0 10px #ec4899",
+                            borderBottom: "2px solid #ec4899",
+                          }}
                         >
                           곡 정보
                         </TableCell>
                         <TableCell
-                          sx={{ color: "#FFFFFF", fontWeight: "bold" }}
-                        >
-                          점수
-                        </TableCell>
-                        <TableCell
-                          sx={{ color: "#FFFFFF", fontWeight: "bold" }}
-                        >
-                          품질
-                        </TableCell>
-                        <TableCell
-                          sx={{ color: "#FFFFFF", fontWeight: "bold" }}
+                          sx={{ 
+                            color: "#FFFFFF", 
+                            fontWeight: "bold",
+                            textShadow: "0 0 10px #ec4899",
+                            borderBottom: "2px solid #ec4899",
+                          }}
                         >
                           재생시간
                         </TableCell>
                         <TableCell
-                          sx={{ color: "#FFFFFF", fontWeight: "bold" }}
+                          sx={{ 
+                            color: "#FFFFFF", 
+                            fontWeight: "bold",
+                            textShadow: "0 0 10px #ec4899",
+                            borderBottom: "2px solid #ec4899",
+                          }}
                         >
                           녹음일
                         </TableCell>
@@ -1213,26 +1394,6 @@ const MyPage: React.FC = () => {
                                 </Typography>
                               </Box>
                             </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              sx={{ fontWeight: "bold", color: "#FFFFFF" }}
-                            >
-                              {recording.analysis?.overallScore || "-"}점
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={recording.processingStatus}
-                              size="small"
-                              sx={{
-                                backgroundColor: getProcessingStatusColor(
-                                  recording.processingStatus
-                                ),
-                                color: "white",
-                              }}
-                            />
                           </TableCell>
                           <TableCell>
                             <Typography
@@ -1301,16 +1462,17 @@ const MyPage: React.FC = () => {
                 <Box sx={{ textAlign: "center", py: 8 }}>
                   <Typography
                     variant="h6"
-                    sx={{ color: "rgba(255, 255, 255, 0.8)", mb: 1 }}
-                  >
-                    오류가 발생했습니다
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: "rgba(255, 255, 255, 0.7)" }}
+                    sx={{ color: "#FF6B6B", mb: 2 }}
                   >
                     {likedAlbumsError}
                   </Typography>
+                  <Button
+                    onClick={() => loadLikedAlbumsWithRetry()}
+                    variant="outlined"
+                    sx={{ color: "#FFFFFF", borderColor: "#FFFFFF" }}
+                  >
+                    다시 시도
+                  </Button>
                 </Box>
               ) : likedAlbums.length === 0 ? (
                 <Box sx={{ textAlign: "center", py: 8 }}>
@@ -1880,25 +2042,66 @@ const MyPage: React.FC = () => {
                       transform: "scale(1.05)",
                     },
                   }}
-                  onClick={() => {
+                  onClick={async () => {
+                    console.log("앨범 커버 클릭됨:", album.title, album.coverImageUrl);
+                    
                     if (
                       album.coverImageUrl &&
-                      album.coverImageUrl !== "/image/albumCoverImage.png"
+                      album.coverImageUrl !== "/image/albumCoverImage.png" &&
+                      album.coverImageUrl !== "default"
                     ) {
-                      // 실제 커버 이미지가 있으면 배경으로 설정
-                      localStorage.setItem(
-                        "customBackground",
-                        `url(${album.coverImageUrl})`
-                      );
-                      setForceDefaultBackground(false);
-                      localStorage.removeItem("forceDefaultBackground");
-                      showToast(
-                        "앨범 커버가 배경으로 설정되었습니다.",
-                        "success"
-                      );
-                      setIsBackgroundModalOpen(false);
-                      window.location.reload();
+                      try {
+                        // URL이 상대 경로인 경우 절대 경로로 변환
+                        let imageUrl = album.coverImageUrl;
+                        if (imageUrl.startsWith('/')) {
+                          imageUrl = `${window.location.origin}${imageUrl}`;
+                        }
+                        
+                        console.log("설정할 배경 URL:", imageUrl);
+                        
+                        // 앨범 커버를 배경으로 설정 (url() 형태로 저장)
+                        localStorage.setItem(
+                          "customBackground",
+                          `url(${imageUrl})`
+                        );
+                        
+                        // 강제 기본 배경 플래그 해제
+                        setForceDefaultBackground(false);
+                        localStorage.removeItem("forceDefaultBackground");
+                        
+                        console.log("localStorage에 저장됨:", localStorage.getItem("customBackground"));
+                        
+                        // 서버에 배경 이미지 업로드 (선택사항)
+                        if (updateBackgroundImage) {
+                          try {
+                            const response = await fetch(imageUrl);
+                            if (response.ok) {
+                              const blob = await response.blob();
+                              const file = new File([blob], 'album-cover.png', { type: 'image/png' });
+                              await updateBackgroundImage(file);
+                              console.log("서버 업로드 성공");
+                            }
+                          } catch (uploadError) {
+                            console.log("서버 업로드 실패, 로컬에서만 적용:", uploadError);
+                          }
+                        }
+                        
+                        showToast(
+                          "앨범 커버가 배경으로 설정되었습니다.",
+                          "success"
+                        );
+                        setIsBackgroundModalOpen(false);
+                        
+                        // 페이지 새로고침으로 배경 적용
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 500);
+                      } catch (error) {
+                        console.error("배경 설정 실패:", error);
+                        showToast("배경 설정에 실패했습니다.", "error");
+                      }
                     } else {
+                      console.log("유효하지 않은 커버 이미지:", album.coverImageUrl);
                       showToast(
                         "이 앨범에는 커버 이미지가 설정되지 않았습니다.",
                         "info"
@@ -1969,9 +2172,13 @@ const MyPage: React.FC = () => {
                           defaultBgFile
                         );
                         if (success) {
-                          // 서버 업로드 성공 시 플래그 해제 (서버 데이터 사용)
+                          // 서버 업로드 성공 시 플래그 해제하고 기본 배경을 localStorage에 저장
                           setForceDefaultBackground(false);
                           localStorage.removeItem("forceDefaultBackground");
+                          localStorage.setItem("customBackground", `url(${defaultImageUrl})`);
+                        } else {
+                          // 서버 업로드 실패 시에도 플래그는 유지
+                          console.log("서버 업로드 실패, 강제 기본 배경 플래그 유지");
                         }
                       }
                     } catch (uploadError) {
@@ -2020,7 +2227,9 @@ const MyPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+      </Box>
+    </div>
+    </>
   );
 };
 
