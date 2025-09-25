@@ -13,7 +13,7 @@ import com.ssafy.lab.orak.profile.service.ProfileService;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-@Slf4j
+@Log4j2
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -286,12 +286,24 @@ public class AlbumService {
             coverImageUrl = getDefaultCoverImageUrl();
         }
 
-        // 사용자 프로필 정보 가져오기 (임시로 기본값 사용)
+        // 사용자 프로필 정보 가져오기
         String userNickname = "사용자 " + album.getUserId();
         String userProfileImageUrl = null;
 
-        // TODO: 프로필 서비스 연동 (현재는 기본값 사용)
-        log.debug("사용자 정보 - userId: {}, nickname: {}", album.getUserId(), userNickname);
+        try {
+                    ProfileResponseDTO profileResponse = profileService.getProfileByUserId(album.getUserId());
+            if (profileResponse != null) {
+                userNickname = profileResponse.getNickname() != null ?
+                        profileResponse.getNickname() : "사용자 " + album.getUserId();
+                userProfileImageUrl = profileResponse.getProfileImageUrl();
+            }
+            log.debug("사용자 프로필 정보 조회 완료 - userId: {}, nickname: {}, hasProfileImage: {}",
+                    album.getUserId(), userNickname, userProfileImageUrl != null);
+        } catch (Exception e) {
+            log.warn("사용자 프로필 정보 조회 실패, 기본값 사용 - userId: {}, error: {}",
+                    album.getUserId(), e.getMessage());
+            log.debug("프로필 조회 상세 오류", e);
+        }
 
         return AlbumResponseDto.builder()
                 .id(album.getId())

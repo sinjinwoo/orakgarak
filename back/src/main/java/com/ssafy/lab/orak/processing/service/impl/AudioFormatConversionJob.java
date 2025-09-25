@@ -1,14 +1,17 @@
 package com.ssafy.lab.orak.processing.service.impl;
 
+import com.ssafy.lab.orak.ai.service.VectorService;
 import com.ssafy.lab.orak.processing.exception.AudioProcessingException;
 import com.ssafy.lab.orak.processing.service.ProcessingJob;
+import com.ssafy.lab.orak.recording.entity.Record;
+import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
 import com.ssafy.lab.orak.s3.helper.S3Helper;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +22,14 @@ import java.nio.file.Paths;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class AudioFormatConversionJob implements ProcessingJob {
 
     private final AudioConverter audioConverter;
     private final S3Helper s3Helper;
     private final UploadRepository uploadRepository;
+    private final VectorService vectorService;
+    private final RecordRepository recordRepository;
 
     @Value("${orak.upload.path:/tmp/orak-upload}")
     private String uploadPath;
@@ -34,10 +39,20 @@ public class AudioFormatConversionJob implements ProcessingJob {
         log.info("포맷 변환 시작: upload: {} ({})", upload.getId(), upload.getOriginalFilename());
         
         try {
-            // 실제 포맷 변환 수행
+            // 1. 실제 포맷 변환 수행
             performActualConversion(upload);
-
             log.info("포맷 변환 완료: upload: {}", upload.getId());
+
+            // 2. WAV 변환 완료 후 바로 벡터 분석 수행
+            try {
+                performVectorAnalysis(upload);
+                log.info("벡터 분석 완료: upload: {}", upload.getId());
+            } catch (Exception vectorException) {
+                log.warn("벡터 분석 실패하지만 WAV 변환은 성공: upload: {}, error: {}",
+                    upload.getId(), vectorException.getMessage());
+                // 벡터 분석 실패해도 WAV 변환은 성공으로 처리
+            }
+
             return true;
 
         } catch (AudioProcessingException e) {
@@ -62,7 +77,7 @@ public class AudioFormatConversionJob implements ProcessingJob {
     
     @Override
     public ProcessingStatus getCompletedStatus() {
-        return ProcessingStatus.COMPLETED;
+        return ProcessingStatus.VECTOR_COMPLETED;
     }
     
     @Override
@@ -217,6 +232,30 @@ public class AudioFormatConversionJob implements ProcessingJob {
         upload.setContentType("audio/wav");
         uploadRepository.save(upload);
         log.info("Upload 엔티티 업데이트 완료: uploadId={}, newExtension=wav", upload.getId());
+    }
+
+    /**
+     * 벡터 분석 수행 (WAV 변환 완료 후)
+     */
+    private void performVectorAnalysis(Upload upload) {
+        log.info("벡터 분석 시작: uploadId={}", upload.getId());
+
+        // Record 조회 (userId, songId 필요)
+        Record record = recordRepository.findByUploadId(upload.getId());
+        if (record == null) {
+            log.warn("Record를 찾을 수 없음, 벡터 분석 스킵: uploadId={}", upload.getId());
+            return;
+        }
+
+        // VectorService를 통한 Python 음성 분석 호출
+        vectorService.processRecordVectorSync(
+            record.getUserId(),
+            upload.getId(),
+            record.getSongId()
+        );
+
+        log.info("벡터 분석 완료: uploadId={}, userId={}, songId={}",
+                upload.getId(), record.getUserId(), record.getSongId());
     }
 
     private void cleanupLocalFiles(String... filePaths) {

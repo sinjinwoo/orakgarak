@@ -9,7 +9,7 @@ import com.ssafy.lab.orak.comment.exception.CommentAccessDeniedException;
 import com.ssafy.lab.orak.comment.exception.CommentNotFoundException;
 import com.ssafy.lab.orak.comment.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,7 +21,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
+@Log4j2
 @Service
 @RequiredArgsConstructor
 @Transactional

@@ -62,4 +62,26 @@ public interface UploadRepository extends JpaRepository<Upload, Long> {
     
     // UUID로 업로드 찾기 (S3 이벤트 처리용)
     Optional<Upload> findByUuid(String uuid);
+
+    // ===============================================
+    // DLQ 패턴용 추가 쿼리들
+    // ===============================================
+
+    /**
+     * Kafka에서 놓친 파일들 조회 (배치 처리용)
+     * 오랫동안 UPLOADED 상태로 남아있는 파일들
+     */
+    @Query("SELECT u FROM Upload u WHERE " +
+           "u.processingStatus = 'UPLOADED' AND " +
+           "u.createdAt < :stuckTime " +
+           "ORDER BY u.createdAt ASC")
+    List<Upload> findStuckUploads(@Param("limit") int limit, @Param("stuckTime") LocalDateTime stuckTime);
+
+    /**
+     * Kafka 헬스 체크용 - 오랫동안 처리되지 않은 파일 개수
+     */
+    @Query("SELECT COUNT(u) FROM Upload u WHERE " +
+           "u.processingStatus = 'UPLOADED' AND " +
+           "u.createdAt < :stuckTime")
+    long countStuckUploads(@Param("stuckTime") LocalDateTime stuckTime);
 }

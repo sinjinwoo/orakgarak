@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.lab.orak.event.dto.UploadEvent;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -14,12 +14,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class KafkaEventConsumer {
 
     private final ObjectMapper objectMapper;
     private final FileUploadService fileUploadService;
     private final EventDrivenProcessingService eventDrivenProcessingService;
+    private final KafkaEventProducer kafkaEventProducer;
     
     // 처리 통계
     private final AtomicInteger processedEvents = new AtomicInteger(0);
@@ -48,11 +49,18 @@ public class KafkaEventConsumer {
             log.debug("업로드 이벤트 처리 완료: {}", event.getEventId());
             
         } catch (Exception e) {
-            log.error("업로드 이벤트 처리 실패: partition={}, offset={}, value={}", 
+            log.error("업로드 이벤트 처리 실패: partition={}, offset={}, value={}",
                     record.partition(), record.offset(), record.value(), e);
             failedEvents.incrementAndGet();
-            
-            // 실패 시에도 ACK (재시도 로직은 별도 구현 필요)
+
+            // 재시도 또는 DLQ 처리
+            try {
+                UploadEvent event = objectMapper.readValue(record.value(), UploadEvent.class);
+                handleProcessingFailure(event, e);
+            } catch (Exception parseException) {
+                log.error("실패한 이벤트 파싱조차 실패: {}", record.value(), parseException);
+            }
+
             ack.acknowledge();
         }
     }
@@ -190,5 +198,86 @@ public class KafkaEventConsumer {
         private int totalProcessed;
         private int totalFailed;
         private double successRate;
+    }
+
+    // ===============================================
+    // DLQ 및 재시도 관련 메서드들
+    // ===============================================
+
+    private void handleProcessingFailure(UploadEvent event, Exception exception) {
+        String errorMessage = String.format("Processing failed: %s", exception.getMessage());
+
+        if (event.isEligibleForRetry()) {
+            // 재시도 가능한 경우 재시도 토픽으로 전송
+            log.warn("이벤트 재시도 예약: uploadId={}, retryCount={}, error={}",
+                    event.getUploadId(), event.getRetryCount(), errorMessage);
+            kafkaEventProducer.sendToRetryTopic(event);
+        } else {
+            // 최대 재시도 횟수 초과 시 DLQ로 전송
+            log.error("최대 재시도 횟수 초과로 DLQ 이동: uploadId={}, retryCount={}, error={}",
+                    event.getUploadId(), event.getRetryCount(), errorMessage);
+            kafkaEventProducer.sendToDLQ(event, errorMessage);
+        }
+    }
+
+    // ===============================================
+    // 재시도 토픽 Consumer
+    // ===============================================
+
+    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.upload-events-retry')}",
+                   groupId = "#{@environment.getProperty('spring.kafka.consumer.group-id')}-retry")
+    public void handleRetryEvents(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        try {
+            String eventJson = record.value();
+            UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
+
+            log.info("재시도 이벤트 처리 중: uploadId={}, retryCount={}, partition={}, offset={}",
+                    event.getUploadId(), event.getRetryCount(), record.partition(), record.offset());
+
+            // 재시도 지연 처리 (5분 지연)
+            long retryDelayMinutes = 5;
+            if (event.getLastRetryTime() != null) {
+                long timeSinceLastRetry = java.time.Duration.between(
+                        event.getLastRetryTime(),
+                        java.time.LocalDateTime.now()
+                ).toMinutes();
+
+                if (timeSinceLastRetry < retryDelayMinutes) {
+                    log.info("재시도 지연 시간 미충족, 다시 재시도 토픽으로: uploadId={}, timeSince={}분",
+                            event.getUploadId(), timeSinceLastRetry);
+                    kafkaEventProducer.sendToRetryTopic(event);
+                    ack.acknowledge();
+                    return;
+                }
+            }
+
+            // 실제 재시도 처리
+            switch (event.getEventType()) {
+                case "UPLOAD_COMPLETED" -> handleUploadCompleted(event);
+                case "PROCESSING_REQUESTED" -> handleProcessingRequested(event);
+                case "RETRY_PROCESSING" -> handleProcessingRequested(event);
+                default -> log.warn("알 수 없는 재시도 이벤트 타입: {}", event.getEventType());
+            }
+
+            ack.acknowledge();
+            processedEvents.incrementAndGet();
+            log.info("재시도 이벤트 처리 성공: uploadId={}, retryCount={}",
+                    event.getUploadId(), event.getRetryCount());
+
+        } catch (Exception e) {
+            log.error("재시도 이벤트 처리 실패: partition={}, offset={}, value={}",
+                    record.partition(), record.offset(), record.value(), e);
+            failedEvents.incrementAndGet();
+
+            // 재시도 이벤트도 실패한 경우 DLQ로 전송
+            try {
+                UploadEvent event = objectMapper.readValue(record.value(), UploadEvent.class);
+                kafkaEventProducer.sendToDLQ(event, "Retry event processing failed: " + e.getMessage());
+            } catch (Exception parseException) {
+                log.error("재시도 이벤트 파싱 실패: {}", record.value(), parseException);
+            }
+
+            ack.acknowledge();
+        }
     }
 }
