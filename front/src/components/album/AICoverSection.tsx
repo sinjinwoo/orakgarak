@@ -3,10 +3,10 @@
  * 스타일 프리셋, 레퍼런스 보드, 파라미터 조정이 가능한 AI 커버 생성
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, RefreshCw, Check, Eye, EyeOff
+  Sparkles, RefreshCw, Check
 } from 'lucide-react';
 import { useAlbumMetaStore } from '../../stores/albumMetaStore';
 import { generateCovers } from '../../services/api/cover';
@@ -25,8 +25,6 @@ const AICoverSection: React.FC<AICoverSectionProps> = ({
     cover,
     addCoverVariant,
     selectCoverVariant,
-    comparisonMode,
-    setComparisonMode,
     setCoverUpload,
   } = useAlbumMetaStore();
 
@@ -92,22 +90,6 @@ const AICoverSection: React.FC<AICoverSectionProps> = ({
             <Sparkles size={18} />
           )}
           {isGenerating ? 'AI 생성 중...' : 'AI 커버 생성'}
-        </motion.button>
-
-        <motion.button
-          onClick={() => setComparisonMode(!comparisonMode)}
-          className={`
-            px-4 py-3 rounded-xl font-medium transition-colors flex items-center gap-2
-            ${comparisonMode
-              ? 'bg-blue-500/20 text-blue-300 border-2 border-blue-400/30'
-              : 'bg-white/10 text-white/70 hover:bg-white/20 border-2 border-transparent'
-            }
-          `}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          {comparisonMode ? <Eye size={16} /> : <EyeOff size={16} />}
-          비교
         </motion.button>
       </div>
 

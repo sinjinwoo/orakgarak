@@ -38,11 +38,11 @@ const CoverSelectionTab: React.FC<CoverSelectionTabProps> = ({
   return (
     <div className={`relative ${className}`}>
       {/* 탭 컨테이너 */}
-      <div className="relative bg-white/5 backdrop-blur-sm rounded-xl p-1 border border-white/10">
+      <div className="relative bg-white/5 backdrop-blur-sm rounded-xl p-1">
         <div className="grid grid-cols-2 gap-1 relative">
           {/* 슬라이딩 배경 */}
           <motion.div
-            className="absolute inset-y-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm rounded-lg border border-white/20"
+            className="absolute inset-y-1 bg-gradient-to-r from-cyan-300/30 to-pink-300/30 backdrop-blur-sm rounded-lg"
             layoutId="tab-background"
             animate={{
               x: mode === 'ai' ? 0 : '100%',

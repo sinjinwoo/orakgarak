@@ -1,6 +1,6 @@
 /**
  * Vertical Timeline Stepper Component
- * 좌측 세로 타임라인 스테퍼 - 키보드 네비게이션 지원
+ * 좌측 세로 타임라인 스테퍼
  */
 
 import React, { useCallback, useEffect, useRef } from 'react';
@@ -56,35 +56,6 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
   className = '',
 }) => {
   const timelineRef = useRef<HTMLDivElement>(null);
-  const currentStepIndex = steps.findIndex((step) => step.id === currentStage);
-
-  // 키보드 네비게이션 핸들러
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
-      const currentIndex = steps.findIndex((step) => step.id === currentStage);
-
-      switch (event.key) {
-        case 'ArrowUp':
-          event.preventDefault();
-          if (currentIndex > 0) {
-            onStageChange(steps[currentIndex - 1].id);
-          }
-          break;
-        case 'ArrowDown':
-          event.preventDefault();
-          if (currentIndex < steps.length - 1) {
-            onStageChange(steps[currentIndex + 1].id);
-          }
-          break;
-        case 'Enter':
-        case ' ':
-          event.preventDefault();
-          // 현재 단계는 이미 활성화되어 있으므로 아무것도 하지 않음
-          break;
-      }
-    },
-    [currentStage, onStageChange]
-  );
 
   // 단계 클릭 핸들러
   const handleStepClick = useCallback(
@@ -108,7 +79,7 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
   return (
     <div
       ref={timelineRef}
-      className={`sticky top-20 h-[calc(100vh-5rem)] overflow-auto rounded-2xl px-5 py-6 w-full ${className}`}
+      className={`sticky top-20 h-[calc(100vh-5rem)] overflow-hidden rounded-2xl px-5 py-6 w-full ${className}`}
       role="navigation"
       aria-label="앨범 생성 단계"
       style={{
@@ -125,7 +96,7 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
       {/* 타임라인 스텝 */}
       <div className="relative">
         {/* 연결선 */}
-        <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-white/20" />
+        <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-gradient-to-b from-pink-400/60 to-cyan-300/60" />
 
         {steps.map((step, index) => {
           const isCompleted = completedStages.includes(step.id);
@@ -140,10 +111,7 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
               key={step.id}
               className={`relative flex items-start mb-8 last:mb-0 cursor-pointer group transition-all duration-200 overflow-hidden`}
               onClick={() => handleStepClick(step.id)}
-              onKeyDown={handleKeyDown}
-              tabIndex={isCurrent ? 0 : -1}
               role="button"
-              aria-current={isCurrent ? 'step' : undefined}
               aria-label={`${step.title}: ${step.description}`}
               data-active={isCurrent}
             >
@@ -151,11 +119,11 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
               <div
                 className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-200 ${
                   isCompleted
-                    ? 'bg-fuchsia-500 border-fuchsia-400 text-white'
+                    ? 'bg-gradient-to-br from-pink-400 to-cyan-300 border-pink-300 text-white shadow-lg shadow-pink-400/40'
                     : isCurrent
-                    ? 'bg-transparent border-fuchsia-400 text-fuchsia-400 ring-2 ring-fuchsia-400/30'
-                    : 'bg-transparent border-white/30 text-white/40'
-                } ${isCurrent ? 'shadow-lg shadow-fuchsia-400/20' : ''}`}
+                    ? 'bg-transparent border-pink-300 text-pink-300 ring-2 ring-pink-300/40 shadow-lg shadow-pink-300/30'
+                    : 'bg-transparent border-white/50 text-white/60'
+                }`}
               >
                 {isCompleted ? (
                   <CheckCircle2 className="w-4 h-4" />
@@ -191,7 +159,7 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
 
                 {/* 현재 단계 인디케이터 */}
                 {isCurrent && (
-                  <div className="mt-2 px-2 py-1 bg-fuchsia-500/20 border border-fuchsia-400/30 rounded-lg text-xs text-fuchsia-300 font-medium inline-block max-w-full">
+                  <div className="mt-2 px-2 py-1 bg-gradient-to-r from-pink-400/30 to-cyan-300/30 border border-pink-300/40 rounded-lg text-xs text-pink-200 font-medium inline-block max-w-full">
                     진행 중
                   </div>
                 )}
@@ -201,22 +169,13 @@ const StepperTimeline: React.FC<StepperTimelineProps> = ({
               <div
                 className={`absolute inset-0 -m-2 rounded-xl border transition-all duration-200 ${
                   isCurrent
-                    ? 'border-fuchsia-400/30 bg-fuchsia-500/5'
-                    : 'border-transparent group-hover:border-white/10 group-hover:bg-white/5'
+                    ? 'border-pink-300/40 bg-gradient-to-r from-pink-400/10 to-cyan-300/10'
+                    : 'border-transparent group-hover:border-pink-300/20 group-hover:bg-gradient-to-r group-hover:from-pink-400/10 group-hover:to-cyan-300/10'
                 }`}
               />
             </div>
           );
         })}
-      </div>
-
-      {/* 키보드 단축키 안내 */}
-      <div className="mt-8 pt-4 border-t border-white/10">
-        <p className="text-xs text-white/40 mb-2">키보드 단축키</p>
-        <div className="space-y-1 text-xs text-white/60">
-          <div>↑/↓ 단계 이동</div>
-          <div>Enter 선택</div>
-        </div>
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({ className = '' }) => {
 
   return (
     <div className={`
-      sticky top-20 h-[calc(100vh-5rem)] overflow-auto
+      sticky top-20 h-[calc(100vh-5rem)] overflow-hidden
       rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10
       p-6 space-y-8 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent
       ${className}

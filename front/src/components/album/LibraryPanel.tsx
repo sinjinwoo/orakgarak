@@ -89,14 +89,14 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
   return (
     <div
       ref={setNodeRef}
-      className={`bg-gray-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 h-full flex flex-col ${
-        isOver ? 'ring-2 ring-fuchsia-400 bg-fuchsia-500/5' : ''
+      className={`bg-gray-900/50 backdrop-blur-xl border-2 border-cyan-300/80 rounded-2xl p-6 h-full flex flex-col shadow-2xl shadow-cyan-300/50 ${
+        isOver ? 'ring-2 ring-yellow-300 bg-yellow-500/5 shadow-2xl shadow-yellow-300/70' : ''
       } ${className}`}
     >
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-          <Music className="w-5 h-5 text-fuchsia-400" />
+          <Music className="w-5 h-5 text-cyan-300" />
           내 녹음 목록
         </h2>
         <p className="text-sm text-white/60">
@@ -113,7 +113,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
             placeholder="제목으로 검색..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 bg-white/5 border-2 border-cyan-300/60 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 focus:shadow-2xl focus:shadow-pink-300/60"
           />
         </div>
       </div>
@@ -133,8 +133,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
                 onClick={() => handleSortChange(field)}
                 className={`px-2 py-1 text-xs rounded-md transition-colors duration-200 flex items-center gap-1 ${
                   sortField === field
-                    ? 'bg-fuchsia-500 text-white'
-                    : 'bg-white/10 text-white/60 hover:bg-white/20'
+                    ? 'bg-pink-400 text-white shadow-2xl shadow-pink-400/70'
+                    : 'bg-white/10 text-white/60 hover:bg-white/20 hover:shadow-2xl hover:shadow-cyan-300/50'
                 }`}
               >
                 <Icon className="w-3 h-3" />
@@ -151,8 +151,8 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
       </div>
 
       {/* Recording List */}
-      <div className="flex-1 overflow-auto">
-        <div className="space-y-2">
+      <div className="flex-1 overflow-hidden">
+        <div className="space-y-3 p-1">
           {filteredAndSortedRecordings.length === 0 ? (
             <div className="text-center py-8 text-white/40">
               <Music className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -178,7 +178,7 @@ const LibraryPanel: React.FC<LibraryPanelProps> = ({
       </div>
 
       {/* Drag hint */}
-      <div className="mt-4 p-3 bg-white/5 border border-white/10 rounded-lg">
+      <div className="mt-4 p-3 bg-white/5 border-2 border-pink-300/60 rounded-lg shadow-2xl shadow-pink-300/50">
         <p className="text-xs text-white/60 text-center">
           💡 녹음을 드래그해서 오른쪽 캔버스에 추가하세요
         </p>
