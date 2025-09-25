@@ -225,24 +225,6 @@ const RecommendationsPage: React.FC = () => {
             mb: 4,
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{
-              fontWeight: "bold",
-              color: "#FB42D4",
-              fontSize: { xs: "2rem", md: "2.5rem" },
-              textShadow: "0 0 20px #F40AD5",
-              fontFamily: "neon, monospace",
-              animation: "cyber 2s ease-in-out infinite alternate",
-              "@keyframes cyber": {
-                "0%": { textShadow: "0 0 20px #F40AD5" },
-                "100%": { textShadow: "0 0 40px #F40AD5, 0 0 60px #F40AD5" },
-              },
-            }}
-          >
-            🎵 NEON RECOMMENDATIONS
-          </Typography>
         </Box>
 
         {/* 웰컴 화면 */}
