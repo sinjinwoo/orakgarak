@@ -286,12 +286,22 @@ public class AlbumService {
             coverImageUrl = getDefaultCoverImageUrl();
         }
 
-        // 사용자 프로필 정보 가져오기 (임시로 기본값 사용)
+        // 사용자 프로필 정보 가져오기
         String userNickname = "사용자 " + album.getUserId();
         String userProfileImageUrl = null;
 
-        // TODO: 프로필 서비스 연동 (현재는 기본값 사용)
-        log.debug("사용자 정보 - userId: {}, nickname: {}", album.getUserId(), userNickname);
+        try {
+            ProfileResponseDTO profile = profileService.getProfileByUserId(album.getUserId());
+            if (profile != null) {
+                userNickname = profile.getNickname() != null ? profile.getNickname() : userNickname;
+                userProfileImageUrl = profile.getProfileImageUrl();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch profile for userId: {}", album.getUserId(), e);
+        }
+
+        log.debug("사용자 정보 - userId: {}, nickname: {}, profileImageUrl: {}",
+                  album.getUserId(), userNickname, userProfileImageUrl);
 
         return AlbumResponseDto.builder()
                 .id(album.getId())
