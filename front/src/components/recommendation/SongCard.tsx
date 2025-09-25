@@ -3,11 +3,17 @@ import {
   Card, 
   Typography, 
   Box,
-  Button
+  Button,
+  IconButton,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { 
-  BookmarkAdd
+  BookmarkAdd,
+  ThumbDown,
+  ThumbDownOffAlt
 } from '@mui/icons-material';
+import { songService } from '../../services/api/songs';
 import type { RecommendedSong } from '../../types/recommendation';
 import '../../styles/cyberpunk-animations.css';
 
@@ -16,18 +22,34 @@ interface SongCardProps {
   isSelected?: boolean;
   onSelect?: (song: RecommendedSong) => void;
   onReservation?: (song: RecommendedSong) => void;
+  showDislike?: boolean;
 }
 
 const SongCard: React.FC<SongCardProps> = ({
   song,
   isSelected = false,
   onSelect,
-  onReservation
+  onReservation,
+  showDislike = true
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isDisliked, setIsDisliked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
   // 카드 클릭 핸들러 (뒤집기)
   const handleCardClick = (e: React.MouseEvent) => {
+    // 싫어요 버튼 클릭인지 확인
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-dislike-button]')) {
+      console.log('싫어요 버튼 클릭 감지 - 카드 클릭 무시');
+      return;
+    }
+    
     e.stopPropagation();
     console.log('카드 클릭 - 뒤집기:', !isFlipped);
     setIsFlipped(!isFlipped);
@@ -39,6 +61,43 @@ const SongCard: React.FC<SongCardProps> = ({
     e.stopPropagation();
     console.log('예약 버튼 클릭:', song.title);
     onReservation?.(song);
+  };
+
+  // 싫어요 버튼 핸들러
+  const handleDislike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    
+    try {
+      console.log('싫어요 토글:', song.title, song.songId);
+      const response = await songService.toggleDislike(song.songId);
+      
+      setIsDisliked(response.isDisliked);
+      setSnackbar({
+        open: true,
+        message: response.message,
+        severity: 'success'
+      });
+      
+      console.log('싫어요 토글 결과:', response);
+    } catch (error) {
+      console.error('싫어요 토글 실패:', error);
+      setSnackbar({
+        open: true,
+        message: '싫어요 처리 중 오류가 발생했습니다.',
+        severity: 'error'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 스낵바 닫기
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   return (
@@ -81,6 +140,7 @@ const SongCard: React.FC<SongCardProps> = ({
             boxShadow: isSelected 
               ? '0 0 40px rgba(255,0,128,0.4)' 
               : '0 8px 32px rgba(0,0,0,0.4)',
+            pointerEvents: isFlipped ? 'none' : 'auto'
           }}
         >
           <Box
@@ -115,6 +175,7 @@ const SongCard: React.FC<SongCardProps> = ({
                 `
               }}
             />
+
 
             {/* 앞면 하단 정보 */}
             <Box sx={{ position: 'relative', zIndex: 2, p: 2 }}>
@@ -151,7 +212,7 @@ const SongCard: React.FC<SongCardProps> = ({
           </Box>
         </Card>
 
-        {/* 뒷면 - 예약 버튼만 */}
+        {/* 뒷면 - 예약 버튼과 싫어요 버튼 */}
         <Card
           sx={{
             position: 'absolute',
@@ -173,10 +234,84 @@ const SongCard: React.FC<SongCardProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             p: 4,
-            boxShadow: '0 0 40px rgba(0,255,255,0.2)'
+            boxShadow: '0 0 40px rgba(0,255,255,0.2)',
+            pointerEvents: isFlipped ? 'auto' : 'none'
           }}
           className="matrix-bg hologram-panel"
         >
+          {/* 싫어요 버튼 (뒷면 좌하단, 안쪽으로 배치) */}
+          {showDislike && (
+          <Box 
+            data-dislike-button
+            sx={{ 
+              position: 'absolute', 
+              bottom: 16, 
+              left: 16, 
+              zIndex: 1000,
+              pointerEvents: 'auto'
+            }}
+            onClick={(e) => {
+              console.log('싫어요 버튼 Box 클릭');
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onMouseDown={(e) => {
+              console.log('싫어요 버튼 Box 마우스다운');
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <IconButton
+              data-dislike-button
+              onClick={(e) => {
+                console.log('싫어요 버튼 IconButton 클릭');
+                e.preventDefault();
+                e.stopPropagation();
+                handleDislike(e);
+              }}
+              onMouseDown={(e) => {
+                console.log('싫어요 버튼 IconButton 마우스다운');
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onMouseUp={(e) => {
+                console.log('싫어요 버튼 IconButton 마우스업');
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              disabled={isLoading}
+              sx={{
+                background: isDisliked 
+                  ? 'rgba(255, 0, 0, 0.8)' 
+                  : 'rgba(0, 0, 0, 0.6)',
+                color: isDisliked ? '#fff' : 'rgba(255, 255, 255, 0.7)',
+                border: isDisliked 
+                  ? '2px solid rgba(255, 0, 0, 0.8)' 
+                  : '2px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '50%',
+                width: 40,
+                height: 40,
+                backdropFilter: 'blur(10px)',
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+                '&:hover': {
+                  background: isDisliked 
+                    ? 'rgba(255, 0, 0, 0.9)' 
+                    : 'rgba(255, 0, 0, 0.7)',
+                  color: '#fff',
+                  border: '2px solid rgba(255, 0, 0, 0.9)',
+                  transform: 'scale(1.1)',
+                  boxShadow: '0 0 20px rgba(255, 0, 0, 0.5)'
+                },
+                '&:active': {
+                  transform: 'scale(0.95)'
+                }
+              }}
+            >
+              {isDisliked ? <ThumbDown /> : <ThumbDownOffAlt />}
+            </IconButton>
+          </Box>
+          )}
           {/* 곡 정보 */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
             <Typography 
@@ -263,6 +398,32 @@ const SongCard: React.FC<SongCardProps> = ({
           </Typography>
         </Card>
       </Box>
+
+      {/* 스낵바 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleSnackbarClose} 
+          severity={snackbar.severity}
+          sx={{
+            background: snackbar.severity === 'success' 
+              ? 'rgba(0, 255, 136, 0.9)' 
+              : 'rgba(255, 0, 68, 0.9)',
+            color: '#000',
+            fontFamily: "'Courier New', monospace",
+            fontWeight: 600,
+            '& .MuiAlert-icon': {
+              color: '#000'
+            }
+          }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

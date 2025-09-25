@@ -9,6 +9,7 @@ export interface Comment {
   content: string;
   createdAt: string;
   updatedAt: string;
+  replies?: Comment[];
 }
 
 export interface Album {

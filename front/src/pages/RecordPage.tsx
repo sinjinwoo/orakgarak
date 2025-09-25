@@ -40,6 +40,7 @@ const RecordPageContent: React.FC = () => {
   useEffect(() => {
     if (selectedSong) {
       console.log("🔄 새로고침 효과 - 새 노래 초기화:", selectedSong.title);
+      console.log("🎵 선택된 노래 ID:", selectedSong.id, "타입:", typeof selectedSong.id);
       // 모든 상태 완전 초기화 (새로고침 효과)
       setCurrentTime(0);
       setDuration(180);
@@ -424,7 +425,10 @@ const RecordPageContent: React.FC = () => {
                 minHeight: "400px",
               }}
             >
-              <RecordingControls onRecordingChange={handleRecordingChange} />
+              <RecordingControls 
+                onRecordingChange={handleRecordingChange} 
+                selectedSongId={selectedSong?.id ? parseInt(selectedSong.id) : undefined}
+              />
             </div>
           </div>
 

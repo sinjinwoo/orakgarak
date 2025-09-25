@@ -12,6 +12,7 @@ interface CoverFlowProps {
   onSongFeedback?: (songId: string, feedback: 'like' | 'dislike') => void;
   showMRButton?: boolean;
   onReservation?: (song: RecommendedSong) => void;
+  showDislike?: boolean;
 }
 
 const CoverFlow: React.FC<CoverFlowProps> = ({
@@ -23,7 +24,8 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
   userFeedback = {},
   onSongFeedback,
   showMRButton = true,
-  onReservation
+  onReservation,
+  showDislike = true
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -217,6 +219,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                 isSelected={distance === 0}
                 onSelect={onSongSelect}
                 onReservation={onReservation}
+                showDislike={showDislike}
               />
             </div>
           );

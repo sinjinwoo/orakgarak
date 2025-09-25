@@ -21,7 +21,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/social")
+@RequestMapping("/social")
 @RequiredArgsConstructor
 public class CommentController {
 

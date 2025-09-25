@@ -1,42 +1,24 @@
 package com.ssafy.lab.orak.event.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.lab.orak.event.dto.UploadEvent;
-import com.ssafy.lab.orak.event.exception.EventBridgeSendException;
 import com.ssafy.lab.orak.event.exception.EventProcessingException;
 import com.ssafy.lab.orak.event.exception.KafkaSendException;
 import io.micrometer.core.instrument.Counter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
-import software.amazon.awssdk.services.eventbridge.model.PutEventsRequest;
-import software.amazon.awssdk.services.eventbridge.model.PutEventsRequestEntry;
 
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-
+/**
+ * Kafka 기반 이벤트 서비스
+ * S3 업로드 및 처리 상태 변경 이벤트를 Kafka로 발송
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class EventBridgeService {
 
-    private final EventBridgeClient eventBridgeClient;
-    private final ObjectMapper objectMapper;
     private final KafkaEventProducer kafkaEventProducer;
     private final Counter kafkaMessagesSentCounter;
-    private final Counter kafkaMessagesReceivedCounter;
-
-    @Value("${aws.eventbridge.bus-name}")
-    private String eventBusName;
-
-    @Value("${aws.eventbridge.source}")
-    private String eventSource;
-
-    @Value("${aws.eventbridge.detail-type}")
-    private String detailType;
 
     /**
      * 업로드 이벤트를 Kafka로 발송
@@ -170,47 +152,5 @@ public class EventBridgeService {
             }
         }
         return false;
-    }
-
-    private void publishToEventBridge(UploadEvent event) {
-        try {
-            String eventDetail = objectMapper.writeValueAsString(event);
-            
-            // EventBridge 메타데이터 추가
-            Map<String, Object> enrichedDetail = new HashMap<>();
-            enrichedDetail.put("uploadEvent", event);
-            enrichedDetail.put("timestamp", Instant.now().toString());
-            enrichedDetail.put("region", "ap-northeast-2");
-            enrichedDetail.put("version", "1.0");
-            
-            String finalDetail = objectMapper.writeValueAsString(enrichedDetail);
-            
-            PutEventsRequestEntry entry = PutEventsRequestEntry.builder()
-                    .source(eventSource)
-                    .detailType(detailType)
-                    .detail(finalDetail)
-                    .eventBusName(eventBusName)
-                    .time(Instant.now())
-                    .build();
-
-            PutEventsRequest request = PutEventsRequest.builder()
-                    .entries(entry)
-                    .build();
-
-            var response = eventBridgeClient.putEvents(request);
-            
-            if (response.failedEntryCount() > 0) {
-                log.error("EventBridge 실패한 항목들: {}", response.entries());
-                throw new EventBridgeSendException("EventBridge에서 일부 항목 처리 실패");
-            }
-            
-            log.debug("EventBridge 이벤트 발송 성공: {}", event.getEventId());
-            
-        } catch (EventBridgeSendException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("EventBridge 발송 실패: {}", event, e);
-            throw new EventBridgeSendException("EventBridge 발송 실패: " + e.getMessage(), e);
-        }
     }
 }

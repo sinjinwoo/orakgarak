@@ -170,6 +170,7 @@ const Header: React.FC = () => {
           border: "1px solid rgba(255, 255, 255, 0.2)",
         }}
       >
+        {/* 로고 (랜딩 페이지에서는 공간은 유지, 버튼은 숨김) */}
         <Box
           sx={{
             display: "flex",
@@ -193,6 +194,8 @@ const Header: React.FC = () => {
               alignItems: "center",
               gap: 1,
               outline: "none",
+              visibility: isLandingPage ? 'hidden' : 'visible',
+              pointerEvents: isLandingPage ? 'none' : 'auto',
               "&:focus": {
                 outline: "none",
               },

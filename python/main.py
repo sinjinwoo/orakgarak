@@ -12,6 +12,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 # 경로 설정
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +30,7 @@ from voice_analysis.user.voice_keyword_generator import analyze_voice
 from vector_db.user_recording_manager import UserRecordingManager
 from vector_db.user_vector_manager import UserVectorManager
 from vector_db.pinecone_recommender import PineconeRecommender
+from database.mysql_manager import MySQLManager
 
 app = FastAPI(root_path="/data")
 
@@ -54,6 +59,7 @@ all_songs_df = None
 user_recording_manager = None
 user_vector_manager = None
 pinecone_recommender = None
+mysql_manager = None
 
 class VoiceRecommendationRequest(BaseModel):
     user_id: int
@@ -86,7 +92,7 @@ def load_all_songs_features():
 @app.on_event("startup")
 async def startup_event():
     """서버 시작시 DB 매칭된 곡 데이터 및 사용자 녹음 관리자 초기화"""
-    global user_recording_manager, user_vector_manager, pinecone_recommender
+    global user_recording_manager, user_vector_manager, pinecone_recommender, mysql_manager
 
     if not load_all_songs_features():
         logging.error("DB 매칭된 곡 데이터 로드 실패")
@@ -126,6 +132,18 @@ async def startup_event():
     except Exception as e:
         logging.error(f"Pinecone 추천 시스템 초기화 오류: {e}")
         pinecone_recommender = None
+
+    # MySQL 관리자 초기화
+    try:
+        mysql_manager = MySQLManager()
+        if mysql_manager.connect():
+            logging.info("MySQL 관리자 초기화 성공")
+        else:
+            logging.error("MySQL 관리자 연결 실패")
+            mysql_manager = None
+    except Exception as e:
+        logging.error(f"MySQL 관리자 초기화 오류: {e}")
+        mysql_manager = None
 
 @app.get("/health")
 # Request/Response 모델
@@ -241,13 +259,24 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
             stored_genres = target_record["user_genres"].split(", ")
             user_genres = [g.strip() for g in stored_genres if g.strip()]
 
-        # Pinecone 기반 추천 (voice analysis 로직 반영)
+        # 사용자가 싫어요한 곡 ID 목록 가져오기
+        disliked_song_ids = []
+        if mysql_manager:
+            try:
+                disliked_song_ids = mysql_manager.get_user_disliked_songs(request.user_id)
+                logging.info(f"사용자 {request.user_id}의 싫어요 곡 {len(disliked_song_ids)}개 조회")
+            except Exception as e:
+                logging.error(f"싫어요 곡 조회 오류: {e}")
+
+        # Pinecone 기반 추천 (voice analysis 로직 + dislike 페널티 반영)
         recommendations = pinecone_recommender.get_recommendations(
             user_features=user_features,
             top_n=request.top_n,
             min_popularity=1000,  # 기존 voice analysis의 인기도 필터 적용
             use_pitch_filter=True,
-            allowed_genres=user_genres  # 저장된 사용자 어울리는 장르 사용
+            allowed_genres=user_genres,  # 저장된 사용자 어울리는 장르 사용
+            disliked_song_ids=disliked_song_ids,  # 싫어요 곡 ID 목록
+            penalty_factor=0.1  # recommend_with_voice.py와 동일한 페널티 팩터
         )
 
         if recommendations.empty:
@@ -406,54 +435,64 @@ async def save_user_vector(request: SaveUserVectorRequest):
 @app.post("/ai/generate-voice-image", response_model=VoiceImageGenerationResponse)
 async def generate_voice_image(request: VoiceImageGenerationRequest):
     """
-    녹음 리스트 기반 AI 이미지 생성 API
+    Pinecone 메타데이터 기반 AI 이미지 생성 API (파일 다운로드 없이 처리)
     """
     try:
-        logging.info(f"Received voice image generation request with {len(request.records)} records")
+        logging.info(f"Received Pinecone metadata-based voice image generation request with {len(request.records)} records")
         logging.info(f"Request parameters: aspect_ratio={request.aspect_ratio}, safety_filter_level={request.safety_filter_level}, person_generation={request.person_generation}")
 
-        for i, record in enumerate(request.records):
-            logging.info(f"Record {i}: id={record.id}, userId={record.userId}, songId={record.songId}, title='{record.title}', url='{record.url[:50] if record.url else None}...'")
-
-        # 1. 녹음된 음성들에서 키워드 추출
+        # 1. Pinecone 메타데이터에서 음성 분석 정보 추출 (파일 다운로드 없이)
         voice_keywords = []
         song_titles = []
 
+        if user_vector_manager is None:
+            logging.error("사용자 벡터 관리자가 초기화되지 않았습니다.")
+            return VoiceImageGenerationResponse(
+                success=False,
+                error="벡터 관리 시스템을 사용할 수 없습니다."
+            )
+
         for record in request.records:
-            temp_audio_path = None
             try:
-                # S3 URL에서 파일 다운로드
-                logging.info(f"S3에서 음성 파일 다운로드 중... (ID: {record.id})")
-                with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
-                    response = requests.get(record.url, timeout=30)
-                    response.raise_for_status()
-                    tmp_file.write(response.content)
-                    temp_audio_path = tmp_file.name
-                    logging.info(f"음성 파일 다운로드 완료: {len(response.content)} bytes")
+                # Pinecone 메타데이터에서 음성 분석 정보 조회 (파일 다운로드 없이)
+                upload_id = str(record.uploadId) if hasattr(record, 'uploadId') and record.uploadId else str(record.id)
+                user_id = str(record.userId)
 
-                # 음성 분석으로 키워드 추출
-                voice_analysis = analyze_voice(temp_audio_path)
-                # 분석 결과에서 요약 문장 추출
-                voice_summary = voice_analysis["summary"]
-                voice_keywords.append(voice_summary)
-                logging.info(f"음성 분석 성공 (ID: {record.id}): {voice_summary}")
+                logging.info(f"Pinecone에서 메타데이터 조회 중... (Upload ID: {upload_id}, User ID: {user_id})")
 
-                # 노래 제목도 수집
-                if record.title:
-                    song_titles.append(record.title)
+                # 사용자 기록에서 음성 분석 정보 조회
+                user_history = user_vector_manager.get_user_history(user_id)
+                target_record = None
 
-            except requests.exceptions.RequestException as e:
-                logging.error(f"S3 파일 다운로드 오류 (ID: {record.id}): {e}")
-                continue
+                for history_record in user_history:
+                    if history_record.get("upload_id") == upload_id:
+                        target_record = history_record
+                        break
+
+                if target_record:
+                    # Pinecone 메타데이터에서 음성 분석 결과 추출
+                    voice_summary = target_record.get("voice_analysis", "")
+                    if voice_summary:
+                        voice_keywords.append(voice_summary)
+                        logging.info(f"Pinecone 메타데이터에서 음성 분석 정보 조회 성공 (Upload ID: {upload_id}): {voice_summary}")
+
+                    # 노래 제목 수집
+                    if record.title:
+                        song_titles.append(record.title)
+                else:
+                    logging.warning(f"Pinecone 메타데이터에서 Upload ID {upload_id} 정보를 찾을 수 없음")
+                    # 기본값 사용
+                    if record.title:
+                        voice_keywords.append(f"음악적 표현: {record.title}")
+                        song_titles.append(record.title)
+
             except Exception as e:
-                logging.error(f"음성 분석 실패 (ID: {record.id}): {str(e)}")
-                import traceback
-                traceback.print_exc()
+                logging.error(f"Pinecone 메타데이터 조회 실패 (ID: {record.id}): {str(e)}")
+                # 기본값으로 대체
+                if record.title:
+                    voice_keywords.append(f"음악적 표현: {record.title}")
+                    song_titles.append(record.title)
                 continue
-            finally:
-                # 임시 파일 정리
-                if temp_audio_path and os.path.exists(temp_audio_path):
-                    os.unlink(temp_audio_path)
 
         # 2. 키워드와 노래 제목을 바탕으로 프롬프트 생성
         if not voice_keywords and not song_titles:

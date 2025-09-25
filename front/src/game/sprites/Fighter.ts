@@ -50,35 +50,10 @@ export class Fighter extends Phaser.Sprite {
     updateText () {
         this.text.setText(this.name + "\nScore: " + this.score + "\nHP: " + this.hitpoints);
         
-        // HP가 0 이하가 되면 게임 오버 처리
+        // HP가 0 이하가 되면 alive 상태만 변경 (게임 오버 이벤트는 Game.ts에서 처리)
         if (this.hitpoints <= 0 && this.alive) {
-            console.log('🎮 Fighter에서 게임 오버 감지! HP:', this.hitpoints);
+            console.log('🎮 Fighter HP 0 - alive 상태 변경');
             this.alive = false;
-            
-            // 게임 오버 상태 설정
-            (window as any).isGameOver = true;
-            (window as any).gameState = { gameOver: true };
-            
-            // 게임 오버 이벤트 발생
-            const gameOverEvent = new CustomEvent('gameOver', {
-                detail: {
-                    score: this.score,
-                    hitpoints: this.hitpoints,
-                    pitchScores: (window as any).pitchScores || {}
-                }
-            });
-            
-            console.log('🎮 Fighter에서 게임 오버 이벤트 발생:', gameOverEvent.detail);
-            window.dispatchEvent(gameOverEvent);
-            document.dispatchEvent(gameOverEvent);
-            
-            // 잠시 후 게임 오버 상태로 전환
-            setTimeout(() => {
-                if (this.game && this.game.state) {
-                    console.log('🎮 Fighter에서 GameOver 상태로 전환');
-                    this.game.state.start('GameOver');
-                }
-            }, 100);
         }
     }
 

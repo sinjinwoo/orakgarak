@@ -7,6 +7,7 @@ import com.ssafy.lab.orak.album.entity.Album;
 import com.ssafy.lab.orak.album.exception.AlbumAccessDeniedException;
 import com.ssafy.lab.orak.album.exception.AlbumNotFoundException;
 import com.ssafy.lab.orak.album.repository.AlbumRepository;
+import com.ssafy.lab.orak.albumtrack.service.AlbumTrackService;
 import com.ssafy.lab.orak.profile.dto.ProfileResponseDTO;
 import com.ssafy.lab.orak.profile.service.ProfileService;
 import com.ssafy.lab.orak.upload.entity.Upload;
@@ -29,25 +30,59 @@ public class AlbumService {
     private final AlbumRepository albumRepository;
     private final FileUploadService fileUploadService;
     private final ProfileService profileService;
+    private final AlbumTrackService albumTrackService;
 
     // =========================
-    // 앨범 생성
+    // 앨범 생성 (트랙과 함께 생성 가능)
     // =========================
     public AlbumResponseDto createAlbum(Long userId, AlbumCreateRequestDto request) {
-        log.info("create album for user: {}, title: {}", userId, request.getTitle());
+        log.info("앨범 생성 요청 - 사용자: {}, 제목: {}, 트랙 개수: {}",
+            userId, request.getTitle(), request.getRecordIds() != null ? request.getRecordIds().size() : 0);
 
-        Album album = Album.builder()
-                .userId(userId)
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .uploadId(request.getUploadId())
-                .isPublic(request.getIsPublic())
-                .build();
+        try {
+            // 요청 데이터 검증
+            log.debug("요청 데이터 검증 시작");
+            validateAlbumCreateRequest(request);
+            log.debug("요청 데이터 검증 완료");
 
-        Album savedAlbum = albumRepository.save(album);
-        log.info("Album created successfully with ID: {}", savedAlbum.getId());
+            // 앨범 엔티티 생성 및 저장
+            log.debug("앨범 엔티티 생성 시작");
+            Album album = Album.builder()
+                    .userId(userId)
+                    .title(request.getTitle())
+                    .description(request.getDescription())
+                    .uploadId(request.getUploadId())
+                    .isPublic(request.getIsPublic())
+                    .build();
 
-        return convertToResponseDto(savedAlbum);
+            log.debug("앨범 저장 시작");
+            Album savedAlbum = albumRepository.save(album);
+            log.debug("앨범 저장 완료 - 앨범ID: {}", savedAlbum.getId());
+
+            // 트랙 데이터가 있으면 트랙들도 함께 생성
+            if (hasTrackData(request)) {
+                log.info("앨범과 함께 트랙 생성 시작 - 앨범ID: {}, 트랙 개수: {}",
+                    savedAlbum.getId(), request.getRecordIds().size());
+
+                albumTrackService.createAlbumTracksOnAlbumCreation(
+                    savedAlbum,
+                    request.getRecordIds(),
+                    request.getTrackOrders(),
+                    userId
+                );
+                log.info("앨범과 트랙 생성 완료 - 앨범ID: {}, 트랙 개수: {}",
+                    savedAlbum.getId(), request.getRecordIds().size());
+            } else {
+                log.info("트랙 없는 앨범 생성 완료 - 앨범ID: {}", savedAlbum.getId());
+            }
+
+            // 트랙 생성 시 통계가 업데이트되므로 savedAlbum 정보 사용
+            log.debug("응답 DTO 생성 시작");
+            return convertToResponseDto(savedAlbum);
+        } catch (Exception e) {
+            log.error("앨범 생성 중 오류 발생 - 사용자: {}, 제목: {}", userId, request.getTitle(), e);
+            throw e;
+        }
     }
 
     // =========================
@@ -55,10 +90,10 @@ public class AlbumService {
     // =========================
     @Transactional(readOnly = true)
     public Page<AlbumResponseDto> getAllAlbums(int page, int size) {
-        log.info("getAllAlbums - page: {}, size: {}", page, size);
+        log.info("전체 앨범 조회 - 페이지: {}, 크기: {}", page, size);
         Pageable pageable = PageRequest.of(page, size);
         Page<Album> albums = albumRepository.findAllByOrderByCreatedAtDesc(pageable);
-        // ✅ 각 아이템을 convertToResponseDto로 변환 (coverImageUrl 포함)
+        // 각 아이템을 convertToResponseDto로 변환 (coverImageUrl 포함)
         return albums.map(this::convertToResponseDto);
     }
 
@@ -251,19 +286,12 @@ public class AlbumService {
             coverImageUrl = getDefaultCoverImageUrl();
         }
 
-        // 사용자 프로필 정보 가져오기
-        String userNickname = "알 수 없는 사용자";
+        // 사용자 프로필 정보 가져오기 (임시로 기본값 사용)
+        String userNickname = "사용자 " + album.getUserId();
         String userProfileImageUrl = null;
-        try {
-            ProfileResponseDTO profile = profileService.getProfileByUserId(album.getUserId());
-            if (profile != null) {
-                userNickname = profile.getNickname() != null ? profile.getNickname() : "사용자 " + album.getUserId();
-                userProfileImageUrl = profile.getProfileImageUrl();
-            }
-        } catch (Exception e) {
-            log.warn("Failed to get profile for userId: {}", album.getUserId(), e);
-            userNickname = "사용자 " + album.getUserId();
-        }
+
+        // TODO: 프로필 서비스 연동 (현재는 기본값 사용)
+        log.debug("사용자 정보 - userId: {}, nickname: {}", album.getUserId(), userNickname);
 
         return AlbumResponseDto.builder()
                 .id(album.getId())
@@ -300,5 +328,21 @@ public class AlbumService {
             throw new AlbumAccessDeniedException("앨범에 접근할 권한이 없거나 앨범을 찾을 수 없습니다.");
         }
         return album;
+    }
+
+    // === Helper Methods for Album Creation ===
+
+    private void validateAlbumCreateRequest(AlbumCreateRequestDto request) {
+        if (!request.hasValidTrackData()) {
+            throw new IllegalArgumentException(
+                "녹음본이 선택되었다면 트랙 순서도 함께 제공되어야 하며, 개수가 일치해야 합니다.");
+        }
+    }
+
+    private boolean hasTrackData(AlbumCreateRequestDto request) {
+        return request.getRecordIds() != null &&
+               !request.getRecordIds().isEmpty() &&
+               request.getTrackOrders() != null &&
+               !request.getTrackOrders().isEmpty();
     }
 }

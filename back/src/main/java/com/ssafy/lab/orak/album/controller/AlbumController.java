@@ -39,10 +39,16 @@ public class AlbumController {
             @RequestBody @Valid AlbumCreateRequestDto request,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
-        Long userId = principal.getUserId();
-        log.info("POST /api/albums - Creating album by user: {}", userId);
-        AlbumResponseDto response = albumService.createAlbum(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        try {
+            Long userId = principal.getUserId();
+            log.info("앨범 생성 컨트롤러 호출 - 사용자ID: {}, 요청: {}", userId, request);
+            AlbumResponseDto response = albumService.createAlbum(userId, request);
+            log.info("앨범 생성 성공 - 앨범ID: {}", response.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            log.error("앨범 생성 컨트롤러에서 오류 발생", e);
+            throw e;
+        }
     }
 
 
@@ -53,7 +59,7 @@ public class AlbumController {
             @RequestParam(defaultValue = "0") @Parameter(description = "페이지 번호") int page,
             @RequestParam(defaultValue = "20") @Parameter(description = "페이지 크기") int size) {
 
-        log.info("GET /api/albums - Getting all albums - page: {}, size: {}", page, size);
+        log.info("전체 앨범 조회 요청 - 페이지: {}, 크기: {}", page, size);
         Page<AlbumResponseDto> albums = albumService.getAllAlbums(page, size);
         return ResponseEntity.ok(albums);
     }
@@ -65,7 +71,7 @@ public class AlbumController {
             @PathVariable @Parameter(description = "앨범 ID") Long albumId,
             @AuthenticationPrincipal CustomUserPrincipal principal) {
         Long userId = principal.getUserId();
-        log.info("GET /api/albums/{} - Getting album by user: {}", albumId, userId);
+        log.info("앨범 상세 조회 요청 - 앨범ID: {}, 사용자ID: {}", albumId, userId);
         AlbumResponseDto album = albumService.getAlbum(albumId, userId);
         return ResponseEntity.ok(album);
     }
@@ -79,7 +85,7 @@ public class AlbumController {
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("PUT /api/albums/{} - Updating album by user: {}", albumId, userId);
+        log.info("앨범 수정 요청 - 앨범ID: {}, 사용자ID: {}", albumId, userId);
         AlbumResponseDto response = albumService.updateAlbum(userId, albumId, request);
         return  ResponseEntity.status(HttpStatus.OK).body(response);
 
@@ -94,7 +100,7 @@ public class AlbumController {
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("DELETE /api/albums/{} - Deleting album by user: {}", albumId, userId);
+        log.info("앨범 삭제 요청 - 앨범ID: {}, 사용자ID: {}", albumId, userId);
         albumService.deleteAlbum(albumId, userId);
         return ResponseEntity.noContent().build();
     }
@@ -107,7 +113,7 @@ public class AlbumController {
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("POST /api/albums/cover/upload - Uploading album cover by user: {}", userId);
+        log.info("앨범 커버 업로드 요청 - 사용자ID: {}", userId);
 
         AlbumCoverUploadResponseDto response = albumCoverService.uploadAlbumCover(userId, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -121,14 +127,14 @@ public class AlbumController {
             @AuthenticationPrincipal CustomUserPrincipal principal) {
 
         Long userId = principal.getUserId();
-        log.info("POST /api/albums/covers/generate - Generating AI album cover by user: {} with uploadIds: {}", userId, request.uploadIds());
+        log.info("AI 앨범 커버 생성 요청 - 사용자ID: {}, 업로드ID들: {}", userId, request.uploadIds());
 
         try {
             AlbumCoverUploadResponseDto response = albumCoverService.generateAlbumCover(userId, request).block();
-            log.info("AI album cover generation successful for user: {}, returning response", userId);
+            log.info("AI 앨범 커버 생성 완료 - 사용자ID: {}", userId);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception error) {
-            log.error("Error generating AI album cover for user: {}", userId, error);
+            log.error("AI 앨범 커버 생성 실패 - 사용자ID: {}", userId, error);
             throw new RuntimeException("앨범 커버 생성 중 오류가 발생했습니다: " + error.getMessage(), error);
         }
     }

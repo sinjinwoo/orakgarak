@@ -134,6 +134,21 @@ const LPRecord: React.FC = () => {
           background-size: 100%, 3em 3em;
           animation: spin 1.79s linear infinite;
         }
+
+        .album-cover {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 60%;
+          height: 60%;
+          margin-left: -30%;
+          margin-top: -30%;
+          border-radius: 100%;
+          object-fit: cover;
+          z-index: 2;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
       `}</style>
       <div className="lp-record"></div>
     </>

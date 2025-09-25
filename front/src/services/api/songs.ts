@@ -149,5 +149,17 @@ export const songService = {
   }> => {
     const response = await apiClient.get(`/songs/${songId}/stats`);
     return response.data;
+  },
+
+  // === 싫어요 기능 ===
+  
+  // 싫어요 토글 (추가/취소)
+  toggleDislike: async (songId: number): Promise<{
+    isDisliked: boolean;
+    success: boolean;
+    message: string;
+  }> => {
+    const response = await apiClient.post('/songs/dislikes/toggle', { songId });
+    return response.data;
   }
 };
