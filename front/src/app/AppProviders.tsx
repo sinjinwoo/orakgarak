@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { theme } from './theme';
 import ErrorBoundary from './ErrorBoundary';
+import { ReservationProvider } from '../contexts/ReservationContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
