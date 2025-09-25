@@ -15,6 +15,14 @@ import java.util.Optional;
 @Repository
 public interface FollowRepository extends JpaRepository<Follow, Long> {
 
+    // User ID 기반으로 팔로우 관계 확인
+    @Query("SELECT COUNT(f) > 0 FROM Follow f WHERE f.follower.user.id = :followerId AND f.following.user.id = :followingId")
+    boolean existsByFollowerUserIdAndFollowingUserId(@Param("followerId") Long followerId, @Param("followingId") Long followingId);
+
+    @Query("SELECT f FROM Follow f WHERE f.follower.user.id = :followerId AND f.following.user.id = :followingId")
+    Optional<Follow> findByFollowerUserIdAndFollowingUserId(@Param("followerId") Long followerId, @Param("followingId") Long followingId);
+
+    // 기존 Profile ID 기반 메서드들 (호환성 유지)
     boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId);
 
     Optional<Follow> findByFollowerIdAndFollowingId(Long followerId, Long followingId);
@@ -31,7 +39,14 @@ public interface FollowRepository extends JpaRepository<Follow, Long> {
             "WHERE f.following.id = :userId " +
             "ORDER BY f.createdAt DESC")
     Page<Follow> findFollowerByFollowingId(@Param("userId") Long userId, Pageable pageable);
-//    팔로우 수 조회
+//    User ID 기반 팔로우 수 조회
+    @Query("SELECT COUNT(f) FROM Follow f WHERE f.following.user.id = :userId")
+    long countByFollowingUserId(@Param("userId") Long userId);
+
+    @Query("SELECT COUNT(f) FROM Follow f WHERE f.follower.user.id = :userId")
+    long countByFollowerUserId(@Param("userId") Long userId);
+
+//    Profile ID 기반 팔로우 수 조회 (기존)
     long countByFollowingId(Long followingId);
 //    팔로잉 수 조회
     long countByFollowerId(Long followerId);
