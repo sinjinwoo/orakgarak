@@ -54,8 +54,10 @@ public class TestKafkaConfig {
     public ConcurrentKafkaListenerContainerFactory<String, String> testKafkaListenerContainerFactory() {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(testConsumerFactory());
-        // 테스트에서는 자동 Acknowledge 모드 사용 (Acknowledgment 파라미터 불필요)
-        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+        // 테스트에서는 MANUAL 모드 사용하여 Acknowledgment 파라미터 지원
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+        // 오류 핸들러 설정으로 안정성 향상
+        factory.setCommonErrorHandler(new org.springframework.kafka.listener.DefaultErrorHandler());
         return factory;
     }
 }
