@@ -18,7 +18,7 @@ public class AiDemoApplicationResponseDTO {
 
     private Long id;
     private Long userId;
-    private Long recordId;
+    private List<Long> recordIds;
     private List<String> youtubeLinks;
     private ApplicationStatus status;
     private String statusDescription;
@@ -28,17 +28,17 @@ public class AiDemoApplicationResponseDTO {
     private LocalDateTime updatedAt;
     private LocalDateTime processedAt;
 
-    private RecordResponseDTO record;
+    private List<RecordResponseDTO> records;
 
-    public static AiDemoApplicationResponseDTO of(Long id, Long userId, Long recordId,
+    public static AiDemoApplicationResponseDTO of(Long id, Long userId, List<Long> recordIds,
                                                 List<String> youtubeLinks, ApplicationStatus status,
                                                 String adminNote, LocalDateTime createdAt,
                                                 LocalDateTime updatedAt, LocalDateTime processedAt,
-                                                RecordResponseDTO record) {
+                                                List<RecordResponseDTO> records) {
         return AiDemoApplicationResponseDTO.builder()
                 .id(id)
                 .userId(userId)
-                .recordId(recordId)
+                .recordIds(recordIds)
                 .youtubeLinks(youtubeLinks)
                 .status(status)
                 .statusDescription(status.getDescription())
@@ -46,7 +46,7 @@ public class AiDemoApplicationResponseDTO {
                 .createdAt(createdAt)
                 .updatedAt(updatedAt)
                 .processedAt(processedAt)
-                .record(record)
+                .records(records)
                 .build();
     }
 }

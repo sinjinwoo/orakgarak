@@ -7,7 +7,6 @@ import com.ssafy.lab.orak.recording.exception.RecordOperationException;
 import com.ssafy.lab.orak.recording.mapper.RecordMapper;
 import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
-import com.ssafy.lab.orak.recording.util.AudioDurationCalculator;
 import com.ssafy.lab.orak.s3.exception.S3UrlGenerationException;
 import com.ssafy.lab.orak.s3.util.LocalUploader;
 import com.ssafy.lab.orak.upload.entity.Upload;
@@ -36,7 +35,6 @@ public class AiDemoRecordService {
     private final FileUploadService fileUploadService;
     private final RecordMapper recordMapper;
     private final AudioConverter audioConverter;
-    private final AudioDurationCalculator audioDurationCalculator;
     private final LocalUploader localUploader;
     private final UploadRepository uploadRepository;
 
@@ -46,7 +44,7 @@ public class AiDemoRecordService {
     /**
      * 관리자가 특정 사용자에게 AI 데모 파일 업로드 (directory = "ai-cover")
      */
-    public RecordResponseDTO createAiDemoRecord(String title, MultipartFile audioFile, Long targetUserId) {
+    public RecordResponseDTO createAiDemoRecord(String title, MultipartFile audioFile, Long targetUserId, Long fileSizeBytes, Integer durationSeconds) {
         Upload upload = null;
         try {
             // 1. DTO 생성
@@ -57,13 +55,10 @@ public class AiDemoRecordService {
                     .build();
 
             // 2. AI 데모 파일 처리 및 업로드 (directory = "ai-cover"로 설정)
-            upload = processAndUploadAiDemoFile(audioFile, targetUserId);
-            Integer calculatedDuration = audioDurationCalculator.calculateDurationInSeconds(
-                uploadPath + "/" + upload.getStoredFilename()
-            );
+            upload = processAndUploadAiDemoFile(audioFile, targetUserId, fileSizeBytes);
 
-            // 3. DB 저장 (트랜잭션 내부)
-            Record savedRecord = saveAiDemoRecordTransaction(requestDTO, targetUserId, upload, calculatedDuration);
+            // 3. DB 저장 (트랜잭션 내부) - 클라이언트에서 제공받은 duration 사용
+            Record savedRecord = saveAiDemoRecordTransaction(requestDTO, targetUserId, upload, durationSeconds);
 
             log.info("AI 데모 파일 생성 성공: targetUserId={}, recordId={}", targetUserId, savedRecord.getId());
 
@@ -90,7 +85,7 @@ public class AiDemoRecordService {
     /**
      * AI 데모 파일용 업로드 처리 (directory = "ai-cover")
      */
-    private Upload processAndUploadAiDemoFile(MultipartFile audioFile, Long targetUserId) {
+    private Upload processAndUploadAiDemoFile(MultipartFile audioFile, Long targetUserId, Long fileSizeBytes) {
         try {
             // 1. UUID 생성 (단일 UUID로 통일)
             String uuid = UUID.randomUUID().toString();
@@ -111,9 +106,12 @@ public class AiDemoRecordService {
             // 4. S3에 업로드 (directory = "ai-cover"로 설정)
             Upload upload = fileUploadService.uploadLocalFile(fileToUpload, "ai-cover", targetUserId, audioFile.getOriginalFilename());
 
-            // 5. 올바른 UUID로 업데이트
-            if (!upload.getUuid().equals(uuid)) {
-                upload = upload.toBuilder().uuid(uuid).build();
+            // 5. UUID와 클라이언트 제공 file_size로 업데이트
+            if (!upload.getUuid().equals(uuid) || !upload.getFileSize().equals(fileSizeBytes)) {
+                upload = upload.toBuilder()
+                        .uuid(uuid)
+                        .fileSize(fileSizeBytes) // 클라이언트가 제공한 파일 크기 사용
+                        .build();
                 upload = uploadRepository.save(upload);
             }
 

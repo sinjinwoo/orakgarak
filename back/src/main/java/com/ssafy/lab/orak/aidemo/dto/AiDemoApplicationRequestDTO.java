@@ -18,8 +18,9 @@ import java.util.List;
 @Builder
 public class AiDemoApplicationRequestDTO {
 
-    @NotNull(message = "녹음본 ID는 필수입니다")
-    private Long recordId;
+    @NotNull(message = "녹음본 ID 목록은 필수입니다")
+    @Size(min = 1, message = "녹음본은 1개 이상 선택해주세요")
+    private List<Long> recordIds;
 
     @NotNull(message = "유튜브 링크는 필수입니다")
     @Size(min = 1, max = 3, message = "유튜브 링크는 1개 이상 3개 이하로 입력해주세요")

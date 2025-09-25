@@ -1,6 +1,7 @@
 package com.ssafy.lab.orak.aidemo.entity;
 
 import com.ssafy.lab.orak.aidemo.converter.YouTubeLinksConverter;
+import com.ssafy.lab.orak.aidemo.converter.RecordIdsConverter;
 import com.ssafy.lab.orak.aidemo.enums.ApplicationStatus;
 import com.ssafy.lab.orak.common.entity.BaseEntity;
 import com.ssafy.lab.orak.recording.entity.Record;
@@ -28,8 +29,9 @@ public class AiDemoApplication extends BaseEntity {
     @Column(nullable = false)
     private Long userId;
 
-    @Column(nullable = false)
-    private Long recordId;
+    @Convert(converter = RecordIdsConverter.class)
+    @Column(columnDefinition = "JSON", nullable = false)
+    private List<Long> recordIds;
 
     @Convert(converter = YouTubeLinksConverter.class)
     @Column(columnDefinition = "JSON")
@@ -43,10 +45,6 @@ public class AiDemoApplication extends BaseEntity {
     private String adminNote;
 
     private LocalDateTime processedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recordId", insertable = false, updatable = false)
-    private Record record;
 
     public void updateStatus(ApplicationStatus newStatus, String adminNote) {
         this.status = newStatus;

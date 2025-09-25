@@ -32,9 +32,11 @@ public class AiDemoRecordController {
     public ResponseEntity<RecordResponseDTO> createAiDemoRecord(
             @RequestParam("audioFile") @NotNull MultipartFile audioFile,
             @RequestParam("title") @NotBlank String title,
-            @RequestParam("targetUserId") @NotNull Long targetUserId) {
+            @RequestParam("targetUserId") @NotNull Long targetUserId,
+            @RequestParam("fileSizeBytes") @NotNull Long fileSizeBytes,
+            @RequestParam("durationSeconds") @NotNull Integer durationSeconds) {
 
-        RecordResponseDTO response = aiDemoRecordService.createAiDemoRecord(title, audioFile, targetUserId);
+        RecordResponseDTO response = aiDemoRecordService.createAiDemoRecord(title, audioFile, targetUserId, fileSizeBytes, durationSeconds);
         return ResponseEntity.ok(response);
     }
 

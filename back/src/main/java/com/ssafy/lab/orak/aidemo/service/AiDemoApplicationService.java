@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -36,25 +37,35 @@ public class AiDemoApplicationService {
 
     public AiDemoApplicationResponseDTO createApplication(AiDemoApplicationRequestDTO requestDTO, Long userId) {
         try {
-            // 1. 신청할 녹음본이 존재하고 본인 소유인지 확인
-            Record record = recordRepository.findById(requestDTO.getRecordId())
-                    .orElseThrow(() -> new RecordNotFoundException(requestDTO.getRecordId()));
+            // 1. 신청할 녹음본들이 존재하고 모두 본인 소유인지 확인
+            List<Record> records = recordRepository.findAllById(requestDTO.getRecordIds());
 
-            if (!record.getUserId().equals(userId)) {
-                throw new AiDemoApplicationOperationException("본인 소유의 녹음본만 AI 데모 신청이 가능합니다.");
+            if (records.size() != requestDTO.getRecordIds().size()) {
+                throw new RecordNotFoundException("일부 녹음본을 찾을 수 없습니다.");
             }
 
-            // 2. 중복 신청 체크
-            if (aiDemoApplicationRepository.existsByUserIdAndRecordId(userId, requestDTO.getRecordId())) {
-                throw new DuplicateAiDemoApplicationException(userId, requestDTO.getRecordId());
+            for (Record record : records) {
+                if (!record.getUserId().equals(userId)) {
+                    throw new AiDemoApplicationOperationException("본인 소유의 녹음본만 AI 데모 신청이 가능합니다.");
+                }
+            }
+
+            // 2. 중복 신청 체크 (JSON 배열로 변환하여 체크)
+            try {
+                String recordIdsJson = new ObjectMapper().writeValueAsString(requestDTO.getRecordIds());
+                if (aiDemoApplicationRepository.existsByUserIdAndRecordIdsOverlap(userId, recordIdsJson)) {
+                    throw new DuplicateAiDemoApplicationException(userId, null);
+                }
+            } catch (Exception e) {
+                log.warn("중복 신청 체크 실패, 계속 진행: {}", e.getMessage());
             }
 
             // 3. 엔티티 생성 및 저장
             AiDemoApplication application = mapper.toEntity(requestDTO, userId);
             AiDemoApplication savedApplication = aiDemoApplicationRepository.save(application);
 
-            log.info("AI 데모 신청 생성 성공: userId={}, recordId={}, applicationId={}",
-                    userId, requestDTO.getRecordId(), savedApplication.getId());
+            log.info("AI 데모 신청 생성 성공: userId={}, recordIds={}, applicationId={}",
+                    userId, requestDTO.getRecordIds(), savedApplication.getId());
 
             // 4. 응답 DTO 생성
             return convertToResponseDTO(savedApplication);
@@ -62,7 +73,7 @@ public class AiDemoApplicationService {
         } catch (RecordNotFoundException | DuplicateAiDemoApplicationException e) {
             throw e;
         } catch (Exception e) {
-            log.error("AI 데모 신청 생성 실패: userId={}, recordId={}", userId, requestDTO.getRecordId(), e);
+            log.error("AI 데모 신청 생성 실패: userId={}, recordIds={}", userId, requestDTO.getRecordIds(), e);
             throw new AiDemoApplicationOperationException("AI 데모 신청 생성에 실패했습니다: " + e.getMessage(), e);
         }
     }
@@ -70,7 +81,7 @@ public class AiDemoApplicationService {
     @Transactional(readOnly = true)
     public List<AiDemoApplicationResponseDTO> getMyApplications(Long userId) {
         try {
-            List<AiDemoApplication> applications = aiDemoApplicationRepository.findByUserIdWithRecord(userId);
+            List<AiDemoApplication> applications = aiDemoApplicationRepository.findByUserIdOrderByCreatedAtDesc(userId);
             return convertToResponseDTOs(applications);
         } catch (Exception e) {
             log.error("내 AI 데모 신청 목록 조회 실패: userId={}", userId, e);
@@ -81,7 +92,7 @@ public class AiDemoApplicationService {
     @Transactional(readOnly = true)
     public List<AiDemoApplicationResponseDTO> getAllApplicationsByStatus(ApplicationStatus status) {
         try {
-            List<AiDemoApplication> applications = aiDemoApplicationRepository.findByStatusWithRecord(status);
+            List<AiDemoApplication> applications = aiDemoApplicationRepository.findByStatusOrderByCreatedAtAsc(status);
             return convertToResponseDTOs(applications);
         } catch (Exception e) {
             log.error("상태별 AI 데모 신청 목록 조회 실패: status={}", status, e);
@@ -91,7 +102,7 @@ public class AiDemoApplicationService {
 
     @Transactional(readOnly = true)
     public AiDemoApplicationResponseDTO getApplication(Long applicationId) {
-        AiDemoApplication application = aiDemoApplicationRepository.findByIdWithRecord(applicationId)
+        AiDemoApplication application = aiDemoApplicationRepository.findById(applicationId)
                 .orElseThrow(() -> new AiDemoApplicationNotFoundException(applicationId));
         return convertToResponseDTO(application);
     }
@@ -149,11 +160,22 @@ public class AiDemoApplicationService {
 
     private AiDemoApplicationResponseDTO convertToResponseDTO(AiDemoApplication application) {
         try {
-            RecordResponseDTO recordResponseDTO = recordService.getRecord(application.getRecordId());
-            return mapper.toResponseDTO(application, recordResponseDTO);
+            List<RecordResponseDTO> recordResponseDTOs = application.getRecordIds().stream()
+                    .map(recordId -> {
+                        try {
+                            return recordService.getRecord(recordId);
+                        } catch (Exception e) {
+                            log.warn("Record 정보 조회 실패: recordId={}", recordId, e);
+                            return null;
+                        }
+                    })
+                    .filter(recordDto -> recordDto != null)
+                    .collect(Collectors.toList());
+
+            return mapper.toResponseDTO(application, recordResponseDTOs);
         } catch (Exception e) {
-            log.warn("Record 정보 조회 실패로 기본 응답 생성: applicationId={}, recordId={}",
-                    application.getId(), application.getRecordId(), e);
+            log.warn("Record 정보 조회 실패로 기본 응답 생성: applicationId={}, recordIds={}",
+                    application.getId(), application.getRecordIds(), e);
             return mapper.toResponseDTO(application);
         }
     }
