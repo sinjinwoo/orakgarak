@@ -2,6 +2,7 @@ package com.ssafy.lab.orak.event.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.lab.orak.event.dto.UploadEvent;
+import com.ssafy.lab.orak.processing.service.impl.VoiceAnalysisJob;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -21,19 +22,21 @@ public class KafkaEventConsumer {
     private final FileUploadService fileUploadService;
     private final EventDrivenProcessingService eventDrivenProcessingService;
     private final KafkaEventProducer kafkaEventProducer;
+    private final VoiceAnalysisJob voiceAnalysisJob;
     
     // 처리 통계
     private final AtomicInteger processedEvents = new AtomicInteger(0);
     private final AtomicInteger failedEvents = new AtomicInteger(0);
 
-    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.upload-events')}", 
+    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.upload-events')}",
                    groupId = "#{@environment.getProperty('spring.kafka.consumer.group-id')}-upload")
-    public void handleUploadEvents(ConsumerRecord<String, String> record, Acknowledgment ack) {
+    public void handleUploadEvents(ConsumerRecord<String, String> record,
+                                   Acknowledgment ack) {
         try {
             String eventJson = record.value();
             UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
-            
-            log.info("업로드 이벤트 처리 중: type={}, uploadId={}, partition={}, offset={}", 
+
+            log.info("업로드 이벤트 처리 중: type={}, uploadId={}, partition={}, offset={}",
                     event.getEventType(), event.getUploadId(), record.partition(), record.offset());
 
             switch (event.getEventType()) {
@@ -42,12 +45,13 @@ public class KafkaEventConsumer {
                 default -> log.warn("알 수 없는 업로드 이벤트 타입: {}", event.getEventType());
             }
 
-            // 수동 커밋
-            ack.acknowledge();
+            // 수동 커밋 (테스트 환경에서는 null일 수 있음)
+            if (ack != null) {
+                ack.acknowledge();
+            }
             processedEvents.incrementAndGet();
-            
             log.debug("업로드 이벤트 처리 완료: {}", event.getEventId());
-            
+
         } catch (Exception e) {
             log.error("업로드 이벤트 처리 실패: partition={}, offset={}, value={}",
                     record.partition(), record.offset(), record.value(), e);
@@ -61,55 +65,129 @@ public class KafkaEventConsumer {
                 log.error("실패한 이벤트 파싱조차 실패: {}", record.value(), parseException);
             }
 
-            ack.acknowledge();
+            if (ack != null) {
+                ack.acknowledge();
+            }
         }
     }
 
-    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.processing-status')}", 
+    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.processing-status')}",
                    groupId = "#{@environment.getProperty('spring.kafka.consumer.group-id')}-status")
     public void handleProcessingStatusEvents(ConsumerRecord<String, String> record, Acknowledgment ack) {
         try {
             String eventJson = record.value();
             UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
-            
-            log.info("처리 상태 이벤트 처리 중: uploadId={}, status={}, partition={}, offset={}", 
+
+            log.info("처리 상태 이벤트 처리 중: uploadId={}, status={}, partition={}, offset={}",
                     event.getUploadId(), event.getCurrentStatus(), record.partition(), record.offset());
 
             if ("STATUS_CHANGED".equals(event.getEventType())) {
                 handleStatusChanged(event);
             }
 
-            ack.acknowledge();
+            if (ack != null) {
+                ack.acknowledge();
+            }
             processedEvents.incrementAndGet();
-            
+
         } catch (Exception e) {
-            log.error("상태 이벤트 처리 실패: partition={}, offset={}, value={}", 
+            log.error("상태 이벤트 처리 실패: partition={}, offset={}, value={}",
                     record.partition(), record.offset(), record.value(), e);
             failedEvents.incrementAndGet();
-            ack.acknowledge();
+            if (ack != null) {
+                ack.acknowledge();
+            }
         }
     }
 
-    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.processing-results')}", 
+    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.processing-results')}",
                    groupId = "#{@environment.getProperty('spring.kafka.consumer.group-id')}-results")
     public void handleProcessingResultEvents(ConsumerRecord<String, String> record, Acknowledgment ack) {
         try {
             String eventJson = record.value();
             UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
-            
-            log.info("처리 결과 이벤트 처리 중: uploadId={}, status={}, partition={}, offset={}", 
+
+            log.info("처리 결과 이벤트 처리 중: uploadId={}, status={}, partition={}, offset={}",
                     event.getUploadId(), event.getCurrentStatus(), record.partition(), record.offset());
 
             handleProcessingResult(event);
 
-            ack.acknowledge();
+            if (ack != null) {
+                ack.acknowledge();
+            }
             processedEvents.incrementAndGet();
-            
+
         } catch (Exception e) {
-            log.error("결과 이벤트 처리 실패: partition={}, offset={}, value={}", 
+            log.error("결과 이벤트 처리 실패: partition={}, offset={}, value={}",
                     record.partition(), record.offset(), record.value(), e);
             failedEvents.incrementAndGet();
-            ack.acknowledge();
+            if (ack != null) {
+                ack.acknowledge();
+            }
+        }
+    }
+
+    @KafkaListener(topics = "#{@environment.getProperty('kafka.topics.voice-analysis-events', 'voice-analysis-events')}",
+                   groupId = "#{@environment.getProperty('spring.kafka.consumer.group-id')}-voice-analysis")
+    public void handleVoiceAnalysisEvents(ConsumerRecord<String, String> record, Acknowledgment ack) {
+        try {
+            String eventJson = record.value();
+            UploadEvent event = objectMapper.readValue(eventJson, UploadEvent.class);
+
+            log.info("음성 분석 이벤트 처리 중: uploadId={}, type={}, partition={}, offset={}",
+                    event.getUploadId(), event.getEventType(), record.partition(), record.offset());
+
+            if ("VOICE_ANALYSIS_REQUESTED".equals(event.getEventType())) {
+                handleVoiceAnalysisRequested(event);
+            }
+
+            if (ack != null) {
+                ack.acknowledge();
+            }
+            processedEvents.incrementAndGet();
+
+        } catch (Exception e) {
+            log.error("음성 분석 이벤트 처리 실패: partition={}, offset={}, value={}",
+                    record.partition(), record.offset(), record.value(), e);
+            failedEvents.incrementAndGet();
+
+            // 재시도 또는 DLQ 처리
+            try {
+                UploadEvent event = objectMapper.readValue(record.value(), UploadEvent.class);
+                handleProcessingFailure(event, e);
+            } catch (Exception parseException) {
+                log.error("실패한 음성 분석 이벤트 파싱 실패: {}", record.value(), parseException);
+            }
+
+            if (ack != null) {
+                ack.acknowledge();
+            }
+        }
+    }
+
+    private void handleVoiceAnalysisRequested(UploadEvent event) {
+        try {
+            if (event.getUploadId() == null) {
+                log.warn("음성 분석 이벤트에 uploadId가 없음: {}", event);
+                return;
+            }
+
+            // FileUploadService를 통해 Upload 엔티티 조회
+            var upload = fileUploadService.getUpload(event.getUploadId());
+
+            // VoiceAnalysisJob을 통한 음성 분석 처리
+            boolean success = voiceAnalysisJob.process(upload);
+
+            if (success) {
+                log.info("음성 분석 처리 성공 - uploadId: {}", event.getUploadId());
+            } else {
+                log.warn("음성 분석 처리 실패 - uploadId: {}", event.getUploadId());
+                throw new RuntimeException("음성 분석 처리에 실패했습니다");
+            }
+
+        } catch (Exception e) {
+            log.error("음성 분석 요청 처리 실패: uploadId={}", event.getUploadId(), e);
+            throw e; // 재시도 또는 DLQ 처리를 위해 예외 재발생
         }
     }
 
@@ -246,7 +324,9 @@ public class KafkaEventConsumer {
                     log.info("재시도 지연 시간 미충족, 다시 재시도 토픽으로: uploadId={}, timeSince={}분",
                             event.getUploadId(), timeSinceLastRetry);
                     kafkaEventProducer.sendToRetryTopic(event);
-                    ack.acknowledge();
+                    if (ack != null) {
+                        ack.acknowledge();
+                    }
                     return;
                 }
             }
@@ -259,7 +339,9 @@ public class KafkaEventConsumer {
                 default -> log.warn("알 수 없는 재시도 이벤트 타입: {}", event.getEventType());
             }
 
-            ack.acknowledge();
+            if (ack != null) {
+                ack.acknowledge();
+            }
             processedEvents.incrementAndGet();
             log.info("재시도 이벤트 처리 성공: uploadId={}, retryCount={}",
                     event.getUploadId(), event.getRetryCount());
@@ -277,7 +359,9 @@ public class KafkaEventConsumer {
                 log.error("재시도 이벤트 파싱 실패: {}", record.value(), parseException);
             }
 
-            ack.acknowledge();
+            if (ack != null) {
+                ack.acknowledge();
+            }
         }
     }
 }

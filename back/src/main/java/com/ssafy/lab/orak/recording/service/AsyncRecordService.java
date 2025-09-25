@@ -76,10 +76,8 @@ public class AsyncRecordService {
 
     @Transactional(readOnly = true)
     public RecordResponseDTO getRecord(Long recordId) {
-        Record record = recordRepository.findByIdWithUpload(recordId);
-        if (record == null) {
-            throw new RecordNotFoundException(recordId);
-        }
+        Record record = recordRepository.findByIdWithUpload(recordId)
+                .orElseThrow(() -> new RecordNotFoundException(recordId));
 
         Upload upload = fileUploadService.getUpload(record.getUploadId());
         return recordMapper.toResponseDTO(record, upload);
@@ -152,8 +150,7 @@ public class AsyncRecordService {
         }
 
         // 이미 Record가 존재하는지 확인
-        Record existingRecord = recordRepository.findByUploadId(uploadId);
-        if (existingRecord != null) {
+        if (recordRepository.findByUploadId(uploadId).isPresent()) {
             throw new RecordOperationException("이미 Record가 존재하는 업로드입니다: " + uploadId, null);
         }
 

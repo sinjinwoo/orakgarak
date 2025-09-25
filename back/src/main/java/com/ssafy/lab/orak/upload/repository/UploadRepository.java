@@ -43,10 +43,15 @@ public interface UploadRepository extends JpaRepository<Upload, Long> {
     
     // 특정 사용자의 처리 상태별 업로드 조회
     List<Upload> findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(Long uploaderId, ProcessingStatus status);
+
+    // 특정 사용자의 여러 처리 상태 업로드 조회
+    List<Upload> findByUploaderIdAndProcessingStatusInOrderByCreatedAtDesc(Long uploaderId, List<ProcessingStatus> statuses);
     
     // 처리 중인 파일 개수 조회
     @Query("SELECT COUNT(u) FROM Upload u WHERE u.processingStatus IN " +
-           "('PROCESSING', 'CONVERTING', 'ANALYSIS_PENDING', 'IMAGE_OPTIMIZING', 'THUMBNAIL_GENERATING')")
+           "('AUDIO_CONVERTING', 'VOICE_ANALYSIS_PENDING', 'VOICE_ANALYZING', " +
+           " 'IMAGE_OPTIMIZING', 'THUMBNAIL_GENERATING', " +
+           " 'PROCESSING', 'CONVERTING', 'ANALYSIS_PENDING')")
     long countProcessingFiles();
     
     // 실패한 처리 건수 조회 (모니터링용)
@@ -54,10 +59,12 @@ public interface UploadRepository extends JpaRepository<Upload, Long> {
     
     // 특정 기간 내 처리 완료된 파일 조회
     @Query("SELECT u FROM Upload u WHERE " +
-           "u.processingStatus = 'COMPLETED' AND " +
+           "(u.processingStatus = 'COMPLETED' OR " +
+           " u.processingStatus = 'VOICE_ANALYZED' OR " +
+           " u.processingStatus = 'AUDIO_CONVERTED') AND " +
            "u.updatedAt BETWEEN :startDate AND :endDate " +
            "ORDER BY u.updatedAt DESC")
-    List<Upload> findCompletedBetween(@Param("startDate") LocalDateTime startDate, 
+    List<Upload> findCompletedBetween(@Param("startDate") LocalDateTime startDate,
                                     @Param("endDate") LocalDateTime endDate);
     
     // UUID로 업로드 찾기 (S3 이벤트 처리용)
@@ -69,11 +76,13 @@ public interface UploadRepository extends JpaRepository<Upload, Long> {
 
     /**
      * Kafka에서 놓친 파일들 조회 (배치 처리용)
-     * 오랫동안 UPLOADED 상태로 남아있는 파일들
+     * 처리가 중단된 상태로 남아있는 파일들
      */
     @Query("SELECT u FROM Upload u WHERE " +
-           "u.processingStatus = 'UPLOADED' AND " +
-           "u.createdAt < :stuckTime " +
+           "(u.processingStatus = 'UPLOADED' OR " +
+           " u.processingStatus = 'AUDIO_CONVERTING' OR " +
+           " u.processingStatus = 'AUDIO_CONVERTED') AND " +
+           "u.updatedAt < :stuckTime " +
            "ORDER BY u.createdAt ASC")
     List<Upload> findStuckUploads(@Param("limit") int limit, @Param("stuckTime") LocalDateTime stuckTime);
 
@@ -81,7 +90,9 @@ public interface UploadRepository extends JpaRepository<Upload, Long> {
      * Kafka 헬스 체크용 - 오랫동안 처리되지 않은 파일 개수
      */
     @Query("SELECT COUNT(u) FROM Upload u WHERE " +
-           "u.processingStatus = 'UPLOADED' AND " +
-           "u.createdAt < :stuckTime")
+           "(u.processingStatus = 'UPLOADED' OR " +
+           " u.processingStatus = 'AUDIO_CONVERTING' OR " +
+           " u.processingStatus = 'AUDIO_CONVERTED') AND " +
+           "u.updatedAt < :stuckTime")
     long countStuckUploads(@Param("stuckTime") LocalDateTime stuckTime);
 }

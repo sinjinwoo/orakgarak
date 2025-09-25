@@ -92,7 +92,7 @@ public class UploadEvent {
                 .build();
     }
     
-    public static UploadEvent createStatusChangeEvent(Long uploadId, String uuid, 
+    public static UploadEvent createStatusChangeEvent(Long uploadId, String uuid,
                                                      ProcessingStatus currentStatus, ProcessingStatus previousStatus,
                                                      String message) {
         return UploadEvent.builder()
@@ -105,6 +105,20 @@ public class UploadEvent {
                 .previousStatus(previousStatus)
                 .statusMessage(message)
                 .eventTime(LocalDateTime.now())
+                .retryCount(0)
+                .build();
+    }
+
+    public static UploadEvent createVoiceAnalysisRequestEvent(Long uploadId) {
+        return UploadEvent.builder()
+                .eventId(java.util.UUID.randomUUID().toString())
+                .eventType("VOICE_ANALYSIS_REQUESTED")
+                .source("audio-conversion")
+                .uploadId(uploadId)
+                .currentStatus(ProcessingStatus.VOICE_ANALYSIS_PENDING)
+                .statusMessage("음성 분석 요청됨")
+                .eventTime(LocalDateTime.now())
+                .priority(5) // 중간 우선순위 (백그라운드 처리)
                 .retryCount(0)
                 .build();
     }
