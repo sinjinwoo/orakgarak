@@ -310,7 +310,7 @@ const Header: React.FC = () => {
                     fontWeight: 500,
                   }}
                 >
-                  {user?.nickname || "사용자"}
+                  {user?.nickname || "닉네임 설정"}
                 </Typography>
               </Button>
 
