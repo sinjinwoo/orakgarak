@@ -154,4 +154,49 @@ public class VectorService {
             log.error("Record 벡터 처리 중 오류 발생: userId={}, uploadId={}, songId={}", userId, uploadId, songId, e);
         }
     }
+
+    /**
+     * 동기식 벡터 처리 (Kafka ProcessingJob에서 사용)
+     */
+    public void processRecordVectorSync(Long userId, Long uploadId, Long songId) {
+        log.info("Record 동기 벡터 처리 시작: userId={}, uploadId={}, songId={}", userId, uploadId, songId);
+
+        try {
+            // Upload ID로 파일 URL 조회
+            var upload = fileUploadService.getUpload(uploadId);
+            String fileUrl = fileUploadService.getFileUrl(upload);
+
+            log.info("Record 벡터 처리를 위한 파일 URL 조회 완료: uploadId={}", uploadId);
+
+            // Python AI 서비스 동기 호출
+            JsonNode pythonResponse = pythonAiService.saveUserVector(fileUrl, userId, String.valueOf(uploadId), songId)
+                    .block(); // 동기 처리
+
+            if (pythonResponse == null) {
+                throw new RuntimeException("Python 서비스로부터 응답을 받지 못했습니다");
+            }
+
+            // Python 응답 검증
+            String status = pythonResponse.path("status").asText("failed");
+
+            if ("success".equals(status)) {
+                String vectorId = pythonResponse.path("vector_id").asText(null);
+                if (vectorId != null) {
+                    log.info("Record 동기 벡터 처리 성공: userId={}, uploadId={}, songId={}, vectorId={}",
+                            userId, uploadId, songId, vectorId);
+                } else {
+                    log.warn("벡터 저장은 성공했지만 vectorId가 없음: userId={}, uploadId={}", userId, uploadId);
+                    throw new RuntimeException("vectorId가 없습니다");
+                }
+            } else {
+                String error = pythonResponse.path("error").asText("Unknown error");
+                log.error("Record 동기 벡터 처리 실패: userId={}, uploadId={}, error={}", userId, uploadId, error);
+                throw new RuntimeException("Python 벡터 처리 실패: " + error);
+            }
+
+        } catch (Exception e) {
+            log.error("Record 동기 벡터 처리 중 오류 발생: userId={}, uploadId={}, songId={}", userId, uploadId, songId, e);
+            throw new RuntimeException("벡터 처리 실패", e);
+        }
+    }
 }

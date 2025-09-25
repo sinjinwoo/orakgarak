@@ -27,7 +27,9 @@ export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
         <BrowserRouter>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            {children}
+            <ReservationProvider>
+              {children}
+            </ReservationProvider>
             <ReactQueryDevtools initialIsOpen={false} />
           </ThemeProvider>
         </BrowserRouter>

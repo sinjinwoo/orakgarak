@@ -68,9 +68,12 @@ public class Upload extends BaseEntity {
     
     // 편의 메서드: 저장된 파일명 생성
     public String getStoredFilename() {
+        if (extension == null || extension.isEmpty()) {
+            return uuid + "_" + originalFilename;
+        }
         return uuid + "_" + originalFilename + "." + extension;
     }
-    
+
     // 편의 메서드: 전체 파일 경로 생성
     public String getFullPath() {
         return directory + "/" + getStoredFilename();
@@ -136,9 +139,7 @@ public class Upload extends BaseEntity {
         String lowerExt = ext.toLowerCase();
         return lowerExt.equals("mp3") || lowerExt.equals("wav") ||
                lowerExt.equals("m4a") || lowerExt.equals("flac") ||
-               lowerExt.equals("aac") || lowerExt.equals("ogg") ||
-               lowerExt.equals("mp4") || lowerExt.equals("3gp") ||
-               lowerExt.equals("webm") || lowerExt.equals("amr");
+               lowerExt.equals("aac") || lowerExt.equals("ogg");
     }
 
 }
