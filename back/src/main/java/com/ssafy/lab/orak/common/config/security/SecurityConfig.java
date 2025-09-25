@@ -51,7 +51,8 @@ public class SecurityConfig {
     @Order(0) // Webhook을 위한 Security FilterChain 설정
     public SecurityFilterChain webhookSecurity(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/webhook/**")
+                .securityMatcher("/webhook/**",
+                        "/records/async/upload-completed")
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -85,7 +86,6 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
-                                "/api/records/async/upload-completed",
                                 "/api/images/**",
                                 "/images/**"
                         ).permitAll()
