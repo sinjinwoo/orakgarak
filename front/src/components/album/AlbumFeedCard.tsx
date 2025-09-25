@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Avatar, Chip, CardMedia } from '@mui/material';
-import { Person, MusicNote } from '@mui/icons-material';
+import { Person } from '@mui/icons-material';
+import { Album } from 'lucide-react';
 
 interface AlbumFeedCardProps {
   album: {
@@ -99,8 +100,8 @@ const AlbumFeedCard: React.FC<AlbumFeedCardProps> = ({ album, onClick }) => {
           }}
         >
           {!album.coverImageUrl && (
-            <MusicNote
-              sx={{
+            <Album
+              style={{
                 fontSize: "2rem",
                 color: "rgba(255, 255, 255, 0.8)",
               }}
