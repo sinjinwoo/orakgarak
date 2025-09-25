@@ -10,7 +10,7 @@ import { uploadCover } from '../../services/api/cover';
 import { useAlbumMetaStore } from '../../stores/albumMetaStore';
 
 interface ImageUploadSectionProps {
-  onUploadComplete?: (imageUrl: string) => void;
+  onUploadComplete?: (imageUrl: string, uploadId?: number) => void;
   className?: string;
 }
 
@@ -30,6 +30,7 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   const { setCoverUpload } = useAlbumMetaStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [currentUploadId, setCurrentUploadId] = useState<number | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [showCropModal, setShowCropModal] = useState(false);
   const [cropOptions, setCropOptions] = useState<CropOptions>({
@@ -43,15 +44,84 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const compressImage = useCallback(async (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+
+      img.onload = () => {
+        // 최대 크기 설정 (1920x1920)
+        const maxSize = 1920;
+        let { width, height } = img;
+
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          } else {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.8);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  }, []);
+
+  const uploadWithRetry = useCallback(async (file: File, maxRetries = 3): Promise<{ uploadId: number; imageUrl: string }> => {
+    let lastError: Error;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`업로드 시도 ${attempt}/${maxRetries}`);
+        return await uploadCover(file);
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`업로드 시도 ${attempt} 실패:`, error.message);
+
+        if (attempt < maxRetries) {
+          // 재시도 전 대기 시간 (1초, 2초, 3초...)
+          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        }
+      }
+    }
+
+    throw lastError!;
+  }, []);
+
   const handleFileSelect = useCallback(async (file: File) => {
+    // 이미 업로드 중인 경우 차단
+    if (isUploading) {
+      console.log('이미 업로드 진행 중입니다.');
+      return;
+    }
+
     // 파일 유효성 검사
     if (!file.type.startsWith('image/')) {
       setError('이미지 파일만 업로드할 수 있습니다.');
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB
-      setError('파일 크기는 10MB 이하여야 합니다.');
+    if (file.size > 50 * 1024 * 1024) { // 50MB로 증가
+      setError('파일 크기는 50MB 이하여야 합니다.');
       return;
     }
 
@@ -59,21 +129,60 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
     setIsUploading(true);
 
     try {
+      // 큰 파일의 경우 압축 처리
+      let processedFile = file;
+      if (file.size > 5 * 1024 * 1024) { // 5MB 이상인 경우 압축
+        console.log('이미지 압축 중...');
+        processedFile = await compressImage(file);
+        console.log(`압축 완료: ${file.size} → ${processedFile.size} bytes`);
+      }
+
       // 로컬 미리보기를 위한 URL 생성
-      const localUrl = URL.createObjectURL(file);
+      const localUrl = URL.createObjectURL(processedFile);
       setUploadedImage(localUrl);
 
-      // 실제 업로드 처리
-      const result = await uploadCover(file);
+      // 재시도 로직을 포함한 업로드 처리
+      const result = await uploadWithRetry(processedFile);
+
+      // 중복 업로드 방지
+      if (currentUploadId === result.uploadId) {
+        console.log('이미 처리된 업로드 ID:', result.uploadId);
+        return;
+      }
+
+      // 상태 업데이트를 순차적으로 처리
+      setCurrentUploadId(result.uploadId);
       setCoverUpload(result.imageUrl, result.uploadId);
-      onUploadComplete?.(result.imageUrl);
+
+      // 상태 업데이트 완료 후 콜백 호출 (uploadId 포함)
+      onUploadComplete?.(result.imageUrl, result.uploadId);
+
+      console.log('업로드 성공:', result);
     } catch (error: any) {
       console.error('업로드 실패:', error);
-      setError(`이미지 업로드에 실패했습니다: ${error.response?.data?.message || error.message}`);
+
+      // 더 자세한 에러 메시지 제공
+      let errorMessage = '이미지 업로드에 실패했습니다.';
+
+      if (error.response?.status === 413) {
+        errorMessage = '파일이 너무 큽니다. 더 작은 이미지를 선택해주세요.';
+      } else if (error.response?.status === 415) {
+        errorMessage = '지원하지 않는 이미지 형식입니다.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = '업로드 시간이 초과되었습니다. 네트워크 상태를 확인해주세요.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
+      setUploadedImage(null); // 실패 시 미리보기 제거
+      setCurrentUploadId(null); // 업로드 ID 초기화
     } finally {
       setIsUploading(false);
     }
-  }, [setCoverUpload, onUploadComplete]);
+  }, [setCoverUpload, onUploadComplete, compressImage, uploadWithRetry]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -108,7 +217,8 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
 
   const handleRemoveImage = useCallback(() => {
     setUploadedImage(null);
-    setCoverUpload('',undefined);
+    setCoverUpload('', undefined);
+    setCurrentUploadId(null); // 업로드 ID 초기화
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -167,17 +277,30 @@ const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
             이미지를 드래그하거나 클릭해서 업로드
           </h3>
           <p className="text-white/60 text-sm mb-4">
-            JPG, PNG, WebP 형식 지원 (최대 10MB)
+            JPG, PNG, WebP 형식 지원 (최대 50MB)
+            <br />
+            <span className="text-xs text-white/40">
+              5MB 이상의 파일은 자동으로 압축됩니다
+            </span>
           </p>
 
           {isUploading && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center justify-center gap-2 text-purple-400"
+              className="flex flex-col items-center justify-center gap-3 text-purple-400"
             >
-              <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
-              <span className="text-sm">업로드 중...</span>
+              <div className="w-8 h-8 border-3 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+              <span className="text-sm font-medium">업로드 중...</span>
+              <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300"
+                  style={{ width: '0%' }}
+                />
+              </div>
+              <p className="text-xs text-white/60 text-center max-w-xs">
+                대용량 이미지의 경우 업로드에 시간이 걸릴 수 있습니다.
+              </p>
             </motion.div>
           )}
 
