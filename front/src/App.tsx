@@ -28,6 +28,7 @@ function AppContent() {
       {isAuthenticated && <Header />}
       <Box 
         component="main"
+        id="app-main"
         sx={{ 
           flex: 1,
           display: 'flex',

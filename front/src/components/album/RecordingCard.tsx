@@ -16,7 +16,7 @@ interface RecordingCardProps {
   isDragging?: boolean;
   showHandle?: boolean;
   showRemove?: boolean;
-  variant?: 'library' | 'canvas';
+  variant?: 'library' | 'canvas' | 'modal';
   order?: number;
   onToggle?: () => void;
   onPlay?: () => void;
@@ -59,6 +59,7 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
         ${isSelected ? 'ring-2 ring-yellow-300 bg-yellow-500/10 shadow-2xl shadow-yellow-300/70 border-yellow-300 transform scale-[1.01]' : 'hover:bg-gray-800/70 hover:border-pink-300/80 hover:shadow-2xl hover:shadow-pink-300/60'}
         ${isDragging ? 'shadow-2xl shadow-yellow-300/70 scale-105 z-50' : ''}
         ${variant === 'canvas' ? 'bg-gray-800/70' : ''}
+        ${variant === 'modal' ? 'bg-gray-800/40 hover:bg-gray-800/60' : ''}
         ${className}
       `}
       onClick={onToggle}
