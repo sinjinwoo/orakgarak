@@ -8,6 +8,9 @@ import com.ssafy.lab.orak.comment.entity.Comment;
 import com.ssafy.lab.orak.comment.exception.CommentAccessDeniedException;
 import com.ssafy.lab.orak.comment.exception.CommentNotFoundException;
 import com.ssafy.lab.orak.comment.repository.CommentRepository;
+import com.ssafy.lab.orak.profile.entity.Profile;
+import com.ssafy.lab.orak.profile.repository.ProfileRepository;
+import com.ssafy.lab.orak.profile.service.ProfileImageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +32,8 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final UserService userService;
+    private final ProfileRepository profileRepository;
+    private final ProfileImageService profileImageService;
 
     @Transactional(readOnly = true)
     public Page<CommentDto.Response> getCommentsByAlbumId(Long albumId, Pageable pageable) {
@@ -45,17 +50,22 @@ public class CommentService {
     }
 
     private CommentDto.Response convertToResponseDto(Comment comment) {
-        // 사용자 정보 가져오기
-        User user = null;
+        // 사용자 프로필 정보 가져오기
+        Profile profile = null;
         String userNickname = null;
         String userProfileImageUrl = null;
 
         try {
-            user = userService.findById(comment.getUserId());
-            userNickname = user.getNickname();
-            userProfileImageUrl = user.getProfileImage();
+            profile = profileRepository.findByUser_Id(comment.getUserId()).orElse(null);
+            if (profile != null) {
+                userNickname = profile.getNickname();
+                userProfileImageUrl = profileImageService.getProfileImageUrl(profile.getProfileImageUpload());
+            } else {
+                userNickname = "사용자 " + comment.getUserId();
+                userProfileImageUrl = null;
+            }
         } catch (Exception e) {
-            log.warn("사용자 정보를 가져올 수 없습니다. userId: {}", comment.getUserId(), e);
+            log.warn("프로필 정보를 가져올 수 없습니다. userId: {}", comment.getUserId(), e);
             userNickname = "사용자 " + comment.getUserId();
             userProfileImageUrl = null;
         }
