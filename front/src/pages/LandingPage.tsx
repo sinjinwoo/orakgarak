@@ -177,7 +177,7 @@ const LandingPage: React.FC = () => {
                     lineHeight: "0.9",
                     textShadow: "0 0 3vw #23F6EF",
                     position: "relative",
-                    left: "0.8vw",
+                    left: "6.0vw",
                     cursor: "default",
                     animation: "zone 3.2s ease-out infinite",
                     letterSpacing: "0.04em",

@@ -52,7 +52,7 @@ public class AsyncRecordService {
             Upload upload = fileUploadService.getUpload(uploadId);
             fileUploadService.updateProcessingStatus(uploadId, ProcessingStatus.UPLOADED);
 
-            // EventBridge로 이벤트 발송 (배치 처리 트리거)
+            // EventBridge로 이벤트 발송 (모든 후처리를 Kafka로 통합)
             UploadEvent event = UploadEvent.createS3UploadEvent(
                 uploadId, upload.getUuid(), s3Key,
                 "orakgaraki-bucket", upload.getFileSize(), upload.getContentType()
@@ -61,23 +61,12 @@ public class AsyncRecordService {
             boolean eventSent = eventBridgeService.publishUploadEvent(event);
 
             if (eventSent) {
-                log.info("레코딩 업로드 완료 이벤트 발송 성공: uploadId={}", uploadId);
+                log.info("레코딩 업로드 완료 이벤트 발송 성공: uploadId={} (WAV변환+음성분석 모두 Kafka에서 처리)", uploadId);
             } else {
                 log.error("레코딩 업로드 완료 이벤트 발송 실패: uploadId={}", uploadId);
             }
 
-            // 벡터 DB에 사용자 음성 데이터 저장
-            try {
-                Record record = recordRepository.findByUploadId(uploadId);
-                if (record != null) {
-                    vectorService.processRecordVectorAsync(record.getUserId(), uploadId, record.getSongId());
-                    log.info("벡터 DB 비동기 저장 요청 완료: uploadId={}", uploadId);
-                } else {
-                    log.warn("Record를 찾을 수 없어 벡터 저장을 건너뜁니다: uploadId={}", uploadId);
-                }
-            } catch (Exception e) {
-                log.error("벡터 DB 저장 중 오류 발생: uploadId={}", uploadId, e);
-            }
+            // 직접 호출 제거 - 이제 모든 처리(WAV 변환 + 음성 분석)가 Kafka ProcessingJob으로 통합됨
 
         } catch (Exception e) {
             log.error("S3 업로드 완료 처리 실패: uploadId={}", uploadId, e);
@@ -85,57 +74,7 @@ public class AsyncRecordService {
         }
     }
 
-    /**
-     * 3단계: 배치 처리에서 호출되는 오디오 처리 메서드
-     */
-    @Transactional
-    public void processRecordingAsync(Long uploadId) {
-        try {
-            log.info("레코딩 비동기 처리 시작: uploadId={}", uploadId);
-
-            // Upload 정보 조회
-            Upload upload = fileUploadService.getUpload(uploadId);
-
-            // Record 조회
-            Record record = recordRepository.findByUploadId(uploadId);
-            if (record == null) {
-                log.warn("레코드를 찾을 수 없습니다: uploadId={}", uploadId);
-                return;
-            }
-
-            // 상태를 PROCESSING으로 변경
-            fileUploadService.updateProcessingStatus(uploadId, ProcessingStatus.PROCESSING);
-
-            // 오디오 변환 처리 (기존 로직 활용)
-            // 실제 오디오 변환 로직은 별도 서비스에서 처리
-            // 여기서는 시뮬레이션
-            simulateAudioProcessing(upload);
-
-            // 처리 완료 상태로 변경
-            fileUploadService.updateProcessingStatus(uploadId, ProcessingStatus.COMPLETED);
-
-            log.info("레코딩 비동기 처리 완료: uploadId={}", uploadId);
-
-        } catch (Exception e) {
-            log.error("레코딩 비동기 처리 실패: uploadId={}", uploadId, e);
-
-            // 실패 상태로 변경
-            try {
-                fileUploadService.markProcessingFailed(uploadId,
-                    "오디오 처리 실패: " + e.getMessage());
-            } catch (Exception statusUpdateError) {
-                log.error("상태 업데이트 실패: uploadId={}", uploadId, statusUpdateError);
-            }
-            throw new RecordOperationException("레코딩 비동기 처리에 실패했습니다: " + e.getMessage(), e);
-        }
-    }
-
-    private void simulateAudioProcessing(Upload upload) throws InterruptedException {
-        // 실제로는 AudioConverter 등 사용 (duration은 프론트에서 이미 계산됨)
-        log.info("오디오 처리 중... uploadId={}", upload.getId());
-        Thread.sleep(2000); // 2초 처리 시뮬레이션
-        log.info("오디오 처리 완료: uploadId={}", upload.getId());
-    }
+    // processRecordingAsync() 제거됨 - 이제 Kafka ProcessingJob들이 모든 처리를 담당
 
     @Transactional(readOnly = true)
     public RecordResponseDTO getRecord(Long recordId) {
@@ -160,9 +99,9 @@ public class AsyncRecordService {
     }
 
     /**
-     * 새로운 Record 생성 메서드 (API 분리용)
-     * - Upload 검증 후 Record 생성
-     * - 즉시 처리 시도 + 실패 시 비동기 처리
+     * 새로운 Record 생성 메서드 (현업 패턴: 빠른 응답 + 안전한 백그라운드 처리)
+     * - Upload 검증 후 Record 생성 (즉시)
+     * - 무거운 처리는 모두 Kafka로 위임
      */
     @Transactional
     public RecordResponseDTO createRecord(CreateRecordRequest request, Long userId) {
@@ -173,7 +112,7 @@ public class AsyncRecordService {
             // 1. Upload 존재 및 상태 검증
             Upload upload = validateUploadForRecord(request.getUploadId(), userId);
 
-            // 2. Record 생성
+            // 2. Record 생성 (즉시)
             Record record = Record.builder()
                     .userId(userId)
                     .songId(request.getSongId())
@@ -185,17 +124,11 @@ public class AsyncRecordService {
             Record savedRecord = recordRepository.save(record);
             log.info("Record 저장 완료: recordId={}, uploadId={}", savedRecord.getId(), request.getUploadId());
 
-            // 3. 즉시 처리 시도
-            boolean immediateProcessingSuccess = tryImmediateProcessing(upload, savedRecord);
-
-            // 4. ResponseDTO 생성
+            // 3. ResponseDTO 생성 (사용자에게 빠른 피드백)
             RecordResponseDTO response = recordMapper.toResponseDTO(savedRecord, upload);
 
-            if (immediateProcessingSuccess) {
-                log.info("Record 즉시 처리 완료: recordId={}", savedRecord.getId());
-            } else {
-                log.info("Record 비동기 처리 예정: recordId={}", savedRecord.getId());
-            }
+            // 4. 무거운 처리는 모두 Kafka ProcessingJob들이 백그라운드에서 처리
+            log.info("Record 생성 완료, 오디오 처리는 백그라운드에서 진행: recordId={}", savedRecord.getId());
 
             return response;
 
@@ -229,45 +162,7 @@ public class AsyncRecordService {
         return upload;
     }
 
-    /**
-     * 즉시 처리 시도
-     */
-    private boolean tryImmediateProcessing(Upload upload, Record record) {
-        try {
-            if (upload.getProcessingStatus() == ProcessingStatus.UPLOADED) {
-                log.info("즉시 처리 시도: uploadId={}", upload.getId());
-
-                // 동기적으로 처리 (간단한 변환만)
-                processRecordingSync(upload.getId());
-                return true;
-            } else {
-                log.info("Upload 상태가 UPLOADED가 아님, 비동기 처리 예정: status={}", upload.getProcessingStatus());
-                return false;
-            }
-        } catch (Exception e) {
-            log.warn("즉시 처리 실패, 비동기 처리로 전환: uploadId={}", upload.getId(), e);
-            return false;
-        }
-    }
-
-    /**
-     * 동기 처리 (간단한 변환만)
-     */
-    private void processRecordingSync(Long uploadId) {
-        try {
-            fileUploadService.updateProcessingStatus(uploadId, ProcessingStatus.PROCESSING);
-
-            // 빠른 처리 (메타데이터 추출 등)
-            Thread.sleep(100); // 실제로는 빠른 변환 작업
-
-            fileUploadService.updateProcessingStatus(uploadId, ProcessingStatus.COMPLETED);
-            log.info("동기 처리 완료: uploadId={}", uploadId);
-
-        } catch (Exception e) {
-            log.error("동기 처리 실패: uploadId={}", uploadId, e);
-            throw new RecordOperationException("동기 처리 실패", e);
-        }
-    }
+    // 시뮬레이션 메서드들 제거됨 - 현업 패턴에 따라 모든 처리는 Kafka ProcessingJob으로 통일
 
     public void deleteRecord(Long recordId, Long userId) {
         try {

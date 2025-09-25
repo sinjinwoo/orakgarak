@@ -45,7 +45,7 @@ class BatchProcessingServiceTest {
     @MockitoBean
     private FileUploadService fileUploadService;
 
-    @MockitoBean
+    @MockitoBean(name = "audioFormatConversionJob")
     private ProcessingJob mockProcessingJob;
 
     @MockitoBean

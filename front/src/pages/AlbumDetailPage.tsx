@@ -164,6 +164,21 @@ const AlbumDetailPage: React.FC = () => {
         // Load like count and status
         setLikeCount(albumData.likeCount || 0);
 
+        // Check user's like status for this album
+        try {
+          const [likeStatus, likeCountResult] = await Promise.all([
+            socialService.albums.checkLikeStatus(parseInt(albumId)),
+            socialService.albums.getLikeCount(parseInt(albumId))
+          ]);
+
+          setIsLiked(likeStatus.isLiked);
+          setLikeCount(likeCountResult.count);
+        } catch (likeError: any) {
+          console.warn('좋아요 상태 확인 실패:', likeError);
+          setIsLiked(false);
+          // albumData에서 받은 likeCount 유지
+        }
+
         // Load comments
         try {
           setLoadingComments(true);
@@ -263,27 +278,54 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
+  // Refresh like status from server
+  const refreshLikeStatus = async () => {
+    if (!albumId) return;
+
+    try {
+      const [likeStatus, likeCountResult] = await Promise.all([
+        socialService.albums.checkLikeStatus(parseInt(albumId)),
+        socialService.albums.getLikeCount(parseInt(albumId))
+      ]);
+
+      setIsLiked(likeStatus.isLiked);
+      setLikeCount(likeCountResult.count);
+    } catch (error) {
+      console.warn('좋아요 상태 새로고침 실패:', error);
+    }
+  };
+
   // Album action handlers
   const handleLikeToggle = async () => {
-    if (!albumId) return;
+    if (!albumId || likingAlbum) return;
 
     try {
       setLikingAlbum(true);
 
-      if (isLiked) {
-        await socialService.albums.unlikeAlbum(parseInt(albumId));
-        setIsLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1));
-        showToast('좋아요를 취소했습니다.', 'success');
+      // 토글 API 사용
+      const result = await socialService.albums.toggleLike(parseInt(albumId));
+
+      if (result.success) {
+        // 상태 업데이트
+        setIsLiked(result.isLiked);
+
+        // 좋아요 수 새로고침
+        const likeCountResult = await socialService.albums.getLikeCount(parseInt(albumId));
+        if (likeCountResult.success) {
+          setLikeCount(likeCountResult.count);
+        }
+
+        showToast(result.message, 'success');
       } else {
-        await socialService.albums.likeAlbum(parseInt(albumId));
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
-        showToast('앨범을 좋아요했습니다!', 'success');
+        throw new Error('토글 요청 실패');
       }
+
     } catch (error: any) {
-      console.error('좋아요 실패:', error);
+      console.error('좋아요 처리 실패:', error);
       showToast('좋아요 처리 중 오류가 발생했습니다.', 'error');
+
+      // 에러 발생 시에도 서버 상태와 동기화
+      await refreshLikeStatus();
     } finally {
       setLikingAlbum(false);
     }
@@ -847,13 +889,18 @@ const AlbumDetailPage: React.FC = () => {
                     py: 1.5,
                     mb: 3,
                     backdropFilter: 'blur(10px)',
+                    transition: 'all 0.3s ease',
                     '&:hover': {
                       bgcolor: isLiked ? 'rgba(251, 66, 212, 0.8)' : 'rgba(251, 66, 212, 0.1)',
                       boxShadow: '0 0 20px rgba(251, 66, 212, 0.3)'
+                    },
+                    '&:disabled': {
+                      opacity: 0.6,
+                      cursor: 'not-allowed'
                     }
                   }}
                 >
-                  <FavoriteIcon sx={{ mr: 1 }} />
+                  <FavoriteIcon sx={{ mr: 1, color: likingAlbum ? 'rgba(255,255,255,0.5)' : 'inherit' }} />
                   {likingAlbum ? 'Processing...' : `${isLiked ? 'Liked' : 'Like'} (${likeCount})`}
                 </Button>
 

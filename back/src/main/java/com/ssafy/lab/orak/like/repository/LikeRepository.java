@@ -21,6 +21,9 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 //    특정 사용자가 좋아요한 앨범 개수
     Long countByUserId(Long userId);
 
+//    특정 앨범의 좋아요 수
+    Long countByAlbumId(Long albumId);
+
 //    특정 사용자가 좋아요한 앨범 목록 조회
     @Query("SELECT l.album FROM Like l JOIN l.album WHERE l.userId = :userId ORDER BY l.createdAt DESC")
     Page<Album> findLikedAlbumsByUserId(@Param("userId") Long userId, Pageable pageable);

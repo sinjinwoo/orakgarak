@@ -3,7 +3,6 @@ import { Box, CssBaseline } from '@mui/material';
 import { AppProviders } from './app/AppProviders';
 import { AppRouter } from './app/router';
 import Header from './components/common/Header';
-import SimpleHeader from './components/common/SimpleHeader';
 import Footer from './components/common/Footer';
 import Toast from './components/common/Toast';
 import { useAuth } from './hooks/useAuth';
@@ -26,7 +25,7 @@ function AppContent() {
       }}
     >
       {/* 인증 상태에 따라 다른 헤더 렌더링 */}
-      {isAuthenticated ? <Header /> : <SimpleHeader />}
+      {isAuthenticated && <Header />}
       <Box 
         component="main"
         sx={{ 
@@ -35,7 +34,7 @@ function AppContent() {
           flexDirection: 'column',
           width: '100%',
           maxWidth: '100vw',
-          overflow: 'hidden'
+          overflow: 'auto' // hidden에서 auto로 변경하여 스크롤 허용
         }}
       >
         <AppRouter />

@@ -18,6 +18,8 @@ import { recordingService } from '../../services/api/recordings';
 import CoverFlow from '../recommendation/CoverFlow';
 import type { RecommendedSong } from '../../types/recommendation';
 import '../../styles/cyberpunk-animations.css';
+import { useReservation } from '../../hooks/useReservation';
+import type { Song } from '../../types/song';
 
 interface RecommendationResultProps {
   recording: Recording;
@@ -35,6 +37,8 @@ export default function RecommendationResult({
   const [selectedSong, setSelectedSong] = useState<RecommendedSong | undefined>();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  // 예약 큐 훅은 컴포넌트 최상단에서 호출
+  const { addToQueue } = useReservation();
 
   // 추천 API 호출
   const { 
@@ -99,25 +103,35 @@ export default function RecommendationResult({
   // 예약 핸들러
   const handleReservation = (song: RecommendedSong) => {
     console.log('🎵 곡 예약:', song.title, song.artist);
-    
-    // TODO: 실제 예약 API 호출
-    // 임시로 로컬 스토리지에 저장
-    const reservations = JSON.parse(localStorage.getItem('songReservations') || '[]');
-    const newReservation = {
-      id: Date.now(),
-      songId: song.id,
-      title: song.title,
-      artist: song.artist,
-      album: song.album,
-      imageUrl: song.imageUrl,
-      reservedAt: new Date().toISOString()
-    };
-    
-    reservations.push(newReservation);
-    localStorage.setItem('songReservations', JSON.stringify(reservations));
-    
-    setSnackbarMessage(`"${song.title}" - ${song.artist} 곡이 예약되었습니다!`);
-    setSnackbarOpen(true);
+
+    try {
+      const mapped: Song = {
+        id: Number(song.songId ?? song.id),
+        songId: Number(song.songId ?? song.id),
+        songName: song.title,
+        artistName: song.artist,
+        albumName: song.album ?? '',
+        musicUrl: '',
+        lyrics: typeof song.lyrics === 'string' ? song.lyrics : JSON.stringify(song.lyrics ?? ''),
+        albumCoverUrl: song.imageUrl ?? song.coverImage ?? '',
+        spotifyTrackId: '',
+        durationMs: song.duration ? song.duration * 1000 : undefined,
+        popularity: song.popularity,
+        status: 'AVAILABLE',
+        title: song.title,
+        artist: song.artist,
+        duration: song.duration,
+        youtubeId: undefined,
+      };
+
+      addToQueue(mapped);
+      setSnackbarMessage(`"${song.title}" - ${song.artist} 곡이 예약되었습니다!`);
+      setSnackbarOpen(true);
+    } catch (e) {
+      console.error('예약 추가 실패:', e);
+      setSnackbarMessage('예약 처리 중 오류가 발생했습니다.');
+      setSnackbarOpen(true);
+    }
   };
 
   // 로딩 상태
@@ -437,6 +451,7 @@ export default function RecommendationResult({
                 onSongSelect={setSelectedSong}
                 showMRButton={false} // MR 재생 버튼 숨김
                 onReservation={handleReservation}
+                showDislike={tab === 'ai'}
               />
 
               {/* 녹음 페이지로 이동 버튼 */}
