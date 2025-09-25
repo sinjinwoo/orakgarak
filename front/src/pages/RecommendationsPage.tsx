@@ -416,7 +416,7 @@ const RecommendationsPage: React.FC = () => {
         minHeight: "100vh",
         position: "relative",
         overflow: "hidden",
-        pt: { xs: 16, sm: 20 },
+        pt: { xs: 2, sm: 3 }, // 헤더 높이만큼 상단 패딩으로 변경
         fontFamily: "neon, monospace",
       }}
     >
@@ -474,24 +474,6 @@ const RecommendationsPage: React.FC = () => {
             mb: 4,
           }}
         >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{
-              fontWeight: "bold",
-              color: "#FB42D4",
-              fontSize: { xs: "2rem", md: "2.5rem" },
-              textShadow: "0 0 20px #F40AD5",
-              fontFamily: "neon, monospace",
-              animation: "cyber 2s ease-in-out infinite alternate",
-              "@keyframes cyber": {
-                "0%": { textShadow: "0 0 20px #F40AD5" },
-                "100%": { textShadow: "0 0 40px #F40AD5, 0 0 60px #F40AD5" },
-              },
-            }}
-          >
-            🎵 NEON RECOMMENDATIONS
-          </Typography>
 
           {/* 추천 히스토리 버튼 */}
           {recommendationHistory.length > 0 && (
@@ -555,39 +537,15 @@ const RecommendationsPage: React.FC = () => {
                 position: "relative",
                 zIndex: 2,
                 textAlign: "center",
-                maxWidth: "800px",
+                maxWidth: "600px",
                 px: 3,
               }}
             >
               {/* 타이틀 */}
-              <Box sx={{ mb: 6 }}>
-                <Typography
-                  variant="h2"
-                  sx={{
-                    color: "#FB42D4",
-                    fontWeight: "bold",
-                    fontSize: { xs: "3rem", md: "4rem", lg: "5rem" },
-                    mb: 2,
-                    textShadow: "0 0 3vw #F40AD5",
-                    fontFamily: "neon, monospace",
-                    animation: "cyber 2.2s ease-in infinite",
-                    "@keyframes cyber": {
-                      "0%, 100%": {
-                        textShadow:
-                          "0 0 3vw #F40AD5, 0 0 6vw #F40AD5, 0 0 9vw #F40AD5",
-                      },
-                      "50%": {
-                        textShadow:
-                          "0 0 1.5vw #F40AD5, 0 0 3vw #F40AD5, 0 0 4.5vw #F40AD5",
-                      },
-                    },
-                  }}
-                >
-                  NEON RECOMMENDATIONS
-                </Typography>
+              <Box sx={{ mb: 4 }}>
 
                 <Typography
-                  variant="h5"
+                  variant="h4"
                   sx={{
                     color: "#42FDEB",
                     fontSize: { xs: "1.2rem", md: "1.5rem" },

@@ -230,8 +230,8 @@ const RecordPageContent: React.FC = () => {
           linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)
         `,
         padding: "20px",
+        paddingTop: "100px", // 헤더 높이만큼 상단 패딩 추가
         fontFamily: "Arial, sans-serif",
-        paddingTop: "80px",
         position: "relative",
         overflow: "auto",
       }}
@@ -249,39 +249,6 @@ const RecordPageContent: React.FC = () => {
           transition: "all 0.6s ease",
         }}
       >
-        {/* 헤더 */}
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: "30px",
-          }}
-        >
-          <h1
-            style={{
-              fontSize: "2.5rem",
-              fontWeight: "bold",
-              background: "linear-gradient(45deg, #00ffff, #ff0080)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              margin: "0 0 10px 0",
-              textShadow: "0 0 20px rgba(0, 255, 255, 0.5)",
-            }}
-          >
-            CYBER STUDIO
-          </h1>
-          <p
-            style={{
-              color: "#00ffff",
-              fontSize: "1rem",
-              margin: "0",
-              textTransform: "uppercase",
-              letterSpacing: "2px",
-            }}
-          >
-            NEURAL RECORDING INTERFACE
-          </p>
-        </div>
-
         {/* 3컬럼 그리드 레이아웃 */}
         <div
           style={{

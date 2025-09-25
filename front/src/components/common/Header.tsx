@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { Typography, Button, Box, Avatar } from "@mui/material";
-import { MusicNote, Person } from "@mui/icons-material";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Typography, Button, Box, Avatar, Menu, MenuItem, Fade } from "@mui/material";
+import { MusicNote, Person, Logout, Settings, AccountCircle } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth, useSocialAuth } from "../../hooks/useAuth";
-import { theme } from "../../styles/theme";
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -11,282 +10,385 @@ const Header: React.FC = () => {
   const { isAuthenticated, logout, user } = useAuth();
   const { loginWithGoogle, isLoading } = useSocialAuth();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
+  const profileMenuOpen = Boolean(profileMenuAnchor);
 
   const isLandingPage = location.pathname === "/";
 
-  // 스크롤 이벤트 핸들러 - 성능 최적화를 위해 쓰로틀링 적용
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-
-    const handleScroll = () => {
-      // 쓰로틀링: 16ms (약 60fps)마다 실행
-      if (timeoutId) return;
-
-      timeoutId = setTimeout(() => {
-        const scrollTop = window.scrollY;
-        setIsScrolled(scrollTop > 50);
-        timeoutId = undefined as unknown as NodeJS.Timeout;
-      }, 16);
-    };
-
-    if (isLandingPage) {
-      window.addEventListener("scroll", handleScroll, { passive: true });
-      handleScroll(); // 초기 상태 설정
-    } else {
-      setIsScrolled(false);
-    }
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [isLandingPage]);
-
-  const handleLogout = async () => {
-    await logout();
-    navigate("/");
-  };
-
-  const handleGoogleLogin = async () => {
-    const success = await loginWithGoogle();
-    if (success) {
-      navigate("/recommendations");
-    }
-  };
-
-  const menuItems = [
+  // 메뉴 아이템 메모이제이션
+  const menuItems = useMemo(() => [
     { label: "추천", path: "/recommendations" },
     { label: "녹음", path: "/record" },
     { label: "피드", path: "/feed" },
     { label: "앨범 만들기", path: "/albums/create" },
-    { label: "마이페이지", path: "/me" },
     { label: "AI 데모", path: "/ai-demo" },
-  ];
+  ], []);
 
-  // 동적 스타일 계산
-  const headerBackground = isLandingPage
-    ? isScrolled
-      ? "linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 100%)"
-      : "transparent"
-    : "linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.85) 100%)";
+  // 스타일 객체 메모이제이션 - 어두운 배경에 맞게 조정
+  const styles = useMemo(() => ({
+    baseButton: {
+      color: "#ffffff",
+      fontSize: "14px",
+      fontWeight: 500,
+      textTransform: "none" as const,
+      borderRadius: "8px",
+      whiteSpace: "nowrap" as const,
+      "&:hover": {
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
+      },
+    },
+    authButton: {
+      padding: "6px 12px",
+      backgroundColor: "rgba(255, 255, 255, 0.2)",
+      color: "#ffffff",
+      fontSize: "14px",
+      fontWeight: 500,
+      textTransform: "none" as const,
+      borderRadius: "8px",
+      border: "1px solid rgba(255, 255, 255, 0.3)",
+      "&:hover": {
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
+      },
+    },
+  }), []);
 
-  const shouldShowShadow = isLandingPage ? isScrolled : true;
+  // auto-hide 스크롤 이벤트 - 모든 페이지에서 작동
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // 스크롤 위치에 따른 배경 투명도 조정
+      const shouldScroll = currentScrollY > 50;
+      setIsScrolled(prev => prev !== shouldScroll ? shouldScroll : prev);
+      
+      // auto-hide: 스크롤하면 헤더 숨김, 최상단이면 헤더 표시
+      if (currentScrollY > 100) {
+        // 100px 이상 스크롤된 경우 헤더 숨김
+        setIsHeaderVisible(false);
+      } else {
+        // 최상단 근처(100px 이하)에 있는 경우 헤더 표시
+        setIsHeaderVisible(true);
+      }
+    };
 
-  // 공통 버튼 스타일
-  const baseButtonStyles = {
-    color: theme.colors.text.primary,
-    fontSize: "15px",
-    fontWeight: 500,
-    transition: "all 0.3s ease",
-    textTransform: "none" as const,
-    textShadow: isLandingPage && !isScrolled ? theme.shadows.text : "none",
-    borderRadius: theme.borderRadius.medium,
-    whiteSpace: "nowrap" as const,
-    "&:hover": {
-      transform: "translateY(-1px)",
-      backgroundColor: theme.colors.glassmorphism.background,
-    },
-    "&:focus": {
-      outline: "none",
-      backgroundColor: theme.colors.glassmorphism.background,
-    },
-    "&:focus-visible": {
-      outline: `2px solid ${theme.colors.glassmorphism.border}`,
-      outlineOffset: "2px",
-    },
-  };
+    // 초기 상태 설정
+    handleScroll();
+    
+    // 스크롤 이벤트 리스너 등록
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
-  const authButtonStyles = {
-    ...baseButtonStyles,
-    padding: "10px 20px",
-    backgroundColor: theme.colors.glassmorphism.background,
-    border: `1px solid ${theme.colors.glassmorphism.border}`,
-    backdropFilter: theme.colors.glassmorphism.backdropFilter,
-    "&:hover": {
-      transform: "translateY(-1px)",
-      backgroundColor: theme.colors.glassmorphism.backgroundHover,
-      borderColor: "rgba(255, 255, 255, 0.4)",
-    },
-    "&:disabled": {
-      backgroundColor: "rgba(255, 255, 255, 0.05)",
-      color: theme.colors.text.muted,
-      borderColor: "rgba(255, 255, 255, 0.1)",
-    },
-  };
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []); // 빈 dependency 배열로 안정화
+
+  // 이벤트 핸들러들 메모이제이션
+  const handleLogout = useCallback(async () => {
+    await logout();
+    navigate("/");
+  }, [logout, navigate]);
+
+  const handleGoogleLogin = useCallback(async () => {
+    const success = await loginWithGoogle();
+    if (success) {
+      navigate("/recommendations");
+    }
+  }, [loginWithGoogle, navigate]);
+
+  const handleProfileMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>) => {
+    setProfileMenuAnchor(event.currentTarget);
+  }, []);
+
+  const handleProfileMenuClose = useCallback(() => {
+    setProfileMenuAnchor(null);
+  }, []);
+
+  const handleProfileMenuAction = useCallback((action: string) => {
+    handleProfileMenuClose();
+    switch (action) {
+      case 'profile':
+        navigate('/me');
+        break;
+      case 'settings':
+        navigate('/settings');
+        break;
+      case 'logout':
+        handleLogout();
+        break;
+    }
+  }, [navigate, handleLogout, handleProfileMenuClose]);
+
+  const handleLogoClick = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
+
+  const handleMenuClick = useCallback((path: string) => {
+    navigate(path);
+  }, [navigate]);
+
+  // 동적 배경 스타일 계산 - 페이지 배경에 맞게 조화롭게
+  const headerBackground = useMemo(() => {
+    if (!isLandingPage) return "rgba(0, 0, 0, 0.3)";
+    return isScrolled ? "rgba(0, 0, 0, 0.4)" : "rgba(0, 0, 0, 0.2)";
+  }, [isLandingPage, isScrolled]);
 
   return (
-    <Box
-      component="header"
-      sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1100,
-        background: headerBackground,
-        backdropFilter: shouldShowShadow ? "blur(20px)" : "none",
-        borderBottom: shouldShowShadow
-          ? `1px solid ${theme.colors.glassmorphism.border}`
-          : "none",
-        boxShadow: shouldShowShadow ? theme.shadows.card : "none",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-      }}
-    >
       <Box
         sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: { xs: "20px 16px", sm: "24px 32px" },
-          maxWidth: "1400px",
-          margin: "0 auto",
+          position: "fixed",
+          // transform을 사용하여 더 부드러운 애니메이션
+          top: 15,
+          left: "50%",
+          transform: `translateX(-50%) translateY(${isHeaderVisible ? '0' : '-150px'})`,
+          zIndex: 1100,
           width: "100%",
+          maxWidth: "calc(100vw - 80px)",
+          display: "flex",
+          justifyContent: "center",
+          pointerEvents: "none",
+          px: { xs: 2, sm: 3, md: 4 },
+          // 부드러운 애니메이션 효과 개선
+          transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
-        {/* 로고 */}
+      <Box
+        component="header"
+        sx={{
+          position: "relative",
+          background: headerBackground,
+          backdropFilter: "blur(10px)",
+          borderRadius: "20px",
+          boxShadow: isScrolled 
+            ? "0 8px 32px rgba(0, 0, 0, 0.15)" 
+            : "0 4px 20px rgba(0, 0, 0, 0.1)",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          width: "100%",
+          minWidth: "300px",
+          maxWidth: { xs: "100%", sm: "600px", md: "800px", lg: "1000px" },
+          pointerEvents: "auto",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+        }}
+      >
         <Box
-          component="button"
-          onClick={() => navigate("/")}
           sx={{
-            ...baseButtonStyles,
-            padding: "8px",
-            backgroundColor: "transparent",
-            border: "none",
-            cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 1,
+            justifyContent: "space-between",
+            padding: { xs: "12px 16px", sm: "16px 20px" },
+            width: "100%",
           }}
         >
-          <MusicNote
+          {/* 로고 */}
+          <Box
+            component="button"
+            onClick={handleLogoClick}
             sx={{
-              color: theme.colors.text.primary,
-              fontSize: "32px",
-              filter:
-                isLandingPage && !isScrolled
-                  ? "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))"
-                  : "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))",
-              transition: "all 0.3s ease",
-            }}
-          />
-          <Typography
-            component="span"
-            sx={{
-              fontSize: { xs: "22px", sm: "24px" },
-              fontWeight: 700,
-              color: theme.colors.text.primary,
-              letterSpacing: "0.02em",
-              textShadow:
-                isLandingPage && !isScrolled
-                  ? theme.shadows.textStrong
-                  : theme.shadows.text,
-              transition: "all 0.3s ease",
+              ...styles.baseButton,
+              padding: "6px 10px",
+              backgroundColor: "transparent",
+              border: "none",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              outline: "none",
+              "&:focus": {
+                outline: "none",
+              },
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                transform: "translateY(-1px)",
+              },
             }}
           >
-            오락가락
-          </Typography>
-        </Box>
+             <MusicNote
+               sx={{
+                 color: "#ffffff",
+                 fontSize: "24px",
+               }}
+             />
+             <Typography
+               component="span"
+               sx={{
+                 fontSize: "18px",
+                 fontWeight: 700,
+                 color: "#ffffff",
+               }}
+             >
+              오락가락
+            </Typography>
+          </Box>
 
-        {/* 네비게이션 메뉴 */}
-        <Box
-          component="nav"
-          sx={{
-            display: { xs: "none", md: "flex" },
-            gap: 1,
-          }}
-        >
-          {menuItems.map((item) => (
-            <Button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              sx={{
-                ...baseButtonStyles,
-                padding: "10px 20px",
-                position: "relative",
-              }}
-            >
-              {item.label}
-              {item.label === "AI 데모" && (
-                <Box
-                  component="span"
+           {/* 네비게이션 메뉴 */}
+           <Box
+             component="nav"
+             sx={{
+               display: { xs: "none", md: "flex" },
+               gap: 0.5,
+             }}
+           >
+             {menuItems.map((item) => {
+               const isActive = location.pathname === item.path;
+               return (
+                   <Button
+                     key={item.path}
+                     onClick={() => handleMenuClick(item.path)}
+                     sx={{
+                       ...styles.baseButton,
+                       padding: "6px 12px",
+                       backgroundColor: "transparent",
+                       position: "relative",
+                       color: isActive ? "#FFD700" : "#ffffff",
+                       fontWeight: isActive ? 700 : 500,
+                       textShadow: isActive ? "2px 2px 4px rgba(0, 0, 0, 0.3)" : "none",
+                       transform: isActive ? "translateY(-1px)" : "translateY(0)",
+                       boxShadow: isActive ? "0 4px 8px rgba(255, 215, 0, 0.3)" : "none",
+                       transition: "all 0.3s ease",
+                       outline: "none",
+                       "&:focus": {
+                         outline: "none",
+                       },
+                       "&:hover": {
+                         color: "#FFD700",
+                         textShadow: "2px 2px 4px rgba(0, 0, 0, 0.3)",
+                         transform: "translateY(-1px)",
+                         boxShadow: "0 4px 8px rgba(255, 215, 0, 0.3)",
+                       },
+                     }}
+                   >
+                   {item.label}
+                   {item.label === "AI 데모" && (
+                     <Box
+                       component="span"
+                       sx={{
+                         position: "absolute",
+                         top: "-8px",
+                         right: "2px",
+                         fontSize: "8px",
+                         fontWeight: 600,
+                         color: "#ff6b6b",
+                         padding: "1px 4px",
+                         borderRadius: "4px",
+                       }}
+                     >
+                       beta
+                     </Box>
+                   )}
+                 </Button>
+               );
+             })}
+           </Box>
+
+          {/* 사용자 영역 */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {isAuthenticated ? (
+              <>
+                <Button
+                  onClick={handleProfileMenuOpen}
                   sx={{
-                    position: "absolute",
-                    top: "6px",
-                    right: "6px",
-                    fontSize: "8px",
-                    fontWeight: 500,
+                    ...styles.baseButton,
+                    padding: "6px 10px",
                     backgroundColor: "transparent",
-                    color: "#ff6b6b",
-                    lineHeight: 1,
+                    border: "1px solid rgba(0, 0, 0, 0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
                   }}
                 >
-                  beta
-                </Box>
-              )}
-            </Button>
-          ))}
-        </Box>
+                   <Avatar
+                     src={user?.profileImageUrl || user?.profileImage}
+                     sx={{ width: 24, height: 24 }}
+                   >
+                     <Person sx={{ fontSize: "14px", color: "#ffffff" }} />
+                   </Avatar>
+                   <Typography
+                     component="span"
+                     sx={{
+                       color: "#ffffff",
+                       fontSize: "14px",
+                       fontWeight: 500,
+                     }}
+                   >
+                    {user?.nickname || "사용자"}
+                  </Typography>
+                </Button>
 
-        {/* 사용자 영역 */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          {isAuthenticated ? (
-            <>
-              {/* 유저 정보 */}
+                <Menu
+                  anchorEl={profileMenuAnchor}
+                  open={profileMenuOpen}
+                  onClose={handleProfileMenuClose}
+                  TransitionComponent={Fade}
+                  PaperProps={{
+                    sx: {
+                      backgroundColor: "rgba(0, 0, 0, 0.9)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3)",
+                      mt: 1,
+                      minWidth: 160,
+                    },
+                  }}
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                >
+                  <MenuItem
+                    onClick={() => handleProfileMenuAction('profile')}
+                    sx={{
+                      color: "#ffffff",
+                      fontSize: "14px",
+                      py: 1,
+                      px: 2,
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      },
+                    }}
+                  >
+                    <AccountCircle sx={{ mr: 1.5, fontSize: "18px", color: "#ffffff" }} />
+                    마이페이지
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => handleProfileMenuAction('settings')}
+                    sx={{
+                      color: "#ffffff",
+                      fontSize: "14px",
+                      py: 1,
+                      px: 2,
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                      },
+                    }}
+                  >
+                    <Settings sx={{ mr: 1.5, fontSize: "18px", color: "#ffffff" }} />
+                    설정
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => handleProfileMenuAction('logout')}
+                    sx={{
+                      color: "#ff6b6b",
+                      fontSize: "14px",
+                      py: 1,
+                      px: 2,
+                      "&:hover": {
+                        backgroundColor: "rgba(255, 107, 107, 0.1)",
+                      },
+                    }}
+                  >
+                    <Logout sx={{ mr: 1.5, fontSize: "18px", color: "#ff6b6b" }} />
+                    로그아웃
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
               <Button
-                onClick={() => navigate("/me")}
-                sx={{
-                  ...baseButtonStyles,
-                  padding: "8px 16px",
-                  backgroundColor: "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  minWidth: "auto",
-                }}
+                onClick={handleGoogleLogin}
+                disabled={isLoading}
+                sx={styles.authButton}
               >
-                <Avatar
-                  src={user?.profileImageUrl || user?.profileImage}
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    border: `2px solid ${theme.colors.glassmorphism.border}`,
-                    boxShadow: theme.shadows.card,
-                  }}
-                >
-                  <Person sx={{ fontSize: "20px" }} />
-                </Avatar>
-                <Typography
-                  component="span"
-                  sx={{
-                    color: theme.colors.text.primary,
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    textShadow:
-                      isLandingPage && !isScrolled
-                        ? theme.shadows.text
-                        : "none",
-                  }}
-                >
-                  {user?.nickname || "사용자"}
-                </Typography>
+                {isLoading ? "로그인 중..." : "구글 로그인"}
               </Button>
-
-              {/* 로그아웃 버튼 */}
-              <Button onClick={handleLogout} sx={authButtonStyles}>
-                로그아웃
-              </Button>
-            </>
-          ) : (
-            <Button
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              sx={authButtonStyles}
-            >
-              {isLoading ? "로그인 중..." : "구글 로그인"}
-            </Button>
-          )}
+            )}
+          </Box>
         </Box>
       </Box>
     </Box>
