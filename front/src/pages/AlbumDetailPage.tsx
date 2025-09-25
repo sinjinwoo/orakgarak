@@ -57,6 +57,7 @@ interface VinyListTrack {
   artist: string;
   duration: string;
   iconType: 'cloud' | 'zap' | 'dollar' | 'phone';
+  audioUrl: string;
 }
 
 interface VinyListAlbum {
@@ -97,9 +98,12 @@ const AlbumDetailPage: React.FC = () => {
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState('0:07');
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(1);
+  const [currentTime, setCurrentTime] = useState('0:00');
+  const [duration, setDuration] = useState('0:00');
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [currentlyPlayingTrack, setCurrentlyPlayingTrack] = useState<number | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Track editing modal state
   const [editTracksOpen, setEditTracksOpen] = useState(false);
@@ -160,7 +164,8 @@ const AlbumDetailPage: React.FC = () => {
           title: track.recordTitle || `트랙 ${track.trackOrder}`,
           artist: albumData.userNickname || `사용자 ${albumData.userId}`,
           duration: `${Math.floor(track.durationSeconds / 60)}:${(track.durationSeconds % 60).toString().padStart(2, '0')}`,
-          iconType: iconTypes[index % 4]
+          iconType: iconTypes[index % 4],
+          audioUrl: track.audioUrl // 오디오 URL 추가
         }));
 
         const vinyListAlbum: VinyListAlbum = {
@@ -175,6 +180,8 @@ const AlbumDetailPage: React.FC = () => {
 
         console.log('변환된 앨범 데이터:', vinyListAlbum);
         console.log('트랙 개수:', vinyListTracks.length);
+        console.log('트랙 데이터:', vinyListTracks);
+        console.log('원본 트랙 데이터:', tracksData);
         setAlbum(vinyListAlbum);
 
         // Load like count and status
@@ -227,6 +234,16 @@ const AlbumDetailPage: React.FC = () => {
     loadAlbum();
   }, [albumId, showToast]);
 
+  // Cleanup audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+    };
+  }, [audioElement]);
+
   // Icon component mapping
   const getTrackIcon = (iconType: string) => {
     const iconProps = { size: 18 };
@@ -239,11 +256,93 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
-  // Track selection handlers
-  const handleTrackSelect = (trackIndex: number) => {
-    setCurrentTrackIndex(trackIndex);
-    setCurrentlyPlayingTrack(trackIndex);
-    setIsPlaying(true);
+  // 오디오 재생 관련 함수들
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleTrackSelect = async (trackIndex: number) => {
+    if (!album || !album.tracks[trackIndex]) return;
+
+    const track = album.tracks[trackIndex];
+    console.log('트랙 선택:', track);
+    console.log('오디오 URL:', track.audioUrl);
+    
+    if (!track.audioUrl) {
+      showToast('오디오 파일 URL이 없습니다.', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 기존 오디오가 있으면 정지
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+
+      // 새로운 오디오 엘리먼트 생성
+      const audio = new Audio(track.audioUrl);
+      
+      // 오디오 이벤트 리스너 설정
+      audio.addEventListener('loadedmetadata', () => {
+        setDuration(formatTime(audio.duration));
+        setIsLoading(false);
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        setCurrentTime(formatTime(audio.currentTime));
+      });
+
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setCurrentTime('0:00');
+        // 자동으로 다음 트랙 재생
+        if (trackIndex < album.tracks.length - 1) {
+          handleTrackSelect(trackIndex + 1);
+        }
+      });
+
+      audio.addEventListener('error', () => {
+        showToast('오디오 파일을 재생할 수 없습니다.', 'error');
+        setIsLoading(false);
+        setIsPlaying(false);
+      });
+
+      // 오디오 재생 시작
+      await audio.play();
+      
+      setAudioElement(audio);
+      setCurrentTrackIndex(trackIndex);
+      setCurrentlyPlayingTrack(trackIndex);
+      setIsPlaying(true);
+      
+    } catch (error) {
+      console.error('오디오 재생 오류:', error);
+      showToast('오디오 재생 중 오류가 발생했습니다.', 'error');
+      setIsLoading(false);
+      setIsPlaying(false);
+    }
+  };
+
+  const handlePlayPause = async () => {
+    if (!audioElement) return;
+
+    try {
+      if (isPlaying) {
+        audioElement.pause();
+        setIsPlaying(false);
+      } else {
+        await audioElement.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('재생/일시정지 오류:', error);
+      showToast('재생 중 오류가 발생했습니다.', 'error');
+    }
   };
 
   const handleFollowToggle = async () => {
@@ -307,15 +406,13 @@ const AlbumDetailPage: React.FC = () => {
 
   const handlePreviousTrack = () => {
     if (currentTrackIndex > 0) {
-      setCurrentTrackIndex(currentTrackIndex - 1);
-      setCurrentlyPlayingTrack(currentTrackIndex - 1);
+      handleTrackSelect(currentTrackIndex - 1);
     }
   };
 
   const handleNextTrack = () => {
     if (album && currentTrackIndex < album.tracks.length - 1) {
-      setCurrentTrackIndex(currentTrackIndex + 1);
-      setCurrentlyPlayingTrack(currentTrackIndex + 1);
+      handleTrackSelect(currentTrackIndex + 1);
     }
   };
 
@@ -1212,25 +1309,35 @@ const AlbumDetailPage: React.FC = () => {
 
             {/* Play/Pause Button */}
             <IconButton
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={handlePlayPause}
+              disabled={isLoading || !audioElement}
               sx={{
                 color: '#fb42d4',
                 '&:hover': {
                   color: '#fb42d4',
                   textShadow: '0 0 10px rgba(251, 66, 212, 0.5)'
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 255, 255, 0.3)'
                 }
               }}
             >
-              {isPlaying ? <PauseIcon sx={{ fontSize: 28 }} /> : <PlayArrowIcon sx={{ fontSize: 28 }} />}
+              {isLoading ? (
+                <CircularProgress size={28} sx={{ color: '#fb42d4' }} />
+              ) : isPlaying ? (
+                <PauseIcon sx={{ fontSize: 28 }} />
+              ) : (
+                <PlayArrowIcon sx={{ fontSize: 28 }} />
+              )}
             </IconButton>
 
             {/* Current Time */}
             <Typography
               variant="body2"
               color="rgba(255, 255, 255, 0.6)"
-              sx={{ minWidth: 'fit-content' }}
+              sx={{ minWidth: 'fit-content', fontFamily: 'monospace' }}
             >
-              {currentTime}
+              {currentTime} / {duration}
             </Typography>
 
             {/* Waveform Visualization */}
