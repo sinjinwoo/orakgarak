@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Typography, Button, Box, Avatar, Menu, MenuItem, Fade } from "@mui/material";
-import { Person, Logout, Settings, AccountCircle } from "@mui/icons-material";
+import { Person, Logout, AccountCircle } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth, useSocialAuth } from "../../hooks/useAuth";
 
@@ -109,9 +109,6 @@ const Header: React.FC = () => {
     switch (action) {
       case 'profile':
         navigate('/me');
-        break;
-      case 'settings':
-        navigate('/settings');
         break;
       case 'logout':
         handleLogout();
@@ -357,21 +354,6 @@ const Header: React.FC = () => {
                   >
                     <AccountCircle sx={{ mr: 1.5, fontSize: "18px", color: "#ffffff" }} />
                     마이페이지
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => handleProfileMenuAction('settings')}
-                    sx={{
-                      color: "#ffffff",
-                      fontSize: "14px",
-                      py: 1,
-                      px: 2,
-                      "&:hover": {
-                        backgroundColor: "rgba(255, 255, 255, 0.1)",
-                      },
-                    }}
-                  >
-                    <Settings sx={{ mr: 1.5, fontSize: "18px", color: "#ffffff" }} />
-                    설정
                   </MenuItem>
                   <MenuItem
                     onClick={() => handleProfileMenuAction('logout')}

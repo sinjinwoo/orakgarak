@@ -5,8 +5,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Eye, ChevronDown, ChevronUp, Album } from 'lucide-react';
 import { useCoverStore } from '../../stores/coverStore';
+import { useAlbumMetaStore } from '../../stores/albumMetaStore';
 
 interface MiniPreviewTrack {
   id: string;
@@ -31,6 +32,7 @@ const MiniPreviewCard: React.FC<MiniPreviewCardProps> = ({
   className = '',
 }) => {
   const { params, selectedCoverId, history, latest } = useCoverStore();
+  const { cover } = useAlbumMetaStore();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -40,13 +42,17 @@ const MiniPreviewCard: React.FC<MiniPreviewCardProps> = ({
   const totalSeconds = totalDurationSec % 60;
   const formattedDuration = `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
 
-  const defaultCover = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop';
-
   // 커버 이미지 실시간 업데이트
   useEffect(() => {
     // 앨범 스토어의 coverImage가 우선순위가 높음 (직접 업로드된 이미지 포함)
     if (coverImageUrl) {
       setPreviewImage(coverImageUrl);
+      return;
+    }
+
+    // albumMetaStore의 직접 업로드된 이미지 확인
+    if (cover.uploadedUrl) {
+      setPreviewImage(cover.uploadedUrl);
       return;
     }
 
@@ -61,7 +67,7 @@ const MiniPreviewCard: React.FC<MiniPreviewCardProps> = ({
 
     // 기본 커버 이미지 사용
     setPreviewImage(null);
-  }, [coverImageUrl, selectedCoverId, latest, history]);
+  }, [coverImageUrl, cover.uploadedUrl, selectedCoverId, latest, history]);
 
   // CSS 필터를 이용한 실시간 미리보기 스타일
   const getPreviewStyle = () => {
@@ -143,15 +149,24 @@ const MiniPreviewCard: React.FC<MiniPreviewCardProps> = ({
             <div className="relative mb-4">
               <div className={`aspect-square rounded-xl overflow-hidden bg-gradient-to-br ${getMoodGradient()}`}>
                 <div className="relative w-full h-full">
-                  <img
-                    src={previewImage || coverImageUrl || defaultCover}
-                    alt={albumTitle}
-                    className="w-full h-full object-cover"
-                    style={getPreviewStyle()}
-                    onError={(e) => {
-                      e.currentTarget.src = defaultCover;
-                    }}
-                  />
+                  {previewImage || coverImageUrl || cover.uploadedUrl ? (
+                    <img
+                      src={previewImage || coverImageUrl || cover.uploadedUrl}
+                      alt={albumTitle}
+                      className="w-full h-full object-cover"
+                      style={getPreviewStyle()}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <Album className="w-12 h-12 text-white/60 mb-2 mx-auto" />
+                        <div className="text-white/40 text-xs">기본 커버</div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 팔레트 색상 오버레이 */}
                   <div
