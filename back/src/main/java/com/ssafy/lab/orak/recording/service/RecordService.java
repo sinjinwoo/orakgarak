@@ -97,10 +97,8 @@ public class RecordService {
     
     @Transactional(readOnly = true)
     public RecordResponseDTO getRecord(Long recordId) {
-        Record record = recordRepository.findByIdWithUpload(recordId);
-        if (record == null) {
-            throw new RecordNotFoundException(recordId);
-        }
+        Record record = recordRepository.findByIdWithUpload(recordId)
+                .orElseThrow(() -> new RecordNotFoundException(recordId));
         
         return convertToResponseDTOWithUrl(record);
     }

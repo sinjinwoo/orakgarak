@@ -40,6 +40,9 @@ public class KafkaEventProducer {
     @Value("${kafka.topics.processing-results-dlq}")
     private String processingResultsDlqTopic;
 
+    @Value("${kafka.topics.voice-analysis-events:voice-analysis-events}")
+    private String voiceAnalysisEventsTopic;
+
     public void sendUploadEvent(UploadEvent event) {
         try {
             String eventJson = objectMapper.writeValueAsString(event);
@@ -260,6 +263,30 @@ public class KafkaEventProducer {
 
         } catch (Exception e) {
             log.error("Result DLQ 이벤트 처리 실패: {}", event, e);
+        }
+    }
+
+    /**
+     * 음성 분석 이벤트 발송
+     */
+    public void sendVoiceAnalysisEvent(Long uploadId) {
+        try {
+            UploadEvent voiceAnalysisEvent = UploadEvent.createVoiceAnalysisRequestEvent(uploadId);
+            String eventJson = objectMapper.writeValueAsString(voiceAnalysisEvent);
+            String key = String.valueOf(uploadId);
+
+            kafkaTemplate.send(voiceAnalysisEventsTopic, key, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("음성 분석 이벤트 발송 완료 - uploadId: {}, partition: {}, offset: {}",
+                                uploadId, result.getRecordMetadata().partition(), result.getRecordMetadata().offset());
+                    } else {
+                        log.error("음성 분석 이벤트 발송 실패 - uploadId: {}", uploadId, ex);
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("음성 분석 이벤트 생성 및 발송 실패 - uploadId: {}", uploadId, e);
         }
     }
 }
