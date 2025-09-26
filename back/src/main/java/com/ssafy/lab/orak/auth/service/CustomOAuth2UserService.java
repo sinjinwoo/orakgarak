@@ -22,16 +22,25 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        OAuth2User oauth2User = super.loadUser(userRequest);
+        log.info("=== CustomOAuth2UserService.loadUser 시작 ===");
 
-        String registrationId = userRequest.getClientRegistration().getRegistrationId();
-        Map<String, Object> attributes = oauth2User.getAttributes();
+        try {
+            OAuth2User oauth2User = super.loadUser(userRequest);
 
-        if ("google".equals(registrationId)) {
-            return processGoogleUser(attributes);
+            String registrationId = userRequest.getClientRegistration().getRegistrationId();
+            Map<String, Object> attributes = oauth2User.getAttributes();
+
+            log.info("OAuth2 Provider: {}", registrationId);
+
+            if ("google".equals(registrationId)) {
+                return processGoogleUser(attributes);
+            }
+
+            throw new OAuth2AuthenticationException("Unsupported OAuth2 provider: " + registrationId);
+        } catch (Exception e) {
+            log.error("CustomOAuth2UserService에서 예외 발생", e);
+            throw new OAuth2AuthenticationException("OAuth2 사용자 로드 실패: " + e.getMessage());
         }
-
-        throw new OAuth2AuthenticationException("Unsupported OAuth2 provider: " + registrationId);
     }
 
     private OAuth2User processGoogleUser(Map<String, Object> attributes) {
@@ -49,18 +58,30 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private User createNewUser(String googleId, String email, String name) {
-        User newUser = User.builder()
-                .googleID(googleId)
-                .email(email)
-                .build();
+        log.info("=== 새 사용자 생성 시작: googleId={}, email={} ===", googleId, email);
 
-        User savedUser = userRepository.save(newUser);
-        log.info("Created new user: {}", savedUser.getId());
-        
-        // 기본 프로필 생성
-        defaultProfileService.createDefaultProfile(savedUser);
-        log.info("Created default profile for user: {}", savedUser.getId());
-        
-        return savedUser;
+        try {
+            User newUser = User.builder()
+                    .googleID(googleId)
+                    .email(email)
+                    .build();
+
+            User savedUser = userRepository.save(newUser);
+            log.info("Created new user: {}", savedUser.getId());
+
+            // 기본 프로필 생성
+            try {
+                defaultProfileService.createDefaultProfile(savedUser);
+                log.info("Created default profile for user: {}", savedUser.getId());
+            } catch (Exception e) {
+                log.error("기본 프로필 생성 실패: userId={}", savedUser.getId(), e);
+                // 프로필 생성 실패해도 사용자는 생성됨
+            }
+
+            return savedUser;
+        } catch (Exception e) {
+            log.error("새 사용자 생성 실패: googleId={}, email={}", googleId, email, e);
+            throw new RuntimeException("사용자 생성 실패", e);
+        }
     }
 }
