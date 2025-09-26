@@ -72,8 +72,16 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .build().toUriString();
 
         log.info("리다이렉트 URL 생성: {}", targetUrl.replaceAll("accessToken=[^&]+", "accessToken=***"));
-        log.info("OAuth2 인증 성공 처리 완료 - 리다이렉트 실행");
+        // OAuth2 로그인 완료 후 세션 무효화 (JWT 기반 stateless 유지)
+        log.info("OAuth2 인증 성공 후 세션 무효화 시작");
+        try {
+            request.getSession().invalidate();
+            log.info("OAuth2 인증 성공 후 세션 무효화 완료");
+        } catch (Exception e) {
+            log.warn("세션 무효화 중 오류 (무시 가능): {}", e.getMessage());
+        }
 
+        log.info("OAuth2 인증 성공 처리 완료 - 리다이렉트 실행");
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }

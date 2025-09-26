@@ -108,6 +108,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         log.info("setAuthentication - SecurityContext에 인증 정보 설정 완료");
+
+        // JWT 인증에서는 세션 사용하지 않음을 명시
+        request.getSession(false); // 기존 세션이 있어도 새로 생성하지 않음
     }
 
     private String extractToken(HttpServletRequest request) {
