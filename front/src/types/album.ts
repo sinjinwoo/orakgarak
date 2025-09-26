@@ -100,7 +100,6 @@ export interface MyPageStats {
   recordingCount: number;
   followerCount: number;
   followingCount: number;
-  totalPlays: number;
   totalLikes: number;
 }
 

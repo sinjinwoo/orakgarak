@@ -7,6 +7,7 @@ import AuthGuard from '../components/auth/AuthGuard';
 const LandingPage = React.lazy(() => import('../pages/LandingPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 const OnboardingRangePage = React.lazy(() => import('../pages/OnboardingRangePage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 const RecommendationsPage = React.lazy(() => import('../pages/RecommendationsPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
+const VoiceTestPage = React.lazy(() => import('../pages/VoiceTestPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 const RecordPage = React.lazy(() => import('../pages/RecordPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 const AlbumCreatePage = React.lazy(() => import('../pages/AlbumCreatePage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
 const AlbumDetailPage = React.lazy(() => import('../pages/AlbumDetailPage').catch(() => ({ default: () => <div>페이지를 불러올 수 없습니다.</div> })));
@@ -47,6 +48,12 @@ export const AppRouter: React.FC = () => {
         <Route path="/recommendations" element={
           <AuthGuard>
             <RecommendationsPage />
+          </AuthGuard>
+        } />
+        
+        <Route path="/voice-test" element={
+          <AuthGuard>
+            <VoiceTestPage />
           </AuthGuard>
         } />
         

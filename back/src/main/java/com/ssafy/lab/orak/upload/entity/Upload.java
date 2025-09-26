@@ -93,6 +93,11 @@ public class Upload extends BaseEntity {
     
     // 편의 메서드: 처리 상태 업데이트
     public void updateProcessingStatus(ProcessingStatus status) {
+        // 상태가 바뀔 때마다 재시도 카운터 리셋 (새로운 처리 단계 시작)
+        if (this.processingStatus != status) {
+            this.retryCount = 0;
+            this.lastFailedAt = null;
+        }
         this.processingStatus = status;
         this.processingErrorMessage = null; // 성공 시 에러 메시지 클리어
     }
@@ -123,11 +128,6 @@ public class Upload extends BaseEntity {
                 .isAfter(this.lastFailedAt.plusNanos(retryDelayMs * 1_000_000));
     }
 
-    // 편의 메서드: 재시도 카운터 리셋 (성공 시)
-    public void resetRetryCount() {
-        this.retryCount = 0;
-        this.lastFailedAt = null;
-    }
 
     // 편의 메서드: 에러 메시지 getter (테스트 호환성)
     public String getErrorMessage() {

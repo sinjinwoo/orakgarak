@@ -257,4 +257,37 @@ public class FileUploadService {
             return ProcessingStatus.COMPLETED; // 기타 파일은 업로드만으로 완료
         }
     }
+
+    // ===============================================
+    // DLQ 패턴용 추가 메서드들
+    // ===============================================
+
+    /**
+     * Kafka에서 놓친 파일들 조회 (배치 처리용)
+     */
+    public List<Upload> findStuckUploads(int limit, long stuckThresholdMs) {
+        java.time.LocalDateTime stuckTime = java.time.LocalDateTime.now()
+                .minusNanos(stuckThresholdMs * 1_000_000);
+
+        return uploadRepository.findStuckUploads(limit, stuckTime);
+    }
+
+    /**
+     * Kafka 헬스 체크용 - 오랫동안 처리되지 않은 파일 개수
+     */
+    public long countStuckUploads(long timestampMs) {
+        java.time.LocalDateTime stuckTime = java.time.LocalDateTime.ofInstant(
+            java.time.Instant.ofEpochMilli(timestampMs),
+            java.time.ZoneId.systemDefault()
+        );
+
+        return uploadRepository.countStuckUploads(stuckTime);
+    }
+
+    /**
+     * ID로 Upload 조회 (DLQ Consumer용)
+     */
+    public Upload findById(Long uploadId) {
+        return uploadRepository.findById(uploadId).orElse(null);
+    }
 }

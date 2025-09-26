@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { authService } from '../services/api';
+import { authService, profileService } from '../services/api';
+import { useUIStore } from '../stores/uiStore';
 import type { User } from '../types/user';
 
 export interface LoginCredentials {
@@ -30,10 +31,12 @@ export interface UseAuthReturn {
   
   // 유틸리티
   clearError: () => void;
+  fetchUserWithProfile: () => Promise<User | null>;
 }
 
 export function useAuth(): UseAuthReturn {
   const { user, isAuthenticated, login: loginStore, logout: logoutStore, updateUser } = useAuthStore();
+  const { showToast } = useUIStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,10 +53,17 @@ export function useAuth(): UseAuthReturn {
       // 스토어 업데이트
       loginStore(userData);
       
+      // 성공 토스트 표시
+      showToast('로그인에 성공했습니다!', 'success', 3000);
+      
       return true;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || '로그인에 실패했습니다.';
       setError(errorMessage);
+      
+      // 실패 토스트 표시
+      showToast(errorMessage, 'error', 4000);
+      
       return false;
     } finally {
       setIsLoading(false);
@@ -73,10 +83,17 @@ export function useAuth(): UseAuthReturn {
       // 스토어 업데이트
       loginStore(userData);
       
+      // 성공 토스트 표시
+      showToast('회원가입에 성공했습니다!', 'success', 3000);
+      
       return true;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || '회원가입에 실패했습니다.';
       setError(errorMessage);
+      
+      // 실패 토스트 표시
+      showToast(errorMessage, 'error', 4000);
+      
       return false;
     } finally {
       setIsLoading(false);
@@ -149,6 +166,35 @@ export function useAuth(): UseAuthReturn {
     setError(null);
   };
 
+  // 사용자 정보와 프로필 정보를 함께 가져오는 함수
+  const fetchUserWithProfile = async (): Promise<User | null> => {
+    try {
+      const userData = await authService.getCurrentUser();
+      
+      // 프로필 정보도 함께 가져오기
+      try {
+        const profileData = await profileService.getMyProfile();
+        
+        // 프로필 정보를 사용자 정보에 병합
+        const enrichedUser: User = {
+          ...userData,
+          nickname: profileData.nickname || userData.nickname,
+          profileImageUrl: profileData.profileImageUrl || userData.profileImageUrl,
+          backgroundImageUrl: profileData.backgroundImageUrl || userData.backgroundImageUrl,
+          description: profileData.description || userData.description,
+        };
+        
+        return enrichedUser;
+      } catch (profileError) {
+        console.warn('프로필 정보 가져오기 실패, 기본 사용자 정보만 사용:', profileError);
+        return userData;
+      }
+    } catch (error) {
+      console.error('사용자 정보 가져오기 실패:', error);
+      return null;
+    }
+  };
+
   // 앱 시작 시 토큰 검증
   useEffect(() => {
     const token = localStorage.getItem('auth-token');
@@ -169,6 +215,7 @@ export function useAuth(): UseAuthReturn {
     updateProfile,
     refreshToken,
     clearError,
+    fetchUserWithProfile,
   };
 }
 

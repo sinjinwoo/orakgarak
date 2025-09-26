@@ -2,7 +2,7 @@ package com.ssafy.lab.orak.auth.jwt.service;
 
 import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class TokenServiceImpl implements TokenService {
 
     private final RedisTemplate<String, Object> redisTemplate;

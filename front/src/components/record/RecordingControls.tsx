@@ -774,316 +774,102 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
             elevation={0}
             sx={{
               width: "92%",
-              maxWidth: 680,
+              maxWidth: 250,
               p: 0,
-              borderRadius: "24px",
+              borderRadius: "14px",
               outline: "none",
               position: "relative",
               overflow: "hidden",
-              background: `
-              radial-gradient(circle at 15% 15%, rgba(0, 255, 255, 0.12) 0%, transparent 60%),
-              radial-gradient(circle at 85% 85%, rgba(255, 0, 128, 0.12) 0%, transparent 60%),
-              radial-gradient(circle at 50% 50%, rgba(0, 255, 170, 0.08) 0%, transparent 70%),
-              linear-gradient(135deg, 
-                rgba(2, 6, 12, 0.98) 0%, 
-                rgba(8, 12, 20, 0.96) 25%,
-                rgba(12, 16, 26, 0.94) 50%,
-                rgba(6, 10, 18, 0.96) 75%,
-                rgba(2, 6, 12, 0.98) 100%
-              )
-            `,
+              background: 'rgba(15, 18, 28, 0.7)',
               border: "2px solid transparent",
               backgroundClip: "padding-box",
               boxShadow: `
-              0 0 80px rgba(0, 255, 255, 0.25),
-              0 0 120px rgba(255, 0, 128, 0.15),
-              0 0 160px rgba(0, 255, 170, 0.1),
-              inset 0 1px 0 rgba(255, 255, 255, 0.08),
-              inset 0 -1px 0 rgba(0, 255, 255, 0.15)
-            `,
-              backdropFilter: "blur(30px)",
+                0 18px 36px rgba(0,0,0,0.5),
+                0 0 22px rgba(236,72,153,0.22),
+                0 0 24px rgba(6,182,212,0.22),
+                inset 0 1px 0 rgba(255,255,255,0.05)
+              `,
+              backdropFilter: "blur(18px)",
               "&::before": {
                 content: '""',
                 position: "absolute",
                 inset: 0,
-                borderRadius: "24px",
-                padding: "2px",
-                background: `
-                linear-gradient(45deg, 
-                  #00ffff 0%, 
-                  #ff0080 25%, 
-                  #00ffaa 50%, 
-                  #ff0080 75%, 
-                  #00ffff 100%
-                )
-              `,
+                borderRadius: "14px",
+                padding: "1px",
+                background: 'linear-gradient(45deg, rgba(236,72,153,0.9), rgba(6,182,212,0.9))',
                 WebkitMask:
                   "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
                 WebkitMaskComposite: "xor",
                 maskComposite: "exclude",
-                animation: "neonBorderPulse 4s ease-in-out infinite",
+                animation: "neonBorderPulse 5s ease-in-out infinite",
               },
             }}
           >
-            {/* 강화된 네온 그리드 패턴 */}
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                opacity: 0.2,
-                backgroundImage: `
-              radial-gradient(circle at 20% 30%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 80% 70%, rgba(255, 0, 128, 0.15) 0%, transparent 50%),
-              linear-gradient(0deg, rgba(0,255,255,0.4) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,255,255,0.3) 1px, transparent 1px),
-              linear-gradient(45deg, rgba(255,0,128,0.2) 1px, transparent 1px)
-            `,
-                backgroundSize:
-                  "100px 100px, 120px 120px, 35px 35px, 35px 35px, 50px 50px",
-                maskImage:
-                  "radial-gradient(ellipse at 50% 40%, rgba(0,0,0,1) 20%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.2) 100%)",
-                pointerEvents: "none",
-                animation: "cyberGridFlow 25s linear infinite",
-              }}
-            />
-
-            {/* 다중 네온 스캔 라인 */}
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                pointerEvents: "none",
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  left: "-120%",
-                  top: "25%",
-                  width: "60%",
-                  height: "3px",
-                  background: `
-                  linear-gradient(90deg, 
-                    transparent, 
-                    rgba(0,255,255,0.3), 
-                    rgba(0,255,255,0.9), 
-                    rgba(0,255,255,0.3), 
-                    transparent
-                  )
-                `,
-                  boxShadow:
-                    "0 0 15px rgba(0,255,255,0.6), 0 0 30px rgba(0,255,255,0.3)",
-                  animation: "neonScanLine1 5s ease-in-out infinite",
-                },
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  right: "-120%",
-                  top: "65%",
-                  width: "50%",
-                  height: "2px",
-                  background: `
-                  linear-gradient(90deg, 
-                    transparent, 
-                    rgba(255,0,128,0.3), 
-                    rgba(255,0,128,0.8), 
-                    rgba(255,0,128,0.3), 
-                    transparent
-                  )
-                `,
-                  boxShadow:
-                    "0 0 12px rgba(255,0,128,0.5), 0 0 25px rgba(255,0,128,0.2)",
-                  animation: "neonScanLine2 6s ease-in-out infinite 1.5s",
-                },
-              }}
-            />
-
-            {/* 네온 파티클 효과 */}
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                pointerEvents: "none",
-                "&::before": {
-                  content: '""',
-                  position: "absolute",
-                  top: "15%",
-                  left: "12%",
-                  width: "6px",
-                  height: "6px",
-                  borderRadius: "50%",
-                  background:
-                    "radial-gradient(circle, #00ffff, rgba(0,255,255,0.3))",
-                  boxShadow: "0 0 20px #00ffff, 0 0 40px rgba(0,255,255,0.5)",
-                  animation: "neonParticle1 8s ease-in-out infinite",
-                },
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  top: "75%",
-                  right: "18%",
-                  width: "4px",
-                  height: "4px",
-                  borderRadius: "50%",
-                  background:
-                    "radial-gradient(circle, #ff0080, rgba(255,0,128,0.3))",
-                  boxShadow: "0 0 15px #ff0080, 0 0 30px rgba(255,0,128,0.4)",
-                  animation: "neonParticle2 10s ease-in-out infinite 3s",
-                },
-              }}
-            />
+            {/* 미니멀 글래스 배경 유지, 과한 데코 제거 */}
 
             {/* 네온 사이버펑크 헤더 */}
             <Box
               sx={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
-                px: 4,
-                py: 3,
+                justifyContent: "center",
+                gap: 1,
+                px: 2,
+                py: 1.25,
                 borderBottom: "2px solid transparent",
-                background: `
-              linear-gradient(135deg, 
-                rgba(0,255,255,0.12) 0%, 
-                rgba(255,0,128,0.08) 50%,
-                rgba(0,255,255,0.12) 100%
-              ),
-              linear-gradient(180deg, rgba(0,0,0,0.3), transparent)
-            `,
-                backdropFilter: "blur(15px)",
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0))',
+                backdropFilter: "blur(10px)",
                 position: "relative",
-                "&::after": {
-                  content: '""',
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: "2px",
-                  background:
-                    "linear-gradient(90deg, transparent, #00ffff 20%, #ff0080 50%, #00ffff 80%, transparent)",
-                  boxShadow: "0 0 10px rgba(0,255,255,0.5)",
-                },
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                {/* 네온 상태 인디케이터 */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      background:
-                        "radial-gradient(circle, #00ffff 30%, rgba(0,255,255,0.3) 70%)",
-                      boxShadow: `
-                    0 0 20px #00ffff,
-                    0 0 40px rgba(0,255,255,0.5),
-                    inset 0 0 10px rgba(255,255,255,0.2)
-                  `,
-                      animation: "neonPulse 2s ease-in-out infinite",
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background:
-                        "radial-gradient(circle, #ff0080 30%, rgba(255,0,128,0.3) 70%)",
-                      boxShadow:
-                        "0 0 15px #ff0080, 0 0 30px rgba(255,0,128,0.4)",
-                      animation: "neonPulse 2s ease-in-out infinite 0.5s",
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background:
-                        "radial-gradient(circle, #00ffaa 30%, rgba(0,255,170,0.3) 70%)",
-                      boxShadow:
-                        "0 0 12px #00ffaa, 0 0 25px rgba(0,255,170,0.3)",
-                      animation: "neonPulse 2s ease-in-out infinite 1s",
-                    }}
-                  />
-                </Box>
-
-                <Typography
-                  id="recording-preview-modal"
-                  variant="h5"
-                  sx={{
-                    m: 0,
-                    fontWeight: 900,
-                    letterSpacing: 2,
-                    fontFamily: "monospace",
-                    background: `
-                    linear-gradient(45deg, 
-                      #00ffff 0%, 
-                      #ffffff 25%, 
-                      #ff0080 50%, 
-                      #ffffff 75%, 
-                      #00ffff 100%
-                    )
-                  `,
-                    backgroundSize: "200% 100%",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    textShadow: "0 0 30px rgba(0,255,255,0.5)",
-                    animation: "neonTextFlow 3s linear infinite",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  ◆ NEURAL AUDIO ◆
+              <Box sx={{
+                width: 22,
+                height: 22,
+                borderRadius: '6px',
+                background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                boxShadow: '0 0 10px rgba(236,72,153,0.5), 0 0 10px rgba(6,182,212,0.45)'
+              }} />
+              <Typography
+                id="recording-preview-modal"
+                variant="h6"
+                sx={{
+                  m: 0,
+                  fontWeight: 900,
+                  letterSpacing: 0.3,
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  color: '#e5e7eb'
+                }}
+              >
+                녹음 저장
+              </Typography>
+              <IconButton
+                aria-label="close"
+                onClick={() => setShowModal(false)}
+                size="small"
+                sx={{
+                  ml: 'auto',
+                  width: 28,
+                  height: 28,
+                  borderRadius: "7px",
+                  color: "#94a3b8",
+                  border: "1px solid rgba(148,163,184,0.35)",
+                  bgcolor: "rgba(15,23,42,0.35)",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    color: '#ec4899',
+                    borderColor: 'rgba(236,72,153,0.6)',
+                    transform: 'scale(1.05)'
+                  }
+                }}
+              >
+                <Typography sx={{ fontWeight: 900, fontSize: "16px", lineHeight: 1 }}>
+                  ✕
                 </Typography>
-              </Box>
-
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    letterSpacing: 1.5,
-                    color: "rgba(0,255,255,0.8)",
-                    fontFamily: "monospace",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    background: "linear-gradient(45deg, #00ffff, #ff0080)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  CYBER_STUDIO.EXE
-                </Typography>
-                <IconButton
-                  aria-label="close"
-                  onClick={() => setShowModal(false)}
-                  size="medium"
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "8px",
-                    color: "#00ffff",
-                    border: "2px solid rgba(0,255,255,0.4)",
-                    bgcolor: "rgba(0,255,255,0.1)",
-                    backdropFilter: "blur(10px)",
-                    boxShadow: "0 0 20px rgba(0,255,255,0.2)",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      bgcolor: "rgba(255,0,128,0.15)",
-                      borderColor: "rgba(255,0,128,0.6)",
-                      color: "#ff0080",
-                      boxShadow: "0 0 25px rgba(255,0,128,0.4)",
-                      transform: "scale(1.05)",
-                    },
-                  }}
-                >
-                  <Typography sx={{ fontWeight: 900, fontSize: "18px" }}>
-                    ✕
-                  </Typography>
-                </IconButton>
-              </Box>
+              </IconButton>
             </Box>
 
             {/* 본문 */}
-            <Box sx={{ p: 3 }}>
+            <Box sx={{ p: 1.5 }}>
               {/* 모던한 오디오 플레이어 */}
               {audioBlob && (
                 <>
@@ -1092,10 +878,10 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 3,
-                      mb: 4,
-                      p: 3,
-                      borderRadius: 3,
+                      gap: 1.5,
+                      mb: 2,
+                      p: 1.5,
+                      borderRadius: 2,
                       background: `
                         linear-gradient(135deg, 
                           rgba(0,255,255,0.08) 0%, 
@@ -1103,7 +889,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                           rgba(0,255,170,0.08) 100%
                         )
                       `,
-                      border: "1px solid rgba(0,255,255,0.2)",
+                      border: "1px solid rgba(0,255,255,0.18)",
                       backdropFilter: "blur(10px)",
                     }}
                   >
@@ -1112,44 +898,44 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                       onClick={toggleWebAudioPlayback}
                       size="large"
                       sx={{
-                        width: 64,
-                        height: 64,
-                        borderRadius: "16px",
+                        width: 52,
+                        height: 52,
+                        borderRadius: "14px",
                         bgcolor: isPlaying 
-                          ? "rgba(255,0,128,0.2)" 
-                          : "rgba(0,255,255,0.15)",
-                        color: isPlaying ? "#ff0080" : "#00ffff",
+                          ? "rgba(236,72,153,0.22)" 
+                          : "rgba(6,182,212,0.16)",
+                        color: isPlaying ? "#ec4899" : "#06b6d4",
                         border: isPlaying 
-                          ? "2px solid rgba(255,0,128,0.6)" 
-                          : "2px solid rgba(0,255,255,0.4)",
+                          ? "2px solid rgba(236,72,153,0.55)" 
+                          : "2px solid rgba(6,182,212,0.5)",
                         boxShadow: isPlaying 
-                          ? "0 0 30px rgba(255,0,128,0.5)" 
-                          : "0 0 25px rgba(0,255,255,0.3)",
+                          ? "0 0 22px rgba(236,72,153,0.4)" 
+                          : "0 0 18px rgba(6,182,212,0.28)",
                         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                         "&:hover": { 
                           transform: "scale(1.08)",
                           boxShadow: isPlaying 
-                            ? "0 0 40px rgba(255,0,128,0.7)" 
-                            : "0 0 35px rgba(0,255,255,0.5)",
+                            ? "0 0 26px rgba(236,72,153,0.55)" 
+                            : "0 0 24px rgba(6,182,212,0.4)",
                         },
                         "&:active": {
                           transform: "scale(0.95)",
                         },
                       }}
                     >
-                      {isPlaying ? <Pause sx={{ fontSize: 32 }} /> : <PlayArrow sx={{ fontSize: 32 }} />}
+                      {isPlaying ? <Pause sx={{ fontSize: 26 }} /> : <PlayArrow sx={{ fontSize: 26 }} />}
                     </IconButton>
 
                     {/* 재생 정보 및 진행바 */}
                     <Box sx={{ flex: 1 }}>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
                         <Typography
                           variant="h6"
                           sx={{ 
-                            color: "#00ffff",
-                            fontFamily: "monospace",
-                            fontWeight: 600,
-                            textShadow: "0 0 10px rgba(0,255,255,0.5)"
+                            color: "#06b6d4",
+                            fontFamily: 'system-ui, -apple-system, sans-serif',
+                            fontWeight: 700,
+                            textShadow: "0 0 8px rgba(6,182,212,0.45)"
                           }}
                         >
                           {formatTime(currentTime)} / {formatTime(duration)}
@@ -1158,8 +944,8 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                         <Typography
                           variant="body2"
                           sx={{ 
-                            color: "rgba(255,255,255,0.6)",
-                            fontFamily: "monospace"
+                            color: "rgba(255,255,255,0.7)",
+                            fontFamily: 'system-ui, -apple-system, sans-serif'
                           }}
                         >
                           {playableAudioBlob ? 'WAV' : 'WebM'} • {((playableAudioBlob || audioBlob).size / 1024 / 1024).toFixed(1)}MB
@@ -1170,8 +956,8 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                       <Box
                         sx={{
                           position: "relative",
-                          height: 12,
-                          borderRadius: 6,
+                          height: 8,
+                          borderRadius: 4,
                           bgcolor: "rgba(255,255,255,0.1)",
                           overflow: "hidden",
                           cursor: "pointer",
@@ -1224,10 +1010,8 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                             top: 0,
                             bottom: 0,
                             width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
-                            background: `
-                              linear-gradient(90deg, #00ffff, #ff0080)
-                            `,
-                            boxShadow: "0 0 15px rgba(0,255,255,0.6)",
+                            background: `linear-gradient(90deg, #06b6d4, #ec4899)`,
+                            boxShadow: "0 0 12px rgba(6,182,212,0.5)",
                             transition: "width 0.1s ease",
                           }}
                         />
@@ -1239,12 +1023,12 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                             left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
                             top: "50%",
                             transform: "translate(-50%, -50%)",
-                            width: 16,
-                            height: 16,
+                            width: 12,
+                            height: 12,
                             borderRadius: "50%",
-                            bgcolor: "#00ffff",
+                            bgcolor: "#06b6d4",
                             border: "2px solid #0b0f14",
-                            boxShadow: "0 0 12px rgba(0,255,255,0.8)",
+                            boxShadow: "0 0 10px rgba(6,182,212,0.65)",
                           }}
                         />
                       </Box>
@@ -1259,36 +1043,52 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                     value={recordingTitle}
                     onChange={(e) => setRecordingTitle(e.target.value)}
                     variant="outlined"
+                    helperText="추천 준비를 위해 제목을 입력해 주세요"
                     disabled={isConverting || processRecording.isPending}
                     sx={{
                       mb: 3,
                       "& .MuiOutlinedInput-root": {
-                        backgroundColor: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(0,255,255,0.3)",
-                        borderRadius: 2,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        border: "2px solid rgba(236,72,153,0.55)",
+                        borderRadius: 10,
                         color: "#fff",
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        letterSpacing: 0.2,
+                        boxShadow: '0 0 10px rgba(236,72,153,0.25), 0 0 10px rgba(6,182,212,0.2)',
                         "&:hover": {
-                          borderColor: "rgba(0,255,255,0.5)",
+                          borderColor: "rgba(6,182,212,0.7)",
                         },
                         "&.Mui-focused": {
-                          borderColor: "#00ffff",
-                          boxShadow: "0 0 12px rgba(0,255,255,0.3)",
+                          borderColor: "#06b6d4",
+                          boxShadow: "0 0 14px rgba(6,182,212,0.35)",
                         },
                         "&.Mui-disabled": {
                           backgroundColor: "rgba(255,255,255,0.02)",
                           borderColor: "rgba(255,255,255,0.1)",
                           color: "#666",
                         },
+                        '& input::placeholder': {
+                          color: 'rgba(255,255,255,0.8)',
+                          opacity: 1
+                        },
                       },
                       "& .MuiInputLabel-root": {
-                        color: "rgba(255,255,255,0.7)",
+                        color: "rgba(255,255,255,0.95)",
+                        fontWeight: 900,
+                        fontSize: '0.95rem',
                         "&.Mui-focused": {
-                          color: "#00ffff",
+                          color: "#06b6d4",
                         },
                         "&.Mui-disabled": {
                           color: "#666",
                         },
                       },
+                      "& .MuiFormHelperText-root": {
+                        color: 'rgba(226,232,240,0.9)',
+                        fontWeight: 600,
+                        marginTop: '6px'
+                      }
                     }}
                   />
 

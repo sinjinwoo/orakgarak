@@ -78,8 +78,8 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
     <div style={{
       position: 'relative',
       width: '100%',
-      height: '800px',
-      fontFamily: 'neon, monospace'
+      height: '550px',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
       {/* 닫기 버튼 */}
       {onClose && (
@@ -87,33 +87,34 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
+            top: '20px',
+            right: '20px',
             zIndex: 50,
-            width: '40px',
-            height: '40px',
-            background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)',
-            border: '2px solid rgba(251, 66, 212, 0.6)',
+            width: '48px',
+            height: '48px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: '50%',
-            color: '#000',
+            color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            boxShadow: '0 0 20px rgba(251, 66, 212, 0.4)',
-            fontSize: '18px',
-            fontWeight: 'bold'
+            backdropFilter: 'blur(10px)',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 1) 0%, rgba(66, 253, 235, 1) 100%)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
             e.currentTarget.style.transform = 'scale(1.1)';
-            e.currentTarget.style.boxShadow = '0 0 30px rgba(251, 66, 212, 0.6)';
+            e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.3)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
             e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(251, 66, 212, 0.4)';
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
           }}
         >
           ×
@@ -123,24 +124,21 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
       <div 
         style={{
           position: 'relative',
-          height: '700px',
-          width: '80%',
+          height: '420px',
+          width: '85%',
           margin: '0 auto',
           overflow: 'hidden',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          borderRadius: '20px',
+          borderRadius: '16px',
           zIndex: 10,
-          perspective: '1200px',
+          perspective: '1000px',
           perspectiveOrigin: 'center center',
-          background: `
-            radial-gradient(ellipse at center, rgba(251, 66, 212, 0.05) 0%, transparent 70%),
-            radial-gradient(ellipse at 20% 80%, rgba(66, 253, 235, 0.03) 0%, transparent 50%),
-            radial-gradient(ellipse at 80% 20%, rgba(251, 66, 212, 0.03) 0%, transparent 50%)
-          `,
-          border: '2px solid rgba(66, 253, 235, 0.2)',
-          boxShadow: '0 0 30px rgba(66, 253, 235, 0.1)'
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)'
         }}
       >
         {/* 카드들 */}
@@ -148,7 +146,7 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
           const distance = index - currentIndex;
           const absDistance = Math.abs(distance);
           
-          // 카드 위치와 회전 계산 - 통일된 크기 (320x380)
+          // 카드 위치와 회전 계산 - 통일된 크기 (240x300)
           const getCardTransform = () => {
             if (distance === 0) {
               // 중앙 카드 - 크기 완전 통일
@@ -157,11 +155,11 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
             
             // 좌우 대칭 배치를 위한 계산 - 새로운 카드 크기 고려
             const angle = distance * 15; // 각 카드당 15도 회전
-            const offsetX = distance * 160; // X축 오프셋 (카드 폭 320 고려)
+            const offsetX = distance * 140; // X축 오프셋 (카드 폭 240 고려)
             const offsetZ = -absDistance * 80; // Z축 깊이
             const offsetY = absDistance * 15; // Y축 오프셋
             
-            // 모든 카드 크기 완전 통일 (scale 고정)
+            // 모든 카드 크기 완전 통일 (scale 강제 고정)
             return `translateX(${offsetX}px) translateY(${offsetY}px) translateZ(${offsetZ}px) rotateY(${angle}deg) scale(0.85)`;
           };
           
@@ -192,7 +190,14 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
                 opacity: getCardOpacity(),
                 zIndex: getCardZIndex(),
                 transformStyle: 'preserve-3d',
-                filter: distance === 0 ? 'drop-shadow(0 25px 50px rgba(139, 92, 246, 0.4))' : 'none'
+                filter: distance === 0 ? 'drop-shadow(0 25px 50px rgba(139, 92, 246, 0.4))' : 'none',
+                // 강제 크기 고정
+                width: '240px',
+                height: '300px',
+                maxWidth: '240px',
+                maxHeight: '300px',
+                minWidth: '240px',
+                minHeight: '300px'
               }}
               onMouseEnter={(e) => {
                 if (distance !== 0) {
@@ -226,91 +231,11 @@ const CoverFlow: React.FC<CoverFlowProps> = ({
         })}
       </div>
 
-      {/* 사이버펑크 네비게이션 버튼들 */}
-      <button
-        onClick={goToPrevious}
-        disabled={isAnimating}
-        style={{
-          position: 'absolute',
-          left: '20px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: '60px',
-          height: '60px',
-          background: 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)',
-          border: '2px solid rgba(251, 66, 212, 0.6)',
-          borderRadius: '50%',
-          color: '#000',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          cursor: isAnimating ? 'not-allowed' : 'pointer',
-          transition: 'all 0.3s ease',
-          boxShadow: '0 0 20px rgba(251, 66, 212, 0.4)',
-          opacity: isAnimating ? 0.5 : 1,
-          zIndex: 20
-        }}
-        onMouseEnter={(e) => {
-          if (!isAnimating) {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 1) 0%, rgba(66, 253, 235, 1) 100%)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-            e.currentTarget.style.boxShadow = '0 0 30px rgba(251, 66, 212, 0.6)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isAnimating) {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 66, 212, 0.8) 0%, rgba(66, 253, 235, 0.8) 100%)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(251, 66, 212, 0.4)';
-          }
-        }}
-      >
-        ‹
-      </button>
-
-      <button
-        onClick={goToNext}
-        disabled={isAnimating}
-        style={{
-          position: 'absolute',
-          right: '20px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: '60px',
-          height: '60px',
-          background: 'linear-gradient(135deg, rgba(66, 253, 235, 0.8) 0%, rgba(251, 66, 212, 0.8) 100%)',
-          border: '2px solid rgba(66, 253, 235, 0.6)',
-          borderRadius: '50%',
-          color: '#000',
-          fontSize: '24px',
-          fontWeight: 'bold',
-          cursor: isAnimating ? 'not-allowed' : 'pointer',
-          transition: 'all 0.3s ease',
-          boxShadow: '0 0 20px rgba(66, 253, 235, 0.4)',
-          opacity: isAnimating ? 0.5 : 1,
-          zIndex: 20
-        }}
-        onMouseEnter={(e) => {
-          if (!isAnimating) {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(66, 253, 235, 1) 0%, rgba(251, 66, 212, 1) 100%)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1.1)';
-            e.currentTarget.style.boxShadow = '0 0 30px rgba(66, 253, 235, 0.6)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isAnimating) {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(66, 253, 235, 0.8) 0%, rgba(251, 66, 212, 0.8) 100%)';
-            e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(66, 253, 235, 0.4)';
-          }
-        }}
-      >
-        ›
-      </button>
 
       {/* 사이버펑크 스타일 원형 컨트롤러 */}
       <div style={{
         position: 'absolute',
-        bottom: '-20px',
+        bottom: '-60px',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 50

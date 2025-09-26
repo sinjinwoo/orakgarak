@@ -106,8 +106,9 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
         mb: 3,
         background: 'transparent',
         backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: 3
+        border: '2px solid rgba(6, 182, 212, 0.8)',
+        borderRadius: 3,
+        boxShadow: '0 0 40px rgba(6, 182, 212, 0.6)'
       }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ 
@@ -154,7 +155,7 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
           앨범에 포함할 녹음을 선택해주세요 (최소 1곡, 최대 10곡)
         </Typography>
 
-        <List sx={{ maxHeight: 400, overflow: 'auto' }}>
+        <List sx={{ maxHeight: 400, overflow: 'hidden', p: 1 }}>
           {recordings.map((recording) => {
             const isSelected = selectedRecordings.includes(recording.id);
             const quality = getQualityChip(recording.analysis?.overallScore || 0);
@@ -164,12 +165,15 @@ const RecordingSelectionStep: React.FC<RecordingSelectionStepProps> = ({
                 key={recording.id}
                 disablePadding
                 sx={{
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  border: isSelected ? '2px solid rgba(255, 193, 7, 0.8)' : '1px solid rgba(255, 255, 255, 0.2)',
                   borderRadius: 1,
-                  mb: 1,
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  mb: 1.5,
+                  backgroundColor: isSelected ? 'rgba(255, 193, 7, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                  boxShadow: isSelected ? '0 0 30px rgba(255, 193, 7, 0.5)' : 'none',
+                  transform: isSelected ? 'scale(1.01)' : 'scale(1)',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    backgroundColor: isSelected ? 'rgba(255, 193, 7, 0.15)' : 'rgba(255, 255, 255, 0.1)',
                   },
                 }}
               >

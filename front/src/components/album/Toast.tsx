@@ -62,7 +62,7 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onRemove }) => {
   };
 
   const getIcon = () => {
-    const iconClass = 'w-5 h-5';
+    const iconClass = 'w-4 h-4';
     switch (toast.type) {
       case 'success':
         return <CheckCircle2 className={iconClass} />;
@@ -77,25 +77,25 @@ const ToastItem: React.FC<ToastProps> = ({ toast, onRemove }) => {
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 rounded-xl border backdrop-blur-xl shadow-lg transition-all duration-300 ${
-        isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+      className={`flex items-center gap-2 p-3 rounded-lg border backdrop-blur-xl shadow-lg transition-all duration-300 ${
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
       } ${getToastStyles()}`}
       role="alert"
       aria-live="polite"
     >
       {/* 아이콘 */}
-      <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
+      <div className="flex-shrink-0">{getIcon()}</div>
 
       {/* 메시지 */}
-      <p className="flex-1 text-sm font-medium">{toast.message}</p>
+      <p className="flex-1 text-xs font-medium">{toast.message}</p>
 
       {/* 닫기 버튼 */}
       <button
         onClick={handleClose}
-        className="flex-shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors duration-200"
+        className="flex-shrink-0 p-1 hover:bg-white/10 rounded-md transition-colors duration-200"
         aria-label="알림 닫기"
       >
-        <X className="w-4 h-4" />
+        <X className="w-3 h-3" />
       </button>
     </div>
   );
@@ -106,7 +106,7 @@ const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemove }) => 
 
   return (
     <div
-      className="fixed top-20 right-4 z-50 space-y-2 max-w-sm w-full"
+      className="fixed bottom-20 left-4 right-4 z-50 space-y-2 max-w-sm mx-auto"
       aria-live="polite"
       aria-label="알림"
     >
