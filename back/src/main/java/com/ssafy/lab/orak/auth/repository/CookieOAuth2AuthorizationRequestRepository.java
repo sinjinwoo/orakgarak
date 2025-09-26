@@ -26,11 +26,24 @@ public class CookieOAuth2AuthorizationRequestRepository implements Authorization
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
-        log.info("쿠키에서 OAuth2 인증 요청 로드 시작");
+        log.info("쿠키에서 OAuth2 인증 요청 로드 시작 - URI: {}", request.getRequestURI());
+
+        // 모든 쿠키 확인
+        Cookie[] allCookies = request.getCookies();
+        if (allCookies != null) {
+            log.info("전체 쿠키 개수: {}", allCookies.length);
+            for (Cookie c : allCookies) {
+                log.info("쿠키 발견: name={}, value={}, path={}, domain={}",
+                    c.getName(), c.getValue().length() > 50 ? c.getValue().substring(0, 50) + "..." : c.getValue(),
+                    c.getPath(), c.getDomain());
+            }
+        } else {
+            log.error("요청에 쿠키가 전혀 없습니다!");
+        }
 
         Cookie cookie = getCookie(request, COOKIE_NAME);
         if (cookie == null) {
-            log.info("OAuth2 인증 요청 쿠키를 찾을 수 없습니다");
+            log.error("OAuth2 인증 요청 쿠키를 찾을 수 없습니다: cookieName={}", COOKIE_NAME);
             return null;
         }
 
@@ -66,7 +79,9 @@ public class CookieOAuth2AuthorizationRequestRepository implements Authorization
             cookie.setSecure(true); // 배포 환경 HTTPS
 
             response.addCookie(cookie);
-            log.info("OAuth2 인증 요청을 쿠키에 저장 완료: state={}", authorizationRequest.getState());
+            log.info("OAuth2 인증 요청을 쿠키에 저장 완료: state={}, cookieName={}, path=/api, secure=true",
+                authorizationRequest.getState(), COOKIE_NAME);
+            log.info("저장된 쿠키 값 길이: {}", encodedValue.length());
         } catch (JsonProcessingException e) {
             log.error("OAuth2 인증 요청 쿠키 직렬화 실패", e);
         }
@@ -75,14 +90,15 @@ public class CookieOAuth2AuthorizationRequestRepository implements Authorization
     @Override
     public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request,
                                                                HttpServletResponse response) {
-        log.info("쿠키에서 OAuth2 인증 요청 제거 시작");
+        log.info("쿠키에서 OAuth2 인증 요청 제거 시작 - URI: {}", request.getRequestURI());
+        log.info("요청 파라미터 state: {}", request.getParameter("state"));
 
         OAuth2AuthorizationRequest authRequest = loadAuthorizationRequest(request);
         if (authRequest != null) {
             deleteCookie(request, response, COOKIE_NAME);
             log.info("OAuth2 인증 요청 쿠키 제거 완료: state={}", authRequest.getState());
         } else {
-            log.info("제거할 OAuth2 인증 요청 쿠키가 없습니다");
+            log.error("제거할 OAuth2 인증 요청 쿠키가 없습니다! cookieName={}", COOKIE_NAME);
         }
 
         return authRequest;
