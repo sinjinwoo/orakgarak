@@ -51,8 +51,8 @@ public class SecurityConfig {
     @Order(0) // Webhook을 위한 Security FilterChain 설정
     public SecurityFilterChain webhookSecurity(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/webhook/**",
-                        "/records/async/upload-completed")
+                .securityMatcher("/api/webhook/**",
+                        "/api/records/async/upload-completed")
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -69,7 +69,8 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
                 .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator")
-                                         && !request.getRequestURI().startsWith("/api/webhook"))
+                                         && !request.getRequestURI().startsWith("/api/webhook")
+                                         && !request.getRequestURI().equals("/api/records/async/upload-completed"))
                 // 세션 미사용 (JWT 기반 인증)
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

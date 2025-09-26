@@ -38,6 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/test/") ||
                 path.equals("/api/auth/refresh") ||
                 path.equals("/auth/refresh") ||
+                path.equals("/api/auth/me") ||
+                path.equals("/auth/me") ||
                 path.startsWith("/api/yjs/") ||
                 path.startsWith("/yjs/") ||
                 path.startsWith("/api/swagger-ui/") ||
@@ -48,8 +50,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/api/images") ||
                 path.startsWith("/images") ||
                 path.startsWith("/api/webhook/") ||
+                path.equals("/api/records/async/upload-completed") ||
+                path.equals("/records/async/upload-completed") ||
+                path.startsWith("/api/actuator") ||
                 path.startsWith("/webhook/") ||
-                path.startsWith("/api/actuator")||
                 path.startsWith("/actuator")) {
             log.info("JWT Filter - Bypassing authentication for path: {}", path);
             filterChain.doFilter(request, response);
