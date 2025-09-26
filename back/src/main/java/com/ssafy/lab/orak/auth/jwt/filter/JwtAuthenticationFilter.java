@@ -31,19 +31,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         if (path.startsWith("/api/oauth2/") ||
+                path.startsWith("/oauth2/") ||
                 path.startsWith("/api/login/oauth2/") ||
+                path.startsWith("/login/oauth2/") ||
                 path.startsWith("/api/test/") ||
+                path.startsWith("/test/") ||
                 path.equals("/api/auth/refresh") ||
+                path.equals("/auth/refresh") ||
                 path.startsWith("/api/yjs/") ||
+                path.startsWith("/yjs/") ||
                 path.startsWith("/api/swagger-ui/") ||
                 path.startsWith("/swagger-ui/") ||
                 path.startsWith("/v3/api-docs") ||
                 path.startsWith("/api-docs") ||
                 path.startsWith("/api/api-docs") ||
                 path.startsWith("/api/images") ||
+                path.startsWith("/images") ||
                 path.startsWith("/api/webhook/") ||
-                path.startsWith("/actuator") ||
-                path.startsWith("/api/actuator")) {
+                path.startsWith("/api/actuator") ||
+                path.startsWith("/webhook/") ||
+                path.startsWith("/actuator")) {
             log.info("JWT Filter - Bypassing authentication for path: {}", path);
             filterChain.doFilter(request, response);
             return;
