@@ -75,21 +75,6 @@ public class ProfileImageService {
         return s3Helper.generatePresignedUrl(s3Key, Duration.ofHours(24));
     }
 
-    // 기존 메서드 호환성을 위해 유지 (deprecated)
-    @Deprecated
-    public String getProfileImageUrl(String s3KeyOrPath) {
-        if (s3KeyOrPath == null || s3KeyOrPath.isBlank()) {
-            return null;
-        }
-
-        // 기본 이미지인지 확인 (static resource 경로로 시작하는지)
-        if (s3KeyOrPath.startsWith(DEFAULT_IMAGE_PREFIX)) {
-            return baseUrl + s3KeyOrPath;
-        }
-
-        // S3 이미지인 경우 presigned URL 생성
-        return s3Helper.generatePresignedUrl(s3KeyOrPath, Duration.ofHours(24));
-    }
 
     public void deleteProfileImage(Upload upload) {
         deleteProfileImage(upload, false);
@@ -124,14 +109,7 @@ public class ProfileImageService {
         }
     }
 
-    // 기존 메서드 호환성을 위해 유지 (deprecated)
-    @Deprecated
-    public void deleteProfileImage(String s3Key) {
-        deleteProfileImage(s3Key, false);
-    }
-
-    @Deprecated
-    public void deleteProfileImage(String s3Key, boolean throwOnFailure) {
+    private void deleteS3Image(String s3Key, boolean throwOnFailure) {
         if (s3Key == null || s3Key.isBlank()) {
             return;
         }

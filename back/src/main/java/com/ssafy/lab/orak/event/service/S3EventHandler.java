@@ -8,12 +8,12 @@ import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class S3EventHandler {
 
     private final FileUploadService fileUploadService;

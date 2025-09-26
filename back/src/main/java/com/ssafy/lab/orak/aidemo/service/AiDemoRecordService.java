@@ -133,7 +133,7 @@ public class AiDemoRecordService {
     public List<RecordResponseDTO> getAiDemoRecords(Long userId) {
         try {
             // 성능 개선: 직접 directory로 필터링하여 N+1 문제 해결
-            List<Record> aiDemoRecords = recordRepository.findByUserIdAndUploadDirectoryWithUpload(userId, "ai-cover");
+            List<Record> aiDemoRecords = recordRepository.findByUserAndDirectory(userId, "ai-cover");
             return convertToResponseDTOsWithUrl(aiDemoRecords);
 
         } catch (Exception e) {
@@ -149,7 +149,7 @@ public class AiDemoRecordService {
     public List<RecordResponseDTO> getAllAiDemoRecords() {
         try {
             // 성능 개선: 직접 directory로 필터링하여 N+1 문제 해결
-            List<Record> aiDemoRecords = recordRepository.findByUploadDirectoryWithUpload("ai-cover");
+            List<Record> aiDemoRecords = recordRepository.findByDirectory("ai-cover");
             return convertToResponseDTOsWithUrl(aiDemoRecords);
 
         } catch (Exception e) {

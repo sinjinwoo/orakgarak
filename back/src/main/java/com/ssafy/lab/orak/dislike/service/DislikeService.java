@@ -3,7 +3,7 @@ package com.ssafy.lab.orak.dislike.service;
 import com.ssafy.lab.orak.dislike.entity.Dislike;
 import com.ssafy.lab.orak.dislike.repository.DislikeRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,7 +11,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 @Transactional(readOnly = true)
 public class DislikeService {
 

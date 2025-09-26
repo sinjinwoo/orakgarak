@@ -49,6 +49,13 @@ public class UploadEvent {
     // 처리 결과
     private String processedS3Key;
     private Long processingDuration;
+
+    // DLQ 및 재시도 관련 필드
+    private Integer retryCount;
+    private LocalDateTime firstFailureTime;
+    private LocalDateTime lastRetryTime;
+    private LocalDateTime dlqTimestamp;
+    private String retryReason;
     
     public static UploadEvent createS3UploadEvent(Long uploadId, String uuid, String s3Key, 
                                                   String s3Bucket, Long fileSize, String contentType) {
@@ -85,7 +92,7 @@ public class UploadEvent {
                 .build();
     }
     
-    public static UploadEvent createStatusChangeEvent(Long uploadId, String uuid, 
+    public static UploadEvent createStatusChangeEvent(Long uploadId, String uuid,
                                                      ProcessingStatus currentStatus, ProcessingStatus previousStatus,
                                                      String message) {
         return UploadEvent.builder()
@@ -98,6 +105,51 @@ public class UploadEvent {
                 .previousStatus(previousStatus)
                 .statusMessage(message)
                 .eventTime(LocalDateTime.now())
+                .retryCount(0)
                 .build();
+    }
+
+    public static UploadEvent createVoiceAnalysisRequestEvent(Long uploadId) {
+        return UploadEvent.builder()
+                .eventId(java.util.UUID.randomUUID().toString())
+                .eventType("VOICE_ANALYSIS_REQUESTED")
+                .source("audio-conversion")
+                .uploadId(uploadId)
+                .currentStatus(ProcessingStatus.VOICE_ANALYSIS_PENDING)
+                .statusMessage("음성 분석 요청됨")
+                .eventTime(LocalDateTime.now())
+                .priority(5) // 중간 우선순위 (백그라운드 처리)
+                .retryCount(0)
+                .build();
+    }
+
+    // DLQ 관련 헬퍼 메서드들
+    public void incrementRetryCount() {
+        this.retryCount = (this.retryCount == null) ? 1 : this.retryCount + 1;
+        this.lastRetryTime = LocalDateTime.now();
+        if (this.firstFailureTime == null) {
+            this.firstFailureTime = LocalDateTime.now();
+        }
+    }
+
+    public void markForDLQ(String errorMessage) {
+        this.dlqTimestamp = LocalDateTime.now();
+        this.errorMessage = errorMessage;
+        this.eventType = "MOVED_TO_DLQ";
+    }
+
+    public void resetForRetry() {
+        this.eventId = java.util.UUID.randomUUID().toString();
+        this.eventType = "RETRY_PROCESSING";
+        this.eventTime = LocalDateTime.now();
+        this.retryReason = "Manual retry from DLQ";
+    }
+
+    public boolean isMaxRetryExceeded(int maxRetries) {
+        return this.retryCount != null && this.retryCount >= maxRetries;
+    }
+
+    public boolean isEligibleForRetry() {
+        return this.retryCount == null || this.retryCount < 3;
     }
 }

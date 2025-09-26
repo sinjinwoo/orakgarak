@@ -1,8 +1,6 @@
 package com.ssafy.lab.orak.comment.service;
 
 
-import com.ssafy.lab.orak.auth.entity.User;
-import com.ssafy.lab.orak.auth.service.UserService;
 import com.ssafy.lab.orak.comment.dto.CommentDto;
 import com.ssafy.lab.orak.comment.entity.Comment;
 import com.ssafy.lab.orak.comment.exception.CommentAccessDeniedException;
@@ -12,7 +10,7 @@ import com.ssafy.lab.orak.profile.entity.Profile;
 import com.ssafy.lab.orak.profile.repository.ProfileRepository;
 import com.ssafy.lab.orak.profile.service.ProfileImageService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,7 +22,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
+@Log4j2
 @Service
 @RequiredArgsConstructor
 @Transactional

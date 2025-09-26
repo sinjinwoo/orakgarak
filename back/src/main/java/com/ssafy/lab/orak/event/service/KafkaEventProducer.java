@@ -3,7 +3,7 @@ package com.ssafy.lab.orak.event.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.lab.orak.event.dto.UploadEvent;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
@@ -13,7 +13,7 @@ import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class KafkaEventProducer {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
@@ -27,6 +27,21 @@ public class KafkaEventProducer {
 
     @Value("${kafka.topics.processing-results}")
     private String processingResultsTopic;
+
+    @Value("${kafka.topics.upload-events-retry}")
+    private String uploadEventsRetryTopic;
+
+    @Value("${kafka.topics.upload-events-dlq}")
+    private String uploadEventsDlqTopic;
+
+    @Value("${kafka.topics.processing-status-dlq}")
+    private String processingStatusDlqTopic;
+
+    @Value("${kafka.topics.processing-results-dlq}")
+    private String processingResultsDlqTopic;
+
+    @Value("${kafka.topics.voice-analysis-events:voice-analysis-events}")
+    private String voiceAnalysisEventsTopic;
 
     public void sendUploadEvent(UploadEvent event) {
         try {
@@ -152,6 +167,126 @@ public class KafkaEventProducer {
 
         } catch (Exception e) {
             log.error("배치 이벤트 전송 실패: type={}", eventType, e);
+        }
+    }
+
+    // ===============================================
+    // DLQ 관련 메서드들
+    // ===============================================
+
+    public void sendToRetryTopic(UploadEvent event) {
+        try {
+            event.incrementRetryCount();
+            String eventJson = objectMapper.writeValueAsString(event);
+            String key = generateEventKey(event);
+
+            kafkaTemplate.send(uploadEventsRetryTopic, key, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("Event sent to retry topic: uploadId={}, retryCount={}, partition={}, offset={}",
+                                event.getUploadId(), event.getRetryCount(),
+                                result.getRecordMetadata().partition(), result.getRecordMetadata().offset());
+                    } else {
+                        log.error("재시도 토픽 전송 실패: uploadId={}, retryCount={}",
+                                event.getUploadId(), event.getRetryCount(), ex);
+                        // 재시도 토픽 실패 시 바로 DLQ로 전송
+                        sendToDLQ(event, "Failed to send to retry topic: " + ex.getMessage());
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("재시도 이벤트 직렬화 실패: {}", event, e);
+            sendToDLQ(event, "Serialization failed for retry: " + e.getMessage());
+        }
+    }
+
+    public void sendToDLQ(UploadEvent event, String errorReason) {
+        try {
+            event.markForDLQ(errorReason);
+            String eventJson = objectMapper.writeValueAsString(event);
+            String key = generateEventKey(event);
+
+            kafkaTemplate.send(uploadEventsDlqTopic, key, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.warn("Event moved to DLQ: uploadId={}, reason={}, partition={}, offset={}",
+                                event.getUploadId(), errorReason,
+                                result.getRecordMetadata().partition(), result.getRecordMetadata().offset());
+                    } else {
+                        log.error("DLQ 전송도 실패: uploadId={}, 원본 오류={}, DLQ 오류={}",
+                                event.getUploadId(), errorReason, ex.getMessage(), ex);
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("DLQ 이벤트 직렬화 실패 (심각): uploadId={}, 원본 오류={}, 직렬화 오류={}",
+                    event.getUploadId(), errorReason, e.getMessage(), e);
+        }
+    }
+
+    public void sendStatusEventToDLQ(UploadEvent event, String errorReason) {
+        try {
+            event.markForDLQ(errorReason);
+            String eventJson = objectMapper.writeValueAsString(event);
+            String key = generateEventKey(event);
+
+            kafkaTemplate.send(processingStatusDlqTopic, key, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.warn("Status event moved to DLQ: uploadId={}, reason={}",
+                                event.getUploadId(), errorReason);
+                    } else {
+                        log.error("Status DLQ 전송 실패: uploadId={}", event.getUploadId(), ex);
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("Status DLQ 이벤트 처리 실패: {}", event, e);
+        }
+    }
+
+    public void sendResultEventToDLQ(UploadEvent event, String errorReason) {
+        try {
+            event.markForDLQ(errorReason);
+            String eventJson = objectMapper.writeValueAsString(event);
+            String key = generateEventKey(event);
+
+            kafkaTemplate.send(processingResultsDlqTopic, key, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.warn("Result event moved to DLQ: uploadId={}, reason={}",
+                                event.getUploadId(), errorReason);
+                    } else {
+                        log.error("Result DLQ 전송 실패: uploadId={}", event.getUploadId(), ex);
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("Result DLQ 이벤트 처리 실패: {}", event, e);
+        }
+    }
+
+    /**
+     * 음성 분석 이벤트 발송
+     */
+    public void sendVoiceAnalysisEvent(Long uploadId) {
+        try {
+            UploadEvent voiceAnalysisEvent = UploadEvent.createVoiceAnalysisRequestEvent(uploadId);
+            String eventJson = objectMapper.writeValueAsString(voiceAnalysisEvent);
+            String key = String.valueOf(uploadId);
+
+            kafkaTemplate.send(voiceAnalysisEventsTopic, key, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        log.info("음성 분석 이벤트 발송 완료 - uploadId: {}, partition: {}, offset: {}",
+                                uploadId, result.getRecordMetadata().partition(), result.getRecordMetadata().offset());
+                    } else {
+                        log.error("음성 분석 이벤트 발송 실패 - uploadId: {}", uploadId, ex);
+                    }
+                });
+
+        } catch (Exception e) {
+            log.error("음성 분석 이벤트 생성 및 발송 실패 - uploadId: {}", uploadId, e);
         }
     }
 }

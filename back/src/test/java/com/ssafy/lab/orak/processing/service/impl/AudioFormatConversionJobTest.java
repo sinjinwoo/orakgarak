@@ -35,6 +35,12 @@ class AudioFormatConversionJobTest {
     @Mock
     private UploadRepository uploadRepository;
 
+    @Mock
+    private com.ssafy.lab.orak.recording.repository.RecordRepository recordRepository;
+
+    @Mock
+    private com.ssafy.lab.orak.event.service.KafkaEventProducer kafkaEventProducer;
+
     @InjectMocks
     private AudioFormatConversionJob audioFormatConversionJob;
 
@@ -114,16 +120,25 @@ class AudioFormatConversionJobTest {
     }
 
     @Test
-    @DisplayName("처리 상태가 PROCESSING이 아니면 처리하지 않음")
-    void testCannotProcessNonProcessingStatus() {
-        // Given
+    @DisplayName("처리 상태가 UPLOADED 또는 PROCESSING이어야 처리 가능")
+    void testCanProcessCorrectStatus() {
+        // Given - UPLOADED 상태
         testUpload.setProcessingStatus(ProcessingStatus.UPLOADED);
 
-        // When
-        boolean canProcess = audioFormatConversionJob.canProcess(testUpload);
+        // When & Then
+        assertThat(audioFormatConversionJob.canProcess(testUpload)).isTrue();
 
-        // Then
-        assertThat(canProcess).isFalse();
+        // Given - PROCESSING 상태
+        testUpload.setProcessingStatus(ProcessingStatus.PROCESSING);
+
+        // When & Then
+        assertThat(audioFormatConversionJob.canProcess(testUpload)).isTrue();
+
+        // Given - COMPLETED 상태 (처리 불가)
+        testUpload.setProcessingStatus(ProcessingStatus.COMPLETED);
+
+        // When & Then
+        assertThat(audioFormatConversionJob.canProcess(testUpload)).isFalse();
     }
 
     @Test
@@ -167,6 +182,7 @@ class AudioFormatConversionJobTest {
         when(s3Helper.downloadFile(anyString(), anyString())).thenReturn(localFilePath);
         when(audioConverter.convertToWav(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(convertedFilePath);
+        when(recordRepository.existsByUploadId(testUpload.getId())).thenReturn(true);
 
         try {
             // When
@@ -177,7 +193,7 @@ class AudioFormatConversionJobTest {
             verify(s3Helper).downloadFile(eq("recordings/test-uuid_test-audio.mp3"), anyString());
             verify(audioConverter).convertToWav(eq(localFilePath), eq("/tmp/test-upload/converted"),
                     eq("test-uuid"), eq("test-audio")); // originalFilename에서 확장자 제거됨
-            verify(uploadRepository).save(testUpload);
+            verify(uploadRepository, atLeastOnce()).save(testUpload);
 
             // 엔티티 업데이트 확인
             assertThat(testUpload.getExtension()).isEqualTo("wav");
@@ -238,10 +254,10 @@ class AudioFormatConversionJobTest {
     void testProcessingJobInterfaceMethods() {
         // When & Then
         assertThat(audioFormatConversionJob.getProcessingStatus())
-                .isEqualTo(ProcessingStatus.CONVERTING);
+                .isEqualTo(ProcessingStatus.AUDIO_CONVERTING);
         assertThat(audioFormatConversionJob.getCompletedStatus())
-                .isEqualTo(ProcessingStatus.COMPLETED);
-        assertThat(audioFormatConversionJob.getPriority()).isEqualTo(3);
+                .isEqualTo(ProcessingStatus.AUDIO_CONVERTED);
+        assertThat(audioFormatConversionJob.getPriority()).isEqualTo(10);
     }
 
     @Test

@@ -4,7 +4,6 @@ import com.ssafy.lab.orak.auth.service.CustomUserPrincipal;
 import com.ssafy.lab.orak.recording.dto.CreateRecordRequest;
 import com.ssafy.lab.orak.recording.dto.RecordResponseDTO;
 import com.ssafy.lab.orak.recording.service.AsyncRecordService;
-import com.ssafy.lab.orak.recording.service.RecordingBatchProcessor;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadRequest;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadResponse;
 import com.ssafy.lab.orak.upload.entity.Upload;
@@ -12,7 +11,7 @@ import com.ssafy.lab.orak.upload.service.FileUploadService;
 import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import com.ssafy.lab.orak.s3.helper.S3Helper;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -28,18 +27,17 @@ import java.util.Map;
 /**
  * 비동기 Recording 컨트롤러
  * - Presigned URL 생성
- * - 배치 처리 모니터링
- * - 테스트 엔드포인트
+ * - S3 업로드 완료 웹훅 처리
+ * - Record CRUD 엔드포인트
  */
 @RestController
 @RequestMapping("/records/async")
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 @Validated
 public class AsyncRecordController {
 
     private final AsyncRecordService asyncRecordService;
-    private final RecordingBatchProcessor batchProcessor;
     private final FileUploadService fileUploadService;
     private final PresignedUploadService presignedUploadService;
     private final S3Helper s3Helper;
@@ -256,53 +254,4 @@ public class AsyncRecordController {
         return ResponseEntity.noContent().build();
     }
 
-    // ========== 배치 처리 관리 엔드포인트 ==========
-
-    /**
-     * 배치 처리 설정 조회
-     */
-    @GetMapping("/batch/config")
-    public ResponseEntity<RecordingBatchProcessor.BatchConfig> getBatchConfig() {
-        return ResponseEntity.ok(batchProcessor.getBatchConfig());
-    }
-
-    /**
-     * 수동 배치 처리 트리거 (테스트용)
-     */
-    @PostMapping("/batch/trigger")
-    public ResponseEntity<Map<String, String>> triggerBatch() {
-        batchProcessor.triggerManualBatch();
-        return ResponseEntity.ok(Map.of(
-                "status", "triggered",
-                "message", "배치 처리가 시작되었습니다"
-        ));
-    }
-
-    /**
-     * 배치 처리 활성화/비활성화
-     */
-    @PutMapping("/batch/enabled")
-    public ResponseEntity<Map<String, Object>> setBatchEnabled(
-            @RequestParam("enabled") boolean enabled) {
-
-        batchProcessor.setBatchEnabled(enabled);
-        return ResponseEntity.ok(Map.of(
-                "status", "updated",
-                "batchEnabled", enabled
-        ));
-    }
-
-    /**
-     * 배치 크기 동적 변경 (테스트용)
-     */
-    @PutMapping("/batch/size")
-    public ResponseEntity<Map<String, Object>> setBatchSize(
-            @RequestParam("size") @Positive int size) {
-
-        batchProcessor.setBatchSize(size);
-        return ResponseEntity.ok(Map.of(
-                "status", "updated",
-                "batchSize", size
-        ));
-    }
 }

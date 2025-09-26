@@ -15,7 +15,7 @@ import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 @Transactional
 public class AsyncRecordService {
 
@@ -76,10 +76,8 @@ public class AsyncRecordService {
 
     @Transactional(readOnly = true)
     public RecordResponseDTO getRecord(Long recordId) {
-        Record record = recordRepository.findByIdWithUpload(recordId);
-        if (record == null) {
-            throw new RecordNotFoundException(recordId);
-        }
+        Record record = recordRepository.findByIdWithUpload(recordId)
+                .orElseThrow(() -> new RecordNotFoundException(recordId));
 
         Upload upload = fileUploadService.getUpload(record.getUploadId());
         return recordMapper.toResponseDTO(record, upload);
@@ -152,8 +150,7 @@ public class AsyncRecordService {
         }
 
         // 이미 Record가 존재하는지 확인
-        Record existingRecord = recordRepository.findByUploadId(uploadId);
-        if (existingRecord != null) {
+        if (recordRepository.findByUploadId(uploadId).isPresent()) {
             throw new RecordOperationException("이미 Record가 존재하는 업로드입니다: " + uploadId, null);
         }
 
