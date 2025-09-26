@@ -1,6 +1,7 @@
 package com.ssafy.lab.orak.comment.service;
 
 
+import com.ssafy.lab.orak.auth.service.UserService;
 import com.ssafy.lab.orak.comment.dto.CommentDto;
 import com.ssafy.lab.orak.comment.entity.Comment;
 import com.ssafy.lab.orak.comment.exception.CommentAccessDeniedException;
