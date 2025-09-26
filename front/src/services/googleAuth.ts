@@ -1,5 +1,5 @@
 // 백엔드 OAuth2 엔드포인트 설정
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13c103.p.ssafy.io/api';
 const GOOGLE_OAUTH_URL = `${API_BASE_URL}/oauth2/authorization/google`;
 
 export interface GoogleUserInfo {

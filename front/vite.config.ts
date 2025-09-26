@@ -42,7 +42,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://j13c103.p.ssafy.io',
         changeOrigin: true,
         secure: false
       }

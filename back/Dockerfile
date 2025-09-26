@@ -31,7 +31,8 @@ RUN apt-get update && \
 # non-root 사용자 생성
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-RUN mkdir -p /var/log/orak && chown -R appuser:appuser /var/log/orak
+# 로그 디렉토리 생성 (application.properties의 LOG_FILE_PATH와 일치)
+RUN mkdir -p /var/log/app && chown -R appuser:appuser /var/log/app
 # 빌드 단계에서 JAR 파일 복사
 COPY --from=build /app/build/libs/orak-*.jar app.jar
 

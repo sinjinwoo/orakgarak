@@ -48,6 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/api/images") ||
                 path.startsWith("/images") ||
                 path.startsWith("/api/webhook/") ||
+                path.startsWith("/api/actuator") ||
                 path.startsWith("/webhook/") ||
                 path.startsWith("/actuator")) {
             log.info("JWT Filter - Bypassing authentication for path: {}", path);
