@@ -35,11 +35,6 @@ const SongCard: React.FC<SongCardProps> = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error';
-  }>({ open: false, message: '', severity: 'success' });
 
   // 카드 클릭 핸들러 (뒤집기)
   const handleCardClick = (e: React.MouseEvent) => {
@@ -76,37 +71,29 @@ const SongCard: React.FC<SongCardProps> = ({
       const response = await songService.toggleDislike(song.songId);
       
       setIsDisliked(response.isDisliked);
-      setSnackbar({
-        open: true,
-        message: response.message,
-        severity: 'success'
-      });
-      
       console.log('싫어요 토글 결과:', response);
     } catch (error) {
       console.error('싫어요 토글 실패:', error);
-      setSnackbar({
-        open: true,
-        message: '싫어요 처리 중 오류가 발생했습니다.',
-        severity: 'error'
-      });
     } finally {
       setIsLoading(false);
     }
   };
 
   // 스낵바 닫기
-  const handleSnackbarClose = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
 
   return (
     <Box 
       sx={{ 
-        width: 320,  // 가로 크기 증가 (통일)
-        height: 380, // 세로 크기 유지 (통일)
+        width: 240,  // 가로 크기 더 감소
+        height: 300, // 세로 크기 더 감소
+        minWidth: 240,  // 최소 크기 강제
+        minHeight: 300, // 최소 크기 강제
+        maxWidth: 240,  // 최대 크기 강제
+        maxHeight: 300, // 최대 크기 강제
         position: 'relative',
-        perspective: '1000px'
+        perspective: '1000px',
+        flexShrink: 0, // 크기 축소 방지
+        overflow: 'hidden' // 넘치는 내용 숨김
       }}
     >
       {/* 3D 카드 컨테이너 */}
@@ -222,22 +209,23 @@ const SongCard: React.FC<SongCardProps> = ({
             transform: 'rotateY(180deg)',
             background: `
               linear-gradient(135deg, 
-                rgba(26,26,26,0.98) 0%, 
-                rgba(13,13,13,0.99) 50%,
-                rgba(26,26,26,0.98) 100%
-              )
+                rgba(45, 20, 45, 0.95) 0%, 
+                rgba(35, 15, 55, 0.98) 30%,
+                rgba(25, 30, 65, 0.95) 70%,
+                rgba(45, 20, 45, 0.95) 100%
+              ) !important
             `,
-            border: '2px solid rgba(0,255,255,0.4)',
+            border: '2px solid rgba(236, 72, 153, 0.4)',
             borderRadius: 4,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            p: 4,
-            boxShadow: '0 0 40px rgba(0,255,255,0.2)',
+            p: 2.5,
+            boxShadow: '0 0 40px rgba(236, 72, 153, 0.3)',
             pointerEvents: isFlipped ? 'auto' : 'none'
           }}
-          className="matrix-bg hologram-panel"
+          className="hologram-panel"
         >
           {/* 싫어요 버튼 (뒷면 좌하단, 안쪽으로 배치) */}
           {showDislike && (
@@ -245,8 +233,8 @@ const SongCard: React.FC<SongCardProps> = ({
             data-dislike-button
             sx={{ 
               position: 'absolute', 
-              bottom: 16, 
-              left: 16, 
+              bottom: 12, 
+              left: 12, 
               zIndex: 1000,
               pointerEvents: 'auto'
             }}
@@ -289,8 +277,8 @@ const SongCard: React.FC<SongCardProps> = ({
                   ? '2px solid rgba(255, 0, 0, 0.8)' 
                   : '2px solid rgba(255, 255, 255, 0.3)',
                 borderRadius: '50%',
-                width: 40,
-                height: 40,
+                width: 32,
+                height: 32,
                 backdropFilter: 'blur(10px)',
                 pointerEvents: 'auto',
                 cursor: 'pointer',
@@ -313,38 +301,48 @@ const SongCard: React.FC<SongCardProps> = ({
           </Box>
           )}
           {/* 곡 정보 */}
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 3 }}>
             <Typography 
-              variant="h4" 
+              variant="h5" 
               className="hologram-text neon-text"
               sx={{ 
-                fontFamily: "'Courier New', monospace",
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 700,
-                letterSpacing: 2,
-                mb: 2
+                letterSpacing: 0.5,
+                mb: 1.5,
+                fontSize: '1.25rem',
+                background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 10px rgba(236, 72, 153, 0.5)'
               }}
             >
               {song.title}
             </Typography>
             <Typography 
-              variant="h5" 
+              variant="h6" 
               sx={{ 
-                color: 'rgba(0,255,255,0.8)',
-                fontFamily: "'Courier New', monospace",
+                color: 'rgba(6, 182, 212, 0.9)',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 600,
                 mb: 1,
-                letterSpacing: 1
+                letterSpacing: 0.3,
+                fontSize: '1rem',
+                textShadow: '0 0 8px rgba(6, 182, 212, 0.4)'
               }}
             >
               {song.artist}
             </Typography>
             {song.album && (
               <Typography 
-                variant="body1" 
+                variant="body2" 
                 sx={{ 
-                  color: 'rgba(255,255,255,0.6)',
-                  fontFamily: "'Courier New', monospace",
-                  letterSpacing: 0.5
+                  color: 'rgba(255,255,255,0.7)',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  letterSpacing: 0.2,
+                  fontSize: '0.8rem',
+                  textShadow: '0 0 5px rgba(236, 72, 153, 0.3)'
                 }}
               >
                 {song.album}
@@ -358,20 +356,20 @@ const SongCard: React.FC<SongCardProps> = ({
             startIcon={<BookmarkAdd />}
             className="cyberpunk-button"
             sx={{
-              px: 8,
-              py: 3,
-              background: 'linear-gradient(45deg, #00ffff, #ff0080)',
+              px: 6,
+              py: 2,
+              background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
               color: '#000',
-              fontFamily: "'Courier New', monospace",
+              fontFamily: 'system-ui, -apple-system, sans-serif',
               fontWeight: 700,
-              letterSpacing: 2,
-              borderRadius: 3,
-              fontSize: '1.2rem',
-              minWidth: 200,
+              letterSpacing: 0.5,
+              borderRadius: 2,
+              fontSize: '1rem',
+              minWidth: 160,
               '&:hover': {
-                background: 'linear-gradient(45deg, #ff0080, #00ffff)',
+                background: 'linear-gradient(45deg, #06b6d4, #ec4899)',
                 transform: 'scale(1.1)',
-                boxShadow: '0 0 40px rgba(0,255,255,0.6)'
+                boxShadow: '0 0 40px rgba(236, 72, 153, 0.6)'
               },
               '&:active': {
                 transform: 'scale(0.95)',
@@ -385,12 +383,14 @@ const SongCard: React.FC<SongCardProps> = ({
           <Typography 
             variant="body2" 
             sx={{ 
-              color: 'rgba(255,255,255,0.5)',
-              fontFamily: "'Courier New', monospace",
+              color: 'rgba(255,255,255,0.6)',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
               textAlign: 'center',
-              mt: 3,
-              letterSpacing: 1,
-              lineHeight: 1.6
+              mt: 2,
+              letterSpacing: 0.3,
+              lineHeight: 1.4,
+              fontSize: '0.75rem',
+              textShadow: '0 0 5px rgba(6, 182, 212, 0.3)'
             }}
           >
             Add to recording queue<br />
@@ -399,31 +399,6 @@ const SongCard: React.FC<SongCardProps> = ({
         </Card>
       </Box>
 
-      {/* 스낵바 */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={handleSnackbarClose} 
-          severity={snackbar.severity}
-          sx={{
-            background: snackbar.severity === 'success' 
-              ? 'rgba(0, 255, 136, 0.9)' 
-              : 'rgba(255, 0, 68, 0.9)',
-            color: '#000',
-            fontFamily: "'Courier New', monospace",
-            fontWeight: 600,
-            '& .MuiAlert-icon': {
-              color: '#000'
-            }
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

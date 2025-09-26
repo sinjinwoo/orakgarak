@@ -5,7 +5,6 @@ import {
   Button,
   Alert,
   AlertTitle,
-  CircularProgress,
   Skeleton,
 } from "@mui/material";
 import {
@@ -19,8 +18,8 @@ import {
   Schedule,
   AudioFile,
 } from "@mui/icons-material";
-import { Eye } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Eye, Album as AlbumIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import StepHeader from './StepHeader';
 
@@ -240,8 +239,8 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
-                      <MusicNote sx={{ fontSize: 48, color: 'rgba(255,255,255,0.4)' }} />
-                      <div className="text-white/40 text-sm mt-2">기본 커버</div>
+                      <AlbumIcon className="w-16 h-16 text-white/60 mb-2 mx-auto" />
+                      <div className="text-white/40 text-sm">기본 커버</div>
                     </div>
                   </div>
                 )}
@@ -348,8 +347,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
         <div className="flex justify-between items-center mt-8">
           <button
             onClick={onPrev}
-            disabled={isPublishing}
-            className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-xl transition-all duration-200"
           >
             <ArrowBack sx={{ fontSize: 20 }} />
             이전 단계
@@ -357,48 +355,14 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
 
           <button
             onClick={onPublish}
-            disabled={isPublishing || !isValidForCreation}
+            disabled={!isValidForCreation}
             className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-600 hover:to-pink-600 text-white rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px] justify-center"
           >
-            {isPublishing ? (
-              <CircularProgress size={20} sx={{ color: 'white' }} />
-            ) : (
-              <Send sx={{ fontSize: 20 }} />
-            )}
-            {isPublishing ? "발행 중..." : "앨범 발행"}
+            <Send sx={{ fontSize: 20 }} />
+            앨범 발행
           </button>
         </div>
 
-        {/* 발행 진행 상태 */}
-        <AnimatePresence>
-          {isPublishing && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-4"
-            >
-              <div className="bg-blue-500/20 border border-blue-500/30 text-blue-300 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <CircularProgress size={16} sx={{ color: '#93c5fd' }} />
-                  <span className="font-semibold">앨범을 발행하고 있습니다...</span>
-                </div>
-                <p className="text-sm text-blue-200">
-                  잠시만 기다려주세요. 앨범 생성 및 트랙 추가가 진행 중입니다.
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* 오류 상태 */}
-        {createCompleteAlbum.isError && (
-          <Alert severity="error" sx={{ mt: 3 }}>
-            <AlertTitle>앨범 발행 실패</AlertTitle>
-            {createCompleteAlbum.error?.message ||
-              "알 수 없는 오류가 발생했습니다."}
-          </Alert>
-        )}
       </Box>
 
       {/* 숨겨진 오디오 엘리먼트 */}

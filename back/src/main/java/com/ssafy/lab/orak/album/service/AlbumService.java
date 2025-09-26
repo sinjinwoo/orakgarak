@@ -291,19 +291,17 @@ public class AlbumService {
         String userProfileImageUrl = null;
 
         try {
-                    ProfileResponseDTO profileResponse = profileService.getProfileByUserId(album.getUserId());
-            if (profileResponse != null) {
-                userNickname = profileResponse.getNickname() != null ?
-                        profileResponse.getNickname() : "사용자 " + album.getUserId();
-                userProfileImageUrl = profileResponse.getProfileImageUrl();
+            ProfileResponseDTO profile = profileService.getProfileByUserId(album.getUserId());
+            if (profile != null) {
+                userNickname = profile.getNickname() != null ? profile.getNickname() : userNickname;
+                userProfileImageUrl = profile.getProfileImageUrl();
             }
-            log.debug("사용자 프로필 정보 조회 완료 - userId: {}, nickname: {}, hasProfileImage: {}",
-                    album.getUserId(), userNickname, userProfileImageUrl != null);
         } catch (Exception e) {
-            log.warn("사용자 프로필 정보 조회 실패, 기본값 사용 - userId: {}, error: {}",
-                    album.getUserId(), e.getMessage());
-            log.debug("프로필 조회 상세 오류", e);
+            log.warn("Failed to fetch profile for userId: {}", album.getUserId(), e);
         }
+
+        log.debug("사용자 정보 - userId: {}, nickname: {}, profileImageUrl: {}",
+                  album.getUserId(), userNickname, userProfileImageUrl);
 
         return AlbumResponseDto.builder()
                 .id(album.getId())

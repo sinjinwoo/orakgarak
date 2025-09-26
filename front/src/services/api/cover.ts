@@ -64,6 +64,13 @@ export async function uploadCover(file: File): Promise<{
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      timeout: 60000, // 60초로 연장 (이미지 업로드는 시간이 더 걸릴 수 있음)
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const progress = (progressEvent.loaded / progressEvent.total) * 100;
+          console.log(`업로드 진행률: ${Math.round(progress)}%`);
+        }
+      },
     });
 
     return {

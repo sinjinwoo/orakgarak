@@ -41,34 +41,27 @@ import {
 } from "@mui/material";
 import { FilterList, Add, MusicNote, Person } from "@mui/icons-material";
 
-// 타입 정의는 feedUtils.ts로 이동됨
-
-// MyAlbum 타입은 feedUtils.ts에서 FeedAlbum로 통합됨
-
-// 더미 피드 데이터 제거 - 실제 데이터만 사용
-
-// 내 앨범 데이터를 localStorage에서 가져오는 함수는 feedUtils.ts로 이동됨
-
-// 유틸리티 함수들은 feedUtils.ts로 이동됨
-
+// 앨범 만들기 페이지와 동일한 스타일 정의
 const cyberpunkStyles = `
     @keyframes hologramScan {
       0% { transform: translateX(-100%) skewX(-15deg); }
       100% { transform: translateX(200%) skewX(-15deg); }
     }
     @keyframes pulseGlow {
-      0% { 
-        text-shadow: 0 0 20px currentColor, 0 0 40px currentColor, 0 0 60px currentColor, 0 0 80px currentColor;
-        transform: perspective(500px) rotateX(15deg) scale(1);
-      }
-      100% { 
-        text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 0 90px currentColor, 0 0 120px currentColor;
-        transform: perspective(500px) rotateX(15deg) scale(1.05);
-      }
+      0% { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+      100% { text-shadow: 0 0 30px currentColor, 0 0 60px currentColor; }
     }
-    @keyframes neonScan {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(200%); }
+    @keyframes neonFlicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.9; }
+    }
+    @keyframes cyberGlow {
+      0% { box-shadow: 0 0 30px rgba(236, 72, 153, 0.4), 0 0 50px rgba(6, 182, 212, 0.3); }
+      100% { box-shadow: 0 0 40px rgba(236, 72, 153, 0.6), 0 0 70px rgba(6, 182, 212, 0.4); }
+    }
+    @keyframes brightPulse {
+      0%, 100% { filter: brightness(1) saturate(1); }
+      50% { filter: brightness(1.2) saturate(1.3); }
     }
   `;
 
@@ -83,6 +76,9 @@ const FeedPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [createFeedModalOpen, setCreateFeedModalOpen] = useState(false);
   const [selectedAlbumId, setSelectedAlbumId] = useState("");
@@ -94,12 +90,16 @@ const FeedPage: React.FC = () => {
   }, []);
 
   // API로 공개 앨범 데이터 로드
-  const loadPublicAlbums = useCallback(async () => {
+  const loadPublicAlbums = useCallback(async (pageNum = 0, append = false) => {
     try {
-      setLoading(true);
+      if (!append) {
+        setLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       setError(null);
       const response = await albumService.getPublicAlbums({
-        page: 0,
+        page: pageNum,
         size: API_CONSTANTS.DEFAULT_PAGE_SIZE,
       });
       const albums = response.content || [];
@@ -115,31 +115,49 @@ const FeedPage: React.FC = () => {
         playCount: Math.floor(Math.random() * 1000),
         commentCount: Math.floor(Math.random() * 50),
       }));
-      setFeedAlbums(mappedAlbums);
+
+      if (append) {
+        setFeedAlbums(prev => [...prev, ...mappedAlbums]);
+      } else {
+        setFeedAlbums(mappedAlbums);
+      }
+
+      // 더 이상 로드할 데이터가 있는지 확인
+      setHasMore(albums.length === API_CONSTANTS.DEFAULT_PAGE_SIZE);
     } catch (error) {
       logError(error, "공개 앨범 로드");
       const errorMessage = getApiErrorMessage(error);
       setError(errorMessage);
 
-      // 에러 시 localStorage 데이터로 폴백
-      setFeedAlbums(getFeedAlbums());
+      // 에러 시 localStorage 데이터로 폴백 (첫 페이지만)
+      if (!append) {
+        setFeedAlbums(getFeedAlbums());
+      }
 
       // 재시도 가능한 에러인 경우 사용자에게 알림
       if (isRetryableError(error)) {
         showToast(WARNING_MESSAGES.NETWORK_RETRY, "warning");
       }
     } finally {
-      setLoading(false);
+      if (!append) {
+        setLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
   }, [showToast]);
 
   // 팔로우한 사용자들의 앨범 로드
-  const loadFollowedUsersAlbums = useCallback(async () => {
+  const loadFollowedUsersAlbums = useCallback(async (pageNum = 0, append = false) => {
     try {
-      setLoading(true);
+      if (!append) {
+        setLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       setError(null);
       const response = await albumService.getFollowedUsersAlbums({
-        page: 0,
+        page: pageNum,
         size: API_CONSTANTS.DEFAULT_PAGE_SIZE,
       });
       const albums = response.content || [];
@@ -155,7 +173,15 @@ const FeedPage: React.FC = () => {
         playCount: Math.floor(Math.random() * 1000),
         commentCount: Math.floor(Math.random() * 50),
       }));
-      setFeedAlbums(mappedAlbums);
+
+      if (append) {
+        setFeedAlbums(prev => [...prev, ...mappedAlbums]);
+      } else {
+        setFeedAlbums(mappedAlbums);
+      }
+
+      // 더 이상 로드할 데이터가 있는지 확인
+      setHasMore(albums.length === API_CONSTANTS.DEFAULT_PAGE_SIZE);
     } catch (error) {
       logError(error, "팔로우 사용자 앨범 로드");
       const errorMessage = getApiErrorMessage(error);
@@ -166,13 +192,13 @@ const FeedPage: React.FC = () => {
         showToast(WARNING_MESSAGES.DATA_LOAD_FAILED, "warning");
       }
     } finally {
-      setLoading(false);
+      if (!append) {
+        setLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
   }, [showToast]);
-
-  // 댓글 상태 (현재 사용하지 않음)
-  // const [commentDrawerOpen, setCommentDrawerOpen] = useState(false);
-  // const [selectedAlbumForComment, setSelectedAlbumForComment] = useState<FeedAlbum | null>(null);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -184,12 +210,37 @@ const FeedPage: React.FC = () => {
   }, [loadPublicAlbums]);
 
   useEffect(() => {
+    // 탭 변경 시 페이지 상태 리셋
+    setPage(0);
+    setHasMore(true);
     if (tabValue === 0) {
-      loadPublicAlbums();
+      loadPublicAlbums(0, false);
     } else {
-      loadFollowedUsersAlbums();
+      loadFollowedUsersAlbums(0, false);
     }
   }, [tabValue, loadPublicAlbums, loadFollowedUsersAlbums]);
+
+  // 무한 스크롤 구현
+  useEffect(() => {
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+
+      // 스크롤이 바닥에서 100px 위에 도달했을 때 더 로드
+      if (scrollTop + clientHeight >= scrollHeight - 100 && hasMore && !isLoadingMore && !loading) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+
+        if (tabValue === 0) {
+          loadPublicAlbums(nextPage, true);
+        } else {
+          loadFollowedUsersAlbums(nextPage, true);
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [page, hasMore, isLoadingMore, loading, tabValue, loadPublicAlbums, loadFollowedUsersAlbums]);
 
   const handleTabChange = useCallback(
     (_event: React.SyntheticEvent, newValue: number) => {
@@ -198,7 +249,6 @@ const FeedPage: React.FC = () => {
     []
   );
 
-  // 현재 탭에 따라 필터링된 피드 데이터 (이미 API에서 필터링된 데이터를 사용)
   const filteredFeedAlbums = useMemo(() => feedAlbums, [feedAlbums]);
 
   const handleSortChange = useCallback(
@@ -208,26 +258,6 @@ const FeedPage: React.FC = () => {
     []
   );
 
-  // 좋아요 처리 (현재 사용하지 않음)
-  // const handleLikeToggle = useCallback(async (albumId: number, isLiked: boolean) => {
-  //   // 좋아요 처리 로직
-  // }, [showToast, tabValue, loadPublicAlbums, loadFollowedUsersAlbums]);
-
-  // 팔로우 처리 (현재 사용하지 않음)
-  // const handleFollowToggle = useCallback(async (userId: number, isFollowing: boolean) => {
-  //   // 팔로우 처리 로직
-  // }, [showToast, loadFollowedUsersAlbums]);
-
-  // 댓글 처리 (현재 사용하지 않음)
-  // const handleCommentClick = (album: FeedAlbum) => {
-  //   setSelectedAlbumForComment(album);
-  //   setCommentDrawerOpen(true);
-  // };
-
-  // const handleCommentDrawerClose = () => {
-  //   setCommentDrawerOpen(false);
-  //   setSelectedAlbumForComment(null);
-  // };
   const handleAlbumClick = (feed: FeedAlbum) => {
     navigate(`/albums/${feed.id}`, { state: { from: "/feed" } });
   };
@@ -254,7 +284,6 @@ const FeedPage: React.FC = () => {
       return;
     }
 
-    // 선택된 앨범 정보 가져오기
     const selectedAlbum = myAlbums.find(
       (album: FeedAlbum) => album.id.toString() === selectedAlbumId
     );
@@ -263,7 +292,6 @@ const FeedPage: React.FC = () => {
       return;
     }
 
-    // 새로운 피드 생성
     const newFeed: FeedAlbum = {
       id: selectedAlbum.id,
       userId: selectedAlbum.userId,
@@ -279,7 +307,7 @@ const FeedPage: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       user: {
-        nickname: user?.nickname || "사용자", // 실제 사용자 정보 사용
+        nickname: user?.nickname || "사용자",
         avatar:
           user?.profileImageUrl ||
           user?.profileImage ||
@@ -297,23 +325,19 @@ const FeedPage: React.FC = () => {
   };
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minHeight: "100vh",
-        background: `
-          radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 40% 40%, rgba(0, 255, 0, 0.05) 0%, transparent 50%),
-          linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)
+    <div style={{
+      minHeight: '100vh',
+      background: `
+          radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.25) 0%, transparent 60%),
+          radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.25) 0%, transparent 60%),
+          radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 80%),
+          radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.15) 0%, transparent 70%),
+          linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
         `,
-        padding: "20px",
-        fontFamily: "Arial, sans-serif",
-        paddingTop: "80px",
-        position: "relative",
-        overflow: "auto",
-      }}
-    >
+      color: '#fff',
+      paddingTop: '100px',
+      overflowX: 'hidden',
+    }}>
       <style dangerouslySetInnerHTML={{ __html: cyberpunkStyles }} />
 
       <div
@@ -340,10 +364,10 @@ const FeedPage: React.FC = () => {
                 sx={{
                   p: 4,
                   borderRadius: "15px",
-                  background: "rgba(26, 26, 26, 0.9)",
-                  border: "1px solid rgba(0, 255, 255, 0.3)",
-                  boxShadow: "0 8px 30px rgba(0, 0, 0, 0.5)",
-                  backdropFilter: "blur(10px)",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "4px solid rgba(236, 72, 153, 0.8)",
+                  boxShadow: "0 0 50px rgba(236, 72, 153, 0.7), inset 0 0 50px rgba(6, 182, 212, 0.4)",
+                  backdropFilter: "blur(15px)",
                 }}
               >
                 <Box sx={{ mb: 4 }}>
@@ -444,7 +468,6 @@ const FeedPage: React.FC = () => {
                   </Box>
                 </Box>
 
-                {/* 에러 상태 표시 */}
                 {error && (
                   <Box
                     sx={{
@@ -481,7 +504,6 @@ const FeedPage: React.FC = () => {
                   </Box>
                 )}
 
-                {/* 로딩 상태 표시 */}
                 {loading && (
                   <Box
                     sx={{
@@ -498,7 +520,6 @@ const FeedPage: React.FC = () => {
                   </Box>
                 )}
 
-                {/* 앨범 카드 목록 */}
                 {!loading && !error && filteredFeedAlbums.length === 0 ? (
                   <Box
                     sx={{
@@ -549,25 +570,11 @@ const FeedPage: React.FC = () => {
                   !error && (
                     <Box
                       sx={{
-                        display: "grid",
-                        gridTemplateColumns: {
-                          xs: "1fr",
-                          sm: "1fr",
-                          md: "1fr 1fr",
-                          lg: "1fr 1fr 1fr",
-                        },
-                        gap: 3,
-                        minWidth: "280px",
-                        "@media (min-width: 600px) and (max-width: 899px)": {
-                          gridTemplateColumns: "1fr",
-                        },
-                        "@media (min-width: 900px) and (max-width: 1199px)": {
-                          gridTemplateColumns: "1fr 1fr",
-                        },
-                        "@media (min-width: 1200px)": {
-                          gridTemplateColumns: "1fr 1fr 1fr",
-                          gap: 4,
-                        },
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                        maxWidth: "800px",
+                        margin: "0 auto",
                       }}
                     >
                       {filteredFeedAlbums.map(
@@ -586,218 +593,222 @@ const FeedPage: React.FC = () => {
                                 cursor: "pointer",
                                 overflow: "hidden",
                                 borderRadius: 2,
-                                p: 2,
-                                minWidth: "280px",
                                 backgroundColor: "rgba(255, 255, 255, 0.05)",
                                 backdropFilter: "blur(10px)",
                                 border: "1px solid rgba(255, 255, 255, 0.1)",
                                 transition: "all 0.3s ease",
+                                display: "grid",
+                                gridTemplateColumns: "500px 1fr",
+                                width: "100%",
+                                minHeight: "500px",
                                 "&:hover": {
-                                  transform: "translateY(-4px)",
+                                  transform: "translateY(-2px)",
                                   backgroundColor: "rgba(255, 255, 255, 0.08)",
                                   boxShadow: "0 8px 25px rgba(0, 0, 0, 0.3)",
                                 },
                               }}
                               onClick={() => handleAlbumClick(album)}
                             >
-                              {/* 앨범 커버 이미지 */}
                               <Box
                                 sx={{
                                   position: "relative",
-                                  mb: 2,
                                   width: "100%",
-                                  aspectRatio: "1",
-                                  borderRadius: 1,
+                                  height: "100%",
                                   overflow: "hidden",
                                   backgroundColor: "rgba(255, 255, 255, 0.1)",
-                                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                                  boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
-                                  transition: "all 0.3s ease",
-                                  "&:hover": {
-                                    transform: "scale(1.02)",
-                                    boxShadow: "0 6px 20px rgba(0, 0, 0, 0.3)",
-                                  },
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
                                 }}
                               >
                                 {album.coverImageUrl ? (
                                   <CardMedia
                                     component="img"
                                     sx={{
-                                      width: "100%",
-                                      height: "100%",
+                                      width: "450px",
+                                      height: "450px",
                                       objectFit: "cover",
+                                      borderRadius: 2,
                                       transition: "all 0.3s ease",
+                                      boxShadow: "0 8px 30px rgba(0, 0, 0, 0.4)",
                                     }}
                                     image={album.coverImageUrl}
                                     alt={album.title}
                                     onError={(e) => {
-                                      // 이미지 로딩 실패 시 기본 배경으로 변경
-                                      const target =
-                                        e.target as HTMLImageElement;
+                                      const target = e.target as HTMLImageElement;
                                       target.style.display = "none";
                                     }}
                                   />
-                                ) : null}
-                                {/* 기본 커버 이미지 또는 이미지 로딩 실패 시 표시할 UI */}
-                                <Box
-                                  sx={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    height: "100%",
-                                    background: album.coverImageUrl
-                                      ? "none"
-                                      : "linear-gradient(135deg, #00ffff, #ff0080)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    zIndex: album.coverImageUrl ? -1 : 1,
-                                  }}
-                                >
-                                  {!album.coverImageUrl && (
-                                    <MusicNote
-                                      sx={{
-                                        fontSize: "2rem",
-                                        color: "rgba(255, 255, 255, 0.8)",
-                                      }}
-                                    />
-                                  )}
-                                </Box>
-                              </Box>
-
-                              <Typography
-                                variant="h6"
-                                sx={{
-                                  fontWeight: 600,
-                                  color: "#FFFFFF",
-                                  fontSize: "1.1rem",
-                                  mb: 1,
-                                }}
-                              >
-                                {album.title || "제목 없음"}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: "rgba(255, 255, 255, 0.7)",
-                                  mb: 1,
-                                }}
-                              >
-                                {album.description}
-                              </Typography>
-
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontSize: "0.8rem",
-                                  fontWeight: 400,
-                                  color: "rgba(255, 255, 255, 0.5)",
-                                  mb: 1,
-                                }}
-                              >
-                                {album.createdAt
-                                  ? new Date(
-                                      album.createdAt
-                                    ).toLocaleDateString("ko-KR")
-                                  : "날짜 없음"}
-                              </Typography>
-
-                              {/* 사용자 정보 */}
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  mb: 1,
-                                }}
-                              >
-                                <Avatar
-                                  src={album.user?.avatar}
-                                  sx={{
-                                    width: 20,
-                                    height: 20,
-                                    mr: 1,
-                                    border:
-                                      "1px solid rgba(255, 255, 255, 0.2)",
-                                  }}
-                                >
-                                  <Person sx={{ fontSize: 12 }} />
-                                </Avatar>
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontSize: "0.8rem",
-                                    color: "rgba(255, 255, 255, 0.7)",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    flex: 1,
-                                  }}
-                                >
-                                  {album.user?.nickname ||
-                                    `사용자 ${album.userId}`}
-                                </Typography>
-                              </Box>
-
-                              {/* 앨범 통계 */}
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 1.5,
-                                  mb: 1,
-                                  flexWrap: "wrap",
-                                }}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontSize: "0.75rem",
-                                    color: "rgba(255, 255, 255, 0.6)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                  }}
-                                >
-                                  ♫ {album.trackCount || 0}곡
-                                </Typography>
-                                {album.totalDuration > 0 && (
-                                  <Typography
-                                    variant="body2"
+                                ) : (
+                                  <Box
                                     sx={{
-                                      fontSize: "0.75rem",
-                                      color: "rgba(255, 255, 255, 0.6)",
+                                      width: "450px",
+                                      height: "450px",
+                                      background: "linear-gradient(135deg, #00ffff, #ff0080)",
+                                      borderRadius: 2,
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: 0.5,
+                                      justifyContent: "center",
+                                      boxShadow: "0 8px 30px rgba(0, 0, 0, 0.4)",
                                     }}
                                   >
-                                    ⏱{" "}
-                                    {Math.floor(
-                                      (album.totalDuration || 0) / 60
-                                    )}
-                                    분 {(album.totalDuration || 0) % 60}초
-                                  </Typography>
+                                    <MusicNote
+                                      sx={{
+                                        fontSize: "8rem",
+                                        color: "rgba(255, 255, 255, 0.9)",
+                                      }}
+                                    />
+                                  </Box>
                                 )}
                               </Box>
+
                               <Box
                                 sx={{
+                                  p: 4,
                                   display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 0.5,
+                                  flexDirection: "column",
+                                  justifyContent: "space-between",
+                                  height: "100%",
                                 }}
                               >
-                                {(album.tags || []).map((tag: string) => (
-                                  <Chip
-                                    key={tag}
-                                    label={tag}
-                                    size="small"
+                                <Box>
+                                  <Typography
+                                    variant="h3"
                                     sx={{
-                                      backgroundColor: "rgba(0, 255, 255, 0.1)",
-                                      color: "#00ffff",
+                                      fontWeight: 800,
+                                      color: "#FFFFFF",
+                                      fontSize: "2.5rem",
+                                      mb: 3,
+                                      lineHeight: 1.1,
                                     }}
-                                  />
-                                ))}
+                                  >
+                                    {album.title || "제목 없음"}
+                                  </Typography>
+
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      mb: 4,
+                                    }}
+                                  >
+                                    <Avatar
+                                      src={album.user?.avatar}
+                                      sx={{
+                                        width: 50,
+                                        height: 50,
+                                        mr: 3,
+                                        border: "3px solid rgba(255, 255, 255, 0.3)",
+                                      }}
+                                    >
+                                      <Person sx={{ fontSize: 28 }} />
+                                    </Avatar>
+                                    <Typography
+                                      variant="h4"
+                                      sx={{
+                                        fontSize: "1.8rem",
+                                        color: "rgba(255, 255, 255, 0.9)",
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {album.user?.nickname || `사용자 ${album.userId}`}
+                                    </Typography>
+                                  </Box>
+
+                                  <Typography
+                                    variant="h6"
+                                    sx={{
+                                      color: "rgba(255, 255, 255, 0.8)",
+                                      lineHeight: 1.6,
+                                      fontSize: "1.3rem",
+                                      mb: 4,
+                                      fontWeight: 400,
+                                    }}
+                                  >
+                                    {album.description || "이 앨범에 대한 설명이 아직 작성되지 않았습니다."}
+                                  </Typography>
+                                </Box>
+
+                                <Box>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 4,
+                                      mb: 3,
+                                      flexWrap: "wrap",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="h5"
+                                      sx={{
+                                        fontSize: "1.5rem",
+                                        color: "rgba(255, 255, 255, 0.9)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      ♫ {album.trackCount || 0}곡
+                                    </Typography>
+                                    {album.totalDuration > 0 && (
+                                      <Typography
+                                        variant="h5"
+                                        sx={{
+                                          fontSize: "1.5rem",
+                                          color: "rgba(255, 255, 255, 0.9)",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 1,
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        ⏱ {Math.floor((album.totalDuration || 0) / 60)}분
+                                      </Typography>
+                                    )}
+                                    <Typography
+                                      variant="h6"
+                                      sx={{
+                                        fontSize: "1.2rem",
+                                        color: "rgba(255, 255, 255, 0.6)",
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      {album.createdAt
+                                        ? new Date(album.createdAt).toLocaleDateString("ko-KR")
+                                        : "날짜 없음"}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 1.5,
+                                    }}
+                                  >
+                                    {(album.tags || []).map((tag: string) => (
+                                      <Chip
+                                        key={tag}
+                                        label={tag}
+                                        sx={{
+                                          backgroundColor: "rgba(0, 255, 255, 0.25)",
+                                          color: "#00ffff",
+                                          fontSize: "1.1rem",
+                                          height: "45px",
+                                          fontWeight: 700,
+                                          border: "2px solid rgba(0, 255, 255, 0.5)",
+                                          px: 2,
+                                          "&:hover": {
+                                            backgroundColor: "rgba(0, 255, 255, 0.35)",
+                                            transform: "translateY(-1px)",
+                                          },
+                                        }}
+                                      />
+                                    ))}
+                                  </Box>
+                                </Box>
                               </Box>
                             </Box>
                           </motion.div>
@@ -806,12 +817,45 @@ const FeedPage: React.FC = () => {
                     </Box>
                   )
                 )}
+
+                {isLoadingMore && (
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      py: 4,
+                      mt: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "rgba(255, 255, 255, 0.7)" }}
+                    >
+                      더 많은 앨범을 불러오는 중...
+                    </Typography>
+                  </Box>
+                )}
+
+                {!hasMore && filteredFeedAlbums.length > 0 && !loading && (
+                  <Box
+                    sx={{
+                      textAlign: "center",
+                      py: 4,
+                      mt: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "rgba(255, 255, 255, 0.5)" }}
+                    >
+                      모든 앨범을 확인했습니다
+                    </Typography>
+                  </Box>
+                )}
               </Paper>
             </motion.div>
           </Box>
         </Container>
 
-        {/* 피드 생성 모달 */}
         <Dialog
           open={createFeedModalOpen}
           onClose={handleCloseCreateFeedModal}
@@ -847,7 +891,6 @@ const FeedPage: React.FC = () => {
           </DialogTitle>
 
           <DialogContent sx={{ px: 4, py: 2 }}>
-            {/* 앨범 선택 섹션 */}
             <Box sx={{ mb: 4 }}>
               <Typography
                 variant="h6"
@@ -994,7 +1037,6 @@ const FeedPage: React.FC = () => {
                                   }}
                                 />
                               ) : null}
-                              {/* 기본 커버 이미지 */}
                               <Box
                                 sx={{
                                   position: "absolute",
@@ -1092,7 +1134,6 @@ const FeedPage: React.FC = () => {
               </FormControl>
             </Box>
 
-            {/* 설명 입력 섹션 */}
             <Box>
               <Typography
                 variant="h6"
@@ -1206,18 +1247,8 @@ const FeedPage: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
-
-        {/* 댓글 드로어 - TODO: CommentDrawer 컴포넌트 구현 필요 */}
-        {/* {selectedAlbumForComment && (
-         <CommentDrawer
-           open={commentDrawerOpen}
-           onClose={handleCommentDrawerClose}
-           albumId={selectedAlbumForComment.id}
-           albumTitle={selectedAlbumForComment.title}
-         />
-       )} */}
       </div>
-    </Box>
+    </div>
   );
 };
 
