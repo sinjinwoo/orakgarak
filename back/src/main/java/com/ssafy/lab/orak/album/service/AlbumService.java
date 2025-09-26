@@ -13,7 +13,7 @@ import com.ssafy.lab.orak.profile.service.ProfileService;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-@Slf4j
+@Log4j2
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -286,12 +286,22 @@ public class AlbumService {
             coverImageUrl = getDefaultCoverImageUrl();
         }
 
-        // 사용자 프로필 정보 가져오기 (임시로 기본값 사용)
+        // 사용자 프로필 정보 가져오기
         String userNickname = "사용자 " + album.getUserId();
         String userProfileImageUrl = null;
 
-        // TODO: 프로필 서비스 연동 (현재는 기본값 사용)
-        log.debug("사용자 정보 - userId: {}, nickname: {}", album.getUserId(), userNickname);
+        try {
+            ProfileResponseDTO profile = profileService.getProfileByUserId(album.getUserId());
+            if (profile != null) {
+                userNickname = profile.getNickname() != null ? profile.getNickname() : userNickname;
+                userProfileImageUrl = profile.getProfileImageUrl();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch profile for userId: {}", album.getUserId(), e);
+        }
+
+        log.debug("사용자 정보 - userId: {}, nickname: {}, profileImageUrl: {}",
+                  album.getUserId(), userNickname, userProfileImageUrl);
 
         return AlbumResponseDto.builder()
                 .id(album.getId())

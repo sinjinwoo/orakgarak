@@ -5,15 +5,16 @@ import com.ssafy.lab.orak.event.exception.EventProcessingException;
 import com.ssafy.lab.orak.event.exception.KafkaSendException;
 import io.micrometer.core.instrument.Counter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 
 /**
- * Kafka 기반 이벤트 서비스
- * S3 업로드 및 처리 상태 변경 이벤트를 Kafka로 발송
+ * EventBridge 래퍼 서비스 (실제로는 Kafka Producer 사용)
+ * DLQ 패턴이 적용된 Kafka 기반 이벤트 처리
+ * 향후 실제 AWS EventBridge 연동 시 이 클래스에서 구현 변경 예정
  */
 @Service
-@Slf4j
+@Log4j2
 @RequiredArgsConstructor
 public class EventBridgeService {
 
@@ -63,48 +64,34 @@ public class EventBridgeService {
         }
     }
 
-    public boolean publishProcessingCompletedEvent(UploadEvent event) {
+    public boolean publishProcessingResultEvent(UploadEvent event) {
         try {
             kafkaEventProducer.sendProcessingResultEvent(event);
 
-            log.info("처리 완료 이벤트 큐잉 완료: eventType={}, uploadId={}",
-                    event.getEventType(), event.getUploadId());
+            log.info("처리 결과 이벤트 큐잉 완료: eventType={}, uploadId={}, status={}",
+                    event.getEventType(), event.getUploadId(), event.getCurrentStatus());
             return true;
 
         } catch (KafkaSendException e) {
-            log.error("처리 완료 이벤트 큐잉 실패: uploadId={}, error={}",
+            log.error("처리 결과 이벤트 큐잉 실패: uploadId={}, error={}",
                     event.getUploadId(), e.getMessage(), e);
-            throw new EventProcessingException("처리 완료 이벤트 처리 실패", e);
+            throw new EventProcessingException("처리 결과 이벤트 처리 실패", e);
         } catch (Exception e) {
-            log.error("처리 완료 이벤트 처리 중 예상치 못한 오류: uploadId={}",
+            log.error("처리 결과 이벤트 처리 중 예상치 못한 오류: uploadId={}",
                     event.getUploadId(), e);
-            throw new EventProcessingException("처리 완료 이벤트 처리 중 시스템 오류 발생", e);
+            throw new EventProcessingException("처리 결과 이벤트 처리 중 시스템 오류 발생", e);
         }
     }
 
-    public boolean publishProcessingFailedEvent(UploadEvent event) {
-        try {
-            kafkaEventProducer.sendProcessingResultEvent(event);
-
-            log.info("처리 실패 이벤트 큐잉 완료: eventType={}, uploadId={}",
-                    event.getEventType(), event.getUploadId());
-            return true;
-
-        } catch (KafkaSendException e) {
-            log.error("처리 실패 이벤트 큐잉 실패: uploadId={}, error={}",
-                    event.getUploadId(), e.getMessage(), e);
-            throw new EventProcessingException("처리 실패 이벤트 처리 실패", e);
-        } catch (Exception e) {
-            log.error("처리 실패 이벤트 처리 중 예상치 못한 오류: uploadId={}",
-                    event.getUploadId(), e);
-            throw new EventProcessingException("처리 실패 이벤트 처리 중 시스템 오류 발생", e);
-        }
-    }
-
+    /**
+     * 배치 이벤트 발송 (여러 이벤트를 한 번에 처리)
+     * DLQ 패턴이 적용되어 실패한 이벤트는 자동으로 재시도됨
+     */
     public boolean publishBatchEvents(java.util.List<UploadEvent> events) {
         try {
             for (UploadEvent event : events) {
                 kafkaEventProducer.sendUploadEvent(event);
+                kafkaMessagesSentCounter.increment();
             }
 
             log.info("배치 이벤트 큐잉 완료: {} 개 이벤트", events.size());
@@ -119,38 +106,5 @@ public class EventBridgeService {
                     events.size(), e);
             throw new EventProcessingException("배치 이벤트 처리 중 시스템 오류 발생", e);
         }
-    }
-
-    public boolean publishUploadEventWithRetry(UploadEvent event, int maxRetries) {
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                kafkaEventProducer.sendUploadEvent(event);
-                log.info("이벤트 큐잉 성공 ({}번째 시도): eventId={}", attempt, event.getEventId());
-                return true;
-
-            } catch (KafkaSendException e) {
-                log.warn("이벤트 큐잉 실패 ({}번째 시도): error={}", attempt, e.getMessage());
-
-                if (attempt == maxRetries) {
-                    log.error("모든 재시도 실패 ({}회): eventId={}", maxRetries, event.getEventId());
-                    throw new EventProcessingException("재시도 횟수 초과로 이벤트 처리 실패: " + event.getEventId(), e);
-                }
-
-                // 재시도 전 대기 (백오프)
-                try {
-                    Thread.sleep(1000 * attempt); // 1초, 2초, 3초...
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new EventProcessingException("재시도 중 인터럽트 발생: " + event.getEventId(), ie);
-                }
-            } catch (Exception e) {
-                log.error("이벤트 처리 중 예상치 못한 오류 ({}번째 시도): eventId={}",
-                        attempt, event.getEventId(), e);
-                if (attempt == maxRetries) {
-                    throw new EventProcessingException("이벤트 처리 중 시스템 오류 발생", e);
-                }
-            }
-        }
-        return false;
     }
 }

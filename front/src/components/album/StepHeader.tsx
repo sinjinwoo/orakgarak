@@ -27,7 +27,7 @@ const StepHeader: React.FC<StepHeaderProps> = ({
     >
       <div className="flex items-center gap-4 mb-4">
         {icon && (
-          <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-fuchsia-500/20 to-pink-500/20 rounded-xl border border-fuchsia-400/30">
+          <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-cyan-300/30 to-pink-300/30 rounded-xl border-2 border-cyan-300/80 shadow-2xl shadow-cyan-300/60">
             {icon}
           </div>
         )}

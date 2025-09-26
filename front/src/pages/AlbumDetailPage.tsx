@@ -57,6 +57,7 @@ interface VinyListTrack {
   artist: string;
   duration: string;
   iconType: 'cloud' | 'zap' | 'dollar' | 'phone';
+  audioUrl: string;
 }
 
 interface VinyListAlbum {
@@ -84,14 +85,25 @@ const AlbumDetailPage: React.FC = () => {
   // 현재 사용자가 앨범 소유자인지 확인 (앨범 데이터가 로드된 후 확인)
   const isOwner = useMemo(() => {
     if (!user || albumUserId === null) return false;
-    return user.id === albumUserId.toString();
+    const result = user.id.toString() === albumUserId.toString();
+    console.log('isOwner 계산:', {
+      userId: user.id,
+      userIdString: user.id.toString(),
+      albumUserId: albumUserId,
+      albumUserIdString: albumUserId.toString(),
+      result: result
+    });
+    return result;
   }, [user, albumUserId]);
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState('0:07');
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(1);
+  const [currentTime, setCurrentTime] = useState('0:00');
+  const [duration, setDuration] = useState('0:00');
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [currentlyPlayingTrack, setCurrentlyPlayingTrack] = useState<number | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Track editing modal state
   const [editTracksOpen, setEditTracksOpen] = useState(false);
@@ -110,6 +122,7 @@ const AlbumDetailPage: React.FC = () => {
   const [likeCount, setLikeCount] = useState(0);
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
 
   // Load album data
   useEffect(() => {
@@ -124,6 +137,13 @@ const AlbumDetailPage: React.FC = () => {
 
         // 앨범 소유자 ID 저장
         setAlbumUserId(albumData.userId);
+        console.log('앨범 소유자 확인:', {
+          albumUserId: albumData.userId,
+          currentUserId: user?.id,
+          userIdType: typeof user?.id,
+          albumUserIdType: typeof albumData.userId,
+          isEqual: user?.id === albumData.userId.toString()
+        });
 
         // Load tracks
         let tracksData: any[] = [];
@@ -144,7 +164,8 @@ const AlbumDetailPage: React.FC = () => {
           title: track.recordTitle || `트랙 ${track.trackOrder}`,
           artist: albumData.userNickname || `사용자 ${albumData.userId}`,
           duration: `${Math.floor(track.durationSeconds / 60)}:${(track.durationSeconds % 60).toString().padStart(2, '0')}`,
-          iconType: iconTypes[index % 4]
+          iconType: iconTypes[index % 4],
+          audioUrl: track.audioUrl // 오디오 URL 추가
         }));
 
         const vinyListAlbum: VinyListAlbum = {
@@ -159,24 +180,33 @@ const AlbumDetailPage: React.FC = () => {
 
         console.log('변환된 앨범 데이터:', vinyListAlbum);
         console.log('트랙 개수:', vinyListTracks.length);
+        console.log('트랙 데이터:', vinyListTracks);
+        console.log('원본 트랙 데이터:', tracksData);
         setAlbum(vinyListAlbum);
 
         // Load like count and status
         setLikeCount(albumData.likeCount || 0);
 
-        // Check user's like status for this album
+        // Check user's like and follow status for this album
         try {
-          const [likeStatus, likeCountResult] = await Promise.all([
+          const promises: any[] = [
             socialService.albums.checkLikeStatus(parseInt(albumId)),
-            socialService.albums.getLikeCount(parseInt(albumId))
-          ]);
+            socialService.albums.getLikeCount(parseInt(albumId)),
+          ];
 
-          setIsLiked(likeStatus.isLiked);
-          setLikeCount(likeCountResult.count);
-        } catch (likeError: any) {
-          console.warn('좋아요 상태 확인 실패:', likeError);
-          setIsLiked(false);
-          // albumData에서 받은 likeCount 유지
+          if (user && albumData.userId.toString() !== user.id) { // Check if not owner
+            promises.push(socialService.follow.checkFollowStatus(albumData.userId));
+          }
+
+          const [likeStatus, likeCountResult, followStatus] = await Promise.all(promises);
+
+          if (likeStatus) setIsLiked(likeStatus.isLiked);
+          if (likeCountResult) setLikeCount(likeCountResult.count);
+          if (followStatus) setIsFollowing(followStatus.isFollowing);
+
+        } catch (socialError: any) {
+          console.warn('소셜 상태(좋아요/팔로우) 확인 실패:', socialError);
+          // Keep existing state on failure
         }
 
         // Load comments
@@ -204,6 +234,16 @@ const AlbumDetailPage: React.FC = () => {
     loadAlbum();
   }, [albumId, showToast]);
 
+  // Cleanup audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+    };
+  }, [audioElement]);
+
   // Icon component mapping
   const getTrackIcon = (iconType: string) => {
     const iconProps = { size: 18 };
@@ -216,11 +256,111 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
-  // Track selection handlers
-  const handleTrackSelect = (trackIndex: number) => {
-    setCurrentTrackIndex(trackIndex);
-    setCurrentlyPlayingTrack(trackIndex);
-    setIsPlaying(true);
+  // 오디오 재생 관련 함수들
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleTrackSelect = async (trackIndex: number) => {
+    if (!album || !album.tracks[trackIndex]) return;
+
+    const track = album.tracks[trackIndex];
+    console.log('트랙 선택:', track);
+    console.log('오디오 URL:', track.audioUrl);
+    
+    if (!track.audioUrl) {
+      showToast('오디오 파일 URL이 없습니다.', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 기존 오디오가 있으면 정지
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.currentTime = 0;
+      }
+
+      // 새로운 오디오 엘리먼트 생성
+      const audio = new Audio(track.audioUrl);
+      
+      // 오디오 이벤트 리스너 설정
+      audio.addEventListener('loadedmetadata', () => {
+        setDuration(formatTime(audio.duration));
+        setIsLoading(false);
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        setCurrentTime(formatTime(audio.currentTime));
+      });
+
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setCurrentTime('0:00');
+        // 자동으로 다음 트랙 재생
+        if (trackIndex < album.tracks.length - 1) {
+          handleTrackSelect(trackIndex + 1);
+        }
+      });
+
+      audio.addEventListener('error', () => {
+        showToast('오디오 파일을 재생할 수 없습니다.', 'error');
+        setIsLoading(false);
+        setIsPlaying(false);
+      });
+
+      // 오디오 재생 시작
+      await audio.play();
+      
+      setAudioElement(audio);
+      setCurrentTrackIndex(trackIndex);
+      setCurrentlyPlayingTrack(trackIndex);
+      setIsPlaying(true);
+      
+    } catch (error) {
+      console.error('오디오 재생 오류:', error);
+      showToast('오디오 재생 중 오류가 발생했습니다.', 'error');
+      setIsLoading(false);
+      setIsPlaying(false);
+    }
+  };
+
+  const handlePlayPause = async () => {
+    if (!audioElement) return;
+
+    try {
+      if (isPlaying) {
+        audioElement.pause();
+        setIsPlaying(false);
+      } else {
+        await audioElement.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('재생/일시정지 오류:', error);
+      showToast('재생 중 오류가 발생했습니다.', 'error');
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!albumUserId || isOwner || !user || user.id.toString() === albumUserId.toString()) return;
+
+    try {
+      if (isFollowing) {
+        await socialService.follow.unfollowUser(albumUserId);
+        showToast('언팔로우했습니다.', 'info');
+      } else {
+        await socialService.follow.followUser(albumUserId);
+        showToast('팔로우했습니다.', 'success');
+      }
+      setIsFollowing(!isFollowing);
+    } catch (error) {
+      console.error('팔로우/언팔로우 실패:', error);
+      showToast('작업에 실패했습니다.', 'error');
+    }
   };
 
   const handleAddComment = async () => {
@@ -266,15 +406,13 @@ const AlbumDetailPage: React.FC = () => {
 
   const handlePreviousTrack = () => {
     if (currentTrackIndex > 0) {
-      setCurrentTrackIndex(currentTrackIndex - 1);
-      setCurrentlyPlayingTrack(currentTrackIndex - 1);
+      handleTrackSelect(currentTrackIndex - 1);
     }
   };
 
   const handleNextTrack = () => {
     if (album && currentTrackIndex < album.tracks.length - 1) {
-      setCurrentTrackIndex(currentTrackIndex + 1);
-      setCurrentlyPlayingTrack(currentTrackIndex + 1);
+      handleTrackSelect(currentTrackIndex + 1);
     }
   };
 
@@ -522,7 +660,7 @@ const AlbumDetailPage: React.FC = () => {
           <Grid
             container
             sx={{
-              gridTemplateColumns: '1fr 400px 1fr',
+              gridTemplateColumns: '500px 400px 1fr',
               gap: 5,
               display: 'grid'
             }}
@@ -565,14 +703,9 @@ const AlbumDetailPage: React.FC = () => {
                   <Typography variant="body2">
                     이 앨범에는 아직 트랙이 추가되지 않았습니다.
                   </Typography>
-                  {isOwner && (
-                    <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.7 }}>
-                      우측 하단의 "Edit Tracks" 버튼을 클릭하여 트랙을 추가해보세요.
-                    </Typography>
-                  )}
                 </Box>
               ) : (
-                <Stack spacing={2} sx={{ position: 'relative', zIndex: 1 }}>
+                <Stack spacing={1} sx={{ position: 'relative', zIndex: 1 }}>
                   {album.tracks.map((track, index) => (
                     <motion.div
                       key={track.id}
@@ -584,124 +717,52 @@ const AlbumDetailPage: React.FC = () => {
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 3,
-                          p: 2,
+                          justifyContent: 'space-between',
+                          gap: 2,
+                          p: 1.5,
                           borderRadius: 2,
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
                           bgcolor: currentlyPlayingTrack === index
                             ? 'rgba(251, 66, 212, 0.2)'
-                            : 'rgba(0, 0, 0, 0.6)',
-                          border: currentlyPlayingTrack === index
-                            ? '2px solid #fb42d4'
-                            : '1px solid rgba(255, 255, 255, 0.2)',
-                          backdropFilter: 'blur(20px)',
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                          position: 'relative',
-                          zIndex: 2,
+                            : 'rgba(0, 0, 0, 0.4)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          backdropFilter: 'blur(10px)',
                           '&:hover': {
-                            bgcolor: 'rgba(251, 66, 212, 0.15)',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 8px 25px rgba(251, 66, 212, 0.3)'
+                            bgcolor: 'rgba(251, 66, 212, 0.1)',
+                            transform: 'translateY(-1px)',
                           }
                         }}
                         onClick={() => handleTrackSelect(index)}
                       >
-                        {/* Play/Pause Button */}
-                        <Box
-                          sx={{
-                            width: 50,
-                            height: 50,
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: currentlyPlayingTrack === index && isPlaying
-                              ? 'rgba(251, 66, 212, 0.8)'
-                              : 'rgba(0, 0, 0, 0.6)',
-                            color: 'white',
-                            border: '2px solid rgba(251, 66, 212, 0.5)',
-                            fontSize: '20px'
-                          }}
-                        >
-                          {currentlyPlayingTrack === index && isPlaying ? (
-                            <PauseIcon />
-                          ) : (
-                            <PlayArrowIcon />
-                          )}
-                        </Box>
-
-                        {/* Track Number */}
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            fontWeight: 600,
-                            minWidth: '30px'
-                          }}
-                        >
-                          {track.position}
-                        </Typography>
-
-                        {/* Track Info */}
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography
-                            variant="h6"
-                            sx={{
-                              color: 'white',
-                              fontWeight: 600,
-                              mb: 0.5,
-                              textShadow: currentlyPlayingTrack === index
-                                ? '0 0 10px rgba(251, 66, 212, 0.5)'
-                                : 'none',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
-                            }}
-                          >
-                            {track.title}
-                          </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
                           <Typography
                             variant="body2"
                             sx={{
                               color: 'rgba(255, 255, 255, 0.6)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap'
+                              fontWeight: 500,
+                              minWidth: '20px',
+                              textAlign: 'center'
                             }}
                           >
-                            {track.artist}
+                            {track.id}
+                          </Typography>
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              color: 'white',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {track.title}
                           </Typography>
                         </Box>
-
-                        {/* Track Icon */}
-                        <Box
-                          sx={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 1,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: track.iconType === 'cloud' ? 'rgba(251, 66, 212, 0.2)' :
-                                     track.iconType === 'zap' ? 'rgba(56, 189, 248, 0.2)' :
-                                     track.iconType === 'dollar' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(249, 115, 22, 0.2)',
-                            color: track.iconType === 'cloud' ? '#fb42d4' :
-                                   track.iconType === 'zap' ? '#38bdf8' :
-                                   track.iconType === 'dollar' ? '#22c55e' : '#f97316',
-                            border: '1px solid currentColor'
-                          }}
-                        >
-                          {getTrackIcon(track.iconType)}
-                        </Box>
-
-                        {/* Duration */}
                         <Typography
                           variant="body2"
                           sx={{
                             color: 'rgba(255, 255, 255, 0.7)',
                             fontWeight: 500,
-                            minWidth: '50px',
+                            minWidth: '40px',
                             textAlign: 'right'
                           }}
                         >
@@ -789,19 +850,44 @@ const AlbumDetailPage: React.FC = () => {
 
               {/* Album Info Header */}
               <Box sx={{ mb: 4 }}>
-                <Typography
-                  variant="caption"
-                  color="rgba(255, 255, 255, 0.6)"
-                  sx={{
-                    textTransform: 'uppercase',
-                    letterSpacing: 1.5,
-                    fontSize: '12px',
-                    display: 'block',
-                    mb: 1
-                  }}
-                >
-                  Album by {album.artist}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography
+                    variant="caption"
+                    color="rgba(255, 255, 255, 0.6)"
+                    sx={{
+                      textTransform: 'uppercase',
+                      letterSpacing: 1.5,
+                      fontSize: '12px',
+                    }}
+                  >
+                    Album by {album.artist}
+                  </Typography>
+                  {!isOwner && user && albumUserId && user.id.toString() !== albumUserId.toString() && (
+                    <Button
+                      size="small"
+                      variant={isFollowing ? "contained" : "outlined"}
+                      onClick={handleFollowToggle}
+                      sx={{
+                        borderColor: isFollowing ? '#fb42d4' : '#38bdf8',
+                        backgroundColor: isFollowing ? '#fb42d4' : 'transparent',
+                        color: isFollowing ? 'white' : '#38bdf8',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        borderRadius: 2,
+                        px: 2,
+                        py: 0.5,
+                        fontSize: '13px',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          backgroundColor: isFollowing ? '#d946c5' : 'rgba(56, 189, 248, 0.1)',
+                          transform: 'translateY(-1px)',
+                        }
+                      }}
+                    >
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </Button>
+                  )}
+                </Box>
 
                 <Typography
                   variant="h4"
@@ -827,40 +913,20 @@ const AlbumDetailPage: React.FC = () => {
               </Box>
 
               {/* Album Description */}
-              <Box
-                sx={{
-                  bgcolor: 'rgba(0, 0, 0, 0.4)',
-                  borderRadius: 3,
-                  p: 3,
-                  mb: 4,
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  backdropFilter: 'blur(20px)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
-                }}
-              >
+              {album.description && (
                 <Typography
-                  variant="subtitle1"
-                  fontWeight={600}
-                  color="white"
+                  variant="body2"
+                  color="rgba(255, 255, 255, 0.8)"
                   sx={{
-                    mb: 2,
-                    fontSize: '18px',
-                    textShadow: '0 0 10px rgba(56, 189, 248, 0.3)'
+                    lineHeight: 1.6,
+                    fontSize: '14px',
+                    mb: 4,
+                    fontStyle: 'italic'
                   }}
                 >
-                  About This Album
+                  "{album.description}"
                 </Typography>
-                <Typography
-                  variant="body1"
-                  color="rgba(255, 255, 255, 0.9)"
-                  sx={{
-                    lineHeight: 1.8,
-                    fontSize: '14px'
-                  }}
-                >
-                  {album.description}
-                </Typography>
-              </Box>
+              )}
 
               {/* Interaction Section */}
               <Box
@@ -874,35 +940,33 @@ const AlbumDetailPage: React.FC = () => {
                 }}
               >
                 {/* Like Button */}
-                <Button
-                  variant={isLiked ? "contained" : "outlined"}
-                  onClick={handleLikeToggle}
-                  disabled={likingAlbum}
-                  fullWidth
-                  sx={{
-                    borderColor: '#fb42d4',
-                    color: isLiked ? 'white' : '#fb42d4',
-                    backgroundColor: isLiked ? '#fb42d4' : 'transparent',
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    borderRadius: 2,
-                    py: 1.5,
-                    mb: 3,
-                    backdropFilter: 'blur(10px)',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      bgcolor: isLiked ? 'rgba(251, 66, 212, 0.8)' : 'rgba(251, 66, 212, 0.1)',
-                      boxShadow: '0 0 20px rgba(251, 66, 212, 0.3)'
-                    },
-                    '&:disabled': {
-                      opacity: 0.6,
-                      cursor: 'not-allowed'
-                    }
-                  }}
-                >
-                  <FavoriteIcon sx={{ mr: 1, color: likingAlbum ? 'rgba(255,255,255,0.5)' : 'inherit' }} />
-                  {likingAlbum ? 'Processing...' : `${isLiked ? 'Liked' : 'Like'} (${likeCount})`}
-                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+                  <IconButton
+                    onClick={handleLikeToggle}
+                    disabled={likingAlbum}
+                    sx={{
+                      color: isLiked ? '#fb42d4' : 'rgba(255, 255, 255, 0.6)',
+                      '&:hover': {
+                        color: '#fb42d4',
+                        backgroundColor: 'rgba(251, 66, 212, 0.1)'
+                      },
+                      transition: 'all 0.2s ease',
+                      p: 1
+                    }}
+                  >
+                    <FavoriteIcon sx={{ fontSize: '1.2rem' }} />
+                  </IconButton>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontWeight: 500,
+                      fontSize: '14px'
+                    }}
+                  >
+                    {likeCount} likes
+                  </Typography>
+                </Box>
 
                 {/* Comments Section */}
                 <Typography
@@ -993,7 +1057,7 @@ const AlbumDetailPage: React.FC = () => {
                                   fontWeight: 600
                                 }}
                               >
-                                사용자 {comment.userId}
+                                {comment.userNickname || `사용자 ${comment.userId}`}
                               </Typography>
                               <Typography
                                 variant="caption"
@@ -1097,7 +1161,7 @@ const AlbumDetailPage: React.FC = () => {
                                         fontSize: '11px'
                                       }}
                                     >
-                                      사용자 {reply.userId}
+                                      {reply.userNickname || `사용자 ${reply.userId}`}
                                     </Typography>
                                     <Typography
                                       variant="caption"
@@ -1146,41 +1210,31 @@ const AlbumDetailPage: React.FC = () => {
                 {isOwner && (
                   <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <Stack spacing={2}>
-                      <Button
-                        variant="outlined"
-                        onClick={() => handleEditTracks()}
-                        fullWidth
-                        sx={{
-                          borderColor: '#38bdf8',
-                          color: '#38bdf8',
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          '&:hover': {
-                            bgcolor: 'rgba(56, 189, 248, 0.1)',
-                            boxShadow: '0 0 20px rgba(56, 189, 248, 0.3)'
-                          }
-                        }}
-                      >
-                        ✏️ Edit Tracks
-                      </Button>
 
                       <Button
-                        variant="outlined"
+                        variant="text"
                         onClick={() => handleDeleteAlbum()}
                         disabled={deletingAlbum}
-                        fullWidth
+                        size="small"
                         sx={{
-                          borderColor: '#ef4444',
-                          color: '#ef4444',
+                          color: 'rgba(239, 68, 68, 0.8)',
                           textTransform: 'none',
-                          fontWeight: 600,
+                          fontWeight: 500,
+                          fontSize: '13px',
+                          py: 0.5,
+                          px: 1,
+                          borderRadius: 1,
+                          alignSelf: 'flex-start',
                           '&:hover': {
-                            bgcolor: 'rgba(239, 68, 68, 0.1)',
-                            boxShadow: '0 0 20px rgba(239, 68, 68, 0.3)'
+                            bgcolor: 'rgba(239, 68, 68, 0.05)',
+                            color: '#ef4444'
+                          },
+                          '&:disabled': {
+                            color: 'rgba(239, 68, 68, 0.3)'
                           }
                         }}
                       >
-                        {deletingAlbum ? 'Deleting...' : '🗑️ Delete Album'}
+                        {deletingAlbum ? 'Deleting...' : 'Delete Album'}
                       </Button>
                     </Stack>
                   </Box>
@@ -1255,25 +1309,35 @@ const AlbumDetailPage: React.FC = () => {
 
             {/* Play/Pause Button */}
             <IconButton
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={handlePlayPause}
+              disabled={isLoading || !audioElement}
               sx={{
                 color: '#fb42d4',
                 '&:hover': {
                   color: '#fb42d4',
                   textShadow: '0 0 10px rgba(251, 66, 212, 0.5)'
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 255, 255, 0.3)'
                 }
               }}
             >
-              {isPlaying ? <PauseIcon sx={{ fontSize: 28 }} /> : <PlayArrowIcon sx={{ fontSize: 28 }} />}
+              {isLoading ? (
+                <CircularProgress size={28} sx={{ color: '#fb42d4' }} />
+              ) : isPlaying ? (
+                <PauseIcon sx={{ fontSize: 28 }} />
+              ) : (
+                <PlayArrowIcon sx={{ fontSize: 28 }} />
+              )}
             </IconButton>
 
             {/* Current Time */}
             <Typography
               variant="body2"
               color="rgba(255, 255, 255, 0.6)"
-              sx={{ minWidth: 'fit-content' }}
+              sx={{ minWidth: 'fit-content', fontFamily: 'monospace' }}
             >
-              {currentTime}
+              {currentTime} / {duration}
             </Typography>
 
             {/* Waveform Visualization */}

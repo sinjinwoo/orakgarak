@@ -422,7 +422,7 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 255, 255, 0.2)';
           }}
         >
-          🎤 MR 컨트롤
+          MR 컨트롤
         </button>
       </div>
 

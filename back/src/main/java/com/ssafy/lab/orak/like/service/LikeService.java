@@ -4,11 +4,11 @@ import com.ssafy.lab.orak.like.dto.LikeDto;
 import com.ssafy.lab.orak.like.entity.Like;
 import com.ssafy.lab.orak.like.repository.LikeRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Slf4j
+@Log4j2
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

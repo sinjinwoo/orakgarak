@@ -9,6 +9,26 @@ import 'swiper/css/effect-coverflow';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
+// 네온 효과를 위한 CSS 애니메이션
+const neonStyles = `
+  @keyframes neonGlow {
+    0%, 100% { 
+      text-shadow: 
+        0 0 20px #ec4899,
+        0 0 40px #ec4899,
+        0 0 60px #ec4899,
+        0 0 80px #ec4899;
+    }
+    50% { 
+      text-shadow: 
+        0 0 10px #ec4899,
+        0 0 20px #ec4899,
+        0 0 30px #ec4899,
+        0 0 40px #ec4899;
+    }
+  }
+`;
+
 // AlbumCoverflow 전용 앨범 인터페이스 (UI 표시용)
 interface CoverflowAlbum {
   id: string;
@@ -58,14 +78,16 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
   }
 
   return (
-    <Box sx={{ 
-      position: 'relative',
-      width: '100%',
-      height: 600, // 앨범 + reflection + 정보를 위한 충분한 높이
-      overflow: 'visible',
-      background: theme.colors.background.main,
-      borderRadius: 3,
-    }}>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: neonStyles }} />
+      <Box sx={{ 
+        position: 'relative',
+        width: '100%',
+        height: 600, // 앨범 + reflection + 정보를 위한 충분한 높이
+        overflow: 'visible',
+        background: 'radial-gradient(circle at center, rgba(59, 130, 246, 0.3) 0%, rgba(255, 255, 255, 0.8) 100%)', // 중앙 파란색, 외곽 흰색 그라데이션
+        borderRadius: 3,
+      }}>
       {/* 제목 */}
       <Box sx={{ 
         position: 'absolute', 
@@ -78,14 +100,16 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
         <Typography variant="h3" sx={{ 
           ...textStyles.title,
           mb: 1,
+          color: '#ec4899',
+          fontWeight: 'bold',
+          fontSize: '2.5rem',
+          textShadow: '0 0 20px #ec4899, 0 0 40px #ec4899, 0 0 60px #ec4899',
+          animation: 'neonGlow 2s ease-in-out infinite',
+          letterSpacing: '0.1em',
+          textStroke: '1px #06b6d4',
+          WebkitTextStroke: '1px #06b6d4',
         }}>
-          My Albums
-        </Typography>
-        <Typography variant="h6" sx={{ 
-          ...textStyles.caption,
-          fontWeight: 400
-        }}>
-          나만의 음악 컬렉션
+          나만의 앨범을 꾸며보세요
         </Typography>
       </Box>
 
@@ -200,9 +224,9 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                 <Box
                   className="reflection"
                   sx={{
-                    width: '180px',
-                    height: '120px', // 높이를 줄여서 더 자연스럽게
-                    marginTop: 2, // 앨범과 간격 추가
+                    width: '240px', // 더 넓게 시작
+                    height: '140px',
+                    marginTop: 0, // 앨범과 붙게
                     borderRadius: 2,
                     overflow: 'hidden',
                     position: 'relative',
@@ -225,10 +249,10 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.95) 100%)',
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.7) 80%, rgba(0,0,0,0.95) 100%)',
                       borderRadius: 2,
                     },
-                    // 추가적인 블러 효과로 더 자연스럽게
+                    // 물결 흐름 효과
                     '&::after': {
                       content: '""',
                       position: 'absolute',
@@ -236,7 +260,11 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.2) 100%)',
+                      background: `
+                        radial-gradient(ellipse at 25% 25%, rgba(255,255,255,0.1) 0%, transparent 40%),
+                        radial-gradient(ellipse at 75% 35%, rgba(255,255,255,0.08) 0%, transparent 35%),
+                        radial-gradient(ellipse at 50% 70%, rgba(0,0,0,0.15) 0%, transparent 50%)
+                      `,
                       borderRadius: 2,
                     }
                   }} 
@@ -326,6 +354,7 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
         </Box>
       )}
     </Box>
+    </>
   );
 };
 

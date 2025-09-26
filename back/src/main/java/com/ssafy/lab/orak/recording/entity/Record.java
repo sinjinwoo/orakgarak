@@ -40,17 +40,4 @@ public class Record extends BaseEntity {
 
     private Integer durationSeconds;
 
-    @Column(name = "vector_analysis_error_message")
-    @Setter
-    private String vectorAnalysisErrorMessage;
-
-    @Column(name = "vector_analysis_retry_count")
-    @Builder.Default
-    @Setter
-    private Integer vectorAnalysisRetryCount = 0;
-
-    @Column(name = "vector_analysis_last_failed_at")
-    @Setter
-    private LocalDateTime vectorAnalysisLastFailedAt;
-
 }

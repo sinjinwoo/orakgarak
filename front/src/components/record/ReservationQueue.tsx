@@ -298,12 +298,12 @@ const ReservationQueue: React.FC = () => {
         justifyContent: 'space-between',
         marginBottom: '20px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
             width: '35px',
             height: '35px',
             borderRadius: '8px',
-            background: 'linear-gradient(45deg, #ff0080, #00ffff)',
+          background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -313,36 +313,38 @@ const ReservationQueue: React.FC = () => {
           </div>
           <div>
             <h3 style={{
-              color: '#ff0080',
+            color: '#ec4899',
               fontSize: '1.2rem',
               fontWeight: 'bold',
               margin: '0 0 4px 0',
-              textShadow: '0 0 10px rgba(255, 0, 128, 0.5)'
+            textShadow: '0 0 10px rgba(236, 72, 153, 0.5)',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
             }}>
-              NEURAL QUEUE
+            예약 큐
             </h3>
             <p style={{
               color: '#888',
               fontSize: '0.8rem',
               margin: '0',
-              textTransform: 'uppercase'
+            fontFamily: 'system-ui, -apple-system, sans-serif'
             }}>
-              RESERVATION SYSTEM
+            노래 예약 목록
             </p>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{
-            background: 'rgba(255, 0, 128, 0.2)',
-            color: '#ff0080',
-            border: '1px solid #ff0080',
+            background: 'rgba(236, 72, 153, 0.15)',
+            color: '#ec4899',
+            border: '1px solid rgba(236, 72, 153, 0.6)',
             padding: '4px 8px',
             borderRadius: '10px',
             fontSize: '0.7rem',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
           }}>
-            {reservationQueue.length} SONGS
+            {reservationQueue.length} 곡
           </span>
           
           {reservationQueue.length > 0 && (
@@ -368,7 +370,7 @@ const ReservationQueue: React.FC = () => {
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              CLEAR ALL
+            전체 삭제
             </button>
           )}
           
@@ -426,19 +428,21 @@ const ReservationQueue: React.FC = () => {
             🎵
           </div>
           <h4 style={{
-            color: '#ff0080',
+            color: '#ec4899',
             fontSize: '1rem',
             fontWeight: 'bold',
-            margin: '0 0 8px 0'
+            margin: '0 0 8px 0',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
           }}>
-            NO RESERVATIONS
+            예약된 노래가 없습니다
           </h4>
           <p style={{
             color: '#888',
             fontSize: '0.8rem',
-            margin: '0'
+            margin: '0',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
           }}>
-            검색한 곡을 예약해보세요
+            노래를 검색하여 예약해 보세요
           </p>
         </div>
       )}

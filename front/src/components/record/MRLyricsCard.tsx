@@ -218,9 +218,9 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
         textAlign: 'center',
         color: '#888',
         padding: '40px 20px',
-        background: 'linear-gradient(135deg, rgba(0, 255, 255, 0.05), rgba(255, 0, 128, 0.05))',
+        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(236, 72, 153, 0.08))',
         borderRadius: '16px',
-        border: '1px solid rgba(0, 255, 255, 0.2)',
+        border: '1px solid rgba(6, 182, 212, 0.25)',
         animation: 'fadeIn 0.5s ease-in-out'
       }}>
         <div style={{
@@ -232,32 +232,35 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           🎵
         </div>
         <h3 style={{
-          color: '#00ffff',
+          color: '#06b6d4',
           fontSize: '1.4rem',
           fontWeight: 'bold',
           margin: '0 0 12px 0',
-          textShadow: '0 0 15px rgba(0, 255, 255, 0.8)'
+          textShadow: '0 0 15px rgba(6, 182, 212, 0.6)',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
         }}>
-          노래를 선택해주세요
+          노래를 선택해 주세요
         </h3>
         <p style={{
           color: '#888',
           fontSize: '1rem',
           margin: '0 0 20px 0',
-          lineHeight: 1.5
+          lineHeight: 1.5,
+          fontFamily: 'system-ui, -apple-system, sans-serif'
         }}>
           예약 큐에서 노래를 클릭하면<br/>
-          <span style={{ color: '#00ffff' }}>새로고침 효과</span>와 함께<br/>
+          <span style={{ color: '#06b6d4' }}>새로고침 효과</span>와 함께<br/>
           완벽하게 재생됩니다
         </p>
         <div style={{
           padding: '12px 20px',
-          background: 'rgba(0, 255, 255, 0.1)',
-          border: '1px solid rgba(0, 255, 255, 0.3)',
+          background: 'rgba(6, 182, 212, 0.12)',
+          border: '1px solid rgba(6, 182, 212, 0.35)',
           borderRadius: '20px',
           fontSize: '0.9rem',
-          color: '#00ffff',
-          textShadow: '0 0 8px rgba(0, 255, 255, 0.6)'
+          color: '#06b6d4',
+          textShadow: '0 0 8px rgba(6, 182, 212, 0.6)',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
         }}>
           🎵 노래 클릭 = 새로고침 + 완벽 재생 ✨
         </div>
@@ -335,6 +338,21 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           borderRadius: '16px',
           overflow: 'hidden'
         }}>
+          {/* 네온 윤곽선 */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 16,
+              padding: 2,
+              pointerEvents: 'none',
+              background: 'linear-gradient(45deg, rgba(236,72,153,0.95), rgba(6,182,212,0.95))',
+              WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+              WebkitMaskComposite: 'xor',
+              maskComposite: 'exclude',
+              boxShadow: '0 0 24px rgba(236,72,153,0.45), 0 0 30px rgba(6,182,212,0.4)'
+            }}
+          />
           <LyricsPanel 
             selectedSong={currentSong ? {
               id: currentSong.id,
@@ -373,94 +391,85 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
           boxSizing: 'border-box',
           overflow: 'hidden'
         }}>
+          {/* 네온 윤곽선 */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 16,
+              padding: 2,
+              pointerEvents: 'none',
+              background: 'linear-gradient(45deg, rgba(236,72,153,0.95), rgba(6,182,212,0.95))',
+              WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+              WebkitMaskComposite: 'xor',
+              maskComposite: 'exclude',
+              boxShadow: '0 0 24px rgba(236,72,153,0.45), 0 0 30px rgba(6,182,212,0.4)'
+            }}
+          />
+          {/* 볼륨 네온 스타일 */}
+          <style>
+            {`
+            .neon-volume { -webkit-appearance: none; appearance: none; background: transparent; }
+            .neon-volume:focus { outline: none; }
+            .neon-volume::-webkit-slider-runnable-track {
+              height: 8px;
+              background: linear-gradient(90deg, rgba(236,72,153,0.7), rgba(6,182,212,0.7));
+              border-radius: 4px;
+              box-shadow: 0 0 12px rgba(236,72,153,0.5), 0 0 18px rgba(6,182,212,0.4);
+            }
+            .neon-volume::-moz-range-track {
+              height: 8px;
+              background: linear-gradient(90deg, rgba(236,72,153,0.7), rgba(6,182,212,0.7));
+              border-radius: 4px;
+              box-shadow: 0 0 12px rgba(236,72,153,0.5), 0 0 18px rgba(6,182,212,0.4);
+            }
+            .neon-volume::-webkit-slider-thumb {
+              -webkit-appearance: none; appearance: none;
+              width: 16px; height: 16px; border-radius: 50%; background: #ffffff;
+              border: 2px solid rgba(236,72,153,0.9);
+              box-shadow: 0 0 12px rgba(236,72,153,0.6), 0 0 18px rgba(6,182,212,0.5);
+              margin-top: -4px; /* center on track */
+            }
+            .neon-volume::-moz-range-thumb {
+              width: 16px; height: 16px; border-radius: 50%; background: #ffffff;
+              border: 2px solid rgba(236,72,153,0.9);
+              box-shadow: 0 0 12px rgba(236,72,153,0.6), 0 0 18px rgba(6,182,212,0.5);
+            }
+            `}
+          </style>
           
-          {/* MR 헤더 */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: '20px'
-          }}>
-            <h3 style={{
-              color: '#ff0080',
-              fontSize: '1.2rem',
-              fontWeight: 'bold',
-              margin: '0 0 8px 0',
-              textShadow: '0 0 10px rgba(255, 0, 128, 0.6)',
-              letterSpacing: '1px'
-            }}>
-              🎤 MR 컨트롤
-            </h3>
-            
-            {/* 곡 정보 + 앨범 커버 */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              marginTop: '16px'
-            }}>
-              {/* 앨범 커버 */}
-              <div style={{
-                width: '50px',
-                height: '50px',
-                borderRadius: '50%',
-                overflow: 'hidden',
-                border: '2px solid rgba(255, 0, 128, 0.5)',
-                boxShadow: '0 0 12px rgba(255, 0, 128, 0.4)',
-                background: 'rgba(255, 0, 128, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
+          {/* MR 헤더 + 곡 정보 (좌) / 상태(우) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '16px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 0 18px rgba(236,72,153,0.25)', background: 'rgba(236, 72, 153, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {currentSong.albumCoverUrl ? (
-                  <img 
-                    src={currentSong.albumCoverUrl} 
-                    alt={`${currentSong.title} album cover`}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover'
-                    }}
-                  />
+                  <img src={currentSong.albumCoverUrl} alt={`${currentSong.title} album cover`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <span style={{
-                    fontSize: '1.5rem',
-                    color: '#ff0080',
-                    textShadow: '0 0 8px rgba(255, 0, 128, 0.8)'
-                  }}>🎤</span>
+                  <span style={{ fontSize: '1.3rem', color: '#ec4899' }}>🎵</span>
                 )}
               </div>
-              
-              <div style={{ textAlign: 'left' }}>
-                <h4 style={{
-                  color: '#ffffff',
-                  fontSize: '1.1rem',
-                  fontWeight: 'bold',
-                  margin: '0 0 4px 0'
-                }}>
-                  {currentSong.title}
-                </h4>
-                <p style={{
-                  color: '#ff0080',
-                  fontSize: '0.9rem',
-                  margin: '0'
-                }}>
-                  {currentSong.artist}
-                </p>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: '#ec4899', fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.2px', marginBottom: 4, fontFamily: 'system-ui, -apple-system, sans-serif' }}>MR 컨트롤</div>
+                <h4 style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{currentSong.title}</h4>
+                <div style={{ color: '#06b6d4', fontSize: '0.85rem', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{currentSong.artist}</div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end' }}>
+              {currentSong.albumCoverUrl ? (
+                <img src={currentSong.albumCoverUrl} alt="cover" style={{ width: 18, height: 18, borderRadius: '4px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.2)' }} />
+              ) : (
+                <span style={{ fontSize: '1rem' }}>🎵</span>
+              )}
+              <div style={{ color: '#ec4899', fontSize: '0.82rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{isYouTubeMR ? 'YouTube MR' : '일반 모드'}</div>
+              <div style={{ color: isPlayerLoading ? '#fbbf24' : (!isPlayerReady && isYouTubeMR) ? '#f87171' : isPlaying ? '#22c55e' : '#888', fontSize: '0.82rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+                {isPlayerLoading ? '⏳ 준비 중' : (!isPlayerReady && isYouTubeMR) ? '❌ 로딩 중' : isPlaying ? '재생 중' : '정지'}
               </div>
             </div>
           </div>
 
-          {/* 재생 컨트롤 */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '20px',
-            flex: 1,
-            justifyContent: 'center'
-          }}>
-            {/* 재생/정지 버튼 */}
+          {/* 재생 컨트롤 섹션: 중앙(버튼+진행바), 우측 세로 볼륨 */}
+          <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 120px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingRight: 60, paddingLeft: 60 }}>
+            {/* 재생/정지 버튼 (중앙 상단) */}
             <button
               onClick={() => {
                 console.log('🎮 MR 재생 버튼 클릭:', {
@@ -480,13 +489,13 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               disabled={isPlayerLoading || (isYouTubeMR && !isPlayerReady)}
               style={{
                 background: isPlayerLoading
-                  ? 'linear-gradient(45deg, #ffa500, #ff8c00)'
+                  ? 'linear-gradient(45deg, rgba(148,163,184,0.35), rgba(148,163,184,0.2))'
                   : isPlaying 
-                    ? 'linear-gradient(45deg, #ff4444, #cc0000)'
-                    : 'linear-gradient(45deg, #00ff00, #00cc00)',
-                color: '#fff',
-                width: '60px',
-                height: '60px',
+                    ? 'linear-gradient(45deg, rgba(6,182,212,0.8), rgba(236,72,153,0.8))'
+                    : 'linear-gradient(45deg, rgba(236,72,153,0.8), rgba(6,182,212,0.8))',
+                color: '#ffffff',
+                width: '72px',
+                height: '72px',
                 border: 'none',
                 borderRadius: '50%',
                 cursor: (isPlayerLoading || (isYouTubeMR && !isPlayerReady)) ? 'not-allowed' : 'pointer',
@@ -495,76 +504,37 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: isPlayerLoading 
-                  ? '0 0 25px rgba(255, 165, 0, 0.6)' 
-                  : isPlaying
-                    ? '0 0 25px rgba(255, 68, 68, 0.6)'
-                    : '0 0 25px rgba(0, 255, 0, 0.6)',
+                  ? '0 0 18px rgba(148,163,184,0.35)'
+                  : '0 0 26px rgba(236,72,153,0.35), 0 0 26px rgba(6,182,212,0.35)',
                 transition: 'all 0.3s ease',
                 transform: 'scale(1)',
                 opacity: (isPlayerLoading || (isYouTubeMR && !isPlayerReady)) ? 0.6 : 1,
-                animation: isPlayerLoading ? 'pulse 1.5s infinite' : 'none'
+                animation: isPlayerLoading ? 'pulse 1.5s infinite' : 'none',
+                marginBottom: 12
               }}
               onMouseEnter={(e) => {
                 if (!isPlayerLoading && (isPlayerReady || !isYouTubeMR)) {
-                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.transform = 'scale(1.08)';
                 }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              {isPlayerLoading ? '⏳' : (isPlaying ? '⏹️' : '▶️')}
+              {isPlayerLoading ? '…' : (isPlaying ? '■' : '▶')}
             </button>
 
-            {/* 상태 표시 */}
-            <div style={{
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: '0.85rem',
-              textAlign: 'center',
-              lineHeight: '1.4'
-            }}>
-              {isYouTubeMR ? (
-                <>
-                  <span style={{ color: '#ff0080' }}>🎵 YouTube MR</span><br />
-                  {isPlayerLoading ? (
-                    <span style={{ color: '#ffa500' }}>⏳ 플레이어 준비 중...</span>
-                  ) : !isPlayerReady ? (
-                    <span style={{ color: '#ff4444' }}>❌ 플레이어 로딩 중</span>
-                  ) : isPlaying ? (
-                    <span style={{ color: '#00ff00' }}>🎵 재생 중</span>
-                  ) : (
-                    <span style={{ color: '#888' }}>⏹️ 정지 상태</span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <span style={{ color: '#ff0080' }}>🎤 일반 모드</span><br />
-                  {isPlaying ? (
-                    <span style={{ color: '#00ff00' }}>🎵 재생 중</span>
-                  ) : (
-                    <span style={{ color: '#888' }}>⏹️ 정지 상태</span>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* 진행률 표시 */}
-            <div style={{ 
-              background: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '8px',
-              padding: '12px',
-              width: '100%',
-              maxWidth: '200px'
-            }}>
+            {/* 진행률 표시 (중앙, 버튼 아래) */}
+            <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '12px', padding: '14px 16px', width: '100%', maxWidth: 560, marginTop: 8 }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 marginBottom: '6px'
               }}>
-                <span style={{ color: '#ff0080', fontSize: '0.7rem' }}>
+                <span style={{ color: '#ec4899', fontSize: '0.75rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                   {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
                 </span>
-                <span style={{ color: '#888', fontSize: '0.7rem' }}>
+                <span style={{ color: '#888', fontSize: '0.75rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                   {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
                 </span>
               </div>
@@ -582,55 +552,44 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
                   }
                   onSeekRequest?.(seekSec);
                 }}
-                style={{
-                  width: '100%',
-                  height: '4px',
-                  background: 'rgba(255, 0, 128, 0.2)',
-                  borderRadius: '2px',
-                  overflow: 'hidden',
-                  cursor: 'pointer'
-                }}
+                style={{ width: '100%', height: '8px', background: 'rgba(236,72,153,0.25)', borderRadius: '4px', overflow: 'hidden', cursor: 'pointer' }}
               >
                 <div
                   style={{
                     width: `${(currentTime / (duration || 1)) * 100}%`,
                     height: '100%',
-                    background: 'linear-gradient(90deg, #ff0080, #00ffff)',
+                    background: 'linear-gradient(90deg, #ec4899, #06b6d4)',
                     transition: 'width 0.2s ease'
                   }}
                 />
               </div>
             </div>
 
-            {/* 볼륨 컨트롤 */}
+            {/* 볼륨 컨트롤 (우측 세로) */}
             {onVolumeChange && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                maxWidth: '200px'
-              }}>
-                <span style={{ color: '#ff0080', fontSize: '0.8rem' }}>🔊</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={volume}
-                  onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-                  style={{
-                    flex: 1,
-                    height: '4px',
-                    background: 'rgba(255, 0, 128, 0.2)',
-                    borderRadius: '2px',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                />
-                <span style={{ color: '#888', fontSize: '0.7rem' }}>
-                  {Math.round(volume * 100)}%
-                </span>
+              <div style={{ position: 'absolute', right: -50, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', flexDirection: 'column', gap: 8 }}>
+                <span style={{ color: '#ec4899', fontSize: '0.75rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>볼륨</span>
+                <div style={{ height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={volume}
+                    onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
+                    style={{
+                      transform: 'rotate(-90deg)',
+                      width: 140,
+                      height: 8,
+                      background: 'transparent',
+                      borderRadius: 4,
+                      outline: 'none',
+                      cursor: 'pointer'
+                    }}
+                    className="neon-volume"
+                  />
+                </div>
+                <span style={{ color: '#888', fontSize: '0.75rem', fontFamily: 'system-ui, -apple-system, sans-serif' }}>{Math.round(volume * 100)}%</span>
               </div>
             )}
           </div>
@@ -663,7 +622,7 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(255, 0, 128, 0.2)';
             }}
           >
-            🔄 가사로 돌아가기
+            가사 보기
           </button>
         </div>
       </div>

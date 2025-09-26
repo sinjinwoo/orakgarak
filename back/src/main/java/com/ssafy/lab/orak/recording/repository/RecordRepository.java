@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RecordRepository extends JpaRepository<Record, Long> {
@@ -17,20 +18,23 @@ public interface RecordRepository extends JpaRepository<Record, Long> {
     List<Record> findByUserIdWithUpload(@Param("userId") Long userId);
 
     @Query("SELECT r FROM Record r JOIN FETCH r.upload WHERE r.id = :recordId")
-    Record findByIdWithUpload(@Param("recordId") Long recordId);
+    Optional<Record> findByIdWithUpload(@Param("recordId") Long recordId);
 
     // 비동기 처리를 위한 uploadId 기반 조회
-    Record findByUploadId(Long uploadId);
+    Optional<Record> findByUploadId(Long uploadId);
+
+    // uploadId 존재 여부 확인
+    boolean existsByUploadId(Long uploadId);
 
     // 배치 처리를 위한 PENDING 상태 Record 조회
     @Query("SELECT r FROM Record r JOIN FETCH r.upload u WHERE u.processingStatus = :status ORDER BY r.createdAt ASC")
-    List<Record> findPendingRecordsWithUpload(@Param("status") ProcessingStatus status, org.springframework.data.domain.Pageable pageable);
+    List<Record> findPendingWithUpload(@Param("status") ProcessingStatus status, org.springframework.data.domain.Pageable pageable);
 
-    // AI 데모용 디렉토리별 조회 메서드들
+    // 디렉토리별 조회 
     @Query("SELECT r FROM Record r JOIN FETCH r.upload u WHERE r.userId = :userId AND u.directory = :directory")
-    List<Record> findByUserIdAndUploadDirectoryWithUpload(@Param("userId") Long userId, @Param("directory") String directory);
+    List<Record> findByUserAndDirectory(@Param("userId") Long userId, @Param("directory") String directory);
 
     @Query("SELECT r FROM Record r JOIN FETCH r.upload u WHERE u.directory = :directory")
-    List<Record> findByUploadDirectoryWithUpload(@Param("directory") String directory);
+    List<Record> findByDirectory(@Param("directory") String directory);
 
 }

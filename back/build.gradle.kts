@@ -117,6 +117,10 @@ dependencies {
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.awaitility:awaitility:4.2.0")
+
+    // TestContainers for Kafka integration testing
+    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+    testImplementation("org.testcontainers:kafka:1.20.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

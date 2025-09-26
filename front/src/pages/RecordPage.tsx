@@ -225,14 +225,13 @@ const RecordPageContent: React.FC = () => {
       style={{
         minHeight: "100vh",
         background: `
-          radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%),
-          radial-gradient(circle at 40% 40%, rgba(0, 255, 0, 0.05) 0%, transparent 50%),
-          linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%)
+          radial-gradient(800px 400px at 15% 85%, rgba(236, 72, 153, 0.12), transparent 60%),
+          radial-gradient(700px 350px at 85% 15%, rgba(6, 182, 212, 0.12), transparent 60%),
+          linear-gradient(135deg, #0b0f14 0%, #111827 50%, #0b0f14 100%)
         `,
         padding: "20px",
         paddingTop: "100px", // 헤더 높이만큼 상단 패딩 추가
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "system-ui, -apple-system, sans-serif",
         position: "relative",
         overflow: "auto",
       }}
@@ -268,7 +267,7 @@ const RecordPageContent: React.FC = () => {
               gap: "20px",
             }}
           >
-            <div
+              <div
               style={{
                 position: "relative",
                 width: "100%",
@@ -295,11 +294,11 @@ const RecordPageContent: React.FC = () => {
                     width: "100%",
                     height: "100%",
                     backfaceVisibility: "hidden",
-                    background: "rgba(26, 26, 26, 0.9)",
-                    border: "1px solid rgba(0, 255, 255, 0.3)",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      border: "1px solid rgba(255, 255, 255, 0.12)",
                     borderRadius: "15px",
                     padding: "20px",
-                    boxShadow: "0 8px 25px rgba(0, 0, 0, 0.3)",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 0 22px rgba(236,72,153,0.25), 0 0 28px rgba(6,182,212,0.2)",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column",
@@ -307,12 +306,30 @@ const RecordPageContent: React.FC = () => {
                     zIndex: 10, // 카드 레이어 (스피커보다 낮게)
                   }}
                 >
+                      {/* 네온 윤곽선 */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          borderRadius: "15px",
+                          padding: "2px",
+                          pointerEvents: "none",
+                          background:
+                            "linear-gradient(45deg, rgba(236,72,153,0.9), rgba(6,182,212,0.9))",
+                          WebkitMask:
+                            "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+                          WebkitMaskComposite: "xor",
+                          maskComposite: "exclude",
+                          boxShadow:
+                            "0 0 18px rgba(236,72,153,0.35), 0 0 22px rgba(6,182,212,0.3)",
+                        }}
+                      />
                   <SongSearchPanel />
                   <div
                     style={{
                       textAlign: "center",
                       padding: "10px",
-                      color: "#00ffff",
+                        color: "#06b6d4",
                       fontSize: "12px",
                       opacity: 0.7,
                     }}
@@ -327,13 +344,13 @@ const RecordPageContent: React.FC = () => {
                     height: "100%",
                     backfaceVisibility: "hidden",
                     transform: "rotateY(180deg)",
-                    background:
-                      "linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(26, 26, 26, 0.9) 50%, rgba(0, 255, 255, 0.05) 100%), radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(0, 255, 255, 0.2) 0%, transparent 50%)",
-                    border: "2px solid #00ffff",
+                      background:
+                        "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)",
+                      border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: "15px",
                     padding: "20px",
-                    boxShadow:
-                      "0 0 30px rgba(0, 255, 255, 0.4), inset 0 0 50px rgba(0, 255, 255, 0.1)",
+                      boxShadow:
+                        "0 0 40px rgba(236,72,153,0.3), 0 0 44px rgba(6,182,212,0.22), 0 0 40px rgba(236,72,153,0.2) inset",
                     overflow: "visible", // 스피커가 카드 밖으로 나올 수 있도록
                     display: "flex",
                     flexDirection: "column",
@@ -382,10 +399,10 @@ const RecordPageContent: React.FC = () => {
             <div
               style={{
                 background: "rgba(26, 26, 26, 0.9)",
-                border: "1px solid rgba(0, 255, 0, 0.3)",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
                 borderRadius: "15px",
                 padding: "20px",
-                boxShadow: "0 8px 25px rgba(0, 0, 0, 0.3)",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 0 22px rgba(236,72,153,0.25), 0 0 28px rgba(6,182,212,0.2)",
                 height: "460px",
                 overflow: "hidden",
               }}
@@ -401,6 +418,7 @@ const RecordPageContent: React.FC = () => {
                         duration: selectedSong.duration,
                         youtubeId: selectedSong.youtubeId,
                         lyrics: selectedSong.lyrics,
+                        albumCoverUrl: (selectedSong as any).albumCoverUrl || (selectedSong as any).albumImageUrl
                       }
                     : undefined
                 }
@@ -440,7 +458,7 @@ const RecordPageContent: React.FC = () => {
               gap: "20px",
             }}
           >
-            <div
+              <div
               style={{
                 position: "relative",
                 width: "100%",
@@ -467,11 +485,11 @@ const RecordPageContent: React.FC = () => {
                     width: "100%",
                     height: "100%",
                     backfaceVisibility: "hidden",
-                    background: "rgba(26, 26, 26, 0.9)",
-                    border: "1px solid rgba(255, 0, 128, 0.3)",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: "15px",
                     padding: "20px",
-                    boxShadow: "0 8px 25px rgba(0, 0, 0, 0.3)",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04) inset, 0 0 22px rgba(236,72,153,0.25), 0 0 28px rgba(6,182,212,0.2)",
                     overflow: "hidden",
                     display: "flex",
                     flexDirection: "column",
@@ -479,12 +497,30 @@ const RecordPageContent: React.FC = () => {
                     zIndex: 10, // 카드 레이어 (스피커보다 낮게)
                   }}
                 >
+                  {/* 네온 윤곽선 */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: "15px",
+                      padding: "2px",
+                      pointerEvents: "none",
+                      background:
+                        "linear-gradient(45deg, rgba(236,72,153,0.95), rgba(6,182,212,0.95))",
+                      WebkitMask:
+                        "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+                      WebkitMaskComposite: "xor",
+                      maskComposite: "exclude",
+                      boxShadow:
+                        "0 0 24px rgba(236,72,153,0.45), 0 0 30px rgba(6,182,212,0.4)",
+                    }}
+                  />
                   <ReservationQueue />
                   <div
                     style={{
                       textAlign: "center",
                       padding: "10px",
-                      color: "#ff0080",
+                        color: "#ec4899",
                       fontSize: "12px",
                       opacity: 0.7,
                     }}
@@ -499,13 +535,13 @@ const RecordPageContent: React.FC = () => {
                     height: "100%",
                     backfaceVisibility: "hidden",
                     transform: "rotateY(180deg)",
-                    background:
-                      "linear-gradient(135deg, rgba(255, 0, 128, 0.1) 0%, rgba(26, 26, 26, 0.9) 50%, rgba(255, 0, 128, 0.05) 100%), radial-gradient(circle at 20% 20%, rgba(255, 0, 128, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255, 0, 128, 0.2) 0%, transparent 50%)",
-                    border: "2px solid #ff0080",
+                      background:
+                        "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)",
+                      border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: "15px",
                     padding: "20px",
-                    boxShadow:
-                      "0 0 30px rgba(255, 0, 128, 0.4), inset 0 0 50px rgba(255, 0, 128, 0.1)",
+                      boxShadow:
+                        "0 0 40px rgba(236,72,153,0.3), 0 0 44px rgba(6,182,212,0.22), 0 0 40px rgba(236,72,153,0.2) inset",
                     overflow: "visible", // 스피커가 카드 밖으로 나올 수 있도록
                     display: "flex",
                     flexDirection: "column",
