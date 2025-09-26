@@ -17,11 +17,13 @@ import java.util.Base64;
 
 @Log4j2
 @Component
-@RequiredArgsConstructor
 public class CookieOAuth2AuthorizationRequestRepository implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
-    @Qualifier("oauth2ObjectMapper")
     private final ObjectMapper objectMapper;
+
+    public CookieOAuth2AuthorizationRequestRepository(@Qualifier("oauth2ObjectMapper") ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     private static final String COOKIE_NAME = "oauth2_auth_request";
     private static final int COOKIE_EXPIRE_SECONDS = 180; // 3분
