@@ -25,17 +25,24 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         log.info("=== CustomOAuth2UserService.loadUser 시작 ===");
 
         try {
+            log.info("OAuth2 사용자 정보 로드 시작");
             OAuth2User oauth2User = super.loadUser(userRequest);
+            log.info("OAuth2 사용자 정보 로드 완료");
 
             String registrationId = userRequest.getClientRegistration().getRegistrationId();
             Map<String, Object> attributes = oauth2User.getAttributes();
 
             log.info("OAuth2 Provider: {}", registrationId);
+            log.info("OAuth2 사용자 속성 개수: {}", attributes.size());
 
             if ("google".equals(registrationId)) {
-                return processGoogleUser(attributes);
+                log.info("Google OAuth2 사용자 처리 시작");
+                OAuth2User result = processGoogleUser(attributes);
+                log.info("Google OAuth2 사용자 처리 완료");
+                return result;
             }
 
+            log.error("지원하지 않는 OAuth2 Provider: {}", registrationId);
             throw new OAuth2AuthenticationException("Unsupported OAuth2 provider: " + registrationId);
         } catch (Exception e) {
             log.error("CustomOAuth2UserService에서 예외 발생", e);
@@ -51,9 +58,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         log.info("Google OAuth2 user info - googleId: {}, email: {}, name: {}", googleId, email,
                 name);
 
+        log.info("데이터베이스에서 기존 사용자 조회 시작 - googleId: {}", googleId);
         User user = userRepository.findByGoogleID(googleId)
-                .orElseGet(() -> createNewUser(googleId, email, name));
+                .orElseGet(() -> {
+                    log.info("기존 사용자 없음 - 새 사용자 생성 진행");
+                    return createNewUser(googleId, email, name);
+                });
 
+        if (user.getId() != null) {
+            log.info("기존 사용자 발견 - userId: {}", user.getId());
+        }
+
+        log.info("CustomOAuth2User 객체 생성");
         return new CustomOAuth2User(user, attributes);
     }
 
