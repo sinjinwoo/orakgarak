@@ -13,7 +13,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResp
 public class OAuth2Config {
 
     @Bean
-    public ObjectMapper objectMapper() {
+    public ObjectMapper oauth2ObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
 
         // OAuth2AuthorizationRequest 직렬화/역직렬화를 위한 설정

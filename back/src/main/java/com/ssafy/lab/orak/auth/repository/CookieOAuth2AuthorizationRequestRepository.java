@@ -2,6 +2,7 @@ package com.ssafy.lab.orak.auth.repository;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,6 +20,7 @@ import java.util.Base64;
 @RequiredArgsConstructor
 public class CookieOAuth2AuthorizationRequestRepository implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
+    @Qualifier("oauth2ObjectMapper")
     private final ObjectMapper objectMapper;
 
     private static final String COOKIE_NAME = "oauth2_auth_request";
