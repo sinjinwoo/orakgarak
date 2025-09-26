@@ -14,6 +14,7 @@ import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
+import com.ssafy.lab.orak.ai.service.VectorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class AsyncRecordService {
     private final FileUploadService fileUploadService;
     private final EventBridgeService eventBridgeService;
     private final RecordMapper recordMapper;
+    private final VectorService vectorService;
 
 
     /**
