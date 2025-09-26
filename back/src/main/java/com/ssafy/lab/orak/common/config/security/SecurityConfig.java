@@ -28,7 +28,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
-import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
+import org.springframework.security.oauth2.client.web.HttpCookieOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 
 import java.util.List;
@@ -76,13 +76,9 @@ public class SecurityConfig {
                 .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator")
                                          && !request.getRequestURI().startsWith("/api/webhook")
                                          && !request.getRequestURI().equals("/api/records/async/upload-completed"))
-                // 세션 미사용 (JWT 기반 인증) - OAuth2 로그인은 예외적으로 세션 필요
+                // 세션 미사용 (JWT 기반 인증) - OAuth2 로그인만 쿠키 기반
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                        .maximumSessions(1)
-                        .maxSessionsPreventsLogin(false)
-                )
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 접근 제어
@@ -167,7 +163,10 @@ public class SecurityConfig {
 
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
-        return new HttpSessionOAuth2AuthorizationRequestRepository();
+        HttpCookieOAuth2AuthorizationRequestRepository repository = new HttpCookieOAuth2AuthorizationRequestRepository();
+        repository.setCookieName("oauth2_auth_request");
+        repository.setCookieMaxAge(180); // 3분
+        return repository;
     }
 
     @Bean
