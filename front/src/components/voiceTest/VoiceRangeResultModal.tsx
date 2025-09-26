@@ -1,5 +1,7 @@
 import React from 'react';
 import { Box, Typography, Button, Modal } from '@mui/material';
+import { motion } from 'framer-motion';
+import { MusicNote, TrendingUp, TrendingDown, Refresh, Close } from '@mui/icons-material';
 
 interface VoiceRangeResultModalProps {
   isOpen: boolean;
@@ -9,6 +11,7 @@ interface VoiceRangeResultModalProps {
   lowestNote?: string;
   highestFrequency?: number;
   lowestFrequency?: number;
+  totalScore?: number;
 }
 
 const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
@@ -19,6 +22,7 @@ const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
   lowestNote,
   highestFrequency,
   lowestFrequency,
+  totalScore,
 }) => {
   console.log('🎮 VoiceRangeResultModal 렌더링:', { 
     isOpen, 
@@ -37,129 +41,133 @@ const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        backdropFilter: 'blur(10px)',
       }}
     >
-      <Box
-        sx={{
-          width: '600px',
-          maxWidth: '90vw',
-          background: 'linear-gradient(145deg, #1a1a1a, #0a0a0a)',
-          borderRadius: '25px',
-          boxShadow: '0 0 40px rgba(0, 255, 136, 0.3), inset 0 0 40px rgba(0, 255, 136, 0.05)',
-          border: '3px solid #00ff88',
-          p: 4,
-          position: 'relative',
-          overflow: 'hidden',
-          backdropFilter: 'blur(5px)',
-        }}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8, y: 50 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.8, y: 50 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
       >
-        {/* 사이버펑크 배경 효과 */}
         <Box
           sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
+            width: '520px',
+            maxWidth: '90vw',
+            position: 'relative',
             background: `
-              radial-gradient(circle at 20% 80%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 80% 20%, rgba(255, 0, 68, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 40% 40%, rgba(0, 255, 255, 0.05) 0%, transparent 50%)
+              radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.25) 0%, transparent 60%),
+              radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.25) 0%, transparent 60%),
+              linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
             `,
-            animation: 'cyberGlow 4s ease-in-out infinite alternate',
-            zIndex: 0,
+            border: '1px solid rgba(6, 182, 212, 0.3)',
+            borderRadius: '16px',
+            boxShadow: '0 0 24px rgba(236, 72, 153, 0.3), 0 0 24px rgba(6, 182, 212, 0.3)',
+            p: 3,
+            overflow: 'hidden',
+            backdropFilter: 'blur(20px)'
           }}
-        />
-
-        {/* 네온 그리드 배경 */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundImage: `
-              linear-gradient(rgba(0, 255, 136, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0, 255, 136, 0.1) 1px, transparent 1px)
-            `,
-            backgroundSize: '50px 50px',
-            animation: 'gridMove 20s linear infinite',
-            zIndex: 0,
-          }}
-        />
-
+        >
         {/* 콘텐츠 */}
         <Box sx={{ position: 'relative', zIndex: 1 }}>
           {/* 제목 */}
           <Typography
-            variant="h4"
+            variant="h6"
             sx={{
-              color: '#00ff88',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              mb: 3,
-              textShadow: '0 0 10px rgba(0, 255, 136, 0.8)',
-              background: 'linear-gradient(45deg, #00ff88, #00ffff)',
+              background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+              backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              letterSpacing: '2px',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              mb: 2,
+              letterSpacing: '1px'
             }}
           >
-            🎵 음역대 테스트 결과
+            🎵 테스트 결과
           </Typography>
 
           {/* 결과 표시 */}
           <Box
             sx={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-              mb: 4,
+              flexDirection: 'row',
+              alignItems: 'stretch',
+              gap: 2,
+              mb: 2
             }}
           >
-            {/* 최고 음역대 */}
+            {/* 총점 표시 */}
             <Box
               sx={{
-                background: 'rgba(0, 255, 136, 0.1)',
-                border: '2px solid #00ff88',
-                borderRadius: '15px',
-                p: 3,
+                flex: 1,
+                background: 'rgba(236, 72, 153, 0.08)',
+                border: '1px solid rgba(236, 72, 153, 0.5)',
+                borderRadius: '12px',
+                p: 2,
                 textAlign: 'center',
-                position: 'relative',
-                overflow: 'hidden',
+                minWidth: 0
               }}
             >
               <Typography
-                variant="h6"
+                variant="subtitle2"
+                sx={{
+                  color: '#ec4899',
+                  fontWeight: 'bold',
+                  mb: 0.5
+                }}
+              >
+                🏆 총점
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  color: '#ffffff',
+                  fontWeight: 'bold',
+                  fontFamily: 'monospace'
+                }}
+              >
+                {totalScore?.toLocaleString() || '0'}
+              </Typography>
+            </Box>
+
+            {/* 최고 음역대 */}
+            <Box
+              sx={{
+                flex: 1,
+                background: 'rgba(0, 255, 136, 0.08)',
+                border: '1px solid rgba(0, 255, 136, 0.6)',
+                borderRadius: '12px',
+                p: 2,
+                textAlign: 'center',
+                minWidth: 0
+              }}
+            >
+              <Typography
+                variant="subtitle2"
                 sx={{
                   color: '#00ff88',
                   fontWeight: 'bold',
-                  mb: 1,
-                  textShadow: '0 0 5px rgba(0, 255, 136, 0.5)',
+                  mb: 0.5
                 }}
               >
                 🎼 최고 음역대
               </Typography>
               <Typography
-                variant="h3"
+                variant="h5"
                 sx={{
                   color: '#ffffff',
                   fontWeight: 'bold',
-                  fontFamily: 'monospace',
-                  textShadow: '0 0 10px rgba(255, 255, 255, 0.5)',
+                  fontFamily: 'monospace'
                 }}
               >
                 {highestNote || 'C4'}
               </Typography>
               {highestFrequency && (
                 <Typography
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    mt: 1,
-                    fontFamily: 'monospace',
-                  }}
+                  variant="caption"
+                  sx={{ color: 'rgba(255, 255, 255, 0.7)', mt: 0.5, fontFamily: 'monospace' }}
                 >
                   {highestFrequency.toFixed(1)} Hz
                 </Typography>
@@ -169,45 +177,39 @@ const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
             {/* 최저 음역대 */}
             <Box
               sx={{
-                background: 'rgba(255, 0, 68, 0.1)',
-                border: '2px solid #ff0044',
-                borderRadius: '15px',
-                p: 3,
+                flex: 1,
+                background: 'rgba(255, 0, 68, 0.08)',
+                border: '1px solid rgba(255, 0, 68, 0.6)',
+                borderRadius: '12px',
+                p: 2,
                 textAlign: 'center',
-                position: 'relative',
-                overflow: 'hidden',
+                minWidth: 0
               }}
             >
               <Typography
-                variant="h6"
+                variant="subtitle2"
                 sx={{
                   color: '#ff0044',
                   fontWeight: 'bold',
-                  mb: 1,
-                  textShadow: '0 0 5px rgba(255, 0, 68, 0.5)',
+                  mb: 0.5
                 }}
               >
                 🎵 최저 음역대
               </Typography>
               <Typography
-                variant="h3"
+                variant="h5"
                 sx={{
                   color: '#ffffff',
                   fontWeight: 'bold',
-                  fontFamily: 'monospace',
-                  textShadow: '0 0 10px rgba(255, 255, 255, 0.5)',
+                  fontFamily: 'monospace'
                 }}
               >
                 {lowestNote || 'C3'}
               </Typography>
               {lowestFrequency && (
                 <Typography
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    mt: 1,
-                    fontFamily: 'monospace',
-                  }}
+                  variant="caption"
+                  sx={{ color: 'rgba(255, 255, 255, 0.7)', mt: 0.5, fontFamily: 'monospace' }}
                 >
                   {lowestFrequency.toFixed(1)} Hz
                 </Typography>
@@ -215,27 +217,12 @@ const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
             </Box>
           </Box>
 
-          {/* 설명 */}
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'rgba(255, 255, 255, 0.8)',
-              textAlign: 'center',
-              mb: 4,
-              lineHeight: 1.6,
-            }}
-          >
-            테스트를 통해 측정된 당신의 음역대입니다.
-            <br />
-            이제 추천받기를 통해 맞춤형 노래를 찾아보세요!
-          </Typography>
-
           {/* 버튼들 */}
           <Box
             sx={{
               display: 'flex',
-              gap: 2,
-              justifyContent: 'center',
+              gap: 1.5,
+              justifyContent: 'center'
             }}
           >
             <Button
@@ -244,17 +231,13 @@ const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
               sx={{
                 color: '#00ff88',
                 borderColor: '#00ff88',
-                px: 4,
-                py: 1.5,
-                borderRadius: '25px',
+                px: 3,
+                py: 1,
+                borderRadius: '20px',
                 fontWeight: 'bold',
                 textTransform: 'none',
-                fontSize: '1rem',
-                '&:hover': {
-                  borderColor: '#00ff88',
-                  backgroundColor: 'rgba(0, 255, 136, 0.1)',
-                  boxShadow: '0 0 20px rgba(0, 255, 136, 0.3)',
-                },
+                fontSize: '0.95rem',
+                '&:hover': { borderColor: '#00ff88', backgroundColor: 'rgba(0, 255, 136, 0.08)' }
               }}
             >
               다시 테스트
@@ -265,21 +248,17 @@ const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
               sx={{
                 background: 'linear-gradient(45deg, #00ff88, #00cc66)',
                 color: '#000000',
-                px: 4,
-                py: 1.5,
-                borderRadius: '25px',
+                px: 3,
+                py: 1,
+                borderRadius: '20px',
                 fontWeight: 'bold',
                 textTransform: 'none',
-                fontSize: '1rem',
-                boxShadow: '0 4px 20px rgba(0, 255, 136, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(45deg, #00ffaa, #00e695)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 6px 25px rgba(0, 255, 170, 0.4)',
-                },
+                fontSize: '0.95rem',
+                boxShadow: '0 4px 16px rgba(0, 255, 136, 0.25)',
+                '&:hover': { background: 'linear-gradient(45deg, #00ffaa, #00e695)' }
               }}
             >
-              확인
+              녹음 하러 가기
             </Button>
           </Box>
         </Box>
@@ -287,18 +266,12 @@ const VoiceRangeResultModal: React.FC<VoiceRangeResultModalProps> = ({
         {/* CSS 애니메이션 */}
         <style>
           {`
-            @keyframes cyberGlow {
-              0% { opacity: 0.3; }
-              100% { opacity: 0.7; }
-            }
-            
-            @keyframes gridMove {
-              0% { transform: translate(0, 0); }
-              100% { transform: translate(50px, 50px); }
-            }
+            @keyframes cyberGlow { 0% { opacity: 0.3; } 100% { opacity: 0.7; } }
+            @keyframes gridMove { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
           `}
         </style>
-      </Box>
+        </Box>
+      </motion.div>
     </Modal>
   );
 };

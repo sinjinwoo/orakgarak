@@ -12,8 +12,8 @@ export class GameState extends Phaser.State {
     background;
     pitchDetect: PitchDetect;
     pitchScores: { [key: string]: number } = {}; // 음역대별 점수 추적
-    scoreDisplayBox: Phaser.Graphics; // 점수 표시 박스
-    scoreTexts: Phaser.Text[] = []; // 점수 텍스트들
+    // scoreDisplayBox: Phaser.Graphics; // 점수 표시 박스 - 게임 외부로 이동
+    // scoreTexts: Phaser.Text[] = []; // 점수 텍스트들 - 게임 외부로 이동
 
     create () {
         this.pitchDetect = new PitchDetect();
@@ -71,7 +71,7 @@ export class GameState extends Phaser.State {
         this.createMicrophoneInstructions();
 
         // 음역대별 점수 표시 박스 생성
-        this.createScoreDisplayBox();
+        // this.createScoreDisplayBox(); // 게임 외부로 이동
     }
 
     update() {
@@ -247,6 +247,9 @@ export class GameState extends Phaser.State {
         fighter.score += 1000;
         fighter.updateText();
 
+        // 전역 변수에 fighter 정보 저장 (React 컴포넌트에서 사용)
+        (window as any).fighter = fighter;
+
         // 음역대별 점수 추가
         if (plasma.pitchName) {
             this.addPitchScore(plasma.pitchName, 1000);
@@ -262,9 +265,10 @@ export class GameState extends Phaser.State {
         
         // HP에 따른 투명도 조정 (100 -> 1.0, 50 -> 0.5, 0 -> 0.0)
         fighter.alpha = fighter.hitpoints / 100;
-        obstacle.kill();
         
-        // HP가 0 이하가 되면 게임 오버 상태로 전환
+        // 전역 변수에 fighter 정보 저장 (React 컴포넌트에서 사용)
+        (window as any).fighter = fighter;
+        
         if (fighter.hitpoints <= 0) {
             console.log("🎮 Game Over! Player died.");
             
@@ -272,37 +276,28 @@ export class GameState extends Phaser.State {
             this.game.paused = true;
             this.game.time.events.pause();
             
-            // 게임 오버 상태로 전환
+            // 게임 오버 상태 설정
             (window as any).isGameOver = true;
-            (window as any).gameState = { gameOver: true };
             
-            // 즉시 이벤트 발생 (React 컴포넌트에서 감지할 수 있도록)
+            // React 컴포넌트에 게임 오버 이벤트 전달
             const gameOverEvent = new CustomEvent('gameOver', {
                 detail: {
                     score: fighter.score,
-                    hitpoints: fighter.hitpoints,
+                    hitpoints: 0,
                     pitchScores: this.pitchScores
                 }
             });
             
-            console.log('🎮 Game.ts에서 게임 오버 이벤트 발생:', gameOverEvent.detail);
-            console.log('🎮 전역 함수 존재 여부:', !!(window as any).onGameOver);
-            console.log('🎮 이벤트 리스너 등록 여부:', !!(window as any).gameOverHandler);
-            
+            console.log('🎮 게임 오버 이벤트 발생:', gameOverEvent.detail);
             window.dispatchEvent(gameOverEvent);
             document.dispatchEvent(gameOverEvent);
             
-            // 전역 함수 호출
+            // 전역 함수 호출 (React 컴포넌트에서 감지할 수 있도록)
             if ((window as any).onGameOver) {
-                console.log('🎮 전역 함수 onGameOver 호출');
                 (window as any).onGameOver(gameOverEvent.detail);
-            } else {
-                console.log('🎮 전역 함수 onGameOver가 존재하지 않음');
             }
-            
-            // 즉시 게임 오버 상태로 전환
-            console.log('🎮 GameOver 상태로 전환');
-            this.game.state.start("GameOver");
+        } else {
+            obstacle.kill();
         }
         
         fighter.updateText();
@@ -356,67 +351,67 @@ export class GameState extends Phaser.State {
         });
     }
 
-    createScoreDisplayBox () {
-        // 점수 표시 박스 생성
-        this.scoreDisplayBox = this.game.add.graphics(0, 0);
-        this.updateScoreDisplay();
-    }
+    // createScoreDisplayBox () {
+    //     // 점수 표시 박스 생성 - 게임 외부로 이동
+    //     this.scoreDisplayBox = this.game.add.graphics(0, 0);
+    //     this.updateScoreDisplay();
+    // }
 
-    updateScoreDisplay () {
-        // 기존 텍스트들 제거
-        this.scoreTexts.forEach(text => text.destroy());
-        this.scoreTexts = [];
+    // updateScoreDisplay () {
+    //     // 기존 텍스트들 제거
+    //     this.scoreTexts.forEach(text => text.destroy());
+    //     this.scoreTexts = [];
 
-        // 음역대별 점수를 높은 음역대부터 내림차순으로 정렬
-        const sortedPitches = Object.keys(this.pitchScores)
-            .filter(pitch => this.pitchScores[pitch] > 0)
-            .sort((a, b) => {
-                // 음역대별 주파수 기준으로 정렬 (높은 음역대부터)
-                const freqA = this.getPitchFrequency(a);
-                const freqB = this.getPitchFrequency(b);
-                return freqB - freqA;
-            });
+    //     // 음역대별 점수를 높은 음역대부터 내림차순으로 정렬
+    //     const sortedPitches = Object.keys(this.pitchScores)
+    //         .filter(pitch => this.pitchScores[pitch] > 0)
+    //         .sort((a, b) => {
+    //             // 음역대별 주파수 기준으로 정렬 (높은 음역대부터)
+    //             const freqA = this.getPitchFrequency(a);
+    //             const freqB = this.getPitchFrequency(b);
+    //             return freqB - freqA;
+    //         });
 
-        if (sortedPitches.length === 0) return;
+    //     if (sortedPitches.length === 0) return;
 
-        // 박스 크기 계산
-        const boxWidth = 200;
-        const boxHeight = Math.max(60, sortedPitches.length * 25 + 20);
-        const boxX = Number(process.env.WIDTH) - boxWidth - 20;
-        const boxY = 20;
+    //     // 박스 크기 계산
+    //     const boxWidth = 200;
+    //     const boxHeight = Math.max(60, sortedPitches.length * 25 + 20);
+    //     const boxX = Number(process.env.WIDTH) - boxWidth - 20;
+    //     const boxY = 20;
 
-        // 박스 그리기
-        this.scoreDisplayBox.clear();
-        this.scoreDisplayBox.beginFill(0x000000, 0.7);
-        this.scoreDisplayBox.lineStyle(2, 0xffffff, 1);
-        this.scoreDisplayBox.drawRoundedRect(boxX, boxY, boxWidth, boxHeight, 10);
-        this.scoreDisplayBox.endFill();
+    //     // 박스 그리기
+    //     this.scoreDisplayBox.clear();
+    //     this.scoreDisplayBox.beginFill(0x000000, 0.7);
+    //     this.scoreDisplayBox.lineStyle(2, 0xffffff, 1);
+    //     this.scoreDisplayBox.drawRoundedRect(boxX, boxY, boxWidth, boxHeight, 10);
+    //     this.scoreDisplayBox.endFill();
 
-        // 제목 텍스트
-        const titleText = this.game.add.text(boxX + boxWidth / 2, boxY + 10, "음역대별 점수", {
-            font: "14px Arial",
-            fill: "#ffff00",
-            align: "center",
-            stroke: "#000000",
-            strokeThickness: 1
-        });
-        titleText.anchor.setTo(0.5, 0);
-        this.scoreTexts.push(titleText);
+    //     // 제목 텍스트
+    //     const titleText = this.game.add.text(boxX + boxWidth / 2, boxY + 10, "음역대별 점수", {
+    //         font: "14px Arial",
+    //         fill: "#ffff00",
+    //         align: "center",
+    //         stroke: "#000000",
+    //         strokeThickness: 1
+    //     });
+    //     titleText.anchor.setTo(0.5, 0);
+    //     this.scoreTexts.push(titleText);
 
-        // 각 음역대별 점수 표시
-        sortedPitches.forEach((pitch, index) => {
-            const yPos = boxY + 35 + (index * 25);
-            const scoreText = this.game.add.text(boxX + 10, yPos,
-                `${pitch}: ${this.pitchScores[pitch].toLocaleString()}점`, {
-                font: "12px Arial",
-                fill: "#ffffff",
-                align: "left",
-                stroke: "#000000",
-                strokeThickness: 1
-            });
-            this.scoreTexts.push(scoreText);
-        });
-    }
+    //     // 각 음역대별 점수 표시
+    //     sortedPitches.forEach((pitch, index) => {
+    //         const yPos = boxY + 35 + (index * 25);
+    //         const scoreText = this.game.add.text(boxX + 10, yPos,
+    //             `${pitch}: ${this.pitchScores[pitch].toLocaleString()}점`, {
+    //             font: "12px Arial",
+    //             fill: "#ffffff",
+    //             align: "left",
+    //             stroke: "#000000",
+    //             strokeThickness: 1
+    //         });
+    //         this.scoreTexts.push(scoreText);
+    //     });
+    // }
 
     getPitchFrequency (pitch: string): number {
         // 50개 음역대별 주파수 반환 (정렬용)
@@ -449,7 +444,13 @@ export class GameState extends Phaser.State {
         // 전역 변수도 업데이트
         (window as any).pitchScores = this.pitchScores;
         
-        this.updateScoreDisplay();
+        // React 컴포넌트에 점수 업데이트 알림
+        const scoreUpdateEvent = new CustomEvent('pitchScoreUpdate', {
+            detail: { pitch, score: this.pitchScores[pitch], allScores: this.pitchScores }
+        });
+        window.dispatchEvent(scoreUpdateEvent);
+        
+        // this.updateScoreDisplay(); // 게임 외부로 이동
     }
 
     getRandomPitchInfo () {
