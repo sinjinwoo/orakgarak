@@ -29,7 +29,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
-import com.ssafy.lab.orak.auth.repository.RedisOAuth2AuthorizationRequestRepository;
+import com.ssafy.lab.orak.auth.repository.CookieOAuth2AuthorizationRequestRepository;
 
 import java.util.List;
 
@@ -45,7 +45,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final ActuatorProperties actuatorProperties;
-    private final RedisOAuth2AuthorizationRequestRepository redisOAuth2AuthorizationRequestRepository;
+    private final CookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
 
     @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
     private String[] allowedOrigins;
@@ -160,7 +160,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
-        return redisOAuth2AuthorizationRequestRepository;
+        return cookieOAuth2AuthorizationRequestRepository;
     }
 
     @Bean
