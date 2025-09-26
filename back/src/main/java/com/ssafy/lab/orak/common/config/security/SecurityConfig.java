@@ -28,7 +28,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
-import org.springframework.security.oauth2.client.web.HttpCookieOAuth2AuthorizationRequestRepository;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 
 import java.util.List;
@@ -76,9 +76,9 @@ public class SecurityConfig {
                 .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator")
                                          && !request.getRequestURI().startsWith("/api/webhook")
                                          && !request.getRequestURI().equals("/api/records/async/upload-completed"))
-                // 세션 미사용 (JWT 기반 인증) - OAuth2 로그인만 쿠키 기반
+                // 세션 미사용 (JWT 기반 인증) - OAuth2만 세션 필요
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 // CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 접근 제어
@@ -102,11 +102,11 @@ public class SecurityConfig {
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(authorization -> authorization
-                                .baseUri("/oauth2/authorization")
+                                .baseUri("/api/oauth2/authorization")
                                 .authorizationRequestRepository(authorizationRequestRepository())
                         )
                         .redirectionEndpoint(redirection -> redirection
-                                .baseUri("/login/oauth2/code/*")
+                                .baseUri("/api/login/oauth2/code/*")
                         )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
@@ -163,10 +163,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
-        HttpCookieOAuth2AuthorizationRequestRepository repository = new HttpCookieOAuth2AuthorizationRequestRepository();
-        repository.setCookieName("oauth2_auth_request");
-        repository.setCookieMaxAge(180); // 3분
-        return repository;
+        return new HttpSessionOAuth2AuthorizationRequestRepository();
     }
 
     @Bean
