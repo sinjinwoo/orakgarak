@@ -100,6 +100,12 @@ public class SecurityConfig {
                                 .userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler((request, response, exception) -> {
+                            log.error("OAuth2 로그인 실패 - 예외 정보:", exception);
+                            log.error("OAuth2 로그인 실패 - 요청 URL: {}", request.getRequestURL());
+                            log.error("OAuth2 로그인 실패 - 파라미터: {}", request.getParameterMap());
+                            response.sendRedirect("https://j13c103.p.ssafy.io/?error=oauth_failed");
+                        })
                 )
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) ->
