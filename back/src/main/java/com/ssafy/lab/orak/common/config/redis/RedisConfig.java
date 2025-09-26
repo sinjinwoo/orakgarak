@@ -8,6 +8,9 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 @Configuration
 public class RedisConfig {
@@ -40,5 +43,14 @@ public class RedisConfig {
         redisTemplate.setValueSerializer(new StringRedisSerializer());
 
         return redisTemplate;
+    }
+
+    @Bean
+    public ObjectMapper oauth2ObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        // OAuth2AuthorizationRequest 직렬화/역직렬화를 위한 설정
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        return mapper;
     }
 }

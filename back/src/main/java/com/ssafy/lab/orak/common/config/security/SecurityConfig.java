@@ -28,8 +28,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
-import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import com.ssafy.lab.orak.auth.repository.RedisOAuth2AuthorizationRequestRepository;
 
 import java.util.List;
 
@@ -45,6 +45,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final ActuatorProperties actuatorProperties;
+    private final RedisOAuth2AuthorizationRequestRepository redisOAuth2AuthorizationRequestRepository;
 
     @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
     private String[] allowedOrigins;
@@ -76,9 +77,9 @@ public class SecurityConfig {
                 .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator")
                                          && !request.getRequestURI().startsWith("/api/webhook")
                                          && !request.getRequestURI().equals("/api/records/async/upload-completed"))
-                // 세션 미사용 (JWT 기반 인증) - OAuth2만 세션 필요
+                // 세션 미사용 (JWT 기반 인증) - OAuth2는 Redis 저장소 사용
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 접근 제어
@@ -159,7 +160,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
-        return new HttpSessionOAuth2AuthorizationRequestRepository();
+        return redisOAuth2AuthorizationRequestRepository;
     }
 
     @Bean
