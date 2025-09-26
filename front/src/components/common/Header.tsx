@@ -19,7 +19,7 @@ const Header: React.FC = () => {
   // 메뉴 아이템 메모이제이션
   const menuItems = useMemo(() => [
     { label: "추천", path: "/recommendations" },
-    { label: "음역대 테스트 게임", path: "/voice-test" },
+    { label: "목 풀기 게임", path: "/voice-test" },
     { label: "녹음", path: "/record" },
     { label: "피드", path: "/feed" },
     { label: "앨범 만들기", path: "/albums/create" },
