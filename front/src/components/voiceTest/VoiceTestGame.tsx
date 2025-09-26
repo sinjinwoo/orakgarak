@@ -2,10 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import GameExitModal from './GameExitModal';
 import GameStartModal from './GameStartModal';
 import GamePauseModal from './GamePauseModal';
-import VoiceTestSelection from './VoiceTestSelection';
-import ExistingRecordingSelection from './ExistingRecordingSelection';
+// 선택 화면 컴포넌트들 제거
 import VoiceRangeResultModal from './VoiceRangeResultModal';
-import type { Recording } from '../../types/recording';
+// Recording 타입 import 제거 (더 이상 사용하지 않음)
 
 // 원본 PitchCraft 게임을 그대로 가져와서 통합
 const VoiceTestGame: React.FC = () => {
@@ -15,8 +14,6 @@ const VoiceTestGame: React.FC = () => {
     const [showStartModal, setShowStartModal] = useState(true);
     const [showExitModal, setShowExitModal] = useState(false);
     const [showPauseModal, setShowPauseModal] = useState(false);
-    const [showVoiceTestSelection, setShowVoiceTestSelection] = useState(false);
-    const [showExistingRecordingSelection, setShowExistingRecordingSelection] = useState(false);
     const [isGamePaused, setIsGamePaused] = useState(false);
     const [showVoiceRangeResult, setShowVoiceRangeResult] = useState(false);
     const [gameOverProcessed, setGameOverProcessed] = useState(false);
@@ -25,34 +22,191 @@ const VoiceTestGame: React.FC = () => {
         lowestNote?: string;
         highestFrequency?: number;
         lowestFrequency?: number;
+        totalScore?: number;
     }>({});
+    const [pitchScores, setPitchScores] = useState<{ [key: string]: number }>({});
+    const [gameInfo, setGameInfo] = useState<{
+        pilotName: string;
+        score: number;
+        hp: number;
+        pitchStatus: string;
+        targetY: number;
+    }>({
+        pilotName: 'Pilot',
+        score: 0,
+        hp: 100,
+        pitchStatus: '피치 감지 중...',
+        targetY: 384
+    });
+
+    // 음역대별 점수 업데이트 함수
+    const updatePitchScores = () => {
+        const scores = (window as any).pitchScores || {};
+        console.log('🎵 점수 업데이트:', scores);
+        console.log('🎵 점수 개수:', Object.keys(scores).length);
+        if (Object.keys(scores).length > 0) {
+            console.log('🎵 점수 상세:', Object.entries(scores));
+        }
+        setPitchScores({ ...scores });
+    };
+
+    // 게임 정보 업데이트 함수
+    const updateGameInfo = () => {
+        const fighter = (window as any).fighter;
+        if (fighter) {
+            setGameInfo({
+                pilotName: fighter.name || 'Pilot',
+                score: fighter.score || 0,
+                hp: fighter.hitpoints || 100,
+                pitchStatus: (window as any).pitchStatus || '피치 감지 중...',
+                targetY: (window as any).targetY || 384
+            });
+        }
+    };
+
+    // 음역대별 주파수 반환 함수 (정렬용)
+    const getPitchFrequency = (pitch: string): number => {
+        const pitchFreqMap: { [key: string]: number } = {
+            // 2옥타브
+            'C2': 65.41, 'C#2': 69.30, 'D2': 73.42, 'D#2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.50,
+            'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'B2': 123.47,
+            // 3옥타브
+            'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'D#3': 155.56, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00,
+            'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'A#3': 233.08, 'B3': 246.94,
+            // 4옥타브
+            'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99,
+            'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+            // 5옥타브
+            'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99,
+            'G5': 783.99, 'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77,
+            // 6옥타브
+            'C6': 1046.50, 'C#6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51, 'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98,
+            'G6': 1567.98, 'G#6': 1661.22, 'A6': 1760.00
+        };
+        return pitchFreqMap[pitch] || 0;
+    };
+
+    // 게임이 로드된 후 점수 업데이트 (이벤트 + 폴링 조합)
+    React.useEffect(() => {
+        if (!isGameLoaded) return;
+
+        const handlePitchScoreUpdate = (event: CustomEvent) => {
+            console.log('🎵 점수 업데이트 이벤트:', event.detail);
+            setPitchScores({ ...event.detail.allScores });
+        };
+
+        // 이벤트 리스너 등록
+        window.addEventListener('pitchScoreUpdate', handlePitchScoreUpdate as EventListener);
+
+        // 폴링도 함께 사용 (이벤트가 실패할 경우를 대비)
+        const interval = setInterval(() => {
+            updatePitchScores();
+            updateGameInfo();
+
+            // 게임 오버 폴링 감지 → 모달 표시 보장
+            if ((window as any).isGameOver && !gameOverProcessed && !showVoiceRangeResult) {
+                try {
+                    const fighter = (window as any).fighter || {};
+                    const totalScore = fighter.score || 0;
+                    const scores = (window as any).pitchScores || {};
+
+                    const noteToFreq: { [key: string]: number } = {
+                        'C2': 65.41, 'C#2': 69.30, 'D2': 73.42, 'D#2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.50,
+                        'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'B2': 123.47,
+                        'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'D#3': 155.56, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00,
+                        'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'A#3': 233.08, 'B3': 246.94,
+                        'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99,
+                        'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+                        'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99,
+                        'G5': 783.99, 'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77,
+                        'C6': 1046.50, 'C#6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51, 'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98,
+                        'G6': 1567.98, 'G#6': 1661.22, 'A6': 1760.00
+                    };
+
+                    const freqList = Object.keys(scores)
+                        .map(note => ({ note, frequency: noteToFreq[note] || 0 }))
+                        .filter(v => v.frequency > 0)
+                        .sort((a, b) => a.frequency - b.frequency);
+
+                    if (freqList.length > 0) {
+                        setVoiceRangeData({
+                            highestNote: freqList[freqList.length - 1].note,
+                            lowestNote: freqList[0].note,
+                            highestFrequency: freqList[freqList.length - 1].frequency,
+                            lowestFrequency: freqList[0].frequency,
+                            totalScore: totalScore
+                        });
+                    } else {
+                        setVoiceRangeData({
+                            highestNote: 'C5',
+                            lowestNote: 'C3',
+                            highestFrequency: 523.25,
+                            lowestFrequency: 130.81,
+                            totalScore: totalScore
+                        });
+                    }
+
+                    setGameOverProcessed(true);
+                    setShowVoiceRangeResult(true);
+                } catch (e) {
+                    console.warn('게임 오버 폴링 처리 실패:', e);
+                }
+            }
+        }, 50); // 0.05초마다 폴링 (매우 빠른 업데이트)
+
+        return () => {
+            window.removeEventListener('pitchScoreUpdate', handlePitchScoreUpdate as EventListener);
+            clearInterval(interval);
+        };
+    }, [isGameLoaded, gameOverProcessed, showVoiceRangeResult]);
 
     const loadGameWithEventListeners = () => {
         if (!gameRef.current) return;
-        
         console.log('🎮 게임 로드 및 이벤트 리스너 설정 시작');
-        
-        // 게임 컨테이너에 ID 설정 (원본 게임이 찾는 ID)
         gameRef.current.id = 'game';
-        
-        // 게임 이벤트 리스너 먼저 설정
         setupGameEventListeners();
-        
-        // 게임 bundle.js 로드
-        const gameScript = document.createElement('script');
-        gameScript.src = '/bundle.js';
-        gameScript.onload = () => {
-            console.log('🎮 게임 스크립트 로드 완료');
-            setIsGameLoaded(true);
-            gameInstanceRef.current = true;
-            
-            console.log('🎮 게임 로드 완료, 이벤트 리스너 설정됨');
-        };
-        gameScript.onerror = () => {
-            console.error('게임 로드 실패');
-        };
 
-        gameRef.current.appendChild(gameScript);
+        // 스크립트는 한 번만 로드
+        const exist = Array.from(document.getElementsByTagName('script')).some(s => s.src.includes('/bundle.js'));
+        if (!exist) {
+            const gameScript = document.createElement('script');
+            gameScript.src = '/bundle.js';
+            gameScript.onload = () => {
+                console.log('🎮 게임 스크립트 로드 완료');
+                setIsGameLoaded(true);
+                gameInstanceRef.current = false; // 아직 생성하지 않음
+                console.log('🎮 스크립트만 로드 완료');
+            };
+            gameScript.onerror = () => { console.error('게임 로드 실패'); };
+            gameRef.current.appendChild(gameScript);
+        } else {
+            setIsGameLoaded(true);
+            gameInstanceRef.current = false;
+        }
+    };
+
+    const createOrRestartGame = () => {
+        if (!gameRef.current) return;
+        // 기존 인스턴스 강제 종료 및 가드 해제
+        if ((window as any).game) {
+            try { (window as any).game.destroy(); } catch {}
+            (window as any).game = null;
+        }
+        if ((window as any).__PITCHCRAFT_RESET) {
+            try { (window as any).__PITCHCRAFT_RESET(); } catch {}
+        } else {
+            (window as any).__PITCHCRAFT_ACTIVE = false;
+        }
+        // 컨테이너 정리
+        gameRef.current.innerHTML = '';
+        gameRef.current.id = 'game';
+        // 전역 팩토리 호출
+        if ((window as any).createPitchCraft) {
+            (window as any).createPitchCraft(gameRef.current);
+            gameInstanceRef.current = true;
+        } else {
+            console.warn('createPitchCraft가 아직 준비되지 않음');
+        }
     };
 
     const setupGameEventListeners = () => {
@@ -67,7 +221,7 @@ const VoiceTestGame: React.FC = () => {
         // 커스텀 이벤트 리스너 등록
         const handleNextTestEvent = () => {
             console.log('🎮 다음 테스트 받기 이벤트 감지');
-            handleNextTest();
+            handleRestart();
         };
         
         const handleRestartEvent = () => {
@@ -95,36 +249,31 @@ const VoiceTestGame: React.FC = () => {
             });
             console.log('🎮 React 상태 업데이트 시작');
             
-            // 이미 게임 오버 처리가 완료되었으면 중복 처리 방지
             if (gameOverProcessed || showVoiceRangeResult) {
                 console.log('🎮 이미 게임 오버 처리가 완료됨 - 중복 처리 방지');
                 return;
             }
             
-            // 게임 오버 처리 시작
             setGameOverProcessed(true);
             
-            // 게임 완전 정지 및 정리
             if ((window as any).game) {
                 console.log('🎮 게임 인스턴스 정지 및 정리');
                 (window as any).game.paused = true;
                 (window as any).game.time.events.pause();
-                (window as any).game.world.setBounds(0, 0, 0, 0); // 월드 경계 제거
+                (window as any).game.world.setBounds(0, 0, 0, 0);
             }
             
-            // 게임 오버 상태 설정
             (window as any).isGameOver = true;
             (window as any).gameState = { gameOver: true };
             
-            // 음역대 데이터 추출 (게임에서 전달된 데이터)
-            const gameData = event.detail || {};
-            const pitchScores = gameData.pitchScores || {};
+            // 사이드패널과 동일한 데이터 소스 사용
+            const currentScores = (window as any).pitchScores || pitchScores || {};
+            const totalScore = ((window as any).fighter && (window as any).fighter.score) || gameInfo.score || 0;
             
-            console.log('🎮 음역대 점수 데이터:', pitchScores);
+            console.log('🎮 음역대 점수 데이터(동일 소스):', currentScores);
+            console.log('🎮 총점(동일 소스):', totalScore);
             
-            // 음역대 데이터 계산
-            const frequencies = Object.keys(pitchScores).map(note => {
-                // 음표를 주파수로 변환하는 간단한 매핑
+            const frequencies = Object.keys(currentScores).map(note => {
                 const noteToFreq: { [key: string]: number } = {
                     'C2': 65.41, 'C#2': 69.30, 'D2': 73.42, 'D#2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.50,
                     'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'B2': 123.47,
@@ -137,7 +286,7 @@ const VoiceTestGame: React.FC = () => {
                     'C6': 1046.50, 'C#6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51, 'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98,
                     'G6': 1567.98, 'G#6': 1661.22, 'A6': 1760.00
                 };
-                return { note, frequency: noteToFreq[note] || 0, score: pitchScores[note] };
+                return { note, frequency: noteToFreq[note] || 0, score: currentScores[note] };
             }).filter(item => item.frequency > 0);
             
             console.log('🎮 계산된 주파수 데이터:', frequencies);
@@ -154,21 +303,20 @@ const VoiceTestGame: React.FC = () => {
                     lowestNote: lowest.note,
                     highestFrequency: highest.frequency,
                     lowestFrequency: lowest.frequency,
+                    totalScore: totalScore,
                 });
             } else {
-                // 기본값 설정
                 console.log('🎮 음역대 데이터가 없어 기본값 사용');
                 setVoiceRangeData({
                     highestNote: 'C5',
                     lowestNote: 'C3',
                     highestFrequency: 523.25,
                     lowestFrequency: 130.81,
+                    totalScore: totalScore,
                 });
             }
             
-            // 음역대 결과 모달 표시
             console.log('🎮 음역대 결과 모달 표시 시작');
-            console.log('🎮 setShowVoiceRangeResult(true) 호출');
             setShowVoiceRangeResult(true);
             console.log('🎮 ===== 게임 오버 이벤트 처리 완료 =====');
         };
@@ -220,19 +368,62 @@ const VoiceTestGame: React.FC = () => {
         // 전역 게임 오버 이벤트 리스너 추가 (확실하게)
         const globalGameOverHandler = (event: CustomEvent) => {
             console.log('🎮 전역 게임 오버 이벤트 감지:', event.detail);
-            setShowVoiceTestSelection(true);
+
+            // 중복 처리 방지
+            if (gameOverProcessed || showVoiceRangeResult) return;
+            setGameOverProcessed(true);
+
+            // 게임 일시정지
+            if ((window as any).game) {
+                (window as any).game.paused = true;
+                (window as any).game.time.events.pause();
+            }
+
+            const detail = event.detail || {};
+            const pitchScores = detail.pitchScores || {};
+            const totalScore = detail.score || 0;
+
+            // 음역대 계산
+            const noteToFreq: { [key: string]: number } = {
+                'C2': 65.41, 'C#2': 69.30, 'D2': 73.42, 'D#2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.50,
+                'G2': 98.00, 'G#2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'B2': 123.47,
+                'C3': 130.81, 'C#3': 138.59, 'D3': 146.83, 'D#3': 155.56, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00,
+                'G3': 196.00, 'G#3': 207.65, 'A3': 220.00, 'A#3': 233.08, 'B3': 246.94,
+                'C4': 261.63, 'C#4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99,
+                'G4': 392.00, 'G#4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'B4': 493.88,
+                'C5': 523.25, 'C#5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99,
+                'G5': 783.99, 'G#5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'B5': 987.77,
+                'C6': 1046.50, 'C#6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51, 'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98,
+                'G6': 1567.98, 'G#6': 1661.22, 'A6': 1760.00
+            };
+            const freqList = Object.keys(pitchScores)
+                .map(note => ({ note, frequency: noteToFreq[note] || 0 }))
+                .filter(v => v.frequency > 0)
+                .sort((a, b) => a.frequency - b.frequency);
+
+            if (freqList.length > 0) {
+                setVoiceRangeData({
+                    highestNote: freqList[freqList.length - 1].note,
+                    lowestNote: freqList[0].note,
+                    highestFrequency: freqList[freqList.length - 1].frequency,
+                    lowestFrequency: freqList[0].frequency,
+                    totalScore
+                });
+            } else {
+                setVoiceRangeData({
+                    highestNote: 'C5',
+                    lowestNote: 'C3',
+                    highestFrequency: 523.25,
+                    lowestFrequency: 130.81,
+                    totalScore
+                });
+            }
+
+            setShowVoiceRangeResult(true);
         };
         
         window.addEventListener('gameOver', globalGameOverHandler as EventListener);
         document.addEventListener('gameOver', globalGameOverHandler as EventListener);
-        
-        // 게임 시작 모달이 열려있을 때는 게임을 로드하지 않음
-        if (showStartModal) {
-            return () => {
-                window.removeEventListener('gameOver', globalGameOverHandler as EventListener);
-                document.removeEventListener('gameOver', globalGameOverHandler as EventListener);
-            };
-        }
 
         if (!gameRef.current) return;
 
@@ -300,7 +491,8 @@ const VoiceTestGame: React.FC = () => {
             // 전역 이벤트 리스너 정리
             const globalGameOverHandler = (event: CustomEvent) => {
                 console.log('🎮 전역 게임 오버 이벤트 감지:', event.detail);
-                setShowVoiceTestSelection(true);
+                // 게임 오버 시 바로 재시작
+                handleRestart();
             };
             window.removeEventListener('gameOver', globalGameOverHandler as EventListener);
             document.removeEventListener('gameOver', globalGameOverHandler as EventListener);
@@ -328,19 +520,19 @@ const VoiceTestGame: React.FC = () => {
         };
     }, [showStartModal]);
 
+    // 초기 로드 시 저장된 게임오버 결과 확인 로직 제거 (새로고침 시 모달 표시 안 함)
+
     // 모달 핸들러들
     const handleStartGame = () => {
         console.log('🎮 게임 시작');
         setShowStartModal(false);
-        // 게임 시작 시 게임 오버 상태 리셋
         (window as any).isGameOver = false;
         (window as any).gameState = null;
-        
-        // 게임 오버 상태 초기화
         setGameOverProcessed(false);
         setShowVoiceRangeResult(false);
         setVoiceRangeData({});
-        
+        // 여기서만 실제 생성
+        createOrRestartGame();
         console.log('🎮 게임 시작 완료');
     };
 
@@ -363,36 +555,13 @@ const VoiceTestGame: React.FC = () => {
     };
 
     const handleRestart = () => {
-        // 게임 컨테이너 정리
         if (gameRef.current) {
             gameRef.current.innerHTML = '';
         }
-        
-        // 기존 게임 인스턴스 정리
-        if ((window as any).game) {
-            try {
-                (window as any).game.destroy();
-            } catch (e) {
-                console.log('게임 정리 중 오류:', e);
-            }
-        }
-        
-        // 게임 재시작
-        gameInstanceRef.current = null;
-        setIsGameLoaded(false);
-        
-        // 잠시 후 게임 다시 로드
-        setTimeout(() => {
-            if (gameRef.current) {
-                loadGameWithEventListeners();
-            }
-        }, 100);
+        createOrRestartGame();
     };
 
-    const handleNextTest = () => {
-        console.log('🎮 다음 테스트 받기 버튼 클릭');
-        setShowVoiceTestSelection(true);
-    };
+    // handleNextTest 함수 제거 (더 이상 사용하지 않음)
 
     const handleVoiceRangeResultClose = () => {
         setShowVoiceRangeResult(false);
@@ -402,41 +571,12 @@ const VoiceTestGame: React.FC = () => {
 
     const handleVoiceRangeResultContinue = () => {
         setShowVoiceRangeResult(false);
-        // 음역대 테스트 완료 후 선택 화면으로 돌아가기
-        setShowVoiceTestSelection(true);
+        // 녹음하기 페이지로 이동
+        window.location.href = '/record';
     };
 
 
-    const handleBackToGame = () => {
-        setShowVoiceTestSelection(false);
-        setShowExistingRecordingSelection(false);
-    };
-
-
-    const handleGetRecommendations = () => {
-        console.log('🎵 VoiceTestGame: 추천받기 함수 호출됨');
-        setShowVoiceTestSelection(false);
-        setShowExistingRecordingSelection(true);
-    };
-
-    const handleStartVoiceTest = () => {
-        console.log('🎵 VoiceTestGame: 음역대 테스트 시작 함수 호출됨');
-        setShowVoiceTestSelection(false);
-        // 게임 시작 모달 표시
-        setShowStartModal(true);
-    };
-
-    const handleSelectExistingRecording = (recording: Recording, uploadId?: number) => {
-        console.log('기존 녹음본 선택:', recording, uploadId);
-        setShowExistingRecordingSelection(false);
-        // 기존 녹음본으로 바로 추천 페이지로 이동
-        window.location.href = '/recommendations';
-    };
-
-    const handleBackFromExistingSelection = () => {
-        setShowExistingRecordingSelection(false);
-        setShowVoiceTestSelection(true);
-    };
+    // 선택 화면 관련 함수들 제거 (더 이상 사용하지 않음)
 
     const handleExit = () => {
         setShowExitModal(false);
@@ -453,26 +593,7 @@ const VoiceTestGame: React.FC = () => {
         setShowExitModal(false);
     };
 
-  // 기존 녹음본 선택 화면 표시
-  if (showExistingRecordingSelection) {
-    return (
-      <ExistingRecordingSelection
-        onSelectRecording={handleSelectExistingRecording}
-        onBack={handleBackFromExistingSelection}
-      />
-    );
-  }
-
-  // 음성 테스트 선택 화면 표시
-  if (showVoiceTestSelection) {
-    return (
-      <VoiceTestSelection
-        onGetRecommendations={handleGetRecommendations}
-        onStartVoiceTest={handleStartVoiceTest}
-        onBack={handleBackToGame}
-      />
-    );
-  }
+  // 선택 화면 제거 - 바로 게임으로 진입
 
 
   return (
@@ -488,6 +609,19 @@ const VoiceTestGame: React.FC = () => {
                     @keyframes gridMove {
                         0% { transform: translate(0, 0); }
                         100% { transform: translate(50px, 50px); }
+                    }
+
+                    /* 피치 비주얼라이저 효과 - 더 극적인 모션 */
+                    @keyframes equalize {
+                        0%   { transform: scaleY(0.12); filter: drop-shadow(0 0 3px rgba(6,182,212,0.35)); }
+                        45%  { transform: scaleY(1.25); filter: drop-shadow(0 0 14px rgba(236,72,153,0.85)); }
+                        60%  { transform: scaleY(0.55); filter: drop-shadow(0 0 6px rgba(6,182,212,0.55)); }
+                        80%  { transform: scaleY(1.10); filter: drop-shadow(0 0 12px rgba(236,72,153,0.75)); }
+                        100% { transform: scaleY(0.12); filter: drop-shadow(0 0 3px rgba(6,182,212,0.35)); }
+                    }
+                    @keyframes pitchGlow {
+                        0%,100% { opacity: 0.35; }
+                        50% { opacity: 0.85; }
                     }
                     
                     @keyframes neonPulse {
@@ -586,29 +720,22 @@ const VoiceTestGame: React.FC = () => {
             <div style={{ 
                 width: '100vw',
                 height: '100vh',
-                background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%)',
+                background: `
+                    radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.25) 0%, transparent 60%),
+                    radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.25) 0%, transparent 60%),
+                    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 80%),
+                    radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.15) 0%, transparent 70%),
+                    linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
+                `,
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                padding: '0 20px',
+                gap: '20px'
             }}>
-                {/* 사이버펑크 배경 효과 */}
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    background: `
-                        radial-gradient(circle at 20% 80%, rgba(0, 255, 136, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 20%, rgba(255, 0, 68, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 40%, rgba(0, 255, 255, 0.05) 0%, transparent 50%)
-                    `,
-                    animation: 'cyberGlow 4s ease-in-out infinite alternate'
-                }} />
-
-                {/* 네온 그리드 배경 */}
+                {/* 그리드 패턴 */}
                 <div style={{
                     position: 'absolute',
                     top: 0,
@@ -616,161 +743,248 @@ const VoiceTestGame: React.FC = () => {
                     width: '100%',
                     height: '100%',
                     backgroundImage: `
-                        linear-gradient(rgba(0, 255, 136, 0.1) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(0, 255, 136, 0.1) 1px, transparent 1px)
+                        linear-gradient(rgba(236, 72, 153, 0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(6, 182, 212, 0.03) 1px)
                     `,
                     backgroundSize: '50px 50px',
                     animation: 'gridMove 20s linear infinite'
                 }} />
 
-                {/* 레트로 게임기 모양의 모달 */}
+                {/* 좌측 게임 정보 영역 */}
                 <div style={{
-                    width: '900px',
+                    width: '300px',
                     height: '650px',
-                    background: 'linear-gradient(145deg, #1a1a1a, #0a0a0a)',
-                    borderRadius: '25px',
-                    boxShadow: '0 0 40px rgba(0, 255, 136, 0.3), inset 0 0 40px rgba(0, 255, 136, 0.05)',
-                    border: '3px solid #00ff88',
+                    background: `
+                        radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.15) 0%, transparent 60%),
+                        linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
+                    `,
+                    borderRadius: '20px',
+                    boxShadow: '0 0 40px rgba(236, 72, 153, 0.3), 0 0 40px rgba(6, 182, 212, 0.3)',
+                    border: '1px solid rgba(6, 182, 212, 0.3)',
                     position: 'relative',
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    backdropFilter: 'blur(5px)',
-                    // 레트로 게임기 느낌을 위한 추가 스타일
-                    transform: 'perspective(800px) rotateX(3deg)',
-                    transformStyle: 'preserve-3d'
+                    backdropFilter: 'blur(20px)',
+                    padding: '20px'
+                }}>
+                    {/* 제목 */}
+                    <div style={{
+                        textAlign: 'center',
+                        marginBottom: '20px'
+                    }}>
+                        <h3 style={{
+                            background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            fontFamily: 'system-ui, -apple-system, sans-serif',
+                            margin: 0
+                        }}>
+                            🎮 게임 정보
+                        </h3>
+                    </div>
+
+                    {/* 게임 정보 목록 */}
+                    <div style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '15px'
+                    }}>
+                        {/* 파일럿 정보 */}
+                        <div style={{
+                            background: 'rgba(236, 72, 153, 0.1)',
+                            border: '1px solid rgba(236, 72, 153, 0.3)',
+                            borderRadius: '10px',
+                            padding: '15px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                        }}>
+                            <div style={{
+                                color: '#ec4899',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                fontFamily: 'system-ui, -apple-system, sans-serif'
+                            }}>
+                                👨‍✈️ {gameInfo.pilotName}
+                            </div>
+                        </div>
+
+                        {/* 점수 정보 */}
+                        <div style={{
+                            background: 'rgba(6, 182, 212, 0.1)',
+                            border: '1px solid rgba(6, 182, 212, 0.3)',
+                            borderRadius: '10px',
+                            padding: '15px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                        }}>
+                            <div style={{
+                                color: '#06b6d4',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                fontFamily: 'system-ui, -apple-system, sans-serif'
+                            }}>
+                                🏆 Score: {gameInfo.score.toLocaleString()}
+                            </div>
+                        </div>
+
+                        {/* HP 정보 */}
+                        <div style={{
+                            background: 'rgba(236, 72, 153, 0.1)',
+                            border: '1px solid rgba(236, 72, 153, 0.3)',
+                            borderRadius: '10px',
+                            padding: '15px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                        }}>
+                            <div style={{
+                                color: '#ec4899',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                fontFamily: 'system-ui, -apple-system, sans-serif'
+                            }}>
+                                ❤️ HP: {gameInfo.hp}
+                            </div>
+                            {/* HP 바 */}
+                            <div style={{
+                                width: '100%',
+                                height: '8px',
+                                background: 'rgba(0, 0, 0, 0.3)',
+                                borderRadius: '4px',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{
+                                    width: `${Math.max(0, Math.min(100, gameInfo.hp))}%`,
+                                    height: '100%',
+                                    background: gameInfo.hp > 50 
+                                        ? 'linear-gradient(90deg, #06b6d4, #10b981)' 
+                                        : gameInfo.hp > 25 
+                                        ? 'linear-gradient(90deg, #f59e0b, #f97316)' 
+                                        : 'linear-gradient(90deg, #ef4444, #dc2626)',
+                                    transition: 'all 0.3s ease'
+                                }} />
+                            </div>
+                        </div>
+
+                        {/* 피치 감지 정보 */}
+                        <div style={{
+                            background: 'rgba(6, 182, 212, 0.1)',
+                            border: '1px solid rgba(6, 182, 212, 0.3)',
+                            borderRadius: '10px',
+                            padding: '15px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            position: 'relative',
+                            overflow: 'hidden'
+                        }}>
+                            {/* 네온 글로우 배경 */}
+                            <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: 'radial-gradient(60% 60% at 50% 50%, rgba(6,182,212,0.15), transparent)',
+                                filter: 'blur(12px)',
+                                animation: 'pitchGlow 2s ease-in-out infinite'
+                            }} />
+                            <div style={{
+                                color: '#06b6d4',
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                fontFamily: 'system-ui, -apple-system, sans-serif',
+                                zIndex: 1
+                            }}>
+                                🎵 {gameInfo.pitchStatus}
+                            </div>
+
+                            {/* 이퀄라이저 비주얼라이저 */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(16, 1fr)',
+                                alignItems: 'end',
+                                gap: '6px',
+                                height: '72px',
+                                padding: '6px 2px',
+                                zIndex: 1
+                            }}>
+                                {Array.from({ length: 16 }).map((_, i) => (
+                                    <div key={i} style={{
+                                        height: `${12 + ((i * 7) % 18)}px`,
+                                        background: 'linear-gradient(180deg, #22d3ee, #ec4899)',
+                                        borderRadius: '4px',
+                                        boxShadow: '0 0 16px rgba(6, 182, 212, 0.8), 0 0 8px rgba(236, 72, 153, 0.6) inset',
+                                        filter: 'saturate(1.3) brightness(1.1)',
+                                        opacity: 0.98,
+                                        transformOrigin: 'bottom',
+                                        willChange: 'transform, filter',
+                                        animation: `equalize ${Math.max(0.5, Math.min(1.6, 1.4 - (gameInfo.targetY / 768))) }s cubic-bezier(0.2, 0.9, 0.1, 1) ${(i * 0.06).toFixed(2)}s infinite`,
+                                    }} />
+                                ))}
+                            </div>
+
+                            {/* 타깃 값 표시 */}
+                            <div style={{
+                                color: '#ffffff',
+                                fontSize: '12px',
+                                fontFamily: 'system-ui, -apple-system, sans-serif',
+                                opacity: 0.8,
+                                zIndex: 1
+                            }}>
+                                Target: {Math.round(gameInfo.targetY)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 게임기 모양의 컨테이너 */}
+                <div style={{
+                    width: '900px',
+                    height: '650px',
+                    background: `
+                        radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.15) 0%, transparent 60%),
+                        linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
+                    `,
+                    borderRadius: '20px',
+                    boxShadow: '0 0 40px rgba(236, 72, 153, 0.3), 0 0 40px rgba(6, 182, 212, 0.3)',
+                    border: '1px solid rgba(6, 182, 212, 0.3)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    backdropFilter: 'blur(20px)',
                 }}>
                     {/* 상단 패널 */}
                     <div style={{
                         height: '60px',
-                        background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
-                        borderTopLeftRadius: '22px',
-                        borderTopRightRadius: '22px',
+                        background: 'rgba(6, 182, 212, 0.1)',
+                        borderTopLeftRadius: '19px',
+                        borderTopRightRadius: '19px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '0 25px',
-                        borderBottom: '2px solid #00ff88',
-                        boxShadow: '0 2px 10px rgba(0, 255, 136, 0.2)',
-                        position: 'relative'
+                        borderBottom: '1px solid rgba(6, 182, 212, 0.3)',
+                        boxShadow: '0 2px 10px rgba(6, 182, 212, 0.2)',
+                        position: 'relative',
+                        backdropFilter: 'blur(10px)'
                     }}>
-                        {/* 코인 슬롯 */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '15px'
-                        }}>
-                            <div style={{
-                                width: '50px',
-                                height: '30px',
-                                background: 'linear-gradient(145deg, #0a0a0a, #000000)',
-                                borderRadius: '15px',
-                                border: '2px solid #00ff88',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                position: 'relative',
-                                boxShadow: 'inset 0 0 8px rgba(0, 0, 0, 0.9)'
-                            }}>
-                                <div style={{
-                                    width: '40px',
-                                    height: '20px',
-                                    background: 'linear-gradient(90deg, #222, #444, #222)',
-                                    borderRadius: '10px',
-                                    border: '1px solid #555',
-                                    position: 'relative',
-                                    overflow: 'hidden'
-                                }}>
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '50%',
-                                        left: '8px',
-                                        transform: 'translateY(-50%)',
-                                        width: '24px',
-                                        height: '1px',
-                                        background: 'linear-gradient(90deg, #00ff88, #00ffff)',
-                                        borderRadius: '1px',
-                                        animation: 'coinSlotGlow 2s ease-in-out infinite'
-                                    }} />
-                                </div>
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '-3px',
-                                    right: '-3px',
-                                    width: '10px',
-                                    height: '10px',
-                                    background: 'radial-gradient(circle, #00ff88, #00aa55)',
-                                    borderRadius: '50%',
-                                    boxShadow: '0 0 8px rgba(0, 255, 136, 0.8)',
-                                    animation: 'coinPulse 1.5s ease-in-out infinite'
-                                }} />
-                            </div>
-                        </div>
-                        {/* 마이크 부분 */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '15px'
-                        }}>
-                            <div style={{
-                                width: '40px',
-                                height: '40px',
-                                background: 'linear-gradient(145deg, #0a0a0a, #000000)',
-                                borderRadius: '50%',
-                                border: '2px solid #00ff88',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                position: 'relative',
-                                boxShadow: '0 0 15px rgba(0, 255, 136, 0.4)',
-                                animation: 'micPulse 2s ease-in-out infinite'
-                            }}>
-                                <div style={{
-                                    width: '16px',
-                                    height: '16px',
-                                    background: 'radial-gradient(circle, #00ff88, #00aa55)',
-                                    borderRadius: '50%',
-                                    position: 'relative'
-                                }}>
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '50%',
-                                        left: '50%',
-                                        transform: 'translate(-50%, -50%)',
-                                        width: '6px',
-                                        height: '6px',
-                                        background: '#ffffff',
-                                        borderRadius: '50%',
-                                        boxShadow: '0 0 3px rgba(255, 255, 255, 0.8)'
-                                    }} />
-                                </div>
-                                {/* 마이크 그리드 패턴 */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '3px',
-                                    left: '3px',
-                                    right: '3px',
-                                    bottom: '3px',
-                                    background: `
-                                        radial-gradient(circle at 30% 30%, rgba(0, 255, 136, 0.2) 1px, transparent 1px),
-                                        radial-gradient(circle at 70% 70%, rgba(0, 255, 136, 0.2) 1px, transparent 1px)
-                                    `,
-                                    backgroundSize: '6px 6px',
-                                    borderRadius: '50%',
-                                    pointerEvents: 'none'
-                                }} />
-                            </div>
-                        </div>
+                        {/* 장식용 코인 슬롯과 마이크 제거 - 기능이 없음 */}
                         
                         {/* 제목 */}
                         <div style={{
-                            color: '#00ff88',
-                            fontSize: '20px',
-                            fontWeight: 'bold',
-                            textShadow: '0 0 10px rgba(0, 255, 136, 0.8)',
-                            background: 'linear-gradient(45deg, #00ff88, #00ffff)',
+                            background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
+                            fontSize: '20px',
+                            fontWeight: 'bold',
+                            fontFamily: 'system-ui, -apple-system, sans-serif',
                             letterSpacing: '1px'
                         }}>
                             PITCHCRAFT
@@ -780,33 +994,36 @@ const VoiceTestGame: React.FC = () => {
                             alignItems: 'center',
                             gap: '10px'
                         }}>
-                            {isGameLoaded && !isGamePaused && (
+                            {isGameLoaded && (
                                 <>
                                     <button
                                         onClick={handlePause}
                                         style={{
-                                            background: 'linear-gradient(45deg, #ff9800, #f57c00)',
-                                            color: '#ffffff',
-                                            border: '2px solid #ff9800',
+                                            background: isGamePaused 
+                                                ? 'linear-gradient(45deg, #06b6d4, #ec4899)' 
+                                                : 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                                            color: '#000000',
+                                            border: 'none',
                                             padding: '8px 16px',
                                             borderRadius: '20px',
                                             fontSize: '12px',
                                             fontWeight: 'bold',
                                             cursor: 'pointer',
                                             transition: 'all 0.3s ease',
-                                            boxShadow: '0 0 15px rgba(255, 152, 0, 0.5)',
-                                            marginRight: '10px'
+                                            boxShadow: '0 0 15px rgba(236, 72, 153, 0.5)',
+                                            marginRight: '10px',
+                                            fontFamily: 'system-ui, -apple-system, sans-serif'
                                         }}
                                         onMouseOver={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(-2px)';
-                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 152, 0, 0.4)';
+                                            e.currentTarget.style.transform = 'scale(1.1)';
+                                            e.currentTarget.style.boxShadow = '0 0 25px rgba(236, 72, 153, 0.8)';
                                         }}
                                         onMouseOut={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(255, 152, 0, 0.3)';
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                            e.currentTarget.style.boxShadow = '0 0 15px rgba(236, 72, 153, 0.5)';
                                         }}
                                     >
-                                        ⏸️ PAUSE
+                                        {isGamePaused ? '▶ RESUME' : '⏸ PAUSE'}
                                     </button>
                                     
                                 </>
@@ -868,174 +1085,120 @@ const VoiceTestGame: React.FC = () => {
                     {/* 게임기 하단 부분 - 조이스틱과 버튼들 */}
                     <div style={{
                         height: '60px',
-                        background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
-                        borderBottomLeftRadius: '22px',
-                        borderBottomRightRadius: '22px',
+                        background: 'rgba(6, 182, 212, 0.1)',
+                        borderBottomLeftRadius: '19px',
+                        borderBottomRightRadius: '19px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '0 25px',
-                        borderTop: '2px solid #00ff88',
+                        borderTop: '1px solid rgba(6, 182, 212, 0.3)',
                         flexShrink: 0,
-                        boxShadow: '0 -2px 10px rgba(0, 255, 136, 0.2)',
-                        position: 'relative'
+                        boxShadow: '0 -2px 10px rgba(6, 182, 212, 0.2)',
+                        position: 'relative',
+                        backdropFilter: 'blur(10px)'
                     }}>
-                        {/* 조이스틱 */}
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '15px'
-                        }}>
-                            <div style={{
-                                width: '50px',
-                                height: '50px',
-                                background: 'linear-gradient(145deg, #0a0a0a, #000000)',
-                                borderRadius: '50%',
-                                border: '3px solid #00ff88',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                position: 'relative',
-                                boxShadow: '0 0 15px rgba(0, 255, 136, 0.3)'
-                            }}>
-                                <div style={{
-                                    width: '32px',
-                                    height: '32px',
-                                    background: 'radial-gradient(circle, #00ff88, #00aa55)',
-                                    borderRadius: '50%',
-                                    position: 'relative',
-                                    boxShadow: 'inset 0 0 8px rgba(0, 0, 0, 0.5)'
-                                }}>
-                                    <div style={{
-                                        position: 'absolute',
-                                        top: '50%',
-                                        left: '50%',
-                                        transform: 'translate(-50%, -50%)',
-                                        width: '16px',
-                                        height: '16px',
-                                        background: 'linear-gradient(45deg, #ffffff, #cccccc)',
-                                        borderRadius: '50%',
-                                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
-                                    }} />
-                                </div>
-                                {/* 조이스틱 그리드 */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '3px',
-                                    left: '3px',
-                                    right: '3px',
-                                    bottom: '3px',
-                                    background: `
-                                        linear-gradient(0deg, rgba(0, 255, 136, 0.15) 1px, transparent 1px),
-                                        linear-gradient(90deg, rgba(0, 255, 136, 0.15) 1px, transparent 1px)
-                                    `,
-                                    backgroundSize: '8px 8px',
-                                    borderRadius: '50%',
-                                    pointerEvents: 'none'
-                                }} />
-                            </div>
-                        </div>
-                        
-                        {/* 액션 버튼들 */}
-                        <div style={{
-                            display: 'flex',
-                            gap: '12px',
-                            alignItems: 'center'
-                        }}>
-                            <div style={{
-                                width: '35px',
-                                height: '35px',
-                                borderRadius: '50%',
-                                background: 'linear-gradient(145deg, #ff4444, #cc0000)',
-                                border: '2px solid #ff6666',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 0 12px rgba(255, 68, 68, 0.5)',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.transform = 'scale(1.1)';
-                                e.currentTarget.style.boxShadow = '0 0 20px rgba(255, 68, 68, 0.8)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.transform = 'scale(1)';
-                                e.currentTarget.style.boxShadow = '0 0 12px rgba(255, 68, 68, 0.5)';
-                            }}
-                            >
-                                A
-                            </div>
-                            <div style={{
-                                width: '30px',
-                                height: '30px',
-                                borderRadius: '50%',
-                                background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
-                                border: '2px solid #555',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                fontSize: '9px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
-                            }}>
-                                B
-                            </div>
-                            <div style={{
-                                width: '45px',
-                                height: '22px',
-                                borderRadius: '11px',
-                                background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
-                                border: '2px solid #555',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                fontSize: '7px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
-                            }}>
-                                START
-                            </div>
-                            <div style={{
-                                width: '30px',
-                                height: '30px',
-                                borderRadius: '50%',
-                                background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
-                                border: '2px solid #555',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                fontSize: '9px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
-                            }}>
-                                X
-                            </div>
-                            <div style={{
-                                width: '30px',
-                                height: '30px',
-                                borderRadius: '50%',
-                                background: 'linear-gradient(145deg, #2a2a2a, #1a1a1a)',
-                                border: '2px solid #555',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                fontSize: '9px',
-                                fontWeight: 'bold',
-                                boxShadow: '0 0 8px rgba(0, 0, 0, 0.3)'
-                            }}>
-                                Y
-                            </div>
-          </div>
+                        {/* 장식용 버튼들 제거 - 기능이 없음 */}
         </div>
       </div>
+
+                {/* 우측 정보 영역 */}
+                <div style={{
+                    width: '300px',
+                    height: '650px',
+                    marginLeft: '20px',
+                    background: `
+                        radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.15) 0%, transparent 60%),
+                        linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
+                    `,
+                    borderRadius: '20px',
+                    boxShadow: '0 0 40px rgba(236, 72, 153, 0.3), 0 0 40px rgba(6, 182, 212, 0.3)',
+                    border: '1px solid rgba(6, 182, 212, 0.3)',
+                    backdropFilter: 'blur(20px)',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    {/* 제목 */}
+                    <div style={{
+                        textAlign: 'center',
+                        marginBottom: '20px'
+                    }}>
+                        <h3 style={{
+                            background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            fontFamily: 'system-ui, -apple-system, sans-serif',
+                            margin: 0
+                        }}>
+                            🎵 음역대별 점수
+                        </h3>
+                    </div>
+
+                    {/* 점수 목록 */}
+                    <div style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: '10px'
+                    }}>
+                        {Object.keys(pitchScores)
+                            .filter(pitch => pitchScores[pitch] > 0)
+                            .sort((a, b) => {
+                                // 음역대별 주파수 기준으로 정렬 (높은 음역대부터)
+                                const freqA = getPitchFrequency(a);
+                                const freqB = getPitchFrequency(b);
+                                return freqB - freqA;
+                            })
+                            .map((pitch, index) => (
+                                <div key={pitch} style={{
+                                    background: 'rgba(6, 182, 212, 0.1)',
+                                    border: '1px solid rgba(6, 182, 212, 0.3)',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    marginBottom: '8px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <span style={{
+                                        color: '#ffffff',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        fontFamily: 'system-ui, -apple-system, sans-serif'
+                                    }}>
+                                        {pitch}
+                                    </span>
+                                    <span style={{
+                                        color: '#ec4899',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        fontFamily: 'system-ui, -apple-system, sans-serif'
+                                    }}>
+                                        {pitchScores[pitch].toLocaleString()}점
+                                    </span>
+                                </div>
+                            ))}
+                        
+                        {Object.keys(pitchScores).filter(pitch => pitchScores[pitch] > 0).length === 0 && (
+                            <div style={{
+                                textAlign: 'center',
+                                color: '#ffffff',
+                                fontSize: '14px',
+                                fontFamily: 'system-ui, -apple-system, sans-serif',
+                                opacity: 0.6,
+                                marginTop: '50px'
+                            }}>
+                                🎤 마이크로 음성을 내어<br />
+                                음역대를 측정해보세요!
+                            </div>
+                        )}
+                    </div>
+                </div>
 
             {/* 게임 시작 확인 모달 */}
             <GameStartModal
@@ -1049,6 +1212,10 @@ const VoiceTestGame: React.FC = () => {
                 isOpen={showPauseModal}
                 onClose={() => setShowPauseModal(false)}
                 onResume={handleResume}
+                onRestart={() => {
+                    setShowPauseModal(false);
+                    handleRestart();
+                }}
                 onExit={handleExit}
             />
 
@@ -1070,6 +1237,7 @@ const VoiceTestGame: React.FC = () => {
                 lowestNote={voiceRangeData.lowestNote}
                 highestFrequency={voiceRangeData.highestFrequency}
                 lowestFrequency={voiceRangeData.lowestFrequency}
+                totalScore={voiceRangeData.totalScore}
             />
     </div>
         </>

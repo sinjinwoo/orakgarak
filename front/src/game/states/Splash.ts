@@ -16,11 +16,8 @@ export class SplashState extends Phaser.State {
         this.load.image("background", "/assets/images/background/background.png");
         this.load.image("foreground", "/assets/images/background/foreground.png");
         this.load.image("fighter", "/assets/images/fighter/topdownfighter.png");
-        this.load.image("fighter2", "/assets/images/fighter/topdownfighter_normal.png");
         this.load.image("plasma", "/assets/images/ring.png");
         this.load.image("obstacle", "/assets/images/ring2.png");
-        this.load.image("forward", "/assets/images/forward.png");
-        this.load.image("backward", "/assets/images/backward.png");
     }
 
     create () {

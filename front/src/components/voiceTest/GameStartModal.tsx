@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Box, Typography, Button } from '@mui/material';
 import { MusicNote, Mic, TrendingUp, TrendingDown, PlayArrow, Close } from '@mui/icons-material';
+import { motion } from 'framer-motion';
 
 interface GameStartModalProps {
     isOpen: boolean;
@@ -16,7 +17,8 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
     return (
         <Modal 
             open={isOpen} 
-            onClose={onClose}
+            onClose={() => { /* 외부 클릭/ESC 무시 */ }}
+            disableEscapeKeyDown
             sx={{
                 display: 'flex',
                 alignItems: 'center',
@@ -24,32 +26,29 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                 backdropFilter: 'blur(10px)',
             }}
         >
-            <Box sx={{
-                position: 'relative',
-                background: 'rgba(15, 23, 42, 0.95)',
-                border: '1px solid rgba(0, 255, 255, 0.2)',
-                borderRadius: '15px',
-                boxShadow: '0 0 40px rgba(0, 255, 255, 0.3)',
-                maxWidth: '600px',
-                width: '90%',
-                textAlign: 'center',
-                color: '#ffffff',
-                backdropFilter: 'blur(20px)',
-                overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 50 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 50 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+                <Box sx={{
+                    position: 'relative',
                     background: `
-                        radial-gradient(circle at 20% 20%, rgba(251, 66, 212, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(66, 253, 235, 0.1) 0%, transparent 50%)
+                        radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.25) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.25) 0%, transparent 60%),
+                        linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
                     `,
-                    zIndex: 0,
-                }
-            }}>
+                    border: '1px solid rgba(6, 182, 212, 0.3)',
+                    borderRadius: '20px',
+                    boxShadow: '0 0 40px rgba(236, 72, 153, 0.3), 0 0 40px rgba(6, 182, 212, 0.3)',
+                    maxWidth: '600px',
+                    width: '90%',
+                    textAlign: 'center',
+                    color: '#ffffff',
+                    backdropFilter: 'blur(20px)',
+                    overflow: 'hidden',
+                }}>
                 <Box sx={{ position: 'relative', zIndex: 1, p: 4 }}>
                     {/* 헤더 */}
                     <Box sx={{ mb: 4 }}>
@@ -61,20 +60,20 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                         }}>
                             <MusicNote sx={{ 
                                 fontSize: 48, 
-                                color: '#00ffff', 
+                                color: '#ec4899', 
                                 mr: 2,
-                                filter: 'drop-shadow(0 0 10px rgba(0, 255, 255, 0.8))'
+                                filter: 'drop-shadow(0 0 10px rgba(236, 72, 153, 0.8))'
                             }} />
                             <Typography
                                 variant="h3"
                                 sx={{
-                                    background: 'linear-gradient(45deg, #00ffff, #ff00ff)',
+                                    background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
                                     backgroundClip: 'text',
                                     WebkitBackgroundClip: 'text',
                                     WebkitTextFillColor: 'transparent',
                                     fontWeight: 'bold',
-                                    fontFamily: 'monospace',
-                                    textShadow: '0 0 20px rgba(0, 255, 255, 0.5)',
+                                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                                    textShadow: '0 0 20px rgba(236, 72, 153, 0.5)',
                                     margin: '0 0 10px 0'
                                 }}
                             >
@@ -85,11 +84,11 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                         <Typography
                             variant="h6"
                             sx={{
-                                color: '#00ffff',
+                                color: '#06b6d4',
                                 fontSize: '1rem',
                                 textTransform: 'uppercase',
                                 letterSpacing: '2px',
-                                fontFamily: 'monospace',
+                                fontFamily: 'system-ui, -apple-system, sans-serif',
                                 opacity: 0.9
                             }}
                         >
@@ -99,8 +98,8 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
 
                     {/* 게임 설명 */}
                     <Box sx={{
-                        background: 'rgba(0, 255, 255, 0.05)',
-                        border: '1px solid rgba(0, 255, 255, 0.2)',
+                        background: 'rgba(6, 182, 212, 0.1)',
+                        border: '1px solid rgba(6, 182, 212, 0.3)',
                         borderRadius: '15px',
                         p: 3,
                         mb: 3,
@@ -109,41 +108,41 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                         <Typography
                             variant="h5"
                             sx={{
-                                color: '#00ffff',
+                                color: '#06b6d4',
                                 fontWeight: 'bold',
                                 mb: 2,
-                                textShadow: '0 0 15px rgba(0, 255, 255, 0.8)',
-                                fontFamily: 'monospace'
+                                textShadow: '0 0 15px rgba(6, 182, 212, 0.8)',
+                                fontFamily: 'system-ui, -apple-system, sans-serif'
                             }}
                         >
-                            🎯 게임 방법
+                         게임 방법
                         </Typography>
                         
                         <Box sx={{ textAlign: 'left', lineHeight: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                <Mic sx={{ color: '#FB42D4', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(251, 66, 212, 0.8))' }} />
-                                <Typography sx={{ color: '#ffffff', fontFamily: 'monospace' }}>
+                                <Mic sx={{ color: '#ec4899', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(236, 72, 153, 0.8))' }} />
+                                <Typography sx={{ color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                                     <strong>마이크로 음성을 내어 음역대를 측정하세요!</strong>
                                 </Typography>
                             </Box>
                             
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                <TrendingDown sx={{ color: '#ff0080', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(255, 0, 128, 0.8))' }} />
-                                <Typography sx={{ color: '#ffffff', fontFamily: 'monospace' }}>
+                                <TrendingDown sx={{ color: '#ec4899', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(236, 72, 153, 0.8))' }} />
+                                <Typography sx={{ color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                                     낮은 음 → 최저 음역대 측정
                                 </Typography>
                             </Box>
                             
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                <TrendingUp sx={{ color: '#00ff88', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(0, 255, 136, 0.8))' }} />
-                                <Typography sx={{ color: '#ffffff', fontFamily: 'monospace' }}>
+                                <TrendingUp sx={{ color: '#06b6d4', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(6, 182, 212, 0.8))' }} />
+                                <Typography sx={{ color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                                     높은 음 → 최고 음역대 측정
                                 </Typography>
                             </Box>
                             
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                <MusicNote sx={{ color: '#ffff00', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(255, 255, 0, 0.8))' }} />
-                                <Typography sx={{ color: '#ffffff', fontFamily: 'monospace' }}>
+                                <MusicNote sx={{ color: '#ec4899', mr: 1.5, fontSize: 20, filter: 'drop-shadow(0 0 5px rgba(236, 72, 153, 0.8))' }} />
+                                <Typography sx={{ color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
                                     다양한 음계를 연습해보세요
                                 </Typography>
                             </Box>
@@ -152,8 +151,8 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
 
                     {/* 주의사항 */}
                     <Box sx={{
-                        background: 'rgba(255, 0, 128, 0.1)',
-                        border: '1px solid rgba(255, 0, 128, 0.3)',
+                        background: 'rgba(236, 72, 153, 0.1)',
+                        border: '1px solid rgba(236, 72, 153, 0.3)',
                         borderRadius: '12px',
                         p: 2,
                         mb: 4,
@@ -161,10 +160,10 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                     }}>
                         <Typography
                             sx={{
-                                color: '#ff0080',
+                                color: '#ec4899',
                                 fontSize: '14px',
-                                fontFamily: 'monospace',
-                                textShadow: '0 0 10px rgba(255, 0, 128, 0.6)',
+                                fontFamily: 'system-ui, -apple-system, sans-serif',
+                                textShadow: '0 0 10px rgba(236, 72, 153, 0.6)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center'
@@ -182,38 +181,11 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                         flexWrap: 'wrap'
                     }}>
                         <Button
-                            variant="outlined"
-                            onClick={onClose}
-                            startIcon={<Close />}
-                            sx={{
-                                borderColor: 'rgba(0, 255, 255, 0.5)',
-                                color: '#00ffff',
-                                px: 4,
-                                py: 1.5,
-                                borderRadius: '25px',
-                                fontWeight: 'bold',
-                                textTransform: 'none',
-                                fontSize: '1rem',
-                                fontFamily: 'monospace',
-                                textShadow: '0 0 10px rgba(0, 255, 255, 0.8)',
-                                boxShadow: '0 0 15px rgba(0, 255, 255, 0.3)',
-                                '&:hover': {
-                                    background: 'rgba(0, 255, 255, 0.1)',
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: '0 4px 20px rgba(0, 255, 255, 0.4)',
-                                    borderColor: '#00ffff',
-                                },
-                            }}
-                        >
-                            취소
-                        </Button>
-
-                        <Button
                             variant="contained"
                             onClick={onStartGame}
                             startIcon={<PlayArrow />}
                             sx={{
-                                background: 'linear-gradient(45deg, #ff00ff, #00ffff)',
+                                background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
                                 color: '#000000',
                                 px: 4,
                                 py: 1.5,
@@ -221,12 +193,12 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                                 fontWeight: 'bold',
                                 textTransform: 'none',
                                 fontSize: '1rem',
-                                fontFamily: 'monospace',
-                                boxShadow: '0 4px 20px rgba(255, 0, 255, 0.3)',
+                                fontFamily: 'system-ui, -apple-system, sans-serif',
+                                boxShadow: '0 4px 20px rgba(236, 72, 153, 0.3)',
                                 '&:hover': {
-                                    background: 'linear-gradient(45deg, #ff33ff, #33ffff)',
-                                    transform: 'translateY(-2px)',
-                                    boxShadow: '0 6px 25px rgba(255, 0, 255, 0.4)',
+                                    background: 'linear-gradient(45deg, #06b6d4, #ec4899)',
+                                    transform: 'scale(1.1)',
+                                    boxShadow: '0 0 40px rgba(236, 72, 153, 0.6)',
                                 },
                             }}
                         >
@@ -235,6 +207,7 @@ const GameStartModal: React.FC<GameStartModalProps> = ({
                     </Box>
                 </Box>
             </Box>
+            </motion.div>
         </Modal>
     );
 };
