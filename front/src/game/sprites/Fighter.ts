@@ -48,7 +48,8 @@ export class Fighter extends Phaser.Sprite {
     }
 
     updateText () {
-        this.text.setText(this.name + "\nScore: " + this.score + "\nHP: " + this.hitpoints);
+        // 게임 내부 텍스트 표시 제거 - 모든 정보를 게임 외부로 이동
+        this.text.setText("");
         
         // HP가 0 이하가 되면 alive 상태만 변경 (게임 오버 이벤트는 Game.ts에서 처리)
         if (this.hitpoints <= 0 && this.alive) {
@@ -58,18 +59,14 @@ export class Fighter extends Phaser.Sprite {
     }
 
     updatePitchInfo (note: string, targetY: number) {
-        // 피치 정보를 표시하는 텍스트 업데이트
+        // 게임 내부 텍스트 표시 제거 - 모든 정보를 게임 외부로 이동
         if (this.text) {
-            let statusText = "";
-            if (note === "No Pitch") {
-                statusText = "🎤 마이크로 음성을 내세요";
-            } else {
-                statusText = "🎵 " + note;
-            }
-
-            this.text.setText(this.name + "\nScore: " + this.score + "\nHP: " + this.hitpoints +
-                "\n" + statusText + "\nTarget: " + Math.round(targetY));
+            this.text.setText("");
         }
+        
+        // 전역 변수에 피치 정보 저장 (React 컴포넌트에서 사용)
+        (window as any).pitchStatus = note === "No Pitch" ? "🎤 마이크로 음성을 내세요" : "🎵 " + note;
+        (window as any).targetY = targetY;
     }
 
     update () { }
