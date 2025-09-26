@@ -73,9 +73,13 @@ public class SecurityConfig {
                 .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator")
                                          && !request.getRequestURI().startsWith("/api/webhook")
                                          && !request.getRequestURI().equals("/api/records/async/upload-completed"))
-                // 세션 미사용 (JWT 기반 인증)
+                // 세션 미사용 (JWT 기반 인증) - OAuth2 로그인은 예외적으로 세션 필요
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sm -> sm
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                        .maximumSessions(1)
+                        .maxSessionsPreventsLogin(false)
+                )
                 // CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 접근 제어
@@ -98,6 +102,12 @@ public class SecurityConfig {
                 )
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .baseUri("/oauth2/authorization")
+                        )
+                        .redirectionEndpoint(redirection -> redirection
+                                .baseUri("/login/oauth2/code/*")
+                        )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
