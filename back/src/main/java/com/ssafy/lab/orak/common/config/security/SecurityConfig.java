@@ -6,6 +6,7 @@ import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
 import com.ssafy.lab.orak.common.config.properties.ActuatorProperties;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -26,10 +27,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import com.ssafy.lab.orak.auth.repository.CookieOAuth2AuthorizationRequestRepository;
 
 import java.util.List;
 
 
+@Log4j2
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
@@ -40,6 +45,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     private final ActuatorProperties actuatorProperties;
+    private final CookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
 
     @Value("${spring.web.cors.allowed-origins:http://localhost:3000}")
     private String[] allowedOrigins;
@@ -71,7 +77,7 @@ public class SecurityConfig {
                 .securityMatcher(request -> !request.getRequestURI().startsWith("/actuator")
                                          && !request.getRequestURI().startsWith("/api/webhook")
                                          && !request.getRequestURI().equals("/api/records/async/upload-completed"))
-                // 세션 미사용 (JWT 기반 인증)
+                // 세션 미사용 (JWT 기반 인증) - OAuth2는 Redis 저장소 사용
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // CORS 설정
@@ -96,10 +102,19 @@ public class SecurityConfig {
                 )
                 // OAuth2 로그인 설정
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(authorization -> authorization
+                                .authorizationRequestRepository(authorizationRequestRepository())
+                        )
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2AuthenticationSuccessHandler)
+                        .failureHandler((request, response, exception) -> {
+                            log.error("OAuth2 로그인 실패 - 예외 정보:", exception);
+                            log.error("OAuth2 로그인 실패 - 요청 URL: {}", request.getRequestURL());
+                            log.error("OAuth2 로그인 실패 - 파라미터: {}", request.getParameterMap());
+                            response.sendRedirect("https://j13c103.p.ssafy.io/?error=oauth_failed");
+                        })
                 )
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint((req, res, ex) ->
@@ -141,6 +156,11 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
+        return cookieOAuth2AuthorizationRequestRepository;
     }
 
     @Bean

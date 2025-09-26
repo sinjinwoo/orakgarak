@@ -36,10 +36,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/oauth2/") ||
                 path.startsWith("/api/login/oauth2/") ||
                 path.startsWith("/login/oauth2/") ||
+                path.startsWith("/api/login") ||
+                path.startsWith("/login") ||
+                path.startsWith("/api/auth/refresh") ||
+                path.startsWith("/auth/refresh") ||
                 path.startsWith("/api/test/") ||
                 path.startsWith("/test/") ||
-                path.equals("/api/auth/refresh") ||
-                path.equals("/auth/refresh") ||
                 path.startsWith("/api/yjs/") ||
                 path.startsWith("/yjs/") ||
                 path.startsWith("/api/swagger-ui/") ||
@@ -106,6 +108,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         log.info("setAuthentication - SecurityContext에 인증 정보 설정 완료");
+
+        // JWT 인증에서는 세션 사용하지 않음을 명시
+        request.getSession(false); // 기존 세션이 있어도 새로 생성하지 않음
     }
 
     private String extractToken(HttpServletRequest request) {

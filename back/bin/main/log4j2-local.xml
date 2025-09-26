@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <Properties>
+        <Property name="LOG_PATTERN">
+            %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n
+        </Property>
+        <Property name="JSON_PATTERN">
+            {"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%-5level","thread":"%thread","logger":"%logger{36}","message":"%msg","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","mdc":"%X"}%n
+        </Property>
+        <Property name="LOG_DIR">./back/logs</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Console Appender (로컬 개발용) -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%clr{${LOG_PATTERN}}{faint}"/>
+        </Console>
+
+        <!-- File Appender for Loki/Promtail (JSON 형태) -->
+        <RollingFile name="LokiFileAppender" fileName="${LOG_DIR}/orakgaraki.log"
+                     filePattern="${LOG_DIR}/orakgaraki-%d{yyyy-MM-dd}-%i.log.gz">
+            <JsonTemplateLayout eventTemplateUri="classpath:EcsLayout.json"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="7"/>
+        </RollingFile>
+
+        <!-- Simple File Appender (백업용) -->
+        <RollingFile name="SimpleFileAppender" fileName="${LOG_DIR}/application.log"
+                     filePattern="${LOG_DIR}/application-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="7"/>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- Spring Boot 시작 로그 대폭 줄이기 -->
+        <Logger name="org.springframework.boot" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Spring 컨텍스트 관련 모든 로그 최소화 -->
+        <Logger name="org.springframework.context" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Bean 관련 모든 로그 숨김 -->
+        <Logger name="org.springframework.beans" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- JPA/Data 초기화 로그 숨김 -->
+        <Logger name="org.springframework.data" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- ORM 초기화 로그 숨김 -->
+        <Logger name="org.springframework.orm" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Transaction 관련 로그 최소화 -->
+        <Logger name="org.springframework.transaction" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Spring Framework 전체를 WARN으로 -->
+        <Logger name="org.springframework" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate 시작 시 초기화 로그들만 숨김 -->
+        <!-- 트랜잭션 rollback-only 로그 숨김 -->
+        <Logger name="org.hibernate.resource.transaction" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Named Query 관련 초기화 로그 숨김 -->
+        <Logger name="org.springframework.data.jpa.repository.query" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- HQL/SQM 파싱 관련 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.orm.query" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.query.sqm.function.SqmFunctionRegistry" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate 엔티티/메타데이터 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.persister" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate 스키마 검증 로그 숨김 -->
+        <Logger name="org.hibernate.tool.schema" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate Validator 초기화 로그 숨김 -->
+        <Logger name="org.hibernate.validator" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate 타입/ID 생성기 등록 로그 숨김 -->
+        <Logger name="org.hibernate.type.BasicTypeRegistry" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.hibernate.orm.idgen.factory" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate 기타 초기화 로그들 -->
+        <Logger name="org.hibernate.integrator" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.hibernate.cache" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.hibernate.boot" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.hibernate.cfg" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- HikariCP 설정 로그 숨김 -->
+        <Logger name="com.zaxxer.hikari.HikariConfig" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Hibernate HQL 함수 등록 로그 숨김 -->
+        <Logger name="org.hibernate.HQL_FUNCTIONS" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- 추가 시작 시 불필요한 로그들 차단 -->
+        <!-- Tomcat 초기화 로그 최소화 -->
+        <Logger name="org.apache.catalina" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.apache.coyote" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.apache.tomcat" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Jackson 초기화 로그 숨김 -->
+        <Logger name="com.fasterxml.jackson" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- JPA/Hibernate EntityManager 로그 최소화 -->
+        <Logger name="jakarta.persistence" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Liquibase/Flyway 로그 최소화 (있을 경우) -->
+        <Logger name="liquibase" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <Logger name="org.flywaydb" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- Connection Pool 기타 로그들 -->
+        <Logger name="com.zaxxer.hikari" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- HikariCP Pool Housekeeper 로그 축소 (정리 작업 메시지들) -->
+        <Logger name="com.zaxxer.hikari.pool.HikariPool" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Validation/Bean Validation 로그 최소화 -->
+        <Logger name="jakarta.validation" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+        </Logger>
+
+        <!-- SQL 로그 출력 - DEBUG에서 INFO로 축소 -->
+        <Logger name="org.hibernate.SQL" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- SQL 바인딩 파라미터 출력 - TRACE에서 WARN으로 축소 (거의 비활성화) -->
+        <Logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- SQL 결과 값 출력 - TRACE에서 WARN으로 축소 (거의 비활성화) -->
+        <Logger name="org.hibernate.type.descriptor.sql.BasicExtractor" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- JPA Repository 메소드 호출 로그 - DEBUG에서 INFO로 축소 -->
+        <Logger name="org.springframework.data.jpa.repository" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Hibernate 세션/트랜잭션 로그 - DEBUG에서 WARN으로 축소 -->
+        <Logger name="org.hibernate.transaction" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- 애플리케이션 패키지 로그 (파일에도 기록) -->
+        <Logger name="com.ssafy.lab.orak" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="SimpleFileAppender"/>
+        </Logger>
+
+        <!-- Security 로그 -->
+        <Logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- AWS SDK 로그 -->
+        <Logger name="software.amazon.awssdk" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Kafka 로그 - 연결/재연결 메시지 대폭 축소 -->
+        <Logger name="org.apache.kafka" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Kafka Consumer 상세 로그 축소 -->
+        <Logger name="org.apache.kafka.clients.consumer" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Kafka Producer 로그 축소 -->
+        <Logger name="org.apache.kafka.clients.producer" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Kafka Network Client 로그 축소 (연결 실패 메시지들) -->
+        <Logger name="org.apache.kafka.clients.NetworkClient" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Kafka Metadata 로그 축소 -->
+        <Logger name="org.apache.kafka.clients.Metadata" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Kafka Consumer Coordinator 로그 축소 (가장 시끄러운 부분) -->
+        <Logger name="org.apache.kafka.clients.consumer.internals.ConsumerCoordinator" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Spring Kafka 로그 축소 -->
+        <Logger name="org.springframework.kafka" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Redis 로그 - DEBUG에서 INFO로 축소 -->
+        <Logger name="org.springframework.data.redis" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Redis Connection 관련 로그 축소 -->
+        <Logger name="org.springframework.data.redis.core.RedisConnectionUtils" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Web 요청 로그 - DEBUG에서 INFO로 축소 -->
+        <Logger name="org.springframework.web" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Spring Security FilterChain 로그 축소 -->
+        <Logger name="org.springframework.security.web.FilterChainProxy" level="WARN" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+        </Logger>
+
+        <!-- Root Logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="LokiFileAppender"/>
+            <AppenderRef ref="SimpleFileAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>
