@@ -6,6 +6,7 @@ import com.ssafy.lab.orak.auth.service.CustomOAuth2UserService;
 import com.ssafy.lab.orak.common.config.properties.ActuatorProperties;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +31,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 
+@Log4j2
 @EnableWebSecurity
 @Configuration
 @RequiredArgsConstructor
