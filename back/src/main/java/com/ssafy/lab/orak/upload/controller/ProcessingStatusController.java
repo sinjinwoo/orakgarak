@@ -1,6 +1,7 @@
 package com.ssafy.lab.orak.upload.controller;
 
 import com.ssafy.lab.orak.upload.dto.ProcessingStatusResponseDTO;
+import com.ssafy.lab.orak.upload.dto.DetailedProcessingStatusDTO;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
@@ -8,7 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -22,7 +23,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/processing")
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 @Tag(name = "Processing Status", description = "파일 처리 상태 관리 API")
 public class ProcessingStatusController {
 
@@ -44,7 +45,54 @@ public class ProcessingStatusController {
         
         return ResponseEntity.ok(response);
     }
-    
+
+    // 상세 처리 상태 조회 (새로 추가)
+    @GetMapping("/status/{uploadId}/detailed")
+    @Operation(summary = "파일 상세 처리 상태 조회", description = "WAV 변환과 음성 분석 상태를 분리하여 상세 조회합니다.")
+    public ResponseEntity<DetailedProcessingStatusDTO> getDetailedProcessingStatus(
+            @PathVariable @Parameter(description = "업로드 ID") Long uploadId) {
+
+        log.info("상세 처리 상태 조회 - uploadId: {}", uploadId);
+
+        Upload upload = fileUploadService.getUpload(uploadId);
+        DetailedProcessingStatusDTO response = DetailedProcessingStatusDTO.from(upload);
+
+        log.info("상세 처리 상태 응답 - uploadId: {}, 전체상태: {}, 재생가능: {}, 음성분석: {}",
+                uploadId, response.getOverallStatus(), response.getCanPlay(), response.getHasVoiceAnalysis());
+
+        return ResponseEntity.ok(response);
+    }
+
+    // 재생 가능한 파일 목록 조회 (새로 추가)
+    @GetMapping("/my-files/playable")
+    @Operation(summary = "재생 가능한 파일 목록", description = "WAV 변환이 완료되어 재생 가능한 파일들을 조회합니다.")
+    public ResponseEntity<List<DetailedProcessingStatusDTO>> getMyPlayableFiles(
+            @RequestHeader("User-Id") @Parameter(description = "사용자 ID") Long userId) {
+
+        log.info("재생 가능한 파일 목록 조회 - userId: {}", userId);
+
+        // AUDIO_CONVERTED 이상의 상태인 파일들 조회
+        List<Upload> uploads = fileUploadService.getUploadRepository()
+                .findByUploaderIdAndProcessingStatusInOrderByCreatedAtDesc(
+                    userId,
+                    List.of(
+                        ProcessingStatus.AUDIO_CONVERTED,
+                        ProcessingStatus.VOICE_ANALYSIS_PENDING,
+                        ProcessingStatus.VOICE_ANALYZING,
+                        ProcessingStatus.VOICE_ANALYZED,
+                        ProcessingStatus.COMPLETED
+                    )
+                );
+
+        List<DetailedProcessingStatusDTO> response = uploads.stream()
+                .map(DetailedProcessingStatusDTO::from)
+                .collect(Collectors.toList());
+
+        log.info("재생 가능한 파일 조회 결과 - userId: {}, 파일수: {}", userId, response.size());
+
+        return ResponseEntity.ok(response);
+    }
+
 //    사용자의 처리 중인 파일 목록 조회
     @GetMapping("/my-files")
     @Operation(summary = "내 파일 처리 상태 목록", description = "현재 사용자의 파일 처리 상태 목록을 조회합니다.")
@@ -59,7 +107,14 @@ public class ProcessingStatusController {
             uploads = fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, status);
         } else {
             // 모든 처리 중인 파일 조회 (완료/실패 제외)
-            uploads = fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.PROCESSING);
+            uploads = fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.AUDIO_CONVERTING);
+            uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.VOICE_ANALYSIS_PENDING));
+            uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.VOICE_ANALYZING));
+            uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.IMAGE_OPTIMIZING));
+            uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.THUMBNAIL_GENERATING));
+
+            // 레거시 상태들도 포함
+            uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.PROCESSING));
             uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.CONVERTING));
             uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.ANALYZING));
             uploads.addAll(fileUploadService.getUploadRepository().findByUploaderIdAndProcessingStatusOrderByCreatedAtDesc(userId, ProcessingStatus.ANALYSIS_PENDING));
@@ -104,10 +159,12 @@ public class ProcessingStatusController {
         // 즉시 현재 상태 전송
         try {
             Upload upload = fileUploadService.getUpload(uploadId);
-            ProcessingStatusResponseDTO currentStatus = ProcessingStatusResponseDTO.from(upload);
+            DetailedProcessingStatusDTO currentStatus = DetailedProcessingStatusDTO.from(upload);
             emitter.send(SseEmitter.event()
                     .name("status")
                     .data(currentStatus));
+
+            log.info("초기 상태 전송 완료 - uploadId: {}, 상태: {}", uploadId, currentStatus.getOverallStatus());
         } catch (IOException e) {
             log.error("[SSE] 초기 상태 전송 실패 - uploadId: {}", uploadId, e);
             sseEmitters.remove(uploadId);
@@ -185,13 +242,14 @@ public class ProcessingStatusController {
         if (emitter != null) {
             try {
                 Upload upload = fileUploadService.getUpload(uploadId);
-                ProcessingStatusResponseDTO statusUpdate = ProcessingStatusResponseDTO.from(upload);
+                DetailedProcessingStatusDTO statusUpdate = DetailedProcessingStatusDTO.from(upload);
 
                 emitter.send(SseEmitter.event()
                         .name("status")
                         .data(statusUpdate));
 
-                log.info("[SSE] 처리 상태 업데이트 전송 완료 - uploadId: {}, 상태: {}", uploadId, statusUpdate.getStatus());
+                log.info("상태 업데이트 전송 완료 - uploadId: {}, 전체상태: {}, 재생가능: {}",
+                        uploadId, statusUpdate.getOverallStatus(), statusUpdate.getCanPlay());
 
                 // 처리 완료 시 연결 종료
                 if (upload.getProcessingStatus().isCompleted()) {

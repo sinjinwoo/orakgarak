@@ -33,11 +33,16 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
 
   // 이미지 업로드 완료 핸들러
   const handleUploadComplete = useCallback(
-    (imageUrl: string) => {
-      // albumMetaStore에서 uploadId 가져와서 albumStore에 저장
-      if (cover.uploadId) {
-        setSelectedCoverUploadId(cover.uploadId);
+    (imageUrl: string, uploadId?: number) => {
+      // 직접 전달받은 uploadId 사용 (race condition 해결)
+      const finalUploadId = uploadId || cover.uploadId;
+
+      if (finalUploadId) {
+        setSelectedCoverUploadId(finalUploadId);
         updateAlbumInfo({ coverImageUrl: imageUrl });
+        console.log('업로드 완료 처리:', { imageUrl, uploadId: finalUploadId });
+      } else {
+        console.warn('업로드 ID가 없어 상태 업데이트를 건너뛁니다.');
       }
     },
     [cover.uploadId, setSelectedCoverUploadId, updateAlbumInfo]
@@ -62,7 +67,7 @@ const NewCoverSelectionStep: React.FC<NewCoverSelectionStepProps> = ({
         <StepHeader
           title="커버 선택"
           description="앨범 커버를 AI로 자동 생성하거나 직접 업로드할 수 있습니다"
-          icon={<Image className="w-6 h-6 text-fuchsia-400" />}
+          icon={<Image className="w-6 h-6 text-cyan-400" />}
         />
 
         {/* 탭 선택 */}

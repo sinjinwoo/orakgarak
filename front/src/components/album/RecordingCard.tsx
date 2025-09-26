@@ -16,7 +16,7 @@ interface RecordingCardProps {
   isDragging?: boolean;
   showHandle?: boolean;
   showRemove?: boolean;
-  variant?: 'library' | 'canvas';
+  variant?: 'library' | 'canvas' | 'modal';
   order?: number;
   onToggle?: () => void;
   onPlay?: () => void;
@@ -54,11 +54,12 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
     <div
       ref={ref}
       className={`
-        group relative bg-gray-800/50 border border-white/10 rounded-xl p-4
-        transition-all duration-200 cursor-pointer
-        ${isSelected ? 'ring-2 ring-fuchsia-400 bg-fuchsia-500/10' : 'hover:bg-gray-800/70 hover:border-white/20'}
-        ${isDragging ? 'shadow-2xl shadow-fuchsia-500/20 scale-105 z-50' : ''}
+        group relative bg-gray-800/50 border-2 border-cyan-300/80 rounded-xl p-4
+        transition-all duration-200 cursor-pointer shadow-lg shadow-cyan-300/40
+        ${isSelected ? 'ring-2 ring-yellow-300 bg-yellow-500/10 shadow-2xl shadow-yellow-300/70 border-yellow-300 transform scale-[1.01]' : 'hover:bg-gray-800/70 hover:border-pink-300/80 hover:shadow-2xl hover:shadow-pink-300/60'}
+        ${isDragging ? 'shadow-2xl shadow-yellow-300/70 scale-105 z-50' : ''}
         ${variant === 'canvas' ? 'bg-gray-800/70' : ''}
+        ${variant === 'modal' ? 'bg-gray-800/40 hover:bg-gray-800/60' : ''}
         ${className}
       `}
       onClick={onToggle}
@@ -78,7 +79,7 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
 
       {/* Order number for canvas */}
       {variant === 'canvas' && order && (
-        <div className="absolute left-4 top-4 w-6 h-6 bg-fuchsia-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+        <div className="absolute left-4 top-4 w-6 h-6 bg-gradient-to-br from-yellow-300 to-yellow-200 rounded-full flex items-center justify-center text-xs font-bold text-black shadow-lg shadow-yellow-300/70">
           {order}
         </div>
       )}
@@ -112,13 +113,13 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
                 onPlay?.();
               }
             }}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200 ${isPlayable ? 'bg-white/10 hover:bg-fuchsia-500/20' : 'bg-white/5 opacity-50 cursor-not-allowed'}`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200 ${isPlayable ? 'bg-white/10 hover:bg-yellow-500/20' : 'bg-white/5 opacity-50 cursor-not-allowed'}`}
             aria-label={isPlaying ? '일시정지' : (isPlayable ? '재생' : '재생 불가')}
             title={isPlayable ? '' : (recording.urlStatus === 'FAILED' ? '처리 실패로 재생 불가' : 'URL 준비 중')}
             disabled={!isPlayable}
           >
             {isPlaying ? (
-              <Pause className="w-4 h-4 text-fuchsia-400" />
+              <Pause className="w-4 h-4 text-yellow-300" />
             ) : (
               <Play className={`w-4 h-4 ${isPlayable ? 'text-white/70' : 'text-white/30'}`} />
             )}
@@ -142,7 +143,7 @@ const RecordingCard = forwardRef<HTMLDivElement, RecordingCardProps>(({
 
       {/* Selection indicator */}
       {isSelected && (
-        <div className="absolute top-2 right-2 w-3 h-3 bg-fuchsia-400 rounded-full" />
+        <div className="absolute top-2 right-2 w-3 h-3 bg-yellow-300 rounded-full shadow-lg shadow-yellow-300/70" />
       )}
     </div>
   );

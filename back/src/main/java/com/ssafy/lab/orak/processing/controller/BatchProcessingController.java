@@ -2,14 +2,14 @@ package com.ssafy.lab.orak.processing.controller;
 
 import com.ssafy.lab.orak.processing.service.BatchProcessingService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/processing/batch")
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class BatchProcessingController {
 
     private final BatchProcessingService batchProcessingService;

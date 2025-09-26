@@ -5,7 +5,7 @@ import com.ssafy.lab.orak.upload.dto.PresignedUploadRequest;
 import com.ssafy.lab.orak.upload.dto.PresignedUploadResponse;
 import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/uploads")
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class PresignedUploadController {
 
     private final PresignedUploadService presignedUploadService;

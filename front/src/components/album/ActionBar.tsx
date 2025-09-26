@@ -1,10 +1,10 @@
 /**
  * Action Bar Component
- * 하단 고정 액션 바 - 이전/임시저장/다음 버튼
+ * 하단 고정 액션 바 - 이전/다음 버튼
  */
 
 import React from 'react';
-import { ChevronLeft, ChevronRight, Save, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export type StageId = 'recordings' | 'cover' | 'metadata' | 'preview';
 
@@ -12,10 +12,8 @@ interface ActionBarProps {
   currentStage: StageId;
   onPrev: () => void;
   onNext: () => void;
-  onSaveDraft: () => void;
   canGoNext: boolean;
   canGoPrev: boolean;
-  isSaving?: boolean;
   className?: string;
 }
 
@@ -30,17 +28,15 @@ const ActionBar: React.FC<ActionBarProps> = ({
   currentStage,
   onPrev,
   onNext,
-  onSaveDraft,
   canGoNext,
   canGoPrev,
-  isSaving = false,
   className = '',
 }) => {
   const labels = stageLabels[currentStage];
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-xl border-t border-white/10 p-4 z-50 ${className}`}
+      className={`fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-xl border-t-2 border-cyan-300/80 p-4 z-50 shadow-2xl shadow-cyan-300/50 ${className}`}
       role="navigation"
       aria-label="앨범 생성 액션"
     >
@@ -51,8 +47,8 @@ const ActionBar: React.FC<ActionBarProps> = ({
           disabled={!canGoPrev}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
             canGoPrev
-              ? 'text-white hover:bg-white/10 border border-white/20 hover:border-white/30'
-              : 'text-white/40 cursor-not-allowed border border-white/10'
+              ? 'text-white hover:bg-white/15 border border-white/30 hover:border-pink-300/60'
+              : 'text-white/50 cursor-not-allowed border border-white/20'
           }`}
           aria-label={labels.prev ? `이전 단계: ${labels.prev}` : '이전'}
         >
@@ -62,31 +58,14 @@ const ActionBar: React.FC<ActionBarProps> = ({
           </span>
         </button>
 
-        {/* 중앙 임시저장 버튼 */}
-        <button
-          onClick={onSaveDraft}
-          disabled={isSaving}
-          className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 rounded-xl font-medium text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-label="임시저장"
-        >
-          {isSaving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          <span className="hidden sm:inline">
-            {isSaving ? '저장 중...' : '임시저장'}
-          </span>
-        </button>
-
         {/* 다음 버튼 */}
         <button
           onClick={onNext}
           disabled={!canGoNext}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
             canGoNext
-              ? 'bg-gradient-to-r from-fuchsia-500 to-purple-500 hover:from-fuchsia-600 hover:to-purple-600 text-white shadow-lg shadow-fuchsia-500/25'
-              : 'bg-gray-700 text-white/40 cursor-not-allowed'
+              ? 'bg-gradient-to-r from-pink-300 to-cyan-300 hover:from-pink-400 hover:to-cyan-400 text-white shadow-lg shadow-pink-300/40'
+              : 'bg-gray-600 text-white/50 cursor-not-allowed'
           }`}
           aria-label={`다음 단계: ${labels.next}`}
         >

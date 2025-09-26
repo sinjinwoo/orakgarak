@@ -1,14 +1,16 @@
 package com.ssafy.lab.orak.processing.service.impl;
 
+import com.ssafy.lab.orak.event.service.KafkaEventProducer;
 import com.ssafy.lab.orak.processing.exception.AudioProcessingException;
 import com.ssafy.lab.orak.processing.service.ProcessingJob;
+import com.ssafy.lab.orak.recording.repository.RecordRepository;
 import com.ssafy.lab.orak.recording.util.AudioConverter;
 import com.ssafy.lab.orak.s3.helper.S3Helper;
 import com.ssafy.lab.orak.upload.entity.Upload;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.repository.UploadRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -19,12 +21,14 @@ import java.nio.file.Paths;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
+@Log4j2
 public class AudioFormatConversionJob implements ProcessingJob {
 
     private final AudioConverter audioConverter;
     private final S3Helper s3Helper;
     private final UploadRepository uploadRepository;
+    private final RecordRepository recordRepository;
+    private final KafkaEventProducer kafkaEventProducer;
 
     @Value("${orak.upload.path:/tmp/orak-upload}")
     private String uploadPath;
@@ -34,10 +38,18 @@ public class AudioFormatConversionJob implements ProcessingJob {
         log.info("포맷 변환 시작: upload: {} ({})", upload.getId(), upload.getOriginalFilename());
         
         try {
-            // 실제 포맷 변환 수행
+            // 1. 실제 포맷 변환 수행
             performActualConversion(upload);
+            log.info("오디오 변환 완료 - uploadId: {}", upload.getId());
 
-            log.info("포맷 변환 완료: upload: {}", upload.getId());
+            // 2. WAV 변환 완료 상태로 업데이트
+            upload.setProcessingStatus(ProcessingStatus.AUDIO_CONVERTED);
+            uploadRepository.save(upload);
+            log.info("오디오 변환 완료 상태 업데이트 - uploadId: {}", upload.getId());
+
+            // 3. 음성 분석을 위한 Kafka 이벤트 발송
+            triggerVoiceAnalysis(upload);
+
             return true;
 
         } catch (AudioProcessingException e) {
@@ -51,23 +63,24 @@ public class AudioFormatConversionJob implements ProcessingJob {
     
     @Override
     public boolean canProcess(Upload upload) {
-        return upload.isAudioFile() && 
-               upload.getProcessingStatus() == ProcessingStatus.PROCESSING;
+        return upload.isAudioFile() &&
+               (upload.getProcessingStatus() == ProcessingStatus.UPLOADED ||
+                upload.getProcessingStatus() == ProcessingStatus.PROCESSING);
     }
-    
+
     @Override
     public ProcessingStatus getProcessingStatus() {
-        return ProcessingStatus.CONVERTING;
+        return ProcessingStatus.AUDIO_CONVERTING;
     }
-    
+
     @Override
     public ProcessingStatus getCompletedStatus() {
-        return ProcessingStatus.COMPLETED;
+        return ProcessingStatus.AUDIO_CONVERTED;
     }
     
     @Override
     public int getPriority() {
-        return 3; // 중간 우선순위
+        return 10; // WAV 변환은 높은 우선순위 (사용자 재생을 위해)
     }
     
     @Override
@@ -217,6 +230,28 @@ public class AudioFormatConversionJob implements ProcessingJob {
         upload.setContentType("audio/wav");
         uploadRepository.save(upload);
         log.info("Upload 엔티티 업데이트 완료: uploadId={}, newExtension=wav", upload.getId());
+    }
+
+    /**
+     * 음성 분석을 위한 Kafka 이벤트 발송
+     */
+    private void triggerVoiceAnalysis(Upload upload) {
+        try {
+            // Record 존재 여부 확인
+            if (!recordRepository.existsByUploadId(upload.getId())) {
+                log.info("Record가 존재하지 않아 음성 분석을 건너뜀 - uploadId: {}", upload.getId());
+                return;
+            }
+
+            // Kafka 이벤트 발송
+            kafkaEventProducer.sendVoiceAnalysisEvent(upload.getId());
+
+            log.info("음성 분석 이벤트 발송 완료 - uploadId: {}", upload.getId());
+
+        } catch (Exception e) {
+            log.error("음성 분석 이벤트 발송 실패 - uploadId: {}", upload.getId(), e);
+            // 음성 분석 이벤트 발송 실패해도 WAV 변환 자체는 성공으로 처리
+        }
     }
 
     private void cleanupLocalFiles(String... filePaths) {
