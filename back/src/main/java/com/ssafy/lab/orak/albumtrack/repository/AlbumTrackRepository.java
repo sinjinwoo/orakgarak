@@ -40,4 +40,8 @@ public interface AlbumTrackRepository extends JpaRepository<AlbumTrack, Long> {
     // 특정 순서 이후의 트랙들 조회 (순서 재정렬용)
     @Query("SELECT at FROM AlbumTrack at WHERE at.album.id = :albumId AND at.trackOrder > :order ORDER BY at.trackOrder ASC")
     List<AlbumTrack> findByAlbumIdAndTrackOrderGreaterThan(@Param("albumId") Long albumId, @Param("order") Integer order);
+
+    // 특정 Record ID로 모든 AlbumTrack 조회 (Record 삭제시 cascade 용)
+    @Query("SELECT at FROM AlbumTrack at WHERE at.record.id = :recordId")
+    List<AlbumTrack> findByRecordId(@Param("recordId") Long recordId);
 }

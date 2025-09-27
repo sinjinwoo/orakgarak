@@ -15,12 +15,16 @@ import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import com.ssafy.lab.orak.upload.service.PresignedUploadService;
 import com.ssafy.lab.orak.upload.service.FileUploadService;
 import com.ssafy.lab.orak.ai.service.VectorService;
+import com.ssafy.lab.orak.albumtrack.repository.AlbumTrackRepository;
+import com.ssafy.lab.orak.albumtrack.service.AlbumTrackService;
+import com.ssafy.lab.orak.albumtrack.entity.AlbumTrack;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +45,8 @@ public class AsyncRecordService {
     private final EventBridgeService eventBridgeService;
     private final RecordMapper recordMapper;
     private final VectorService vectorService;
+    private final AlbumTrackRepository albumTrackRepository;
+    private final AlbumTrackService albumTrackService;
 
 
     /**
@@ -171,13 +177,42 @@ public class AsyncRecordService {
                 throw new RecordPermissionDeniedException(recordId, userId);
             }
 
-            // Record 삭제
+            // 1. 해당 Record를 사용하는 AlbumTrack들 찾기
+            List<AlbumTrack> albumTracks = albumTrackRepository.findByRecordId(recordId);
+
+            // 2. AlbumTrack들이 속한 앨범 ID 수집 (중복 제거)
+            Set<Long> affectedAlbumIds = albumTracks.stream()
+                    .map(track -> track.getAlbum().getId())
+                    .collect(Collectors.toSet());
+
+            log.info("Record 삭제로 인해 영향받는 앨범들: recordId={}, 영향받는 앨범 수={}, 앨범IDs={}",
+                    recordId, affectedAlbumIds.size(), affectedAlbumIds);
+
+            // 3. AlbumTrack들 삭제
+            if (!albumTracks.isEmpty()) {
+                albumTrackRepository.deleteAll(albumTracks);
+                log.info("Record와 연결된 AlbumTrack들 삭제 완료: recordId={}, 삭제된 트랙 수={}",
+                        recordId, albumTracks.size());
+            }
+
+            // 4. Record 삭제
             recordRepository.delete(record);
 
-            // 파일 삭제 (S3 + DB)
+            // 5. 파일 삭제 (S3 + DB)
             fileUploadService.deleteFile(record.getUploadId());
 
-            log.info("레코딩 삭제 완료: recordId={}, userId={}", recordId, userId);
+            // 6. 영향받는 앨범들의 통계 업데이트 (트랙 수가 0이 되면 앨범도 삭제됨)
+            for (Long albumId : affectedAlbumIds) {
+                try {
+                    albumTrackService.refreshAlbumStatistics(albumId);
+                    log.info("앨범 통계 업데이트 완료: albumId={}", albumId);
+                } catch (Exception e) {
+                    log.warn("앨범 통계 업데이트 실패: albumId={}", albumId, e);
+                }
+            }
+
+            log.info("레코딩 삭제 완료: recordId={}, userId={}, 영향받은 앨범 수={}",
+                    recordId, userId, affectedAlbumIds.size());
 
         } catch (Exception e) {
             log.error("레코딩 삭제 실패: recordId={}, userId={}", recordId, userId, e);
