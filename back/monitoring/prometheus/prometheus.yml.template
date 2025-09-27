@@ -7,7 +7,7 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
+          - ${ALERTMANAGER_TARGET}
 
 rule_files:
   - "rules/*.yml"
@@ -27,35 +27,35 @@ scrape_configs:
   # 시스템 메트릭
   - job_name: 'node-exporter'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['${NODE_EXPORTER_URL}']
 
   # 컨테이너 메트릭
   - job_name: 'cadvisor'
     static_configs:
-      - targets: ['cadvisor:8080']
+      - targets: ['${CADVISOR_URL}']
 
   # MySQL 메트릭
   - job_name: 'mysql'
     static_configs:
-      - targets: ['mysql-exporter:9104']
+      - targets: ['${MYSQL_EXPORTER_URL}']
 
   # Redis 메트릭
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis-exporter:9121']
+      - targets: ['${REDIS_EXPORTER_URL}']
 
   # Kafka 메트릭
   - job_name: 'kafka'
     static_configs:
-      - targets: ['kafka-exporter:9308']
+      - targets: ['${KAFKA_EXPORTER_URL}']
 
   # Prometheus 자체 모니터링
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['${PROMETHEUS_TARGET}']
 
   # Grafana 모니터링 (메트릭 활성화됨)
   - job_name: 'grafana'
     static_configs:
-      - targets: ['grafana:3000']
+      - targets: ['${GRAFANA_TARGET}']
     metrics_path: '/grafana/metrics'
