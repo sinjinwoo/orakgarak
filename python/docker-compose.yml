@@ -13,6 +13,8 @@ services:
     volumes:
       - ./models:/app/models         # AI 모델 캐시
     restart: always
+    env_file:
+      - .env
     networks:
       - back_orakgaraki-network  # <-- network 연결
     healthcheck:
