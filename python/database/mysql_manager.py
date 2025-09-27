@@ -51,10 +51,11 @@ class MySQLManager:
     def get_user_disliked_songs(self, user_id: int) -> List[int]:
         """사용자가 싫어요한 song_id 목록 조회"""
         try:
-            if not self.connection or not self.connection.is_connected():
-                if not self.connect():
-                    logging.error(f"DB 연결 실패 - user_id: {user_id}")
-                    return []
+            # 새로운 연결로 최신 데이터 확보
+            self.disconnect()
+            if not self.connect():
+                logging.error(f"DB 연결 실패 - user_id: {user_id}")
+                return []
 
             cursor = self.connection.cursor()
             query = "SELECT song_id FROM dislikes WHERE user_id = %s"
