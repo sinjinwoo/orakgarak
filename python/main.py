@@ -272,7 +272,7 @@ async def voice_recommendation(request: VoiceRecommendationRequest):
         recommendations = pinecone_recommender.get_recommendations(
             user_features=user_features,
             top_n=request.top_n,
-            min_popularity=1000,  # 기존 voice analysis의 인기도 필터 적용
+            min_popularity=50,  # 인기도 필터를 낮춰서 더 많은 곡 포함
             use_pitch_filter=True,
             allowed_genres=user_genres,  # 저장된 사용자 어울리는 장르 사용
             disliked_song_ids=disliked_song_ids,  # 싫어요 곡 ID 목록
