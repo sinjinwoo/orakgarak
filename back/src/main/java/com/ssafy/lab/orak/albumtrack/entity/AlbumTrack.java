@@ -5,6 +5,8 @@ import com.ssafy.lab.orak.recording.entity.Record;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -27,10 +29,12 @@ public class AlbumTrack {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "album_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Album album;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "record_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Record record;
 
     @Column(name = "track_order", nullable = false)
