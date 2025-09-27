@@ -195,9 +195,57 @@ const RecommendationsPage: React.FC = () => {
       extension: recording.extension
     });
 
-    // URL 확인 및 재생 가능 여부 체크
-    const audioUrl = recording.url || recording.publicUrl || recording.audioUrl;
-    const isPlayable = !!audioUrl && (!recording.urlStatus || recording.urlStatus === 'SUCCESS');
+    // presignedUrl을 우선적으로 가져오기 위해 상세 정보 API 호출
+    let audioUrl = recording.url || recording.publicUrl || recording.audioUrl;
+    let isPlayable = !!audioUrl && (!recording.urlStatus || recording.urlStatus === 'SUCCESS');
+
+    // presignedUrl이 필요한 경우 (S3 URL인 경우)
+    if (audioUrl && audioUrl.includes('amazonaws.com') && isPlayable) {
+      try {
+        console.log('🔗 presignedUrl 요청 중...', {
+          recordingId: recording.id,
+          originalUrl: audioUrl,
+          urlStatus: recording.urlStatus
+        });
+        
+        const recordingDetail = await recordingService.getRecordingDetail(recording.id);
+        console.log('🔗 API 응답:', recordingDetail);
+        
+        if (recordingDetail?.presignedUrl) {
+          const newPresignedUrl = recordingDetail.presignedUrl;
+          console.log('✅ presignedUrl 획득:', {
+            originalUrl: recording.url,
+            presignedUrl: newPresignedUrl,
+            expires: recordingDetail.expirationTime
+          });
+          
+          // presignedUrl이 유효한지 간단히 검증
+          if (newPresignedUrl.includes('X-Amz-Signature') && newPresignedUrl.includes('X-Amz-Algorithm')) {
+            audioUrl = newPresignedUrl;
+            console.log('✅ 유효한 presignedUrl로 교체 완료');
+          } else {
+            console.warn('⚠️ presignedUrl 형식이 올바르지 않음:', newPresignedUrl);
+          }
+        } else {
+          console.warn('⚠️ presignedUrl이 응답에 없음:', recordingDetail);
+        }
+      } catch (error) {
+        console.error('❌ presignedUrl 요청 실패:', {
+          error: error,
+          recordingId: recording.id,
+          originalUrl: audioUrl
+        });
+        console.warn('⚠️ 원본 URL 사용:', audioUrl);
+        // presignedUrl 요청 실패 시 원본 URL 계속 사용
+      }
+    } else {
+      console.log('ℹ️ presignedUrl 요청 불필요:', {
+        hasAudioUrl: !!audioUrl,
+        isAmazonaws: audioUrl?.includes('amazonaws.com'),
+        isPlayable: isPlayable,
+        audioUrl: audioUrl
+      });
+    }
     
     if (!isPlayable) {
       console.warn('재생 불가능한 녹음본:', { 
@@ -219,21 +267,9 @@ const RecommendationsPage: React.FC = () => {
       return;
     }
 
-    // URL 유효성 사전 테스트
-    console.log('🔍 URL 유효성 테스트 시작:', audioUrl);
-    try {
-      const testResponse = await fetch(audioUrl, { method: 'HEAD' });
-      if (!testResponse.ok) {
-        console.error('🔍 URL 테스트 실패:', testResponse.status, testResponse.statusText);
-        alert(`오디오 파일에 접근할 수 없습니다. (${testResponse.status}: ${testResponse.statusText})\n파일이 S3에서 삭제되었거나 권한이 없을 수 있습니다.`);
-        return;
-      }
-      console.log('🔍 URL 테스트 성공:', testResponse.status);
-    } catch (fetchError) {
-      console.error('🔍 URL 테스트 중 오류:', fetchError);
-      alert('오디오 파일에 접근할 수 없습니다. 네트워크 연결을 확인해주세요.');
-      return;
-    }
+    // URL 유효성 테스트 (presignedUrl 사용 시에는 테스트 생략)
+    console.log('🔍 최종 오디오 URL:', audioUrl);
+    console.log('🔍 presignedUrl 사용 여부:', audioUrl !== recording.url);
 
     // Audio 엘리먼트 초기화
     if (!audioRef.current) {
@@ -248,8 +284,16 @@ const RecommendationsPage: React.FC = () => {
       
       audioRef.current.addEventListener('error', (e) => {
         console.error('🎵 재생 오류:', e);
+        console.error('🎵 오디오 소스 URL:', audioRef.current?.src);
+        console.error('🎵 오디오 에러 타입:', e.type);
         setCurrentPlayingId(null);
-        alert('오디오 재생 중 오류가 발생했습니다.');
+        
+        // 403 에러인 경우 더 구체적인 메시지 제공
+        if (audioRef.current?.src?.includes('amazonaws.com')) {
+          alert('🚫 S3 파일 접근 권한 문제입니다.\n\npresignedUrl이 만료되었거나 권한이 없을 수 있습니다.\n페이지를 새로고침 후 다시 시도해주세요.');
+        } else {
+          alert('오디오 재생 중 오류가 발생했습니다.\n네트워크 연결을 확인해주세요.');
+        }
       });
 
       audioRef.current.addEventListener('loadstart', () => {
