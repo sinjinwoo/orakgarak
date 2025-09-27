@@ -4,7 +4,7 @@ datasources:
     type: prometheus
     uid: prometheus
     access: proxy
-    url: http://prometheus:9090
+    url: ${PROMETHEUS_URL}
     isDefault: true
     editable: true
     jsonData:
@@ -16,7 +16,7 @@ datasources:
     type: loki
     uid: loki
     access: proxy
-    url: http://loki:3100
+    url: ${LOKI_URL}
     editable: true
     jsonData:
       maxLines: 1000
@@ -28,7 +28,7 @@ datasources:
     type: alertmanager
     uid: alertmanager
     access: proxy
-    url: http://alertmanager:9093
+    url: ${ALERTMANAGER_URL}
     editable: true
     jsonData:
       implementation: prometheus
