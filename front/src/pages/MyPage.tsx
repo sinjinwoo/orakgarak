@@ -410,6 +410,7 @@ const MyPage: React.FC = () => {
     albumCount: 0,
     recordingCount: 0,
     totalLikes: 0,
+    likedAlbumCount: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -490,9 +491,10 @@ const MyPage: React.FC = () => {
       const likedAlbumsResponse = await apiClient.get("/profiles/mypage/liked-albums", {
         params: { page: 0, size: 100 },
       });
-      const likedAlbumsData: MyPageLikedAlbumListResponse = likedAlbumsResponse.data;
-      setLikedAlbums(likedAlbumsData.albums || likedAlbumsData.content || []);
-      console.log("좋아요한 앨범 데이터 로드 성공:", (likedAlbumsData.albums || likedAlbumsData.content || []).length, "개");
+      const likedAlbumsData = likedAlbumsResponse.data;
+      // 백엔드 응답 구조에 맞게 수정: likedAlbums 필드 사용
+      setLikedAlbums(likedAlbumsData.likedAlbums || likedAlbumsData.albums || []);
+      console.log("좋아요한 앨범 데이터 로드 성공:", (likedAlbumsData.likedAlbums || likedAlbumsData.albums || []).length, "개");
     } catch (error) {
       console.error(`좋아요한 앨범 데이터 로드 실패 (시도 ${retryCount + 1}/${maxRetries + 1}):`, error);
       
@@ -537,6 +539,7 @@ const MyPage: React.FC = () => {
             albumCount: myAlbums.length,
             recordingCount: recordings.length,
             totalLikes: 0,
+            likedAlbumCount: 0,
           });
           showToast("통계 데이터를 개별 API로 로드했습니다.", "info");
         }
@@ -575,7 +578,7 @@ const MyPage: React.FC = () => {
     setUserStats({
       albums: myPageStats.albumCount,
       recordings: recordings.length, // 실제 녹음 데이터 사용
-      likes: myPageStats.totalLikes || 0,
+      likes: myPageStats.likedAlbumCount || myPageStats.totalLikes || 0,
       followers: safeFollowersCount, // 안전한 팔로워 수
       following: safeFollowingCount, // 안전한 팔로잉 수
     });
@@ -1038,21 +1041,21 @@ const MyPage: React.FC = () => {
                 onChange={handleTabChange}
                 sx={{
                   "& .MuiTab-root": {
-                    color: "#ec4899",
+                    color: "#ffffff",
                     fontWeight: "bold",
                     textTransform: "none",
                     fontSize: "1rem",
-                    textShadow: "0 0 10px #ec4899",
+                    textShadow: "0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(66, 253, 235, 0.4)",
                     animation: "neonGlow 2s ease-in-out infinite",
                     "&.Mui-selected": {
-                      color: "#06b6d4",
-                      textShadow: "0 0 15px #06b6d4",
-                      animation: "cyanGlow 2s ease-in-out infinite",
+                      color: "#ffffff",
+                      textShadow: "0 0 20px rgba(255, 255, 255, 1), 0 0 35px rgba(66, 253, 235, 0.6)",
+                      animation: "neonGlow 2s ease-in-out infinite",
                     },
                     "&:hover": {
-                      color: "#06b6d4",
-                      textShadow: "0 0 15px #06b6d4",
-                      animation: "cyanGlow 1.5s ease-in-out infinite",
+                      color: "#ffffff",
+                      textShadow: "0 0 20px rgba(255, 255, 255, 1), 0 0 35px rgba(66, 253, 235, 0.6)",
+                      animation: "neonGlow 1.5s ease-in-out infinite",
                     },
                   },
                   "& .MuiTabs-indicator": {
@@ -1100,7 +1103,7 @@ const MyPage: React.FC = () => {
                     variant="h6"
                     sx={{ fontWeight: "bold", color: "#FFFFFF" }}
                   >
-                    내 앨범 ({myAlbums.length})
+                    💿 내 앨범 ({myAlbums.length})
                   </Typography>
                   <Button
                     variant="contained"
@@ -1108,10 +1111,13 @@ const MyPage: React.FC = () => {
                     onClick={() => navigate("/albums/create")}
                     sx={{
                       textTransform: "none",
-                      background: theme.colors.primary.gradient,
+                      background: "transparent",
+                      border: "2px solid #ec4899",
+                      color: "#ffffff",
                       "&:hover": {
-                        background:
-                          "linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)",
+                        background: "rgba(236, 72, 153, 0.1)",
+                        border: "2px solid #ec4899",
+                        boxShadow: "0 0 15px rgba(236, 72, 153, 0.5)",
                       },
                     }}
                   >
@@ -1185,6 +1191,7 @@ const MyPage: React.FC = () => {
                       // 재생 기능 구현
                       console.log("Play album:", album.title);
                     }}
+                    title="My Albums"
                   />
                 )}
               </Box>
@@ -1203,7 +1210,7 @@ const MyPage: React.FC = () => {
                   variant="h6"
                   sx={{ fontWeight: "bold", color: "#FFFFFF" }}
                 >
-                  ♫ 내 녹음 ({recordings.length})
+                  🎤 내 녹음 ({recordings.length})
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Button
@@ -1442,12 +1449,12 @@ const MyPage: React.FC = () => {
               )}
             </TabPanel>
 
-            <TabPanel value={tabValue} index={3}>
+            <TabPanel value={tabValue} index={2}>
               <Typography
                 variant="h6"
                 sx={{ fontWeight: "bold", mb: 3, color: "#FFFFFF" }}
               >
-                ❤️ 좋아요한 앨범 ({likedAlbums.length})
+                💖 좋아요한 앨범 ({likedAlbums.length})
               </Typography>
               {likedAlbumsLoading ? (
                 <Box sx={{ textAlign: "center", py: 8 }}>
@@ -1514,6 +1521,7 @@ const MyPage: React.FC = () => {
                       state: { from: "/me" },
                     });
                   }}
+                  title="Like Albums"
                 />
               )}
             </TabPanel>

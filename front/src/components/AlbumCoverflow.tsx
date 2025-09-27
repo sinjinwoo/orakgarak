@@ -14,17 +14,21 @@ const neonStyles = `
   @keyframes neonGlow {
     0%, 100% { 
       text-shadow: 
+        0 0 5px #ec4899,
+        0 0 10px #ec4899,
+        0 0 15px #ec4899,
         0 0 20px #ec4899,
-        0 0 40px #ec4899,
-        0 0 60px #ec4899,
-        0 0 80px #ec4899;
+        0 0 25px #ec4899,
+        0 0 30px #ec4899;
     }
     50% { 
       text-shadow: 
-        0 0 10px #ec4899,
-        0 0 20px #ec4899,
-        0 0 30px #ec4899,
-        0 0 40px #ec4899;
+        0 0 2px #ec4899,
+        0 0 5px #ec4899,
+        0 0 8px #ec4899,
+        0 0 12px #ec4899,
+        0 0 15px #ec4899,
+        0 0 18px #ec4899;
     }
   }
 `;
@@ -43,11 +47,13 @@ interface AlbumCoverflowProps {
   albums: CoverflowAlbum[];
   onAlbumClick?: (album: CoverflowAlbum) => void;
   onPlayClick?: (album: CoverflowAlbum) => void;
+  title?: string;
 }
 
 const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
   albums,
-  onAlbumClick
+  onAlbumClick,
+  title = "My Albums"
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -98,18 +104,20 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
         textAlign: 'center'
       }}>
         <Typography variant="h3" sx={{ 
-          ...textStyles.title,
           mb: 1,
-          color: '#ec4899',
+          color: '#ffffff',
           fontWeight: 'bold',
           fontSize: '2.5rem',
-          textShadow: '0 0 20px #ec4899, 0 0 40px #ec4899, 0 0 60px #ec4899',
-          animation: 'neonGlow 2s ease-in-out infinite',
+          textShadow: '0 0 5px #ec4899, 0 0 10px #ec4899, 0 0 15px #ec4899, 0 0 20px #ec4899',
+          animation: 'neonGlow 4s ease-in-out infinite',
           letterSpacing: '0.1em',
-          textStroke: '1px #06b6d4',
-          WebkitTextStroke: '1px #06b6d4',
+          // textStyles.title의 그라데이션 효과 오버라이드
+          background: 'none',
+          backgroundClip: 'unset',
+          WebkitBackgroundClip: 'unset',
+          WebkitTextFillColor: 'unset',
         }}>
-          나만의 앨범을 꾸며보세요
+          {title}
         </Typography>
       </Box>
 
