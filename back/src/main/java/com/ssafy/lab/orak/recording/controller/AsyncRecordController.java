@@ -76,31 +76,50 @@ public class AsyncRecordController {
     /**
      * 2단계: S3 업로드 완료 웹훅 (EventBridge, SQS, 또는 클라이언트에서 호출)
      * 환경별 S3 버킷 분리로 로컬에서는 자동 웹훅 발생하지 않음
+     * JSON과 Form-data 요청 모두 지원
      */
     @PostMapping("/upload-completed")
     public ResponseEntity<Map<String, String>> handleUploadCompleted(
-            @RequestParam(value = "uploadId", required = false) Long uploadId,
-            @RequestParam(value = "s3Key", required = false) String s3Key,
-            @RequestParam(value = "source", required = false) String source,
-            @RequestHeader(value = "X-Orak-Event-Source", required = false) String eventSource,
-            HttpServletRequest request) {
+            HttpServletRequest request,
+            @RequestBody(required = false) Map<String, Object> jsonBody,
+            @RequestParam(value = "uploadId", required = false) Long uploadIdParam,
+            @RequestParam(value = "s3Key", required = false) String s3KeyParam,
+            @RequestParam(value = "source", required = false) String sourceParam,
+            @RequestHeader(value = "X-Orak-Event-Source", required = false) String eventSource) {
 
-        // 모든 요청 파라미터 로깅
+        // 요청 파라미터 디버깅 로그
         log.info("웹훅 요청 파라미터들:");
-        request.getParameterMap().forEach((key, values) ->
-            log.info("  {} = {}", key, String.join(", ", values))
-        );
-
-        // 요청 정보 로깅
         log.info("요청 메서드: {}, Content-Type: {}, Query String: {}",
-            request.getMethod(), request.getContentType(), request.getQueryString());
+                request.getMethod(), request.getContentType(), request.getQueryString());
 
-        // s3Key가 누락된 경우 처리
+        // Content-Type에 따라 데이터 추출
+        Long uploadId;
+        String s3Key;
+        String source;
+
+        String contentType = request.getContentType();
+        if (contentType != null && contentType.contains("application/json") && jsonBody != null) {
+            // JSON 요청 처리
+            log.info("JSON 웹훅 요청 처리: {}", jsonBody);
+            uploadId = jsonBody.get("uploadId") != null ?
+                    Long.valueOf(jsonBody.get("uploadId").toString()) : null;
+            s3Key = (String) jsonBody.get("s3Key");
+            source = (String) jsonBody.get("source");
+        } else {
+            // Form 데이터 또는 쿼리 파라미터 처리
+            log.info("Form/Query 파라미터 웹훅 요청 처리: uploadId={}, s3Key={}, source={}",
+                    uploadIdParam, s3KeyParam, sourceParam);
+            uploadId = uploadIdParam;
+            s3Key = s3KeyParam;
+            source = sourceParam;
+        }
+
+        // s3Key 필수 체크
         if (s3Key == null || s3Key.trim().isEmpty()) {
             log.warn("s3Key 파라미터가 누락됨. 요청 본문 확인 필요");
             return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",
-                    "message", "s3Key 파라미터가 필요합니다"
+                    "message", "s3Key 파라미터는 필수입니다"
             ));
         }
 
