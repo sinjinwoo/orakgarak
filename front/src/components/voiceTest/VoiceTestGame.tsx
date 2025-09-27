@@ -165,15 +165,15 @@ const VoiceTestGame: React.FC = () => {
         console.log('🎮 게임 로드 및 이벤트 리스너 설정 시작');
         gameRef.current.id = 'game';
         setupGameEventListeners();
-
+        
         // 스크립트는 한 번만 로드
         const exist = Array.from(document.getElementsByTagName('script')).some(s => s.src.includes('/bundle.js'));
         if (!exist) {
-            const gameScript = document.createElement('script');
-            gameScript.src = '/bundle.js';
-            gameScript.onload = () => {
-                console.log('🎮 게임 스크립트 로드 완료');
-                setIsGameLoaded(true);
+        const gameScript = document.createElement('script');
+        gameScript.src = '/bundle.js';
+        gameScript.onload = () => {
+            console.log('🎮 게임 스크립트 로드 완료');
+            setIsGameLoaded(true);
                 gameInstanceRef.current = false; // 아직 생성하지 않음
                 console.log('🎮 스크립트만 로드 완료');
             };
@@ -788,23 +788,23 @@ const VoiceTestGame: React.FC = () => {
                     </div>
 
                     {/* 게임 정보 목록 */}
-                    <div style={{
-                        flex: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '15px'
-                    }}>
-                        {/* 파일럿 정보 */}
                         <div style={{
+                        flex: 1,
+                            display: 'flex',
+                        flexDirection: 'column',
+                            gap: '15px'
+                        }}>
+                        {/* 파일럿 정보 */}
+                            <div style={{
                             background: 'rgba(236, 72, 153, 0.1)',
                             border: '1px solid rgba(236, 72, 153, 0.3)',
                             borderRadius: '10px',
                             padding: '15px',
-                            display: 'flex',
+                                display: 'flex',
                             flexDirection: 'column',
                             gap: '8px'
-                        }}>
-                            <div style={{
+                            }}>
+                                <div style={{
                                 color: '#ec4899',
                                 fontSize: '14px',
                                 fontWeight: 'bold',
@@ -818,21 +818,21 @@ const VoiceTestGame: React.FC = () => {
                         <div style={{
                             background: 'rgba(6, 182, 212, 0.1)',
                             border: '1px solid rgba(6, 182, 212, 0.3)',
-                            borderRadius: '10px',
+                                    borderRadius: '10px',
                             padding: '15px',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '8px'
-                        }}>
-                            <div style={{
+                                }}>
+                                    <div style={{
                                 color: '#06b6d4',
                                 fontSize: '14px',
                                 fontWeight: 'bold',
                                 fontFamily: 'system-ui, -apple-system, sans-serif'
                             }}>
                                 🏆 Score: {gameInfo.score.toLocaleString()}
+                                </div>
                             </div>
-                        </div>
 
                         {/* HP 정보 */}
                         <div style={{
@@ -853,14 +853,14 @@ const VoiceTestGame: React.FC = () => {
                                 ❤️ HP: {gameInfo.hp}
                             </div>
                             {/* HP 바 */}
-                            <div style={{
+                                <div style={{
                                 width: '100%',
                                 height: '8px',
                                 background: 'rgba(0, 0, 0, 0.3)',
                                 borderRadius: '4px',
                                 overflow: 'hidden'
-                            }}>
-                                <div style={{
+                                }}>
+                                    <div style={{
                                     width: `${Math.max(0, Math.min(100, gameInfo.hp))}%`,
                                     height: '100%',
                                     background: gameInfo.hp > 50 
@@ -869,8 +869,8 @@ const VoiceTestGame: React.FC = () => {
                                         ? 'linear-gradient(90deg, #f59e0b, #f97316)' 
                                         : 'linear-gradient(90deg, #ef4444, #dc2626)',
                                     transition: 'all 0.3s ease'
-                                }} />
-                            </div>
+                                    }} />
+                                </div>
                         </div>
 
                         {/* 피치 감지 정보 */}
@@ -886,8 +886,8 @@ const VoiceTestGame: React.FC = () => {
                             overflow: 'hidden'
                         }}>
                             {/* 네온 글로우 배경 */}
-                            <div style={{
-                                position: 'absolute',
+                                <div style={{
+                                    position: 'absolute',
                                 inset: 0,
                                 background: 'radial-gradient(60% 60% at 50% 50%, rgba(6,182,212,0.15), transparent)',
                                 filter: 'blur(12px)',
@@ -926,7 +926,7 @@ const VoiceTestGame: React.FC = () => {
                                         animation: `equalize ${Math.max(0.5, Math.min(1.6, 1.4 - (gameInfo.targetY / 768))) }s cubic-bezier(0.2, 0.9, 0.1, 1) ${(i * 0.06).toFixed(2)}s infinite`,
                                     }} />
                                 ))}
-                            </div>
+                        </div>
 
                             {/* 타깃 값 표시 */}
                             <div style={{
@@ -1095,15 +1095,15 @@ const VoiceTestGame: React.FC = () => {
                         borderTop: '1px solid rgba(6, 182, 212, 0.3)',
                         flexShrink: 0,
                         boxShadow: '0 -2px 10px rgba(6, 182, 212, 0.2)',
-                        position: 'relative',
+                                position: 'relative',
                         backdropFilter: 'blur(10px)'
                     }}>
                         {/* 장식용 버튼들 제거 - 기능이 없음 */}
-        </div>
-      </div>
-
+                            </div>
+                        </div>
+                        
                 {/* 우측 정보 영역 */}
-                <div style={{
+                        <div style={{
                     width: '300px',
                     height: '650px',
                     marginLeft: '20px',
@@ -1117,12 +1117,12 @@ const VoiceTestGame: React.FC = () => {
                     border: '1px solid rgba(6, 182, 212, 0.3)',
                     backdropFilter: 'blur(20px)',
                     padding: '20px',
-                    display: 'flex',
+                            display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden'
-                }}>
+                        }}>
                     {/* 제목 */}
-                    <div style={{
+                            <div style={{
                         textAlign: 'center',
                         marginBottom: '20px'
                     }}>
@@ -1131,16 +1131,16 @@ const VoiceTestGame: React.FC = () => {
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             fontSize: '18px',
-                            fontWeight: 'bold',
+                                fontWeight: 'bold',
                             fontFamily: 'system-ui, -apple-system, sans-serif',
                             margin: 0
                         }}>
                             🎵 음역대별 점수
                         </h3>
-                    </div>
+                            </div>
 
                     {/* 점수 목록 */}
-                    <div style={{
+                            <div style={{
                         flex: 1,
                         overflowY: 'auto',
                         padding: '10px'
@@ -1160,15 +1160,15 @@ const VoiceTestGame: React.FC = () => {
                                     borderRadius: '10px',
                                     padding: '12px',
                                     marginBottom: '8px',
-                                    display: 'flex',
+                                display: 'flex',
                                     justifyContent: 'space-between',
-                                    alignItems: 'center',
+                                alignItems: 'center',
                                     transition: 'all 0.3s ease'
                                 }}>
                                     <span style={{
-                                        color: '#ffffff',
+                                color: '#ffffff',
                                         fontSize: '14px',
-                                        fontWeight: 'bold',
+                                fontWeight: 'bold',
                                         fontFamily: 'system-ui, -apple-system, sans-serif'
                                     }}>
                                         {pitch}
@@ -1176,12 +1176,12 @@ const VoiceTestGame: React.FC = () => {
                                     <span style={{
                                         color: '#ec4899',
                                         fontSize: '14px',
-                                        fontWeight: 'bold',
+                                fontWeight: 'bold',
                                         fontFamily: 'system-ui, -apple-system, sans-serif'
-                                    }}>
+                            }}>
                                         {pitchScores[pitch].toLocaleString()}점
                                     </span>
-                                </div>
+                            </div>
                             ))}
                         
                         {Object.keys(pitchScores).filter(pitch => pitchScores[pitch] > 0).length === 0 && (
@@ -1197,8 +1197,8 @@ const VoiceTestGame: React.FC = () => {
                                 음역대를 측정해보세요!
                             </div>
                         )}
-                    </div>
-                </div>
+        </div>
+      </div>
 
             {/* 게임 시작 확인 모달 */}
             <GameStartModal
