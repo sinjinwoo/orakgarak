@@ -66,4 +66,27 @@ public class Comment {
         return parentComment != null ? parentComment.getId() : null;
     }
 
+    public static class CommentBuilder {
+        public CommentBuilder userId(Long userId) {
+            if (userId != null) {
+                this.user = User.builder().id(userId).build();
+            }
+            return this;
+        }
+
+        public CommentBuilder albumId(Long albumId) {
+            if (albumId != null) {
+                this.album = Album.builder().id(albumId).build();
+            }
+            return this;
+        }
+
+        public CommentBuilder parentCommentId(Long parentCommentId) {
+            if (parentCommentId != null) {
+                this.parentComment = Comment.builder().id(parentCommentId).build();
+            }
+            return this;
+        }
+    }
+
 }
