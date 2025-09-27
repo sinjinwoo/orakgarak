@@ -53,15 +53,20 @@ class MySQLManager:
         try:
             if not self.connection or not self.connection.is_connected():
                 if not self.connect():
+                    logging.error(f"DB 연결 실패 - user_id: {user_id}")
                     return []
 
             cursor = self.connection.cursor()
             query = "SELECT song_id FROM dislikes WHERE user_id = %s"
+            logging.info(f"실행할 쿼리: {query}, 사용자 ID: {user_id}")
             cursor.execute(query, (user_id,))
             result = cursor.fetchall()
+            logging.info(f"쿼리 결과: {result}")
             cursor.close()
 
-            return [row[0] for row in result]
+            song_ids = [row[0] for row in result]
+            logging.info(f"변환된 song_ids: {song_ids}")
+            return song_ids
 
         except Error as e:
             logging.error(f"사용자 dislike 조회 오류: {e}")
