@@ -176,6 +176,14 @@ services:
       PROMETHEUS_ACTUATOR_USER: ${PROMETHEUS_ACTUATOR_USER}
       PROMETHEUS_ACTUATOR_PASSWORD: ${PROMETHEUS_ACTUATOR_PASSWORD}
       SPRING_APP_TARGET: ${SPRING_APP_TARGET}
+      ALERTMANAGER_TARGET: ${ALERTMANAGER_TARGET}
+      NODE_EXPORTER_URL: ${NODE_EXPORTER_URL}
+      CADVISOR_URL: ${CADVISOR_URL}
+      MYSQL_EXPORTER_URL: ${MYSQL_EXPORTER_URL}
+      REDIS_EXPORTER_URL: ${REDIS_EXPORTER_URL}
+      KAFKA_EXPORTER_URL: ${KAFKA_EXPORTER_URL}
+      PROMETHEUS_TARGET: ${PROMETHEUS_TARGET}
+      GRAFANA_TARGET: ${GRAFANA_TARGET}
     volumes:
       - ./monitoring/prometheus:/templates:ro
       - prometheus_config:/config
@@ -213,7 +221,26 @@ services:
     networks:
       - orakgaraki-network
   # ============================================
-  # z - 시각화 및 대시보드
+  # Grafana Config Generator - 설정 파일 생성
+  # ============================================
+  grafana-config:
+    image: alpine:latest
+    container_name: orakgaraki-grafana-config
+    environment:
+      PROMETHEUS_URL: ${PROMETHEUS_URL}
+      LOKI_URL: ${LOKI_URL}
+      ALERTMANAGER_URL: ${ALERTMANAGER_URL}
+    volumes:
+      - ./monitoring/grafana/datasources:/templates:ro
+      - grafana_datasources:/config
+    command: |
+      sh -c "apk add --no-cache gettext &&
+             envsubst < /templates/prometheus.yml.template > /config/prometheus.yml &&
+             echo 'Grafana datasources configuration generated successfully'"
+    networks:
+      - orakgaraki-network
+  # ============================================
+  # Grafana - 시각화 및 대시보드
   # ============================================
   grafana:
     image: grafana/grafana:latest
@@ -253,6 +280,7 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
+      - grafana-config
       - prometheus
     networks:
       - orakgaraki-network
@@ -433,7 +461,7 @@ services:
     image: alpine:latest
     container_name: orakgaraki-promtail-config
     environment:
-      LOKI_PORT: ${LOKI_PORT}
+      LOKI_URL: ${LOKI_URL}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       PROMTAIL_READLINE_RATE: ${PROMTAIL_READLINE_RATE}
       PROMTAIL_MAX_STREAMS: ${PROMTAIL_MAX_STREAMS}
@@ -475,6 +503,7 @@ volumes:
   prometheus_data:
   prometheus_config:
   grafana_data:
+  grafana_datasources:
   alertmanager_data:
   alertmanager_config:
   promtail_config:
