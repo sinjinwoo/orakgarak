@@ -7,24 +7,22 @@ services:
     container_name: orakgaraki-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD_PROD}
-      MYSQL_DATABASE: ${DB_NAME_PROD}
-      MYSQL_USER: ${DB_USERNAME_PROD}
-      MYSQL_PASSWORD: ${DB_PASSWORD_PROD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD_LOCAL}
+      MYSQL_DATABASE: ${DB_NAME_LOCAL}
+      MYSQL_USER: ${DB_USERNAME_LOCAL}
+      MYSQL_PASSWORD: ${DB_PASSWORD_LOCAL}
       MYSQL_ROOT_HOST: "%"
     ports:
-      - "${DB_PORT_PROD:-3306}:3306"
+      - "${DB_PORT_LOCAL:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD_PROD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD_LOCAL}"]
       timeout: 20s
       retries: 10
       interval: 10s
       start_period: 40s
-    networks:
-      - orakgaraki-network
 
   # Redis
   redis:
@@ -36,78 +34,6 @@ services:
       - "6380:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - orakgaraki-network
-
-  app:
-    user: "root"
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: orakgaraki-app
-    restart: unless-stopped
-    ports:
-      - "${SERVER_PORT:-8080}:8080"
-      - "8091:8091"
-    volumes:
-      - /var/log/app:/var/log/app
-    environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - DB_HOST_PROD=${DB_HOST_PROD:-orakgaraki-mysql}
-      - DB_PORT_PROD=3306
-      - DB_NAME_PROD=${DB_NAME_PROD}
-      - DB_USERNAME_PROD=${DB_USERNAME_PROD}
-      - DB_PASSWORD_PROD=${DB_PASSWORD_PROD}
-      - REDIS_HOST=orakgaraki-redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRATION=${JWT_EXPIRATION}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
-      - OAUTH2_REDIRECT_URI=${OAUTH2_REDIRECT_URI}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION}
-      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
-      - AWS_EVENTBRIDGE_BUS_NAME=${AWS_EVENTBRIDGE_BUS_NAME}
-      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - SWAGGER_ENABLED=${SWAGGER_ENABLED}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
-      - KAFKA_CONSUMER_GROUP=${KAFKA_CONSUMER_GROUP}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
-      - ORAK_EVENTBRIDGE_WEBHOOK_TOKEN=${ORAK_EVENTBRIDGE_WEBHOOK_TOKEN}
-      - ACTUATOR_USER=${ACTUATOR_USER}
-      - ACTUATOR_PASSWORD=${ACTUATOR_PASSWORD}
-      - ACTUATOR_ROLE_NAME=${ACTUATOR_ROLE_NAME}
-      - PROFILE_IMAGE_BASE_URL=${PROFILE_IMAGE_BASE_URL}
-      - PYTHON_SERVICE_URL=${PYTHON_SERVICE_URL}
-      - ORAK_UPLOAD_PATH=${ORAK_UPLOAD_PATH}
-      - PROMETHEUS_PORT=${PROMETHEUS_PORT}
-      - PROMETHEUS_ACTUATOR_USER=${PROMETHEUS_ACTUATOR_USER}
-      - PROMETHEUS_ACTUATOR_PASSWORD=${PROMETHEUS_ACTUATOR_PASSWORD}
-      - SPRING_APP_TARGET=${SPRING_APP_TARGET}
-      - GRAFANA_PORT=${GRAFANA_PORT}
-      - GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
-      - GRAFANA_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GRAFANA_SECRET_KEY=${GRAFANA_SECRET_KEY}
-      - LOKI_PORT=${LOKI_PORT}
-      - LOKI_AUTH_ENABLED=${LOKI_AUTH_ENABLED}
-      - ALERTMANAGER_PORT=${ALERTMANAGER_PORT}
-      - MATTERMOST_WEBHOOK_URL=${MATTERMOST_WEBHOOK_URL}
-      - KAFKA_PORT=${KAFKA_PORT}
-      - KAFKA_UI_PORT=${KAFKA_UI_PORT}
-      - MYSQL_EXPORTER_USER=${MYSQL_EXPORTER_USER}
-      - MYSQL_EXPORTER_PASSWORD=${MYSQL_EXPORTER_PASSWORD}
-      - LOG_FILE_PATH=${LOG_FILE_PATH}
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - orakgaraki-network
 
   # Kafka (KRaft mode - Zookeeper 없이)
   kafka:
@@ -147,8 +73,6 @@ services:
       retries: 5
       interval: 30s
       start_period: 60s
-    networks:
-      - orakgaraki-network
   # Kafka UI
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -164,8 +88,6 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    networks:
-      - orakgaraki-network
   # ============================================
   # Prometheus Config Generator - 설정 파일 생성
   # ============================================
@@ -176,6 +98,14 @@ services:
       PROMETHEUS_ACTUATOR_USER: ${PROMETHEUS_ACTUATOR_USER}
       PROMETHEUS_ACTUATOR_PASSWORD: ${PROMETHEUS_ACTUATOR_PASSWORD}
       SPRING_APP_TARGET: ${SPRING_APP_TARGET}
+      ALERTMANAGER_TARGET: ${ALERTMANAGER_TARGET}
+      NODE_EXPORTER_URL: ${NODE_EXPORTER_URL}
+      CADVISOR_URL: ${CADVISOR_URL}
+      MYSQL_EXPORTER_URL: ${MYSQL_EXPORTER_URL}
+      REDIS_EXPORTER_URL: ${REDIS_EXPORTER_URL}
+      KAFKA_EXPORTER_URL: ${KAFKA_EXPORTER_URL}
+      PROMETHEUS_TARGET: ${PROMETHEUS_TARGET}
+      GRAFANA_TARGET: ${GRAFANA_TARGET}
     volumes:
       - ./monitoring/prometheus:/templates:ro
       - prometheus_config:/config
@@ -184,8 +114,6 @@ services:
              envsubst < /templates/prometheus.yml.template > /config/prometheus.yml &&
              cp -r /templates/rules /config/ &&
              echo 'Prometheus production configuration generated successfully'"
-    networks:
-      - orakgaraki-network
   # ============================================
   # Prometheus - 메트릭 수집 및 저장
   # ============================================
@@ -210,10 +138,25 @@ services:
       - '--web.route-prefix=/'
     depends_on:
       - prometheus-config
-    networks:
-      - orakgaraki-network
   # ============================================
-  # z - 시각화 및 대시보드
+  # Grafana Config Generator - 설정 파일 생성
+  # ============================================
+  grafana-config:
+    image: alpine:latest
+    container_name: orakgaraki-grafana-config
+    environment:
+      PROMETHEUS_URL: ${PROMETHEUS_URL}
+      LOKI_URL: ${LOKI_URL}
+      ALERTMANAGER_URL: ${ALERTMANAGER_URL}
+    volumes:
+      - ./monitoring/grafana/datasources:/templates:ro
+      - grafana_datasources:/config
+    command: |
+      sh -c "apk add --no-cache gettext &&
+             envsubst < /templates/prometheus.yml.template > /config/prometheus.yml &&
+             echo 'Grafana datasources configuration generated successfully'"
+  # ============================================
+  # Grafana - 시각화 및 대시보드
   # ============================================
   grafana:
     image: grafana/grafana:latest
@@ -251,11 +194,10 @@ services:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/dashboards/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana_datasources:/etc/grafana/provisioning/datasources:ro
     depends_on:
+      - grafana-config
       - prometheus
-    networks:
-      - orakgaraki-network
   # ============================================
   # Node Exporter - 시스템 메트릭
   # ============================================
@@ -274,8 +216,6 @@ services:
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    networks:
-      - orakgaraki-network
   # ============================================
   # cAdvisor - 컨테이너 메트릭
   # ============================================
@@ -294,8 +234,6 @@ services:
     privileged: true
     devices:
       - /dev/kmsg
-    networks:
-      - orakgaraki-network
   # ============================================
   # MySQL Exporter - MySQL 메트릭
   # ============================================
@@ -313,8 +251,6 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-    networks:
-      - orakgaraki-network
   # ============================================
   # Redis Exporter - Redis 메트릭
   # ============================================
@@ -329,8 +265,6 @@ services:
       REDIS_PASSWORD: "${REDIS_PASSWORD}"
     depends_on:
       - redis
-    networks:
-      - orakgaraki-network
   # ============================================
   # Kafka Exporter - Kafka 메트릭
   # ============================================
@@ -346,8 +280,6 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
-    networks:
-      - orakgaraki-network
   # ============================================
   # Alertmanager Config Generator - 설정 파일 생성
   # ============================================
@@ -363,8 +295,6 @@ services:
       sh -c "apk add --no-cache gettext &&
              envsubst < /templates/alertmanager.yml.template > /config/alertmanager.yml &&
              echo 'Alertmanager production configuration generated successfully'"
-    networks:
-      - orakgaraki-network
   # ============================================
   # Alertmanager - 알림 관리
   # ============================================
@@ -384,8 +314,6 @@ services:
       - --cluster.advertise-address=0.0.0.0:9093
     depends_on:
       - alertmanager-config
-    networks:
-      - orakgaraki-network
   # ============================================
   # Loki Config Generator - 설정 파일 생성 (운영)
   # ============================================
@@ -407,8 +335,6 @@ services:
       sh -c "apk add --no-cache gettext &&
              envsubst < /templates/loki.yml.template > /config/loki.yml &&
              echo 'Loki production configuration generated successfully'"
-    networks:
-      - orakgaraki-network
   # ============================================
   # Loki - 로그 집계 및 저장
   # ============================================
@@ -424,8 +350,6 @@ services:
     command: -config.file=/etc/loki/loki.yml
     depends_on:
       - loki-config
-    networks:
-      - orakgaraki-network
   # ============================================
   # Promtail Config Generator - 설정 파일 생성 (운영)
   # ============================================
@@ -433,7 +357,7 @@ services:
     image: alpine:latest
     container_name: orakgaraki-promtail-config
     environment:
-      LOKI_PORT: ${LOKI_PORT}
+      LOKI_URL: ${LOKI_URL}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       PROMTAIL_READLINE_RATE: ${PROMTAIL_READLINE_RATE}
       PROMTAIL_MAX_STREAMS: ${PROMTAIL_MAX_STREAMS}
@@ -444,8 +368,6 @@ services:
       sh -c "apk add --no-cache gettext &&
              envsubst < /templates/promtail-config.yml.template > /config/promtail-config.yml &&
              echo 'Promtail production configuration generated successfully'"
-    networks:
-      - orakgaraki-network
   # ============================================
   # Promtail - 로그 수집 에이전트
   # ============================================
@@ -463,8 +385,6 @@ services:
     depends_on:
       - promtail-config
       - loki
-    networks:
-      - orakgaraki-network
 
 volumes:
   mysql_data:
@@ -475,10 +395,7 @@ volumes:
   prometheus_data:
   prometheus_config:
   grafana_data:
+  grafana_datasources:
   alertmanager_data:
   alertmanager_config:
   promtail_config:
-
-networks:
-  orakgaraki-network:
-    driver: bridge

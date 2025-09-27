@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 
@@ -79,9 +80,29 @@ public class AsyncRecordController {
     @PostMapping("/upload-completed")
     public ResponseEntity<Map<String, String>> handleUploadCompleted(
             @RequestParam(value = "uploadId", required = false) Long uploadId,
-            @RequestParam("s3Key") @NotBlank String s3Key,
+            @RequestParam(value = "s3Key", required = false) String s3Key,
             @RequestParam(value = "source", required = false) String source,
-            @RequestHeader(value = "X-Orak-Event-Source", required = false) String eventSource) {
+            @RequestHeader(value = "X-Orak-Event-Source", required = false) String eventSource,
+            HttpServletRequest request) {
+
+        // 모든 요청 파라미터 로깅
+        log.info("웹훅 요청 파라미터들:");
+        request.getParameterMap().forEach((key, values) ->
+            log.info("  {} = {}", key, String.join(", ", values))
+        );
+
+        // 요청 정보 로깅
+        log.info("요청 메서드: {}, Content-Type: {}, Query String: {}",
+            request.getMethod(), request.getContentType(), request.getQueryString());
+
+        // s3Key가 누락된 경우 처리
+        if (s3Key == null || s3Key.trim().isEmpty()) {
+            log.warn("s3Key 파라미터가 누락됨. 요청 본문 확인 필요");
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", "s3Key 파라미터가 필요합니다"
+            ));
+        }
 
         // EventBridge 인증 검증
         if ("eventbridge".equals(source)) {
