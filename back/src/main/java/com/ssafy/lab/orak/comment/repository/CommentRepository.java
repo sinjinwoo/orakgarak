@@ -14,11 +14,11 @@ import java.util.List;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
 //    앨범의 댓글 목록 조회
-    @Query("SELECT c FROM Comment c WHERE c.albumId = :albumId AND c.parentCommentId IS NULL AND c.isDeleted = false  ORDER BY c.createdAt DESC")
-    Page<Comment> findParentCommentsByAlbumId(Long albumId, Pageable pageable);
+    @Query("SELECT c FROM Comment c WHERE c.album.id = :albumId AND c.parentComment IS NULL AND c.isDeleted = false ORDER BY c.createdAt DESC")
+    Page<Comment> findParentCommentsByAlbumId(@Param("albumId") Long albumId, Pageable pageable);
 
 //    특정 댓글의 대댓글 목록 조회
-    @Query("SELECT c FROM Comment c WHERE c.parentCommentId = :parentCommentId AND c.isDeleted = false ORDER BY c.createdAt ASC")
+    @Query("SELECT c FROM Comment c WHERE c.parentComment.id = :parentCommentId AND c.isDeleted = false ORDER BY c.createdAt ASC")
     List<Comment> findRepliesByParentCommentId(@Param("parentCommentId") Long parentCommentId);
 
 
