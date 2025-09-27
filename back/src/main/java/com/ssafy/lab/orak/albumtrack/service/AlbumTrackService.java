@@ -257,21 +257,41 @@ public class AlbumTrackService {
 
     private void updateAlbumStatistics(Long albumId) {
         Integer trackCount = albumTrackRepository.countByAlbumId(albumId);
-        
+
+        // 트랙이 0개가 되면 앨범 삭제
+        if (trackCount == 0) {
+            Album album = albumRepository.findById(albumId)
+                    .orElseThrow(() -> new AlbumNotFoundException(albumId));
+
+            // 커버 이미지가 있다면 삭제
+            if (album.getUploadId() != null) {
+                try {
+                    fileUploadService.deleteFile(album.getUploadId());
+                    log.info("앨범 커버 이미지 삭제 완료 - uploadId: {}", album.getUploadId());
+                } catch (Exception e) {
+                    log.warn("앨범 커버 이미지 삭제 실패 - uploadId: {}", album.getUploadId(), e);
+                }
+            }
+
+            albumRepository.delete(album);
+            log.info("앨범 삭제 완료 - 앨범ID: {} (트랙 수가 0이 됨)", albumId);
+            return;
+        }
+
         // 모든 트랙의 총 재생시간 계산
         List<AlbumTrack> tracks = albumTrackRepository.findByAlbumIdOrderByTrackOrder(albumId);
         Integer totalDuration = tracks.stream()
                 .mapToInt(track -> track.getRecord().getDurationSeconds() != null ?
                     track.getRecord().getDurationSeconds() : 0)
                 .sum();
-        
+
         Album album = albumRepository.findById(albumId)
                 .orElseThrow(() -> new AlbumNotFoundException(albumId));
-        
+
         album.setTrackCount(trackCount);
         album.setTotalDuration(totalDuration);
         albumRepository.save(album);
-        
+
         log.info("앨범 통계 업데이트 - 앨범ID: {}, 트랙수: {}, 총재생시간: {}초", albumId, trackCount, totalDuration);
     }
 
