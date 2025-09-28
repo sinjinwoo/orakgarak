@@ -1329,12 +1329,25 @@ const MyPage: React.FC = () => {
                 >
                   🎤 내 녹음
                 </Typography>
-                <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
+                <Box sx={{ display: "flex", gap: 1, flexShrink: 0, marginLeft: 2 }}>
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     startIcon={<Add />}
                     onClick={handleNewRecording}
-                    sx={{ textTransform: "none" }}
+                    sx={{ 
+                      textTransform: "none",
+                      borderColor: "#00bfff",
+                      borderWidth: "2px",
+                      borderStyle: "solid",
+                      color: "#FFFFFF",
+                      boxShadow: "0 0 10px rgba(0, 191, 255, 0.5), 0 0 20px rgba(0, 191, 255, 0.3), 0 0 30px rgba(0, 191, 255, 0.1)",
+                      "&:hover": {
+                        borderColor: "#00ffff",
+                        color: "#FFFFFF",
+                        backgroundColor: "rgba(0, 191, 255, 0.1)",
+                        boxShadow: "0 0 15px rgba(0, 255, 255, 0.7), 0 0 25px rgba(0, 255, 255, 0.5), 0 0 35px rgba(0, 255, 255, 0.3)"
+                      }
+                    }}
                   >
                     새 녹음하기
                   </Button>

@@ -22,22 +22,56 @@ html, body {
   max-width: 100vw; /* 뷰포트 너비 제한 */
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
+
+/* 사이버펑크 오버레이 스크롤바 - 전역 적용 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #00ffff transparent; /* Firefox: 썸만 표시 */
+}
+
+*::-webkit-scrollbar {
   width: 8px;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+*::-webkit-scrollbar-track {
+  background: transparent; /* 트랙 완전 투명 */
+  width: 0px; /* 트랙 너비 0 */
 }
 
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(45deg, #00ffff, #ff0080, #00ff00, #ff0080);
+  background-size: 200% 200%;
   border-radius: 4px;
+  border: none;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  animation: cyberScrollbar 3s ease-in-out infinite;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #ff0080, #00ffff, #ff0080, #00ff00);
+  box-shadow: 
+    0 0 15px rgba(255, 0, 128, 0.8),
+    0 0 25px rgba(0, 255, 255, 0.6);
+  transform: scale(1.05);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(45deg, #00ff00, #ff0080, #00ffff, #00ff00);
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.9);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent; /* 코너도 투명 */
+}
+
+/* 사이버펑크 스크롤바 애니메이션 */
+@keyframes cyberScrollbar {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* Focus styles for interactive elements only */
