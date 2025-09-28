@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { ApiError } from './types';
 
 // API 기본 설정
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://j13c103.p.ssafy.io/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // 토큰 만료 시간 설정 (기본값: 1시간)
 const TOKEN_EXPIRY_TIME = parseInt(import.meta.env.VITE_TOKEN_EXPIRY_HOURS || '1') * 60 * 60 * 1000;
