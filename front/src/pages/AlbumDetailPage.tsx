@@ -657,7 +657,6 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
-
   const handleDeleteAlbum = async () => {
     if (!albumId) return;
 
@@ -782,12 +781,13 @@ const AlbumDetailPage: React.FC = () => {
           <Grid
             container
             sx={{
-              gridTemplateColumns: "500px 400px 1fr",
-              gap: 5,
+              gridTemplateColumns: "1fr 350px 400px",
+              gap: 4,
               display: "grid",
+              alignItems: "start",
             }}
           >
-            {/* Left Section - Track List */}
+            {/* Left Section - Track List & Album Info */}
             <Box
               sx={{
                 width: "100%",
@@ -796,7 +796,15 @@ const AlbumDetailPage: React.FC = () => {
                 zIndex: 1,
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 3 }}>
+              {/* Tracklist Section */}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 3,
+                }}
+              >
                 <Typography
                   variant="h4"
                   sx={{
@@ -822,6 +830,7 @@ const AlbumDetailPage: React.FC = () => {
                     border: "1px solid rgba(255, 255, 255, 0.1)",
                     position: "relative",
                     zIndex: 1,
+                    mb: 4,
                   }}
                 >
                   <Typography variant="h6" sx={{ mb: 2 }}>
@@ -832,7 +841,10 @@ const AlbumDetailPage: React.FC = () => {
                   </Typography>
                 </Box>
               ) : (
-                <Stack spacing={1} sx={{ position: "relative", zIndex: 1 }}>
+                <Stack
+                  spacing={1}
+                  sx={{ position: "relative", zIndex: 1, mb: 4 }}
+                >
                   {album.tracks.map((track, index) => (
                     <motion.div
                       key={track.id}
@@ -903,6 +915,294 @@ const AlbumDetailPage: React.FC = () => {
                   ))}
                 </Stack>
               )}
+
+              {/* Album Information Section */}
+              <Box
+                sx={{
+                  bgcolor: "rgba(0, 0, 0, 0.4)",
+                  borderRadius: 3,
+                  p: 3,
+                  border: "1px solid rgba(56, 189, 248, 0.3)",
+                  backdropFilter: "blur(20px)",
+                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                {/* Album Info Header */}
+                <Box sx={{ mb: 3 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      color="rgba(255, 255, 255, 0.6)"
+                      sx={{
+                        textTransform: "uppercase",
+                        letterSpacing: 1.5,
+                        fontSize: "12px",
+                      }}
+                    >
+                      Album by {album.artist}
+                    </Typography>
+                    {!isOwner &&
+                      user &&
+                      albumUserId &&
+                      user.id.toString() !== albumUserId.toString() && (
+                        <Button
+                          size="small"
+                          variant={isFollowing ? "contained" : "outlined"}
+                          onClick={handleFollowToggle}
+                          sx={{
+                            borderColor: isFollowing ? "#fb42d4" : "#38bdf8",
+                            backgroundColor: isFollowing
+                              ? "#fb42d4"
+                              : "transparent",
+                            color: isFollowing ? "white" : "#38bdf8",
+                            textTransform: "none",
+                            fontWeight: 600,
+                            borderRadius: 2,
+                            px: 2,
+                            py: 0.5,
+                            fontSize: "13px",
+                            transition: "all 0.2s ease",
+                            "&:hover": {
+                              backgroundColor: isFollowing
+                                ? "#d946c5"
+                                : "rgba(56, 189, 248, 0.1)",
+                              transform: "translateY(-1px)",
+                            },
+                          }}
+                        >
+                          {isFollowing ? "Following" : "Follow"}
+                        </Button>
+                      )}
+                  </Box>
+
+                  {/* Album Title - Editable */}
+                  {isEditingAlbumInfo ? (
+                    <Box sx={{ mb: 2 }}>
+                      <TextField
+                        fullWidth
+                        value={editingAlbumTitle}
+                        onChange={(e) => setEditingAlbumTitle(e.target.value)}
+                        variant="outlined"
+                        placeholder="앨범 제목"
+                        inputProps={{ maxLength: 100 }}
+                        sx={{
+                          mb: 2,
+                          "& .MuiOutlinedInput-root": {
+                            bgcolor: "rgba(0, 0, 0, 0.3)",
+                            color: "white",
+                            fontSize: "24px",
+                            fontWeight: 700,
+                            "& fieldset": {
+                              borderColor: "rgba(56, 189, 248, 0.5)",
+                            },
+                            "&:hover fieldset": {
+                              borderColor: "#38bdf8",
+                            },
+                            "&.Mui-focused fieldset": {
+                              borderColor: "#38bdf8",
+                            },
+                          },
+                          "& .MuiOutlinedInput-input": {
+                            textShadow: "0 0 15px rgba(56, 189, 248, 0.4)",
+                          },
+                        }}
+                      />
+                      <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          onClick={handleUpdateAlbumInfo}
+                          disabled={
+                            !editingAlbumTitle.trim() || updatingAlbumInfo
+                          }
+                          sx={{
+                            bgcolor: "#38bdf8",
+                            "&:hover": { bgcolor: "#0ea5e9" },
+                          }}
+                        >
+                          {updatingAlbumInfo ? "저장 중..." : "저장"}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={handleCancelEditAlbumInfo}
+                          disabled={updatingAlbumInfo}
+                          sx={{
+                            color: "rgba(255, 255, 255, 0.7)",
+                            borderColor: "rgba(255, 255, 255, 0.3)",
+                            "&:hover": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                          }}
+                        >
+                          취소
+                        </Button>
+                      </Box>
+                    </Box>
+                  ) : (
+                    <Typography
+                      variant="h4"
+                      fontWeight={700}
+                      color="white"
+                      sx={{
+                        fontSize: "24px",
+                        lineHeight: 1.2,
+                        mb: 2,
+                        textShadow: "0 0 15px rgba(56, 189, 248, 0.4)",
+                      }}
+                    >
+                      {album.title}
+                    </Typography>
+                  )}
+
+                  <Typography
+                    variant="body2"
+                    color="rgba(255, 255, 255, 0.7)"
+                    sx={{ fontSize: "14px" }}
+                  >
+                    {album.year} • {album.tracks.length} tracks
+                  </Typography>
+                </Box>
+
+                {/* Album Description - Editable */}
+                {isEditingAlbumInfo ? (
+                  <Box sx={{ mb: 3 }}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      value={editingAlbumDescription}
+                      onChange={(e) =>
+                        setEditingAlbumDescription(e.target.value)
+                      }
+                      variant="outlined"
+                      placeholder="앨범 설명을 입력하세요"
+                      inputProps={{ maxLength: 500 }}
+                      helperText={`${editingAlbumDescription.length}/500`}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          bgcolor: "rgba(0, 0, 0, 0.3)",
+                          color: "white",
+                          "& fieldset": {
+                            borderColor: "rgba(139, 92, 246, 0.5)",
+                          },
+                          "&:hover fieldset": {
+                            borderColor: "#8b5cf6",
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderColor: "#8b5cf6",
+                          },
+                        },
+                        "& .MuiFormHelperText-root": {
+                          color: "rgba(255, 255, 255, 0.6)",
+                        },
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  album.description && (
+                    <Typography
+                      variant="body2"
+                      color="rgba(255, 255, 255, 0.8)"
+                      sx={{
+                        lineHeight: 1.6,
+                        fontSize: "14px",
+                        mb: 3,
+                        fontStyle: "italic",
+                      }}
+                    >
+                      "{album.description}"
+                    </Typography>
+                  )
+                )}
+
+                {/* Owner Actions */}
+                {isOwner && (
+                  <Box
+                    sx={{
+                      pt: 3,
+                      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      color="rgba(255, 255, 255, 0.7)"
+                      sx={{ mb: 2, fontWeight: 600, fontSize: "14px" }}
+                    >
+                      앨범 관리
+                    </Typography>
+                    <Stack spacing={2} direction="row">
+                      {/* Edit Album Info Button */}
+                      <Button
+                        variant="outlined"
+                        onClick={handleEditAlbumInfo}
+                        size="small"
+                        startIcon={<SettingsIcon sx={{ fontSize: 16 }} />}
+                        sx={{
+                          color: "#8b5cf6",
+                          borderColor: "#8b5cf6",
+                          textTransform: "none",
+                          fontWeight: 500,
+                          fontSize: "12px",
+                          py: 0.5,
+                          px: 1.5,
+                          borderRadius: 2,
+                          "&:hover": {
+                            bgcolor: "rgba(139, 92, 246, 0.1)",
+                            borderColor: "#7c3aed",
+                            color: "#7c3aed",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
+                          },
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        수정
+                      </Button>
+
+                      {/* Delete Album Button */}
+                      <Button
+                        variant="outlined"
+                        onClick={() => handleDeleteAlbum()}
+                        disabled={deletingAlbum}
+                        size="small"
+                        startIcon={<DeleteForeverIcon sx={{ fontSize: 16 }} />}
+                        sx={{
+                          color: "#ef4444",
+                          borderColor: "#ef4444",
+                          textTransform: "none",
+                          fontWeight: 500,
+                          fontSize: "12px",
+                          py: 0.5,
+                          px: 1.5,
+                          borderRadius: 2,
+                          "&:hover": {
+                            bgcolor: "rgba(239, 68, 68, 0.1)",
+                            borderColor: "#dc2626",
+                            color: "#dc2626",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
+                          },
+                          "&:disabled": {
+                            color: "rgba(239, 68, 68, 0.3)",
+                            borderColor: "rgba(239, 68, 68, 0.3)",
+                          },
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        {deletingAlbum ? "삭제 중..." : "삭제"}
+                      </Button>
+                    </Stack>
+                  </Box>
+                )}
+              </Box>
             </Box>
 
             {/* Center Section - LP Record */}
@@ -913,7 +1213,7 @@ const AlbumDetailPage: React.FC = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 position: "relative",
-                height: "500px",
+                height: "450px",
                 flexDirection: "column",
               }}
             >
@@ -923,14 +1223,15 @@ const AlbumDetailPage: React.FC = () => {
               {currentlyPlayingTrack !== null && (
                 <Box
                   sx={{
-                    mt: 4,
-                    p: 3,
+                    mt: 3,
+                    p: 2.5,
                     bgcolor: "rgba(0, 0, 0, 0.6)",
                     borderRadius: 3,
                     backdropFilter: "blur(20px)",
                     border: "1px solid rgba(251, 66, 212, 0.3)",
                     textAlign: "center",
-                    minWidth: 280,
+                    minWidth: 260,
+                    maxWidth: 300,
                   }}
                 >
                   <Typography
@@ -940,6 +1241,7 @@ const AlbumDetailPage: React.FC = () => {
                       mb: 1,
                       textTransform: "uppercase",
                       letterSpacing: 1,
+                      fontSize: "11px",
                     }}
                   >
                     Now Playing
@@ -950,6 +1252,8 @@ const AlbumDetailPage: React.FC = () => {
                       color: "white",
                       fontWeight: 600,
                       textShadow: "0 0 10px rgba(251, 66, 212, 0.5)",
+                      fontSize: "16px",
+                      lineHeight: 1.3,
                     }}
                   >
                     {album.tracks[currentlyPlayingTrack]?.title}
@@ -958,7 +1262,7 @@ const AlbumDetailPage: React.FC = () => {
               )}
             </Box>
 
-            {/* Right Section - Album Info */}
+            {/* Right Section - Album Cover & Social */}
             <Box sx={{ width: "100%", px: 2.5 }}>
               {/* Album Cover */}
               <Box sx={{ mb: 4, display: "flex", justifyContent: "center" }}>
@@ -978,199 +1282,7 @@ const AlbumDetailPage: React.FC = () => {
                 />
               </Box>
 
-              {/* Album Info Header */}
-              <Box sx={{ mb: 4 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    mb: 1,
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    color="rgba(255, 255, 255, 0.6)"
-                    sx={{
-                      textTransform: "uppercase",
-                      letterSpacing: 1.5,
-                      fontSize: "12px",
-                    }}
-                  >
-                    Album by {album.artist}
-                  </Typography>
-                  {!isOwner &&
-                    user &&
-                    albumUserId &&
-                    user.id.toString() !== albumUserId.toString() && (
-                      <Button
-                        size="small"
-                        variant={isFollowing ? "contained" : "outlined"}
-                        onClick={handleFollowToggle}
-                        sx={{
-                          borderColor: isFollowing ? "#fb42d4" : "#38bdf8",
-                          backgroundColor: isFollowing
-                            ? "#fb42d4"
-                            : "transparent",
-                          color: isFollowing ? "white" : "#38bdf8",
-                          textTransform: "none",
-                          fontWeight: 600,
-                          borderRadius: 2,
-                          px: 2,
-                          py: 0.5,
-                          fontSize: "13px",
-                          transition: "all 0.2s ease",
-                          "&:hover": {
-                            backgroundColor: isFollowing
-                              ? "#d946c5"
-                              : "rgba(56, 189, 248, 0.1)",
-                            transform: "translateY(-1px)",
-                          },
-                        }}
-                      >
-                        {isFollowing ? "Following" : "Follow"}
-                      </Button>
-                    )}
-                </Box>
-
-                {/* Album Title - Editable */}
-                {isEditingAlbumInfo ? (
-                  <Box sx={{ mb: 2 }}>
-                    <TextField
-                      fullWidth
-                      value={editingAlbumTitle}
-                      onChange={(e) => setEditingAlbumTitle(e.target.value)}
-                      variant="outlined"
-                      placeholder="앨범 제목"
-                      inputProps={{ maxLength: 100 }}
-                      sx={{
-                        mb: 2,
-                        '& .MuiOutlinedInput-root': {
-                          bgcolor: 'rgba(0, 0, 0, 0.3)',
-                          color: 'white',
-                          fontSize: '28px',
-                          fontWeight: 700,
-                          '& fieldset': {
-                            borderColor: 'rgba(56, 189, 248, 0.5)'
-                          },
-                          '&:hover fieldset': {
-                            borderColor: '#38bdf8'
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#38bdf8'
-                          }
-                        },
-                        '& .MuiOutlinedInput-input': {
-                          textShadow: '0 0 15px rgba(56, 189, 248, 0.4)'
-                        }
-                      }}
-                    />
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handleUpdateAlbumInfo}
-                        disabled={!editingAlbumTitle.trim() || updatingAlbumInfo}
-                        sx={{
-                          bgcolor: '#38bdf8',
-                          '&:hover': { bgcolor: '#0ea5e9' }
-                        }}
-                      >
-                        {updatingAlbumInfo ? '저장 중...' : '저장'}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={handleCancelEditAlbumInfo}
-                        disabled={updatingAlbumInfo}
-                        sx={{
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          borderColor: 'rgba(255, 255, 255, 0.3)',
-                          '&:hover': {
-                            borderColor: 'rgba(255, 255, 255, 0.5)'
-                          }
-                        }}
-                      >
-                        취소
-                      </Button>
-                    </Box>
-                  </Box>
-                ) : (
-                  <Typography
-                    variant="h4"
-                    fontWeight={700}
-                    color="white"
-                    sx={{
-                      fontSize: "28px",
-                      lineHeight: 1.2,
-                      mb: 2,
-                      textShadow: "0 0 15px rgba(56, 189, 248, 0.4)",
-                    }}
-                  >
-                    {album.title}
-                  </Typography>
-                )}
-
-                <Typography
-                  variant="body2"
-                  color="rgba(255, 255, 255, 0.7)"
-                  sx={{ fontSize: "16px" }}
-                >
-                  {album.year} • {album.tracks.length} tracks
-                </Typography>
-              </Box>
-
-              {/* Album Description - Editable */}
-              {isEditingAlbumInfo ? (
-                <Box sx={{ mb: 4 }}>
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={3}
-                    value={editingAlbumDescription}
-                    onChange={(e) => setEditingAlbumDescription(e.target.value)}
-                    variant="outlined"
-                    placeholder="앨범 설명을 입력하세요"
-                    inputProps={{ maxLength: 500 }}
-                    helperText={`${editingAlbumDescription.length}/500`}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        bgcolor: 'rgba(0, 0, 0, 0.3)',
-                        color: 'white',
-                        '& fieldset': {
-                          borderColor: 'rgba(139, 92, 246, 0.5)'
-                        },
-                        '&:hover fieldset': {
-                          borderColor: '#8b5cf6'
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: '#8b5cf6'
-                        }
-                      },
-                      '& .MuiFormHelperText-root': {
-                        color: 'rgba(255, 255, 255, 0.6)'
-                      }
-                    }}
-                  />
-                </Box>
-              ) : (
-                album.description && (
-                  <Typography
-                    variant="body2"
-                    color="rgba(255, 255, 255, 0.8)"
-                    sx={{
-                      lineHeight: 1.6,
-                      fontSize: "14px",
-                      mb: 4,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    "{album.description}"
-                  </Typography>
-                )
-              )}
-
-              {/* Interaction Section */}
+              {/* Social Interaction Section */}
               <Box
                 sx={{
                   bgcolor: "rgba(0, 0, 0, 0.4)",
@@ -1744,90 +1856,6 @@ const AlbumDetailPage: React.FC = () => {
                     </>
                   )}
                 </Box>
-
-                {/* Owner Actions */}
-                {isOwner && (
-                  <Box
-                    sx={{
-                      mt: 3,
-                      pt: 3,
-                      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle2"
-                      color="rgba(255, 255, 255, 0.7)"
-                      sx={{ mb: 2, fontWeight: 600, fontSize: "14px" }}
-                    >
-                      앨범 관리
-                    </Typography>
-                    <Stack spacing={2}>
-                      {/* Edit Album Info Button */}
-                      <Button
-                        variant="outlined"
-                        onClick={handleEditAlbumInfo}
-                        size="small"
-                        startIcon={<SettingsIcon sx={{ fontSize: 16 }} />}
-                        sx={{
-                          color: "#8b5cf6",
-                          borderColor: "#8b5cf6",
-                          textTransform: "none",
-                          fontWeight: 500,
-                          fontSize: "13px",
-                          py: 1,
-                          px: 2,
-                          borderRadius: 2,
-                          alignSelf: "flex-start",
-                          "&:hover": {
-                            bgcolor: "rgba(139, 92, 246, 0.1)",
-                            borderColor: "#7c3aed",
-                            color: "#7c3aed",
-                            transform: "translateY(-1px)",
-                            boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
-                          },
-                          transition: "all 0.2s ease",
-                        }}
-                      >
-                        앨범 정보 수정
-                      </Button>
-
-
-                      {/* Delete Album Button */}
-                      <Button
-                        variant="outlined"
-                        onClick={() => handleDeleteAlbum()}
-                        disabled={deletingAlbum}
-                        size="small"
-                        startIcon={<DeleteForeverIcon sx={{ fontSize: 16 }} />}
-                        sx={{
-                          color: "#ef4444",
-                          borderColor: "#ef4444",
-                          textTransform: "none",
-                          fontWeight: 500,
-                          fontSize: "13px",
-                          py: 1,
-                          px: 2,
-                          borderRadius: 2,
-                          alignSelf: "flex-start",
-                          "&:hover": {
-                            bgcolor: "rgba(239, 68, 68, 0.1)",
-                            borderColor: "#dc2626",
-                            color: "#dc2626",
-                            transform: "translateY(-1px)",
-                            boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
-                          },
-                          "&:disabled": {
-                            color: "rgba(239, 68, 68, 0.3)",
-                            borderColor: "rgba(239, 68, 68, 0.3)",
-                          },
-                          transition: "all 0.2s ease",
-                        }}
-                      >
-                        {deletingAlbum ? "삭제 중..." : "앨범 삭제"}
-                      </Button>
-                    </Stack>
-                  </Box>
-                )}
               </Box>
             </Box>
           </Grid>
@@ -1999,7 +2027,6 @@ const AlbumDetailPage: React.FC = () => {
           </Box>
         </Box>
       </Box>
-
     </motion.div>
   );
 };
