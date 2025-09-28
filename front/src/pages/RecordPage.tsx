@@ -374,7 +374,6 @@ const RecordPageContent: React.FC = () => {
         `,
         padding: "24px",
         paddingTop: "120px",
-        fontFamily: "'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace",
         position: "relative",
         overflow: "auto",
       }}

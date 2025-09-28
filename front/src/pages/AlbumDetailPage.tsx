@@ -985,7 +985,7 @@ const AlbumDetailPage: React.FC = () => {
                         fontSize: "12px",
                       }}
                     >
-                      Album by {album.artist}
+                      작성자: {album.artist}
                     </Typography>
                     {!isOwner &&
                       user &&
