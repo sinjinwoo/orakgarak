@@ -20,7 +20,6 @@ function AppContent() {
         width: '100%',
         maxWidth: '100vw',
         backgroundColor: '#fafafa',
-        overflow: 'hidden'
       }}
     >
       {/* 인증 상태에 따라 다른 헤더 렌더링 */}
@@ -34,7 +33,6 @@ function AppContent() {
           flexDirection: 'column',
           width: '100%',
           maxWidth: '100vw',
-          overflow: 'auto' // hidden에서 auto로 변경하여 스크롤 허용
         }}
       >
         <AppRouter />

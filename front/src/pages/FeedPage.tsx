@@ -24,13 +24,10 @@ import {
   CardMedia,
   Avatar,
   Button,
-  Tabs,
-  Tab,
-  Select,
-  MenuItem,
-  FormControl,
+  SelectChangeEvent,
 } from "@mui/material";
-import { FilterList, MusicNote, Person } from "@mui/icons-material";
+import { MusicNote, Person } from "@mui/icons-material";
+import FeedTabs from "../components/feed/FeedTabs";
 
 // 앨범 만들기 페이지와 동일한 스타일 정의
 const cyberpunkStyles = `
@@ -273,12 +270,9 @@ const FeedPage: React.FC = () => {
     return sorted;
   }, [feedAlbums, sortBy]);
 
-  const handleSortChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setSortBy(event.target.value as string);
-    },
-    []
-  );
+  const handleSortChange = useCallback((event: SelectChangeEvent<string>) => {
+    setSortBy(event.target.value as string);
+  }, []);
 
   const handleAlbumClick = (feed: FeedAlbum) => {
     navigate(`/albums/${feed.id}`, { state: { from: "/feed" } });
@@ -296,11 +290,18 @@ const FeedPage: React.FC = () => {
           linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
         `,
         color: "#fff",
-        paddingTop: "100px",
-        overflowX: "hidden",
       }}
     >
       <style dangerouslySetInnerHTML={{ __html: cyberpunkStyles }} />
+
+      <FeedTabs
+        tabValue={tabValue}
+        onTabChange={handleTabChange}
+        sortBy={sortBy}
+        onSortChange={handleSortChange}
+        albumCount={feedAlbums.length}
+        isInitialized={isInitialized}
+      />
 
       <div
         style={{
@@ -332,87 +333,6 @@ const FeedPage: React.FC = () => {
                   backdropFilter: "blur(15px)",
                 }}
               >
-                <Box sx={{ mb: 4 }}>
-                  <Tabs
-                    value={tabValue}
-                    onChange={handleTabChange}
-                    centered
-                    sx={{
-                      mb: 4,
-                      borderBottom: 1,
-                      borderColor: "rgba(0, 255, 255, 0.2)",
-                      "& .MuiTabs-indicator": {
-                        background: "linear-gradient(45deg, #00ffff, #ff0080)",
-                        height: 3,
-                        borderRadius: "3px 3px 0 0",
-                        boxShadow: "0 0 10px rgba(0, 255, 255, 0.5)",
-                      },
-                    }}
-                  >
-                    <Tab
-                      label="전체 피드"
-                      sx={{
-                        color: "#B3B3B3",
-                        "&.Mui-selected": { color: "#FFFFFF" },
-                      }}
-                    />
-                    <Tab
-                      label="팔로잉"
-                      sx={{
-                        color: "#B3B3B3",
-                        "&.Mui-selected": { color: "#FFFFFF" },
-                      }}
-                    />
-                  </Tabs>
-
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 3,
-                      flexWrap: "wrap",
-                      gap: 2,
-                    }}
-                  >
-                    <Typography
-                      variant="body1"
-                      sx={{ color: "#00ffff", fontWeight: 500 }}
-                    >
-                      {feedAlbums.length}개 앨범
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      <FilterList sx={{ color: "#00ffff" }} />
-                      <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <Select
-                          value={sortBy}
-                          onChange={handleSortChange}
-                          displayEmpty
-                          sx={{
-                            borderRadius: 2,
-                            backgroundColor: "rgba(0, 255, 255, 0.05)",
-                            color: "#FFFFFF",
-                            "& .MuiOutlinedInput-notchedOutline": {
-                              borderColor: "rgba(0, 255, 255, 0.3)",
-                            },
-                            "&:hover .MuiOutlinedInput-notchedOutline": {
-                              borderColor: "rgba(0, 255, 255, 0.5)",
-                            },
-                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                              borderColor: "rgba(0, 255, 255, 0.7)",
-                            },
-                            "& .MuiSvgIcon-root": { color: "#00ffff" },
-                          }}
-                        >
-                          <MenuItem value="latest">최신순</MenuItem>
-                          <MenuItem value="name">이름순</MenuItem>
-                          <MenuItem value="likeCount">좋아요순</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Box>
-                  </Box>
-                </Box>
-
                 {error && (
                   <Box
                     sx={{
@@ -489,11 +409,14 @@ const FeedPage: React.FC = () => {
                   !error && (
                     <Box
                       sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                        maxWidth: "800px",
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 3,
+                        maxWidth: "1200px",
                         margin: "0 auto",
+                        "@media (max-width: 900px)": {
+                          gridTemplateColumns: "1fr",
+                        },
                       }}
                     >
                       {filteredFeedAlbums.map(
@@ -504,7 +427,10 @@ const FeedPage: React.FC = () => {
                             }
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: index * 0.1 }}
+                            transition={{
+                              duration: 0.5,
+                              delay: (index % 2) * 0.1,
+                            }}
                           >
                             <Box
                               sx={{
@@ -516,14 +442,16 @@ const FeedPage: React.FC = () => {
                                 backdropFilter: "blur(10px)",
                                 border: "1px solid rgba(255, 255, 255, 0.1)",
                                 transition: "all 0.3s ease",
-                                display: "grid",
-                                gridTemplateColumns: "500px 1fr",
+                                display: "flex",
+                                flexDirection: "column",
                                 width: "100%",
-                                minHeight: "500px",
+                                minHeight: "400px",
                                 "&:hover": {
                                   transform: "translateY(-2px)",
-                                  backgroundColor: "rgba(255, 255, 255, 0.08)",
-                                  boxShadow: "0 8px 25px rgba(0, 0, 0, 0.3)",
+                                  backgroundColor:
+                                    "rgba(255, 255, 255, 0.08)",
+                                  boxShadow:
+                                    "0 8px 25px rgba(0, 0, 0, 0.3)",
                                 },
                               }}
                               onClick={() => handleAlbumClick(album)}
@@ -532,25 +460,26 @@ const FeedPage: React.FC = () => {
                                 sx={{
                                   position: "relative",
                                   width: "100%",
-                                  height: "100%",
+                                  height: "300px", // Adjusted height
                                   overflow: "hidden",
-                                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                  backgroundColor: "rgba(0, 0, 0, 0.2)",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
+                                  p: 2,
                                 }}
                               >
                                 {album.coverImageUrl ? (
                                   <CardMedia
                                     component="img"
                                     sx={{
-                                      width: "450px",
-                                      height: "450px",
-                                      objectFit: "cover",
-                                      borderRadius: 2,
+                                      width: "100%",
+                                      height: "100%",
+                                      objectFit: "contain", // Changed to contain
+                                      borderRadius: 1,
                                       transition: "all 0.3s ease",
                                       boxShadow:
-                                        "0 8px 30px rgba(0, 0, 0, 0.4)",
+                                        "0 4px 20px rgba(0, 0, 0, 0.4)",
                                     }}
                                     image={album.coverImageUrl}
                                     alt={album.title}
@@ -563,21 +492,21 @@ const FeedPage: React.FC = () => {
                                 ) : (
                                   <Box
                                     sx={{
-                                      width: "450px",
-                                      height: "450px",
+                                      width: "100%",
+                                      height: "100%",
                                       background:
                                         "linear-gradient(135deg, #00ffff, #ff0080)",
-                                      borderRadius: 2,
+                                      borderRadius: 1,
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
                                       boxShadow:
-                                        "0 8px 30px rgba(0, 0, 0, 0.4)",
+                                        "0 4px 20px rgba(0, 0, 0, 0.4)",
                                     }}
                                   >
                                     <MusicNote
                                       sx={{
-                                        fontSize: "8rem",
+                                        fontSize: "4rem",
                                         color: "rgba(255, 255, 255, 0.9)",
                                       }}
                                     />
@@ -587,22 +516,22 @@ const FeedPage: React.FC = () => {
 
                               <Box
                                 sx={{
-                                  p: 4,
+                                  p: 2,
                                   display: "flex",
                                   flexDirection: "column",
                                   justifyContent: "space-between",
-                                  height: "100%",
+                                  flex: 1,
                                 }}
                               >
                                 <Box>
                                   <Typography
-                                    variant="h3"
+                                    variant="h5"
                                     sx={{
-                                      fontWeight: 800,
+                                      fontWeight: 700,
                                       color: "#FFFFFF",
-                                      fontSize: "2.5rem",
-                                      mb: 3,
-                                      lineHeight: 1.1,
+                                      fontSize: "1.3rem",
+                                      mb: 1.5,
+                                      lineHeight: 1.2,
                                     }}
                                   >
                                     {album.title || "제목 없음"}
@@ -612,27 +541,27 @@ const FeedPage: React.FC = () => {
                                     sx={{
                                       display: "flex",
                                       alignItems: "center",
-                                      mb: 4,
+                                      mb: 1.5,
                                     }}
                                   >
                                     <Avatar
                                       src={album.user?.avatar}
                                       sx={{
-                                        width: 50,
-                                        height: 50,
-                                        mr: 3,
+                                        width: 32,
+                                        height: 32,
+                                        mr: 1.5,
                                         border:
-                                          "3px solid rgba(255, 255, 255, 0.3)",
+                                          "2px solid rgba(255, 255, 255, 0.3)",
                                       }}
                                     >
-                                      <Person sx={{ fontSize: 28 }} />
+                                      <Person sx={{ fontSize: 18 }} />
                                     </Avatar>
                                     <Typography
-                                      variant="h4"
+                                      variant="body1"
                                       sx={{
-                                        fontSize: "1.8rem",
+                                        fontSize: "0.9rem",
                                         color: "rgba(255, 255, 255, 0.9)",
-                                        fontWeight: 700,
+                                        fontWeight: 600,
                                       }}
                                     >
                                       {album.user?.nickname ||
@@ -641,13 +570,18 @@ const FeedPage: React.FC = () => {
                                   </Box>
 
                                   <Typography
-                                    variant="h6"
+                                    variant="body2"
                                     sx={{
                                       color: "rgba(255, 255, 255, 0.8)",
-                                      lineHeight: 1.6,
-                                      fontSize: "1.3rem",
-                                      mb: 4,
+                                      lineHeight: 1.5,
+                                      fontSize: "0.85rem",
+                                      mb: 2,
                                       fontWeight: 400,
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      display: "-webkit-box",
+                                      WebkitLineClamp: 2,
+                                      WebkitBoxOrient: "vertical",
                                     }}
                                   >
                                     {album.description ||
@@ -660,49 +594,51 @@ const FeedPage: React.FC = () => {
                                     sx={{
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: 4,
-                                      mb: 3,
+                                      justifyContent: "space-between",
                                       flexWrap: "wrap",
+                                      gap: 1,
                                     }}
                                   >
-                                    <Typography
-                                      variant="h5"
-                                      sx={{
-                                        fontSize: "1.5rem",
-                                        color: "rgba(255, 255, 255, 0.9)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 1,
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      ♫ {album.trackCount || 0}곡
-                                    </Typography>
-                                    {album.totalDuration > 0 && (
+                                    <Box sx={{ display: "flex", gap: 2 }}>
                                       <Typography
-                                        variant="h5"
+                                        variant="body2"
                                         sx={{
-                                          fontSize: "1.5rem",
+                                          fontSize: "0.8rem",
                                           color: "rgba(255, 255, 255, 0.9)",
                                           display: "flex",
                                           alignItems: "center",
-                                          gap: 1,
-                                          fontWeight: 700,
+                                          gap: 0.5,
+                                          fontWeight: 600,
                                         }}
                                       >
-                                        ⏱{" "}
-                                        {Math.floor(
-                                          (album.totalDuration || 0) / 60
-                                        )}
-                                        분
+                                        ♫ {album.trackCount || 0}곡
                                       </Typography>
-                                    )}
+                                      {album.totalDuration > 0 && (
+                                        <Typography
+                                          variant="body2"
+                                          sx={{
+                                            fontSize: "0.8rem",
+                                            color: "rgba(255, 255, 255, 0.9)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 0.5,
+                                            fontWeight: 600,
+                                          }}
+                                        >
+                                          ⏱{" "}
+                                          {Math.floor(
+                                            (album.totalDuration || 0) / 60
+                                          )}
+                                          분
+                                        </Typography>
+                                      )}
+                                    </Box>
                                     <Typography
-                                      variant="h6"
+                                      variant="caption"
                                       sx={{
-                                        fontSize: "1.2rem",
+                                        fontSize: "0.75rem",
                                         color: "rgba(255, 255, 255, 0.6)",
-                                        fontWeight: 500,
+                                        fontWeight: 400,
                                       }}
                                     >
                                       {album.createdAt
@@ -712,7 +648,6 @@ const FeedPage: React.FC = () => {
                                         : "날짜 없음"}
                                     </Typography>
                                   </Box>
-
                                 </Box>
                               </Box>
                             </Box>
