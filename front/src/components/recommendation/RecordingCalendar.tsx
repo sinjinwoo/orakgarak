@@ -38,7 +38,20 @@ const RecordingCalendar: React.FC<RecordingCalendarProps> = ({
     
     recordings.forEach((recording) => {
       const date = new Date(recording.createdAt);
-      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+      // 로컬 시간 기준으로 날짜 키 생성 (UTC 변환 방지)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
+      
+      // 디버깅 로그 (필요시 활성화)
+      // console.log('🗓️ 녹음본 날짜 처리:', {
+      //   recordingId: recording.id,
+      //   originalCreatedAt: recording.createdAt,
+      //   parsedDate: date,
+      //   localDateKey: dateKey,
+      //   utcDateKey: date.toISOString().split('T')[0]
+      // });
       
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -53,6 +66,8 @@ const RecordingCalendar: React.FC<RecordingCalendarProps> = ({
       );
     });
 
+    // 디버깅 로그 (필요시 활성화)
+    // console.log('🗓️ 날짜별 그룹화 결과:', groups);
     return groups;
   }, [recordings]);
 
@@ -76,7 +91,12 @@ const RecordingCalendar: React.FC<RecordingCalendarProps> = ({
     // 현재 달의 날짜들
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
-      const dateKey = date.toISOString().split('T')[0];
+      // 로컬 시간 기준으로 날짜 키 생성
+      const yearStr = date.getFullYear();
+      const monthStr = String(date.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(date.getDate()).padStart(2, '0');
+      const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
+      
       days.push({
         date: day,
         fullDate: date,
