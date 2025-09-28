@@ -34,7 +34,7 @@ const FeedTabs: React.FC<FeedTabsProps> = ({
     <Box
       sx={{
         position: "sticky",
-        top: 0, // Assuming header height is 64px
+        top: "80px", // Header height (60px) + margin (10px) + extra margin (10px)
         zIndex: 1000,
         backgroundColor: "rgba(26, 26, 46, 0.95)",
         backdropFilter: "blur(20px)",

@@ -308,6 +308,21 @@ const AIDemoPage: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // 시크바 클릭 핸들러
+  const handleSeek = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || duration === 0) return;
+
+    const progressBar = event.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    const clickX = event.clientX - rect.left;
+    const progressWidth = rect.width;
+    const clickProgress = clickX / progressWidth;
+    const newTime = clickProgress * duration;
+
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  }, [duration]);
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -695,22 +710,56 @@ const AIDemoPage: React.FC = () => {
                             {formatTime(currentTime)} / {formatTime(duration)}
                           </Typography>
                           
-                          {/* 진행바 */}
+                          {/* 진행바 (클릭 가능) */}
                           <Box
+                            onClick={handleSeek}
                             sx={{
-                              height: 6,
-                              borderRadius: 3,
+                              height: 8,
+                              borderRadius: 4,
                               bgcolor: 'rgba(255,255,255,0.1)',
-                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              position: 'relative',
+                              '&:hover': {
+                                height: 10,
+                                bgcolor: 'rgba(255,255,255,0.15)',
+                              },
+                              transition: 'all 0.2s ease',
                             }}
                           >
+                            {/* 진행된 부분 */}
                             <Box
                               sx={{
                                 height: '100%',
                                 width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
                                 background: 'linear-gradient(90deg, #00ffff, #ff0080)',
-                                boxShadow: '0 0 10px rgba(0,255,255,0.6)',
+                                boxShadow: '0 0 3px rgba(0,255,255,0.3)',
                                 transition: 'width 0.1s ease',
+                                borderRadius: 4,
+                                position: 'relative',
+                              }}
+                            />
+
+                            {/* 현재 재생 위치 표시 핸들 */}
+                            <Box
+                              sx={{
+                                position: 'absolute !important',
+                                left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: '8px !important',
+                                height: '8px !important',
+                                maxWidth: '8px !important',
+                                minWidth: '8px !important',
+                                borderRadius: '50%',
+                                background: '#fff',
+                                border: '1px solid #00ffff',
+                                boxShadow: '0 0 3px rgba(0,255,255,0.4)',
+                                zIndex: 10,
+                                transition: 'left 0.1s ease, transform 0.2s ease',
+                                '&:hover': {
+                                  transform: 'translate(-50%, -50%) scale(1.1)',
+                                  boxShadow: '0 0 4px rgba(0,255,255,0.6)',
+                                },
                               }}
                             />
                           </Box>
