@@ -101,6 +101,7 @@ export interface MyPageStats {
   followerCount: number;
   followingCount: number;
   totalLikes: number;
+  likedAlbumCount: number; // 백엔드 필드명 추가
 }
 
 export interface MyPageAlbumListResponse extends AlbumListResponse {}

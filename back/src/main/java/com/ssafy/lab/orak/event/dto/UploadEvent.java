@@ -1,5 +1,6 @@
 package com.ssafy.lab.orak.event.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.ssafy.lab.orak.upload.enums.ProcessingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -149,6 +150,7 @@ public class UploadEvent {
         return this.retryCount != null && this.retryCount >= maxRetries;
     }
 
+    @JsonIgnore
     public boolean isEligibleForRetry() {
         return this.retryCount == null || this.retryCount < 3;
     }

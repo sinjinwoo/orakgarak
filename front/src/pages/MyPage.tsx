@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Container,
   Typography,
@@ -121,6 +121,7 @@ import type {
   MyPageAlbumListResponse,
   MyPageLikedAlbumListResponse,
 } from "../types/album";
+import type { Recording } from "../types/recording";
 
 // 사이버펑크 스타일 정의
 const cyberpunkStyles = `
@@ -408,6 +409,7 @@ const MyPage: React.FC = () => {
     albumCount: 0,
     recordingCount: 0,
     totalLikes: 0,
+    likedAlbumCount: 0,
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -428,9 +430,13 @@ const MyPage: React.FC = () => {
   }, [currentProfile.nickname, currentProfile.introduction]);
 
   // 실제 녹음 데이터 상태 관리
-  const [recordings, setRecordings] = useState<any[]>([]);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [recordingsLoading, setRecordingsLoading] = useState(true);
   const [recordingsError, setRecordingsError] = useState<string | null>(null);
+
+  // 오디오 재생 상태 관리
+  const [currentPlayingId, setCurrentPlayingId] = useState<number | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // 실제 사용자 통계 데이터 (나중에 API에서 가져올 예정)
   const [userStats, setUserStats] = useState({
@@ -487,9 +493,10 @@ const MyPage: React.FC = () => {
       const likedAlbumsResponse = await apiClient.get("/profiles/mypage/liked-albums", {
         params: { page: 0, size: 100 },
       });
-      const likedAlbumsData: MyPageLikedAlbumListResponse = likedAlbumsResponse.data;
-      setLikedAlbums(likedAlbumsData.albums || likedAlbumsData.content || []);
-      console.log("좋아요한 앨범 데이터 로드 성공:", (likedAlbumsData.albums || likedAlbumsData.content || []).length, "개");
+      const likedAlbumsData = likedAlbumsResponse.data;
+      // 백엔드 응답 구조에 맞게 수정: likedAlbums 필드 사용
+      setLikedAlbums(likedAlbumsData.likedAlbums || likedAlbumsData.albums || []);
+      console.log("좋아요한 앨범 데이터 로드 성공:", (likedAlbumsData.likedAlbums || likedAlbumsData.albums || []).length, "개");
     } catch (error) {
       console.error(`좋아요한 앨범 데이터 로드 실패 (시도 ${retryCount + 1}/${maxRetries + 1}):`, error);
       
@@ -534,6 +541,7 @@ const MyPage: React.FC = () => {
             albumCount: myAlbums.length,
             recordingCount: recordings.length,
             totalLikes: 0,
+            likedAlbumCount: 0,
           });
         }
 
@@ -571,11 +579,21 @@ const MyPage: React.FC = () => {
     setUserStats({
       albums: myPageStats.albumCount,
       recordings: recordings.length, // 실제 녹음 데이터 사용
-      likes: myPageStats.totalLikes || 0,
+      likes: myPageStats.likedAlbumCount || myPageStats.totalLikes || 0,
       followers: safeFollowersCount, // 안전한 팔로워 수
       following: safeFollowingCount, // 안전한 팔로잉 수
     });
   }, [myPageStats, recordings, safeFollowersCount, safeFollowingCount]);
+
+  // 컴포넌트 언마운트 시 오디오 정리
+  useEffect(() => {
+    return () => {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+    };
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -583,6 +601,111 @@ const MyPage: React.FC = () => {
 
   const handleNewRecording = () => {
     navigate("/record");
+  };
+
+  // 녹음본 재생 함수
+  const handlePlayRecording = async (recording: Recording) => {
+    console.log('🎵 마이페이지 녹음본 재생 시도:', {
+      id: recording.id,
+      title: recording.title,
+      url: recording.url,
+      urlStatus: recording.urlStatus
+    });
+
+    // 이미 재생 중인 경우 일시정지
+    if (currentPlayingId === recording.id && currentAudioRef.current && !currentAudioRef.current.paused) {
+      currentAudioRef.current.pause();
+      setCurrentPlayingId(null);
+      return;
+    }
+
+    // 다른 녹음본이 재생 중인 경우 정지
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+
+    // URL 확인 및 재생 가능 여부 체크
+    let audioUrl = recording.url || recording.publicUrl || recording.audioUrl;
+    const isPlayable = !!audioUrl && (!recording.urlStatus || recording.urlStatus === 'SUCCESS');
+    
+    if (!isPlayable) {
+      let errorMessage = '이 녹음본은 아직 재생할 수 없습니다.';
+      if (!audioUrl) {
+        errorMessage = '오디오 파일 URL이 없습니다. 녹음본이 아직 처리 중이거나 업로드에 실패했을 수 있습니다.';
+      } else if (recording.urlStatus === 'FAILED') {
+        errorMessage = '오디오 파일 처리에 실패했습니다.';
+      } else if (recording.urlStatus === 'PROCESSING') {
+        errorMessage = '오디오 파일이 아직 처리 중입니다. 잠시 후 다시 시도해주세요.';
+      }
+      
+      showToast(errorMessage, 'error');
+      return;
+    }
+
+    // presignedUrl이 필요한 경우 (S3 URL인 경우)
+    if (audioUrl && audioUrl.includes('amazonaws.com') && isPlayable) {
+      try {
+        console.log('🔗 presignedUrl 요청 중...', recording.id);
+        const recordingDetail = await recordingService.getRecordingDetail(recording.id);
+        if (recordingDetail?.presignedUrl) {
+          audioUrl = recordingDetail.presignedUrl;
+          console.log('✅ presignedUrl 획득:', audioUrl);
+        }
+      } catch (error) {
+        console.warn('⚠️ presignedUrl 요청 실패, 원본 URL 사용:', error);
+        // presignedUrl 요청 실패 시 원본 URL 계속 사용
+      }
+    }
+
+    // 오디오 재생
+    try {
+      const audio = new Audio(audioUrl);
+      
+      // CORS 설정
+      if (audioUrl.includes('amazonaws.com') || audioUrl.includes('s3.')) {
+        audio.crossOrigin = 'anonymous';
+      }
+
+      audio.preload = 'metadata';
+      audio.volume = 1.0;
+
+      // 이벤트 리스너 설정
+      audio.addEventListener('loadedmetadata', () => {
+        console.log('🎵 오디오 메타데이터 로드 완료');
+      });
+
+      audio.addEventListener('canplay', () => {
+        console.log('🎵 오디오 재생 준비됨');
+      });
+
+      audio.addEventListener('play', () => {
+        console.log('🎵 오디오 재생 시작');
+        setCurrentPlayingId(recording.id);
+      });
+
+      audio.addEventListener('ended', () => {
+        console.log('🎵 오디오 재생 완료');
+        setCurrentPlayingId(null);
+        currentAudioRef.current = null;
+      });
+
+      audio.addEventListener('error', (e) => {
+        console.error('🎵 오디오 재생 오류:', e);
+        showToast('오디오 재생 중 오류가 발생했습니다.', 'error');
+        setCurrentPlayingId(null);
+        currentAudioRef.current = null;
+      });
+
+      currentAudioRef.current = audio;
+      await audio.play();
+
+    } catch (error) {
+      console.error('🎵 오디오 재생 실패:', error);
+      showToast('오디오 재생에 실패했습니다.', 'error');
+      setCurrentPlayingId(null);
+      currentAudioRef.current = null;
+    }
   };
 
   const handleProfileEdit = () => {
@@ -1019,21 +1142,21 @@ const MyPage: React.FC = () => {
                 onChange={handleTabChange}
                 sx={{
                   "& .MuiTab-root": {
-                    color: "#ec4899",
+                    color: "#ffffff",
                     fontWeight: "bold",
                     textTransform: "none",
                     fontSize: "1rem",
-                    textShadow: "0 0 10px #ec4899",
+                    textShadow: "0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(66, 253, 235, 0.4)",
                     animation: "neonGlow 2s ease-in-out infinite",
                     "&.Mui-selected": {
-                      color: "#06b6d4",
-                      textShadow: "0 0 15px #06b6d4",
-                      animation: "cyanGlow 2s ease-in-out infinite",
+                      color: "#ffffff",
+                      textShadow: "0 0 20px rgba(255, 255, 255, 1), 0 0 35px rgba(66, 253, 235, 0.6)",
+                      animation: "neonGlow 2s ease-in-out infinite",
                     },
                     "&:hover": {
-                      color: "#06b6d4",
-                      textShadow: "0 0 15px #06b6d4",
-                      animation: "cyanGlow 1.5s ease-in-out infinite",
+                      color: "#ffffff",
+                      textShadow: "0 0 20px rgba(255, 255, 255, 1), 0 0 35px rgba(66, 253, 235, 0.6)",
+                      animation: "neonGlow 1.5s ease-in-out infinite",
                     },
                   },
                   "& .MuiTabs-indicator": {
@@ -1081,7 +1204,7 @@ const MyPage: React.FC = () => {
                     variant="h6"
                     sx={{ fontWeight: "bold", color: "#FFFFFF" }}
                   >
-                    내 앨범 ({myAlbums.length})
+                    💿 내 앨범 ({myAlbums.length})
                   </Typography>
                   <Button
                     variant="contained"
@@ -1089,10 +1212,13 @@ const MyPage: React.FC = () => {
                     onClick={() => navigate("/albums/create")}
                     sx={{
                       textTransform: "none",
-                      background: theme.colors.primary.gradient,
+                      background: "transparent",
+                      border: "2px solid #ec4899",
+                      color: "#ffffff",
                       "&:hover": {
-                        background:
-                          "linear-gradient(135deg, #FF7BA7 0%, #C951EA 100%)",
+                        background: "rgba(236, 72, 153, 0.1)",
+                        border: "2px solid #ec4899",
+                        boxShadow: "0 0 15px rgba(236, 72, 153, 0.5)",
                       },
                     }}
                   >
@@ -1166,6 +1292,7 @@ const MyPage: React.FC = () => {
                       // 재생 기능 구현
                       console.log("Play album:", album.title);
                     }}
+                    title="My Albums"
                   />
                 )}
               </Box>
@@ -1184,7 +1311,7 @@ const MyPage: React.FC = () => {
                   variant="h6"
                   sx={{ fontWeight: "bold", color: "#FFFFFF" }}
                 >
-                  ♫ 내 녹음 ({recordings.length})
+                  🎤 내 녹음 ({recordings.length})
                 </Typography>
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Button
@@ -1348,17 +1475,40 @@ const MyPage: React.FC = () => {
                               <IconButton
                                 size="small"
                                 sx={{
-                                  color: "#FFFFFF",
+                                  color: currentPlayingId === recording.id ? "#06b6d4" : "#FFFFFF",
+                                  backgroundColor: currentPlayingId === recording.id ? "rgba(6, 182, 212, 0.1)" : "transparent",
+                                  border: currentPlayingId === recording.id ? "1px solid rgba(6, 182, 212, 0.3)" : "1px solid transparent",
+                                  borderRadius: "50%",
+                                  width: 32,
+                                  height: 32,
+                                  transition: "all 0.3s ease",
                                   "&:hover": {
-                                    backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                    backgroundColor: currentPlayingId === recording.id ? "rgba(6, 182, 212, 0.2)" : "rgba(255, 255, 255, 0.1)",
+                                    transform: "scale(1.1)",
+                                    boxShadow: currentPlayingId === recording.id 
+                                      ? "0 0 15px rgba(6, 182, 212, 0.5)" 
+                                      : "0 0 10px rgba(255, 255, 255, 0.2)"
                                   },
+                                  "&:active": {
+                                    transform: "scale(0.95)"
+                                  }
                                 }}
-                                onClick={() => {
-                                  // TODO: 녹음 재생 기능 구현
-                                  console.log("재생:", recording.title);
+                                onClick={async () => {
+                                  await handlePlayRecording(recording);
                                 }}
                               >
-                                <PlayArrow />
+                                {currentPlayingId === recording.id ? (
+                                  <Box
+                                    sx={{
+                                      width: 8,
+                                      height: 8,
+                                      backgroundColor: '#ffffff',
+                                      borderRadius: '1px'
+                                    }}
+                                  />
+                                ) : (
+                                  <PlayArrow sx={{ fontSize: 16 }} />
+                                )}
                               </IconButton>
                               <Box>
                                 <Typography
@@ -1423,12 +1573,12 @@ const MyPage: React.FC = () => {
               )}
             </TabPanel>
 
-            <TabPanel value={tabValue} index={3}>
+            <TabPanel value={tabValue} index={2}>
               <Typography
                 variant="h6"
                 sx={{ fontWeight: "bold", mb: 3, color: "#FFFFFF" }}
               >
-                ❤️ 좋아요한 앨범 ({likedAlbums.length})
+                💖 좋아요한 앨범 ({likedAlbums.length})
               </Typography>
               {likedAlbumsLoading ? (
                 <Box sx={{ textAlign: "center", py: 8 }}>
@@ -1495,6 +1645,7 @@ const MyPage: React.FC = () => {
                       state: { from: "/me" },
                     });
                   }}
+                  title="Like Albums"
                 />
               )}
             </TabPanel>
