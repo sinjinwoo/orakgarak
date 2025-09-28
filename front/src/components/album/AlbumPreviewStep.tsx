@@ -300,7 +300,7 @@ const AlbumPreviewStep: React.FC<AlbumPreviewStepProps> = ({
                 {/* 트랙 정보 */}
                 <div className="flex-1 min-w-0">
                   <h4 className="text-white font-medium text-base mb-2 truncate">
-                    {recording.title || recording.song?.title || `녹음 ${recording.id}`}
+                    {recording.title || `녹음 ${recording.id}`}
                   </h4>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-white/60">

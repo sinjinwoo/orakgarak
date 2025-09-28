@@ -136,25 +136,48 @@
   animation: neonGlow 2s ease-in-out infinite alternate;
 }
 
-/* 사이버펑크 스크롤바 */
+/* 사이버펑크 스크롤바 - 고급 테마 */
 .cyberpunk-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 12px;
 }
 
 .cyberpunk-scrollbar::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 .cyberpunk-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(45deg, #00ffff, #ff0080);
-  border-radius: 4px;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  background: linear-gradient(45deg, #00ffff, #ff0080, #00ff00, #ff0080);
+  background-size: 200% 200%;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  box-shadow: 
+    0 0 10px rgba(0, 255, 255, 0.5),
+    inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  animation: cyberScrollbar 3s ease-in-out infinite;
 }
 
 .cyberpunk-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(45deg, #ff0080, #00ffff);
-  box-shadow: 0 0 15px rgba(255, 0, 128, 0.7);
+  background: linear-gradient(45deg, #ff0080, #00ffff, #ff0080, #00ff00);
+  box-shadow: 
+    0 0 20px rgba(255, 0, 128, 0.8),
+    0 0 30px rgba(0, 255, 255, 0.6),
+    inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  transform: scale(1.05);
+}
+
+.cyberpunk-scrollbar::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(45deg, #00ff00, #ff0080, #00ffff, #00ff00);
+  box-shadow: 
+    0 0 25px rgba(0, 255, 0, 0.9),
+    inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.cyberpunk-scrollbar::-webkit-scrollbar-corner {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 255, 255, 0.2);
 }
 
 /* 데이터 매트릭스 효과 */

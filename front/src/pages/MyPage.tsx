@@ -111,6 +111,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import { useFollowList } from "../hooks/useSocial";
 import { useUIStore } from "../stores/uiStore";
+import { formatActivityStartDate, extractYear, formatKoreanDate } from "../utils/dateUtils";
 import { recordingService } from "../services/api/recordings";
 import { motion } from "framer-motion";
 import AlbumCoverflow from "../components/AlbumCoverflow";
@@ -1055,8 +1056,7 @@ const MyPage: React.FC = () => {
                         if (profileLoading) return "활동 시작일을 불러오는 중...";
                         if (!createdAt) return "활동 시작일 정보 없음";
                         
-                        const date = new Date(createdAt);
-                        return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.부터 활동`;
+                        return formatActivityStartDate(createdAt);
                       })()}
                     </Typography>
                   </Box>
@@ -1213,7 +1213,7 @@ const MyPage: React.FC = () => {
                     variant="h6"
                     sx={{ fontWeight: "bold", color: "#FFFFFF" }}
                   >
-                    💿 내 앨범 ({myAlbums.length})
+                    💿 내 앨범
                   </Typography>
                   <Button
                     variant="contained"
@@ -1289,11 +1289,9 @@ const MyPage: React.FC = () => {
                       coverImageUrl:
                         album.coverImageUrl || "/image/albumCoverImage.png", // 백엔드에서 제공하는 coverImageUrl 사용
                       artist: "나",
-                      year: (() => {
-                        const date = new Date(album.createdAt);
-                        return date.getFullYear().toString();
-                      })(),
+                      year: extractYear(album.createdAt),
                       trackCount: album.trackCount,
+                      isPublic: album.isPublic,
                     }))}
                     onAlbumClick={(album) =>
                       navigate(`/albums/${album.id}`, {
@@ -1317,20 +1315,39 @@ const MyPage: React.FC = () => {
                   justifyContent: "space-between",
                   alignItems: "center",
                   mb: 3,
+                  flexWrap: "nowrap",
                 }}
               >
                 <Typography
                   variant="h6"
-                  sx={{ fontWeight: "bold", color: "#FFFFFF" }}
+                  sx={{ 
+                    fontWeight: "bold", 
+                    color: "#FFFFFF",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0
+                  }}
                 >
-                  🎤 내 녹음 ({recordings.length})
+                  🎤 내 녹음
                 </Typography>
-                <Box sx={{ display: "flex", gap: 1 }}>
+                <Box sx={{ display: "flex", gap: 1, flexShrink: 0, marginLeft: 2 }}>
                   <Button
-                    variant="contained"
+                    variant="outlined"
                     startIcon={<Add />}
                     onClick={handleNewRecording}
-                    sx={{ textTransform: "none" }}
+                    sx={{ 
+                      textTransform: "none",
+                      borderColor: "#00bfff",
+                      borderWidth: "2px",
+                      borderStyle: "solid",
+                      color: "#FFFFFF",
+                      boxShadow: "0 0 10px rgba(0, 191, 255, 0.5), 0 0 20px rgba(0, 191, 255, 0.3), 0 0 30px rgba(0, 191, 255, 0.1)",
+                      "&:hover": {
+                        borderColor: "#00ffff",
+                        color: "#FFFFFF",
+                        backgroundColor: "rgba(0, 191, 255, 0.1)",
+                        boxShadow: "0 0 15px rgba(0, 255, 255, 0.7), 0 0 25px rgba(0, 255, 255, 0.5), 0 0 35px rgba(0, 255, 255, 0.3)"
+                      }
+                    }}
                   >
                     새 녹음하기
                   </Button>
@@ -1554,13 +1571,7 @@ const MyPage: React.FC = () => {
                               variant="body2"
                               sx={{ color: "#FFFFFF" }}
                             >
-                              {(() => {
-                                const date = new Date(recording.createdAt);
-                                return date.toLocaleDateString(
-                                  "ko-KR",
-                                  { month: "long", day: "numeric" }
-                                );
-                              })()}
+                              {formatKoreanDate(recording.createdAt)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -1593,7 +1604,7 @@ const MyPage: React.FC = () => {
                 variant="h6"
                 sx={{ fontWeight: "bold", mb: 3, color: "#FFFFFF" }}
               >
-                💖 좋아요한 앨범 ({likedAlbums.length})
+                💖 좋아요한 앨범
               </Typography>
               {likedAlbumsLoading ? (
                 <Box sx={{ textAlign: "center", py: 8 }}>
@@ -1650,12 +1661,10 @@ const MyPage: React.FC = () => {
                     artist: album.userNickname || "Various Artists", // 좋아요한 앨범의 아티스트 정보
                     coverImageUrl:
                       album.coverImageUrl || "/image/albumCoverImage.png",
-                    year: (() => {
-                      const date = new Date(album.createdAt);
-                      return date.getFullYear().toString();
-                    })(),
+                    year: extractYear(album.createdAt),
                     trackCount: album.trackCount,
                     likeCount: album.likeCount, // 좋아요 수 추가
+                    isPublic: album.isPublic,
                   }))}
                   onAlbumClick={(album) => {
                     console.log("좋아요한 앨범 클릭:", album);
@@ -2261,6 +2270,7 @@ const MyPage: React.FC = () => {
                       sx={{ fontSize: 40, color: "rgba(255, 255, 255, 0.6)" }}
                     />
                   )}
+                  
                 </Box>
               ))}
             </Box>
