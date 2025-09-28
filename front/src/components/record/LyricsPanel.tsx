@@ -293,7 +293,7 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(0, 255, 255, 0.4) rgba(15, 15, 25, 0.3)',
         }}
-        className="lyrics-scrollbar"
+        className="custom-scrollbar"
       >
         {parsedLyrics.length === 0 ? (
       <div style={{ 
@@ -426,24 +426,7 @@ const LyricsPanel: React.FC<LyricsPanelProps> = ({
         </button>
       </div>
 
-      <style>{`
-        .lyrics-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .lyrics-scrollbar::-webkit-scrollbar-track {
-          background: rgba(15, 15, 25, 0.4);
-          border-radius: 3px;
-        }
-        .lyrics-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, rgba(0, 255, 255, 0.6), rgba(255, 0, 128, 0.6));
-          border-radius: 3px;
-          transition: all 0.3s ease;
-        }
-        .lyrics-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, rgba(0, 255, 255, 0.8), rgba(255, 0, 128, 0.8));
-          box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
-        }
-      `}</style>
+      {/* 오버레이 스크롤바 사용 (index.css의 .custom-scrollbar 클래스 활용) */}
     </div>
   );
 };

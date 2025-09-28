@@ -3,16 +3,24 @@ import { Typography, Button, Box, Avatar, Menu, MenuItem, Fade } from "@mui/mate
 import { Person, Logout, AccountCircle } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth, useSocialAuth } from "../../hooks/useAuth";
+import { useAlbumStore } from "../../stores/albumStore";
+import { useUIStore } from "../../stores/uiStore";
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, logout, user } = useAuth();
-  const { loginWithGoogle, isLoading } = useSocialAuth();
+  const { loginWithGoogle, isLoading: isSocialLoading } = useSocialAuth();
   const [isHeaderVisible, setIsHeaderVisible] = useState(false);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
+  const [userActivity, setUserActivity] = useState(false);
+  const [headerMode, setHeaderMode] = useState<'auto' | 'fixed' | 'hidden'>('auto');
   const profileMenuOpen = Boolean(profileMenuAnchor);
+
+  // 스토어 상태 가져오기
+  const { creationState } = useAlbumStore();
+  const { isLoading: isUILoading } = useUIStore();
 
   const isLandingPage = location.pathname === "/";
 
@@ -54,7 +62,7 @@ const Header: React.FC = () => {
     },
   }), []);
 
-  // 헤더 표시/숨김 관리 (호버 전용)
+  // 헤더 표시/숨김 관리
   const showHeader = useCallback(() => {
     setIsHeaderVisible(true);
   }, []);
@@ -63,25 +71,95 @@ const Header: React.FC = () => {
     setIsHeaderVisible(false);
   }, []);
 
-  // 스크롤 기반 로직 비활성화: 호버 전용 모드
+  // 페이지별 헤더 모드 설정
   useEffect(() => {
-    setIsHeaderVisible(false);
-  }, []);
+    switch (location.pathname) {
+      case '/voice-test':
+        setHeaderMode('hidden'); // 게임 페이지는 숨김
+        break;
+      case '/albums/create':
+        setHeaderMode('fixed'); // 앨범 생성은 고정
+        showHeader();
+        break;
+      default:
+        // 앨범 디테일 페이지 확인 (동적 라우트)
+        if (location.pathname.startsWith('/albums/') && location.pathname !== '/albums/create') {
+          setHeaderMode('hidden'); // 앨범 디테일 페이지는 숨김
+        } else {
+          setHeaderMode('auto'); // 기본 자동 모드 (녹음 포함)
+        }
+    }
+  }, [location.pathname, showHeader]);
 
-  // 터치/휠 감지 비활성화: 호버 전용 모드
+  // 앨범 생성 중 헤더 고정
+  useEffect(() => {
+    if (creationState.step > 0) {
+      setHeaderMode('fixed');
+      showHeader();
+    }
+  }, [creationState.step, showHeader]);
 
-  // 타이머 정리 로직 제거 (호버 전용 모드에서는 타이머 미사용)
+  // 사용자 활동 감지
+  useEffect(() => {
+    const handleUserActivity = () => {
+      setUserActivity(true);
+      if (headerMode === 'auto') {
+        showHeader();
+      }
+    };
 
-  // 마우스 이벤트 핸들러
+    const handleInactivity = () => {
+      setUserActivity(false);
+      if (headerMode === 'auto') {
+        hideHeader();
+      }
+    };
+
+    // 마우스, 키보드, 터치 이벤트 감지
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, handleUserActivity, true);
+    });
+
+    // 3초간 비활성 시 헤더 숨김
+    const inactivityTimer = setInterval(() => {
+      if (userActivity && headerMode === 'auto') {
+        handleInactivity();
+      }
+    }, 3000);
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserActivity, true);
+      });
+      clearInterval(inactivityTimer);
+    };
+  }, [userActivity, headerMode, showHeader, hideHeader]);
+
+  // 초기 헤더 상태 설정
+  useEffect(() => {
+    if (headerMode === 'fixed') {
+      showHeader();
+    } else if (headerMode === 'hidden') {
+      hideHeader();
+    }
+  }, [headerMode, showHeader, hideHeader]);
+
+  // 마우스 이벤트 핸들러 (auto 모드에서만 호버 동작)
   const handleMouseEnter = useCallback(() => {
     setIsHeaderHovered(true);
-    showHeader();
-  }, [showHeader]);
+    if (headerMode === 'auto') {
+      showHeader();
+    }
+  }, [showHeader, headerMode]);
 
   const handleMouseLeave = useCallback(() => {
     setIsHeaderHovered(false);
-    hideHeader();
-  }, [hideHeader]);
+    if (headerMode === 'auto') {
+      hideHeader();
+    }
+  }, [hideHeader, headerMode]);
 
   // 이벤트 핸들러들
   const handleLogout = useCallback(async () => {
@@ -146,12 +224,12 @@ const Header: React.FC = () => {
         position: "fixed",
         top: 0,
         left: "50%",
-        transform: `translateX(-50%) translateY(${isHeaderVisible || isHeaderHovered ? '10px' : '-100px'})`,
+        transform: `translateX(-50%) translateY(${isHeaderVisible ? '10px' : '-100px'})`,
         zIndex: 1100,
-        width: "100%",
+        width: "calc(100vw - 80px)",
         maxWidth: "calc(100vw - 80px)",
         transition: "transform 0.3s ease-in-out",
-        pointerEvents: isHeaderVisible || isHeaderHovered ? "auto" : "none",
+        pointerEvents: isHeaderVisible ? "auto" : "none",
       }}
     >
       <Box
@@ -370,10 +448,10 @@ const Header: React.FC = () => {
           ) : (
             <Button
               onClick={handleGoogleLogin}
-              disabled={isLoading}
+              disabled={isSocialLoading}
                 sx={styles.authButton}
             >
-              {isLoading ? "로그인 중..." : "구글 로그인"}
+              {isSocialLoading ? "로그인 중..." : "구글 로그인"}
             </Button>
           )}
         </Box>

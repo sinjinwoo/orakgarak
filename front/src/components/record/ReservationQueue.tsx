@@ -270,27 +270,7 @@ const ReservationQueue: React.FC = () => {
 
   return (
     <div style={{ height: '100%' }}>
-      {/* 사이버펑크 스크롤바 스타일 */}
-      <style dangerouslySetInnerHTML={{ 
-        __html: `
-          .queue-scrollbar::-webkit-scrollbar {
-            width: 8px;
-          }
-          .queue-scrollbar::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 4px;
-          }
-          .queue-scrollbar::-webkit-scrollbar-thumb {
-            background: linear-gradient(45deg, #ff0080, #00ffff);
-            border-radius: 4px;
-            border: 1px solid rgba(255, 0, 128, 0.3);
-          }
-          .queue-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(45deg, #cc0066, #00cccc);
-            box-shadow: 0 0 10px rgba(255, 0, 128, 0.5);
-          }
-        `
-      }} />
+      {/* 오버레이 스크롤바 사용 (index.css의 .custom-scrollbar 클래스 활용) */}
       {/* 헤더 */}
       <div style={{
         display: 'flex',
@@ -386,7 +366,7 @@ const ReservationQueue: React.FC = () => {
         >
           <SortableContext items={reservationQueue.map(song => song.id)} strategy={verticalListSortingStrategy}>
             <div 
-              className="queue-scrollbar"
+              className="custom-scrollbar"
               style={{ 
                 maxHeight: '350px', 
                 overflow: 'auto',

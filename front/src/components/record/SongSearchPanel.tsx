@@ -139,34 +139,7 @@ const SongSearchPanel: React.FC = () => {
   
   const { addToQueue, reservationQueue } = useReservation();
 
-  // 사이버펑크 스크롤바 스타일 및 애니메이션
-  const cyberScrollbarStyle = `
-    .cyber-scrollbar::-webkit-scrollbar {
-      width: 12px;
-    }
-    .cyber-scrollbar::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 6px;
-      border: 1px solid rgba(6, 182, 212, 0.2);
-    }
-    .cyber-scrollbar::-webkit-scrollbar-thumb {
-      background: linear-gradient(45deg, rgba(6, 182, 212, 0.8), rgba(236, 72, 153, 0.8));
-      border-radius: 6px;
-      border: 1px solid rgba(6, 182, 212, 0.4);
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-    }
-    .cyber-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(45deg, rgba(6, 182, 212, 1), rgba(236, 72, 153, 1));
-      box-shadow: 0 0 15px rgba(6, 182, 212, 0.6), inset 0 1px 3px rgba(0, 0, 0, 0.3);
-      transform: scale(1.05);
-    }
-    .cyber-scrollbar::-webkit-scrollbar-thumb:active {
-      background: linear-gradient(45deg, rgba(6, 182, 212, 0.9), rgba(236, 72, 153, 0.9));
-    }
-    .cyber-scrollbar::-webkit-scrollbar-corner {
-      background: rgba(0, 0, 0, 0.5);
-    }
-  `;
+  // 오버레이 스크롤바 사용 (index.css의 .custom-scrollbar 클래스 활용)
 
   // 검색 함수
   const performSearch = useCallback(async (keyword: string) => {
@@ -249,8 +222,6 @@ const SongSearchPanel: React.FC = () => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      {/* 사이버펑크 스크롤바 스타일 */}
-      <style dangerouslySetInnerHTML={{ __html: cyberScrollbarStyle }} />
       {/* 헤더 */}
       <div style={{
         display: 'flex',
@@ -406,7 +377,7 @@ const SongSearchPanel: React.FC = () => {
       }}>
         {showResults ? (
           <div 
-            className="cyber-scrollbar"
+            className="custom-scrollbar"
             style={{
             flex: 1,
             overflow: 'auto',
