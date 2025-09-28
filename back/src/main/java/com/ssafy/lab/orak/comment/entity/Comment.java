@@ -1,5 +1,6 @@
 package com.ssafy.lab.orak.comment.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.ssafy.lab.orak.album.entity.Album;
 import com.ssafy.lab.orak.auth.entity.User;
 import jakarta.persistence.*;
@@ -11,6 +12,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "comments")
@@ -47,11 +50,11 @@ public class Comment {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Long createdAt;
+    private LocalDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private Long updatedAt;
+    private LocalDateTime updatedAt;
 
     // 기존 코드와의 호환성을 위한 메서드들
     public Long getUserId() {

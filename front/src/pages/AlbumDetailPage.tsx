@@ -44,6 +44,7 @@ import { Cloud as CloudIcon, Zap, DollarSign, Phone } from "lucide-react";
 import { albumService } from "../services/api/albums";
 import { socialService, type Comment } from "../services/api/social";
 import { useAuthStore } from "../stores/authStore";
+import { useUIStore } from "../stores/uiStore";
 import type { Album } from "../types/album";
 import LPRecord from "../components/LPRecord";
 
@@ -66,12 +67,14 @@ interface VinyListAlbum {
   description: string;
   coverImage: string;
   tracks: VinyListTrack[];
+  isPublic?: boolean;
 }
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { showToast } = useUIStore();
 
   // State
   const [loading, setLoading] = useState(true);

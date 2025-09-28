@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUIStore } from "../stores/uiStore";
 import { useAuthStore } from "../stores/authStore";
 import { albumService } from "../services/api/albums";
 import { motion } from "framer-motion";
@@ -24,7 +25,6 @@ import {
   Avatar,
   Chip,
   Button,
-  TextField,
   Tabs,
   Tab,
   Select,
@@ -59,6 +59,7 @@ const cyberpunkStyles = `
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useUIStore();
   const { user } = useAuthStore();
   const [tabValue, setTabValue] = useState(0);
   const [sortBy, setSortBy] = useState("latest");
@@ -71,114 +72,127 @@ const FeedPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-
   useEffect(() => {
     const timer = setTimeout(() => setIsInitialized(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
   // API로 공개 앨범 데이터 로드
-  const loadPublicAlbums = useCallback(async (pageNum = 0, append = false) => {
-    try {
-      if (!append) {
-        setLoading(true);
-      } else {
-        setIsLoadingMore(true);
-      }
-      setError(null);
-      const response = await albumService.getPublicAlbums({
-        page: pageNum,
-        size: API_CONSTANTS.DEFAULT_PAGE_SIZE,
-      });
-      const albums = response.content || [];
-      const mappedAlbums: FeedAlbum[] = albums.map((album) => ({
-        ...album,
-        user: {
-          nickname: album.userNickname || `사용자 ${album.userId}`,
-          avatar:
-            album.userProfileImageUrl ||
-            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-        },
-        tags: ["캐주얼", "힐링"],
-        playCount: Math.floor(Math.random() * 1000),
-        commentCount: Math.floor(Math.random() * 50),
-      }));
+  const loadPublicAlbums = useCallback(
+    async (pageNum = 0, append = false) => {
+      try {
+        if (!append) {
+          setLoading(true);
+        } else {
+          setIsLoadingMore(true);
+        }
+        setError(null);
+        const response = await albumService.getPublicAlbums({
+          page: pageNum,
+          size: API_CONSTANTS.DEFAULT_PAGE_SIZE,
+        });
+        const albums = response.content || [];
+        const mappedAlbums: FeedAlbum[] = albums.map((album) => ({
+          ...album,
+          user: {
+            nickname: album.userNickname || `사용자 ${album.userId}`,
+            avatar:
+              album.userProfileImageUrl ||
+              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+          },
+          tags: ["캐주얼", "힐링"],
+          playCount: Math.floor(Math.random() * 1000),
+          commentCount: Math.floor(Math.random() * 50),
+        }));
 
-      if (append) {
-        setFeedAlbums(prev => [...prev, ...mappedAlbums]);
-      } else {
-        setFeedAlbums(mappedAlbums);
-      }
+        if (append) {
+          setFeedAlbums((prev) => [...prev, ...mappedAlbums]);
+        } else {
+          setFeedAlbums(mappedAlbums);
+        }
 
-      // 더 이상 로드할 데이터가 있는지 확인
-      setHasMore(albums.length === API_CONSTANTS.DEFAULT_PAGE_SIZE);
-    } catch (error) {
-      logError(error, "공개 앨범 로드");
-      const errorMessage = getApiErrorMessage(error);
-      setError(errorMessage);
+        // 더 이상 로드할 데이터가 있는지 확인
+        setHasMore(albums.length === API_CONSTANTS.DEFAULT_PAGE_SIZE);
+      } catch (error) {
+        logError(error, "공개 앨범 로드");
+        const errorMessage = getApiErrorMessage(error);
+        setError(errorMessage);
 
-      // 에러 시 localStorage 데이터로 폴백 (첫 페이지만)
-      if (!append) {
-        setFeedAlbums(getFeedAlbums());
-      }
+        // 에러 시 localStorage 데이터로 폴백 (첫 페이지만)
+        if (!append) {
+          setFeedAlbums(getFeedAlbums());
+        }
 
-    } finally {
-      if (!append) {
-        setLoading(false);
-      } else {
-        setIsLoadingMore(false);
+        // 재시도 가능한 에러인 경우 사용자에게 알림
+        if (isRetryableError(error)) {
+          showToast(WARNING_MESSAGES.NETWORK_RETRY, "warning");
+        }
+      } finally {
+        if (!append) {
+          setLoading(false);
+        } else {
+          setIsLoadingMore(false);
+        }
       }
-    }
-  }, []);
+    },
+    [showToast]
+  );
 
   // 팔로우한 사용자들의 앨범 로드
-  const loadFollowedUsersAlbums = useCallback(async (pageNum = 0, append = false) => {
-    try {
-      if (!append) {
-        setLoading(true);
-      } else {
-        setIsLoadingMore(true);
-      }
-      setError(null);
-      const response = await albumService.getFollowedUsersAlbums({
-        page: pageNum,
-        size: API_CONSTANTS.DEFAULT_PAGE_SIZE,
-      });
-      const albums = response.content || [];
-      const mappedAlbums: FeedAlbum[] = albums.map((album) => ({
-        ...album,
-        user: {
-          nickname: album.userNickname || `사용자 ${album.userId}`,
-          avatar:
-            album.userProfileImageUrl ||
-            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-        },
-        tags: ["커버", "감성"],
-        playCount: Math.floor(Math.random() * 1000),
-        commentCount: Math.floor(Math.random() * 50),
-      }));
+  const loadFollowedUsersAlbums = useCallback(
+    async (pageNum = 0, append = false) => {
+      try {
+        if (!append) {
+          setLoading(true);
+        } else {
+          setIsLoadingMore(true);
+        }
+        setError(null);
+        const response = await albumService.getFollowedUsersAlbums({
+          page: pageNum,
+          size: API_CONSTANTS.DEFAULT_PAGE_SIZE,
+        });
+        const albums = response.content || [];
+        const mappedAlbums: FeedAlbum[] = albums.map((album) => ({
+          ...album,
+          user: {
+            nickname: album.userNickname || `사용자 ${album.userId}`,
+            avatar:
+              album.userProfileImageUrl ||
+              "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
+          },
+          tags: ["커버", "감성"],
+          playCount: Math.floor(Math.random() * 1000),
+          commentCount: Math.floor(Math.random() * 50),
+        }));
 
-      if (append) {
-        setFeedAlbums(prev => [...prev, ...mappedAlbums]);
-      } else {
-        setFeedAlbums(mappedAlbums);
-      }
+        if (append) {
+          setFeedAlbums((prev) => [...prev, ...mappedAlbums]);
+        } else {
+          setFeedAlbums(mappedAlbums);
+        }
 
-      // 더 이상 로드할 데이터가 있는지 확인
-      setHasMore(albums.length === API_CONSTANTS.DEFAULT_PAGE_SIZE);
-    } catch (error) {
-      logError(error, "팔로우 사용자 앨범 로드");
-      const errorMessage = getApiErrorMessage(error);
-      setError(errorMessage);
+        // 더 이상 로드할 데이터가 있는지 확인
+        setHasMore(albums.length === API_CONSTANTS.DEFAULT_PAGE_SIZE);
+      } catch (error) {
+        logError(error, "팔로우 사용자 앨범 로드");
+        const errorMessage = getApiErrorMessage(error);
+        setError(errorMessage);
 
-    } finally {
-      if (!append) {
-        setLoading(false);
-      } else {
-        setIsLoadingMore(false);
+        // 재시도 가능한 에러인 경우 사용자에게 알림
+        if (isRetryableError(error)) {
+          showToast(WARNING_MESSAGES.DATA_LOAD_FAILED, "warning");
+        }
+      } finally {
+        if (!append) {
+          setLoading(false);
+        } else {
+          setIsLoadingMore(false);
+        }
       }
-    }
-  }, []);
+    },
+    [showToast]
+  );
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -203,10 +217,16 @@ const FeedPage: React.FC = () => {
   // 무한 스크롤 구현
   useEffect(() => {
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      const { scrollTop, scrollHeight, clientHeight } =
+        document.documentElement;
 
       // 스크롤이 바닥에서 100px 위에 도달했을 때 더 로드
-      if (scrollTop + clientHeight >= scrollHeight - 100 && hasMore && !isLoadingMore && !loading) {
+      if (
+        scrollTop + clientHeight >= scrollHeight - 100 &&
+        hasMore &&
+        !isLoadingMore &&
+        !loading
+      ) {
         const nextPage = page + 1;
         setPage(nextPage);
 
@@ -218,9 +238,17 @@ const FeedPage: React.FC = () => {
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [page, hasMore, isLoadingMore, loading, tabValue, loadPublicAlbums, loadFollowedUsersAlbums]);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [
+    page,
+    hasMore,
+    isLoadingMore,
+    loading,
+    tabValue,
+    loadPublicAlbums,
+    loadFollowedUsersAlbums,
+  ]);
 
   const handleTabChange = useCallback(
     (_event: React.SyntheticEvent, newValue: number) => {
@@ -242,21 +270,22 @@ const FeedPage: React.FC = () => {
     navigate(`/albums/${feed.id}`, { state: { from: "/feed" } });
   };
 
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: `
+    <div
+      style={{
+        minHeight: "100vh",
+        background: `
           radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.25) 0%, transparent 60%),
           radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.25) 0%, transparent 60%),
           radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.1) 0%, transparent 80%),
           radial-gradient(circle at 30% 30%, rgba(6, 182, 212, 0.15) 0%, transparent 70%),
           linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
         `,
-      color: '#fff',
-      paddingTop: '100px',
-      overflowX: 'hidden',
-    }}>
+        color: "#fff",
+        paddingTop: "100px",
+        overflowX: "hidden",
+      }}
+    >
       <style dangerouslySetInnerHTML={{ __html: cyberpunkStyles }} />
 
       <div
@@ -268,7 +297,6 @@ const FeedPage: React.FC = () => {
           transition: "all 0.6s ease",
         }}
       >
-
         <Container
           maxWidth="lg"
           sx={{ py: 3, position: "relative", zIndex: 1 }}
@@ -285,7 +313,8 @@ const FeedPage: React.FC = () => {
                   borderRadius: "15px",
                   background: "rgba(255, 255, 255, 0.05)",
                   border: "4px solid rgba(236, 72, 153, 0.8)",
-                  boxShadow: "0 0 50px rgba(236, 72, 153, 0.7), inset 0 0 50px rgba(6, 182, 212, 0.4)",
+                  boxShadow:
+                    "0 0 50px rgba(236, 72, 153, 0.7), inset 0 0 50px rgba(6, 182, 212, 0.4)",
                   backdropFilter: "blur(15px)",
                 }}
               >
@@ -506,12 +535,14 @@ const FeedPage: React.FC = () => {
                                       objectFit: "cover",
                                       borderRadius: 2,
                                       transition: "all 0.3s ease",
-                                      boxShadow: "0 8px 30px rgba(0, 0, 0, 0.4)",
+                                      boxShadow:
+                                        "0 8px 30px rgba(0, 0, 0, 0.4)",
                                     }}
                                     image={album.coverImageUrl}
                                     alt={album.title}
                                     onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
+                                      const target =
+                                        e.target as HTMLImageElement;
                                       target.style.display = "none";
                                     }}
                                   />
@@ -520,12 +551,14 @@ const FeedPage: React.FC = () => {
                                     sx={{
                                       width: "450px",
                                       height: "450px",
-                                      background: "linear-gradient(135deg, #00ffff, #ff0080)",
+                                      background:
+                                        "linear-gradient(135deg, #00ffff, #ff0080)",
                                       borderRadius: 2,
                                       display: "flex",
                                       alignItems: "center",
                                       justifyContent: "center",
-                                      boxShadow: "0 8px 30px rgba(0, 0, 0, 0.4)",
+                                      boxShadow:
+                                        "0 8px 30px rgba(0, 0, 0, 0.4)",
                                     }}
                                   >
                                     <MusicNote
@@ -574,7 +607,8 @@ const FeedPage: React.FC = () => {
                                         width: 50,
                                         height: 50,
                                         mr: 3,
-                                        border: "3px solid rgba(255, 255, 255, 0.3)",
+                                        border:
+                                          "3px solid rgba(255, 255, 255, 0.3)",
                                       }}
                                     >
                                       <Person sx={{ fontSize: 28 }} />
@@ -587,7 +621,8 @@ const FeedPage: React.FC = () => {
                                         fontWeight: 700,
                                       }}
                                     >
-                                      {album.user?.nickname || `사용자 ${album.userId}`}
+                                      {album.user?.nickname ||
+                                        `사용자 ${album.userId}`}
                                     </Typography>
                                   </Box>
 
@@ -601,7 +636,8 @@ const FeedPage: React.FC = () => {
                                       fontWeight: 400,
                                     }}
                                   >
-                                    {album.description || "이 앨범에 대한 설명이 아직 작성되지 않았습니다."}
+                                    {album.description ||
+                                      "이 앨범에 대한 설명이 아직 작성되지 않았습니다."}
                                   </Typography>
                                 </Box>
 
@@ -640,7 +676,11 @@ const FeedPage: React.FC = () => {
                                           fontWeight: 700,
                                         }}
                                       >
-                                        ⏱ {Math.floor((album.totalDuration || 0) / 60)}분
+                                        ⏱{" "}
+                                        {Math.floor(
+                                          (album.totalDuration || 0) / 60
+                                        )}
+                                        분
                                       </Typography>
                                     )}
                                     <Typography
@@ -652,7 +692,9 @@ const FeedPage: React.FC = () => {
                                       }}
                                     >
                                       {album.createdAt
-                                        ? new Date(album.createdAt).toLocaleDateString("ko-KR")
+                                        ? new Date(
+                                            album.createdAt
+                                          ).toLocaleDateString("ko-KR")
                                         : "날짜 없음"}
                                     </Typography>
                                   </Box>
@@ -669,15 +711,18 @@ const FeedPage: React.FC = () => {
                                         key={tag}
                                         label={tag}
                                         sx={{
-                                          backgroundColor: "rgba(0, 255, 255, 0.25)",
+                                          backgroundColor:
+                                            "rgba(0, 255, 255, 0.25)",
                                           color: "#00ffff",
                                           fontSize: "1.1rem",
                                           height: "45px",
                                           fontWeight: 700,
-                                          border: "2px solid rgba(0, 255, 255, 0.5)",
+                                          border:
+                                            "2px solid rgba(0, 255, 255, 0.5)",
                                           px: 2,
                                           "&:hover": {
-                                            backgroundColor: "rgba(0, 255, 255, 0.35)",
+                                            backgroundColor:
+                                              "rgba(0, 255, 255, 0.35)",
                                             transform: "translateY(-1px)",
                                           },
                                         }}
@@ -731,7 +776,6 @@ const FeedPage: React.FC = () => {
             </motion.div>
           </Box>
         </Container>
-
       </div>
     </div>
   );
