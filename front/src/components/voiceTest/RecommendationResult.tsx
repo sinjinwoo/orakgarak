@@ -189,12 +189,13 @@ export default function RecommendationResult({
   // 로딩 상태
   if (isLoading) {
     return (
-      <Box sx={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
+      <Box sx={{
+        minHeight: '100vh',
+        display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center', 
+        alignItems: 'center',
         justifyContent: 'center',
+        pt: 12,
         background: `
           radial-gradient(circle at 30% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
           radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
@@ -292,7 +293,7 @@ export default function RecommendationResult({
                 }
               }}
             >
-              AI가 당신을 위한 노래를 찾고 있어요...
+              당신을 위한 완벽한 노래를 찾고 있어요...
             </Typography>
             
             {/* 프로그레스 바 */}
@@ -341,7 +342,7 @@ export default function RecommendationResult({
                   fontSize: '0.9rem'
                 }}
               >
-                🧠 AI 추천 알고리즘 실행 중...
+                음성 분석 및 추천 시스템 실행 중...
               </Typography>
               <Typography 
                 variant="body1" 
@@ -362,7 +363,7 @@ export default function RecommendationResult({
   // 에러 상태
   if (isError) {
     return (
-      <Box className="matrix-bg" sx={{ minHeight: '100vh', p: 3 }}>
+      <Box className="matrix-bg" sx={{ minHeight: '100vh', pt: 12, p: 3 }}>
         <Container maxWidth="md">
           <Button
             startIcon={<ArrowBack />}
@@ -428,7 +429,7 @@ export default function RecommendationResult({
       color: '#fff',
       position: 'relative'
     }}>
-      <Container maxWidth="xl" sx={{ py: 3, pb: 8 }}>
+      <Container maxWidth="xl" sx={{ pt: 12, pb: 8 }}>
         {/* 헤더 */}
         <Box sx={{ 
           display: 'flex', 
