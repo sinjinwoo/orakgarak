@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { 
   Box, 
   Typography, 
@@ -9,10 +9,8 @@ import {
   Fade,
   Container,
   Snackbar,
-  Tabs,
-  Tab
 } from '@mui/material';
-import { ArrowBack, MusicNote, Mic, CheckCircle } from '@mui/icons-material';
+import { ArrowBack, Mic, CheckCircle, Refresh } from '@mui/icons-material';
 import { Recording } from '../../types/recording';
 import { recordingService } from '../../services/api/recordings';
 import CoverFlow from '../recommendation/CoverFlow';
@@ -26,17 +24,21 @@ interface RecommendationResultProps {
   uploadId: number;
   onBack: () => void;
   onGoToRecord?: () => void; // 녹음 페이지로 이동
+  onRerecommend?: () => void; // 다시 추천 받기
 }
 
 export default function RecommendationResult({ 
   recording, 
   uploadId, 
   onBack,
-  onGoToRecord
+  onGoToRecord,
+  onRerecommend
 }: RecommendationResultProps) {
   const [selectedSong, setSelectedSong] = useState<RecommendedSong | undefined>();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const queryClient = useQueryClient();
+  
   // 예약 큐 훅은 컴포넌트 최상단에서 호출
   const { addToQueue } = useReservation();
 
@@ -45,7 +47,8 @@ export default function RecommendationResult({
     data: recommendationData, 
     isLoading, 
     isError, 
-    error 
+    error,
+    refetch: refetchRecommendations
   } = useQuery({
     queryKey: ['recommendations', uploadId],
     queryFn: () => recordingService.getRecommendations(uploadId),
@@ -58,7 +61,8 @@ export default function RecommendationResult({
     data: similarVoiceData,
     isLoading: isLoadingSimilar,
     isError: isErrorSimilar,
-    error: errorSimilar
+    error: errorSimilar,
+    refetch: refetchSimilarRecommendations
   } = useQuery({
     queryKey: ['similar-voice-recommendations', uploadId],
     queryFn: () => recordingService.getSimilarVoiceRecommendations(uploadId),
@@ -68,7 +72,6 @@ export default function RecommendationResult({
 
   // 탭 상태: 'ai' | 'similar'
   const [tab, setTab] = useState<'ai' | 'similar'>('ai');
-  const handleTabChange = (_: React.SyntheticEvent, value: 'ai' | 'similar') => setTab(value);
 
   // 예약된 노래 보기 상태
   const [showReservedSongs, setShowReservedSongs] = useState(false);
@@ -79,15 +82,45 @@ export default function RecommendationResult({
     setShowReservedSongs(!showReservedSongs);
   };
 
+  // 내부에서 처리하는 다시 추천 받기 함수
+  const handleInternalRerecommend = async () => {
+    console.log("🔄 RecommendationResult 내부에서 다시 추천 받기 처리");
+    
+    // 선택된 노래 초기화
+    setSelectedSong(undefined);
+    
+    // 캐시 무효화 및 새로운 데이터 가져오기
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ['recommendations', uploadId]
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['similar-voice-recommendations', uploadId]
+      })
+    ]);
+    
+    // 강제로 새로운 데이터 가져오기
+    await Promise.all([
+      refetchRecommendations(),
+      refetchSimilarRecommendations()
+    ]);
+    
+    console.log("✅ 새로운 추천 데이터 가져오기 완료");
+    
+    // 외부 함수도 호출
+    onRerecommend?.();
+  };
+
   // API 응답을 RecommendedSong 형식으로 변환 (업데이트된 스키마 반영)
-  const convertToRecommendedSongs = (apiRecommendations: any[]): RecommendedSong[] => {
+  const convertToRecommendedSongs = (apiRecommendations: unknown[]): RecommendedSong[] => {
     return apiRecommendations.map((item, index) => {
+      const song = item as Record<string, unknown>;
       return {
-        id: item.songId?.toString?.() ?? String(item.id),
-        songId: item.songId ?? item.id, // 백엔드 songId 추가
-        title: item.songName,
-        artist: item.artistName,
-        imageUrl: item.albumCoverUrl,
+        id: song.songId?.toString?.() ?? String(song.id),
+        songId: (song.songId as number) ?? (song.id as number), // 백엔드 songId 추가
+        title: song.songName as string,
+        artist: song.artistName as string,
+        imageUrl: song.albumCoverUrl as string,
         // 이하 필드는 새 응답에 없으므로 기본/생략 처리
         album: undefined,
         spotifyUrl: undefined,
@@ -332,8 +365,6 @@ export default function RecommendationResult({
 
   const aiSongs = recommendationData ? convertToRecommendedSongs(recommendationData.recommendations) : [];
   const similarSongs = similarVoiceData ? convertToRecommendedSongs(similarVoiceData.recommendations) : [];
-  const aiCount = aiSongs.length;
-  const similarCount = similarSongs.length;
   const hasSimilarTab = true; // 항상 탭 노출하여 상태 확인 가능하게
   const currentSongs = tab === 'ai' ? aiSongs : similarSongs;
   const currentAnalysis = tab === 'ai' ? recommendationData?.voiceAnalysis : similarVoiceData?.voiceAnalysis;
@@ -411,6 +442,35 @@ export default function RecommendationResult({
               "{recording.title}" 분석 기반
             </Typography>
           </Box>
+
+          {/* 다시 추천 받기 버튼 */}
+          {onRerecommend && (
+            <Button
+              startIcon={<Refresh />}
+              onClick={handleInternalRerecommend}
+              sx={{
+                px: 3,
+                py: 1.5,
+                background: 'linear-gradient(45deg, rgba(0, 255, 150, 0.2), rgba(0, 180, 255, 0.2))',
+                border: '1px solid rgba(0, 255, 150, 0.4)',
+                color: '#00ff96',
+                borderRadius: 2,
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 0 20px rgba(0, 255, 150, 0.2)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, rgba(0, 255, 150, 0.3), rgba(0, 180, 255, 0.3))',
+                  border: '1px solid rgba(0, 255, 150, 0.6)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 0 30px rgba(0, 255, 150, 0.4)',
+                }
+              }}
+            >
+              다시 추천 받기
+            </Button>
+          )}
         </Box>
 
         {/* 탭: AI 추천 / 유사 음색 추천 */}
@@ -823,7 +883,7 @@ export default function RecommendationResult({
                             borderRadius: '3px',
                           },
                         }}>
-                          {reservedSongs.map((song, index) => (
+                          {reservedSongs.map((song) => (
                             <Box
                               key={song.id}
                               sx={{
