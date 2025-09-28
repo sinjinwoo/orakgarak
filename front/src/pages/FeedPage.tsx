@@ -314,7 +314,7 @@ const FeedPage: React.FC = () => {
       >
         <Container
           maxWidth="lg"
-          sx={{ py: 3, position: "relative", zIndex: 1 }}
+          sx={{ py: 3, position: "relative", zIndex: 1, mt: "80px" }}
         >
           <Box sx={{ maxWidth: "1200px", mx: "auto" }}>
             <motion.div
