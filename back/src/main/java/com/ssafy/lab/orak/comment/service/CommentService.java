@@ -17,9 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -84,17 +82,14 @@ public class CommentService {
                 .albumId(comment.getAlbumId())
                 .parentCommentId(comment.getParentCommentId())
                 .content(comment.getContent())
-                .createdAt(convertToLocalDateTime(comment.getCreatedAt()))
-                .updatedAt(convertToLocalDateTime(comment.getUpdatedAt()))
+                .createdAt(comment.getCreatedAt())
+                .updatedAt(comment.getUpdatedAt())
                 .userNickname(userNickname)
                 .userProfileImageUrl(userProfileImageUrl)
                 .replies(replies)
                 .build();
     }
 
-    private LocalDateTime convertToLocalDateTime(Long timestamp) {
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
-    }
 
     public void createComment(Long userId, Long albumId, CommentDto.CreateRequest request) {
         Comment comment = Comment.builder()
