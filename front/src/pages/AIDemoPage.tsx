@@ -258,27 +258,41 @@ const AIDemoPage: React.FC = () => {
     if (playingAudio === url && isPlaying) {
       // 현재 재생 중인 오디오를 일시정지
       audio.pause();
-      setIsPlaying(false);
     } else {
       // 새로운 오디오 재생 또는 재생 재개
       if (playingAudio !== url) {
         audio.src = url;
         setPlayingAudio(url);
+        setCurrentTime(0);
+        setDuration(0);
       }
       audio.play();
-      setIsPlaying(true);
     }
   }, [playingAudio, isPlaying]);
+
+  // 오디오 재생 시작
+  const handlePlay = useCallback(() => {
+    setIsPlaying(true);
+  }, []);
+
+  // 오디오 일시정지
+  const handlePause = useCallback(() => {
+    setIsPlaying(false);
+  }, []);
 
   // 오디오 시간 업데이트
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current) {
       setCurrentTime(audioRef.current.currentTime);
-      if (!duration) {
-        setDuration(audioRef.current.duration);
-      }
     }
-  }, [duration]);
+  }, []);
+
+  // 오디오 메타데이터 로드
+  const handleLoadedMetadata = useCallback(() => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  }, []);
 
   // 오디오 재생 완료
   const handleEnded = useCallback(() => {
@@ -663,13 +677,11 @@ const AIDemoPage: React.FC = () => {
                       {/* 오디오 플레이어 */}
                       <audio
                         ref={audioRef}
+                        onPlay={handlePlay}
+                        onPause={handlePause}
                         onTimeUpdate={handleTimeUpdate}
+                        onLoadedMetadata={handleLoadedMetadata}
                         onEnded={handleEnded}
-                        onLoadedMetadata={() => {
-                          if (audioRef.current) {
-                            setDuration(audioRef.current.duration);
-                          }
-                        }}
                         preload="metadata"
                       />
 
