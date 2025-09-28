@@ -30,20 +30,41 @@ export const formatKoreanDate = (createdAt: string): string => {
 };
 
 /**
- * 상대적 시간 포맷팅 (N일 전, N시간 전 등)
+ * 상대적 시간 포맷팅 (N분 전, N시간 전, N일 전 등)
  */
 export const formatRelativeTime = (dateString: string): string => {
   const date = new Date(dateString);
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - date.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
-  if (diffDays === 0) return '오늘';
-  if (diffDays === 1) return '1일 전';
+  // 분 단위 차이
+  const diffMinutes = Math.floor(diffTime / (1000 * 60));
+  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
+  
+  // 1분 미만
+  if (diffMinutes < 1) return '방금 전';
+  
+  // 1시간 미만
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+  
+  // 24시간 미만
+  if (diffHours < 24) return `${diffHours}시간 전`;
+  
+  // 7일 미만
   if (diffDays < 7) return `${diffDays}일 전`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}주 전`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}개월 전`;
-  return `${Math.floor(diffDays / 365)}년 전`;
+  
+  // 4주 미만
+  if (diffWeeks < 4) return `${diffWeeks}주 전`;
+  
+  // 12개월 미만
+  if (diffMonths < 12) return `${diffMonths}개월 전`;
+  
+  // 1년 이상
+  return `${diffYears}년 전`;
 };
 
 /**

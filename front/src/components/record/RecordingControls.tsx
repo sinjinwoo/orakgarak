@@ -248,7 +248,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
     playbackStartTimeRef.current = Date.now() / 1000; // 현재 시간을 초 단위로 저장
     
     playbackTimerRef.current = window.setInterval(() => {
-      if (audioContextRef.current && audioSourceRef.current && isPlaying) {
+      if (audioContextRef.current && audioSourceRef.current) {
         const now = Date.now() / 1000;
         const elapsed = now - playbackStartTimeRef.current;
         
@@ -268,7 +268,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
         }
       }
     }, 100);
-  }, [duration, isPlaying]);
+  }, [duration]);
 
   const stopPlaybackTimer = useCallback(() => {
     console.log('재생 타이머 중지');
@@ -403,10 +403,8 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
       setIsPlaying(true);
       setDuration(audioBuffer.duration);
       
-      // 타이머는 재생 시작 후에 시작
-      setTimeout(() => {
-        startPlaybackTimer();
-      }, 50);
+      // 타이머는 재생 시작과 동시에 시작
+      startPlaybackTimer();
       
       console.log('✅ 재생 시작 명령 완료:', {
         duration: audioBuffer.duration,
@@ -807,47 +805,21 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
           >
             {/* 미니멀 글래스 배경 유지, 과한 데코 제거 */}
 
-            {/* 네온 사이버펑크 헤더 */}
+            {/* 닫기 버튼만 있는 헤더 */}
             <Box
               sx={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 1,
+                justifyContent: "flex-end",
                 px: 2,
                 py: 1.25,
-                borderBottom: "2px solid transparent",
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0))',
-                backdropFilter: "blur(10px)",
                 position: "relative",
               }}
             >
-              <Box sx={{
-                width: 22,
-                height: 22,
-                borderRadius: '6px',
-                background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
-                boxShadow: '0 0 10px rgba(236,72,153,0.5), 0 0 10px rgba(6,182,212,0.45)'
-              }} />
-              <Typography
-                id="recording-preview-modal"
-                variant="h6"
-                sx={{
-                  m: 0,
-                  fontWeight: 900,
-                  letterSpacing: 0.3,
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  color: '#e5e7eb'
-                }}
-              >
-                녹음 저장
-              </Typography>
               <IconButton
                 aria-label="close"
                 onClick={() => setShowModal(false)}
                 size="small"
                 sx={{
-                  ml: 'auto',
                   width: 28,
                   height: 28,
                   borderRadius: "7px",
@@ -965,7 +937,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                          onClick={(e) => {
                            const rect = e.currentTarget.getBoundingClientRect();
                            const clickX = e.clientX - rect.left;
-                           const newTime = (clickX / rect.width) * duration;
+                           const newTime = Math.max(0, Math.min(duration, (clickX / rect.width) * duration));
                            
                            console.log('진행바 클릭:', {
                              clickX,
@@ -981,10 +953,13 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                              // 현재 재생 중이면 해당 시점부터 다시 재생
                              toggleWebAudioPlayback(); // 일시정지
                              setTimeout(() => {
-                               // TODO: 특정 시점부터 재생하는 기능 구현 필요
-                               // 현재는 처음부터 재생
+                               // 재생 시작 시간을 조정하여 해당 시점부터 재생
+                               playbackStartTimeRef.current = Date.now() / 1000 - newTime;
                                toggleWebAudioPlayback();
                              }, 100);
+                           } else {
+                             // 일시정지 상태에서는 시작 시간만 조정
+                             playbackStartTimeRef.current = Date.now() / 1000 - newTime;
                            }
                          }}
                       >

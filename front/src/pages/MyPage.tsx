@@ -1291,6 +1291,7 @@ const MyPage: React.FC = () => {
                       artist: "나",
                       year: extractYear(album.createdAt),
                       trackCount: album.trackCount,
+                      isPublic: album.isPublic,
                     }))}
                     onAlbumClick={(album) =>
                       navigate(`/albums/${album.id}`, {
@@ -1650,6 +1651,7 @@ const MyPage: React.FC = () => {
                     year: extractYear(album.createdAt),
                     trackCount: album.trackCount,
                     likeCount: album.likeCount, // 좋아요 수 추가
+                    isPublic: album.isPublic,
                   }))}
                   onAlbumClick={(album) => {
                     console.log("좋아요한 앨범 클릭:", album);
@@ -2255,6 +2257,7 @@ const MyPage: React.FC = () => {
                       sx={{ fontSize: 40, color: "rgba(255, 255, 255, 0.6)" }}
                     />
                   )}
+                  
                 </Box>
               ))}
             </Box>
