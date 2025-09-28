@@ -153,7 +153,7 @@ const AlbumCreatePage: React.FC = () => {
       .map((recording, index) => ({
         id: String(recording.id),
         order: index + 1,
-        title: recording.song?.title || "제목 없음",
+        title: recording.title || recording.song?.title || "제목 없음",
         artist: recording.song?.artist || "아티스트 없음",
         durationSec: recording.duration || 0,
       }));

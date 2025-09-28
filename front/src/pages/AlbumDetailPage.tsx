@@ -20,6 +20,8 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   TextField,
+  Switch,
+  FormControlLabel,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -37,6 +39,8 @@ import {
   Cancel as CancelIcon,
   Settings as SettingsIcon,
   DeleteForever as DeleteForeverIcon,
+  Public as PublicIcon,
+  Lock as LockIcon,
 } from "@mui/icons-material";
 import { Cloud as CloudIcon, Zap, DollarSign, Phone } from "lucide-react";
 
@@ -141,6 +145,7 @@ const AlbumDetailPage: React.FC = () => {
   const [deletingComment, setDeletingComment] = useState<number | null>(null);
   const [updatingReply, setUpdatingReply] = useState(false);
   const [deletingReply, setDeletingReply] = useState<number | null>(null);
+  const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
 
   // Load album data
   useEffect(() => {
@@ -208,6 +213,7 @@ const AlbumDetailPage: React.FC = () => {
             albumData.description || "이 앨범에 대한 설명이 없습니다.",
           coverImage: albumData.coverImageUrl || "/placeholder-album.jpg",
           tracks: vinyListTracks,
+          isPublic: albumData.isPublic || false,
         };
 
         console.log("변환된 앨범 데이터:", vinyListAlbum);
@@ -684,6 +690,34 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
+  const handleTogglePrivacy = async () => {
+    if (!albumId || !album) return;
+
+    try {
+      setUpdatingPrivacy(true);
+      const newIsPublic = !album.isPublic;
+
+      await albumService.updateAlbum(parseInt(albumId), {
+        title: album.title,
+        description: album.description,
+        isPublic: newIsPublic,
+      });
+
+      // 로컬 상태 업데이트
+      setAlbum((prev) => (prev ? { ...prev, isPublic: newIsPublic } : null));
+
+      showToast(
+        newIsPublic ? "앨범이 공개되었습니다." : "앨범이 비공개되었습니다.",
+        "success"
+      );
+    } catch (error: any) {
+      console.error("앨범 공개 설정 변경 실패:", error);
+      showToast("앨범 공개 설정 변경에 실패했습니다.", "error");
+    } finally {
+      setUpdatingPrivacy(false);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -892,7 +926,7 @@ const AlbumDetailPage: React.FC = () => {
                               textAlign: "center",
                             }}
                           >
-                            {track.id}
+                            {track.position}
                           </Typography>
                           <Typography
                             variant="body1"
@@ -1019,37 +1053,6 @@ const AlbumDetailPage: React.FC = () => {
                           },
                         }}
                       />
-                      <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={handleUpdateAlbumInfo}
-                          disabled={
-                            !editingAlbumTitle.trim() || updatingAlbumInfo
-                          }
-                          sx={{
-                            bgcolor: "#38bdf8",
-                            "&:hover": { bgcolor: "#0ea5e9" },
-                          }}
-                        >
-                          {updatingAlbumInfo ? "저장 중..." : "저장"}
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          onClick={handleCancelEditAlbumInfo}
-                          disabled={updatingAlbumInfo}
-                          sx={{
-                            color: "rgba(255, 255, 255, 0.7)",
-                            borderColor: "rgba(255, 255, 255, 0.3)",
-                            "&:hover": {
-                              borderColor: "rgba(255, 255, 255, 0.5)",
-                            },
-                          }}
-                        >
-                          취소
-                        </Button>
-                      </Box>
                     </Box>
                   ) : (
                     <Typography
@@ -1110,6 +1113,75 @@ const AlbumDetailPage: React.FC = () => {
                         },
                       }}
                     />
+
+                    {/* 공개/비공개 토글 - 수정 모드에서만 표시 */}
+                    <Box sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={album?.isPublic || false}
+                            onChange={handleTogglePrivacy}
+                            disabled={updatingPrivacy}
+                            sx={{
+                              "& .MuiSwitch-switchBase.Mui-checked": {
+                                color: "#38bdf8",
+                              },
+                              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
+                                {
+                                  backgroundColor: "#38bdf8",
+                                },
+                            }}
+                          />
+                        }
+                        label={
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                            }}
+                          >
+                            {album?.isPublic ? (
+                              <PublicIcon
+                                sx={{ fontSize: 16, color: "#4CAF50" }}
+                              />
+                            ) : (
+                              <LockIcon
+                                sx={{ fontSize: 16, color: "#FF9800" }}
+                              />
+                            )}
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: album?.isPublic ? "#4CAF50" : "#FF9800",
+                                fontWeight: 500,
+                                fontSize: "13px",
+                              }}
+                            >
+                              {album?.isPublic ? "공개 앨범" : "비공개 앨범"}
+                            </Typography>
+                            {updatingPrivacy && (
+                              <CircularProgress size={14} sx={{ ml: 1 }} />
+                            )}
+                          </Box>
+                        }
+                        sx={{ alignItems: "center" }}
+                      />
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "rgba(255, 255, 255, 0.6)",
+                          ml: 4,
+                          display: "block",
+                          mt: 0.5,
+                          fontSize: "11px",
+                        }}
+                      >
+                        {album?.isPublic
+                          ? "다른 사용자들이 이 앨범을 볼 수 있습니다"
+                          : "이 앨범은 나만 볼 수 있습니다"}
+                      </Typography>
+                    </Box>
                   </Box>
                 ) : (
                   album.description && (
@@ -1136,74 +1208,134 @@ const AlbumDetailPage: React.FC = () => {
                       borderTop: "1px solid rgba(255, 255, 255, 0.1)",
                     }}
                   >
-                    <Typography
-                      variant="subtitle2"
-                      color="rgba(255, 255, 255, 0.7)"
-                      sx={{ mb: 2, fontWeight: 600, fontSize: "14px" }}
-                    >
-                      앨범 관리
-                    </Typography>
                     <Stack spacing={2} direction="row">
-                      {/* Edit Album Info Button */}
-                      <Button
-                        variant="outlined"
-                        onClick={handleEditAlbumInfo}
-                        size="small"
-                        startIcon={<SettingsIcon sx={{ fontSize: 16 }} />}
-                        sx={{
-                          color: "#8b5cf6",
-                          borderColor: "#8b5cf6",
-                          textTransform: "none",
-                          fontWeight: 500,
-                          fontSize: "12px",
-                          py: 0.5,
-                          px: 1.5,
-                          borderRadius: 2,
-                          "&:hover": {
-                            bgcolor: "rgba(139, 92, 246, 0.1)",
-                            borderColor: "#7c3aed",
-                            color: "#7c3aed",
-                            transform: "translateY(-1px)",
-                            boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
-                          },
-                          transition: "all 0.2s ease",
-                        }}
-                      >
-                        수정
-                      </Button>
+                      {isEditingAlbumInfo ? (
+                        <>
+                          {/* Save Button */}
+                          <Button
+                            variant="contained"
+                            onClick={handleUpdateAlbumInfo}
+                            disabled={!editingAlbumTitle.trim() || updatingAlbumInfo}
+                            size="small"
+                            startIcon={<SaveIcon sx={{ fontSize: 16 }} />}
+                            sx={{
+                              bgcolor: "#38bdf8",
+                              color: "white",
+                              textTransform: "none",
+                              fontWeight: 500,
+                              fontSize: "12px",
+                              py: 0.5,
+                              px: 1.5,
+                              borderRadius: 2,
+                              "&:hover": {
+                                bgcolor: "#0ea5e9",
+                                transform: "translateY(-1px)",
+                                boxShadow: "0 4px 12px rgba(56, 189, 248, 0.3)",
+                              },
+                              "&:disabled": {
+                                bgcolor: "rgba(56, 189, 248, 0.3)",
+                              },
+                              transition: "all 0.2s ease",
+                            }}
+                          >
+                            {updatingAlbumInfo ? "저장 중..." : "저장"}
+                          </Button>
 
-                      {/* Delete Album Button */}
-                      <Button
-                        variant="outlined"
-                        onClick={() => handleDeleteAlbum()}
-                        disabled={deletingAlbum}
-                        size="small"
-                        startIcon={<DeleteForeverIcon sx={{ fontSize: 16 }} />}
-                        sx={{
-                          color: "#ef4444",
-                          borderColor: "#ef4444",
-                          textTransform: "none",
-                          fontWeight: 500,
-                          fontSize: "12px",
-                          py: 0.5,
-                          px: 1.5,
-                          borderRadius: 2,
-                          "&:hover": {
-                            bgcolor: "rgba(239, 68, 68, 0.1)",
-                            borderColor: "#dc2626",
-                            color: "#dc2626",
-                            transform: "translateY(-1px)",
-                            boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
-                          },
-                          "&:disabled": {
-                            color: "rgba(239, 68, 68, 0.3)",
-                            borderColor: "rgba(239, 68, 68, 0.3)",
-                          },
-                          transition: "all 0.2s ease",
-                        }}
-                      >
-                        {deletingAlbum ? "삭제 중..." : "삭제"}
-                      </Button>
+                          {/* Cancel Button */}
+                          <Button
+                            variant="outlined"
+                            onClick={handleCancelEditAlbumInfo}
+                            disabled={updatingAlbumInfo}
+                            size="small"
+                            startIcon={<CancelIcon sx={{ fontSize: 16 }} />}
+                            sx={{
+                              color: "rgba(255, 255, 255, 0.7)",
+                              borderColor: "rgba(255, 255, 255, 0.3)",
+                              textTransform: "none",
+                              fontWeight: 500,
+                              fontSize: "12px",
+                              py: 0.5,
+                              px: 1.5,
+                              borderRadius: 2,
+                              "&:hover": {
+                                borderColor: "rgba(255, 255, 255, 0.5)",
+                                bgcolor: "rgba(255, 255, 255, 0.05)",
+                                transform: "translateY(-1px)",
+                              },
+                              "&:disabled": {
+                                color: "rgba(255, 255, 255, 0.3)",
+                                borderColor: "rgba(255, 255, 255, 0.1)",
+                              },
+                              transition: "all 0.2s ease",
+                            }}
+                          >
+                            취소
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Edit Album Info Button */}
+                          <Button
+                            variant="outlined"
+                            onClick={handleEditAlbumInfo}
+                            size="small"
+                            startIcon={<SettingsIcon sx={{ fontSize: 16 }} />}
+                            sx={{
+                              color: "#8b5cf6",
+                              borderColor: "#8b5cf6",
+                              textTransform: "none",
+                              fontWeight: 500,
+                              fontSize: "12px",
+                              py: 0.5,
+                              px: 1.5,
+                              borderRadius: 2,
+                              "&:hover": {
+                                bgcolor: "rgba(139, 92, 246, 0.1)",
+                                borderColor: "#7c3aed",
+                                color: "#7c3aed",
+                                transform: "translateY(-1px)",
+                                boxShadow: "0 4px 12px rgba(139, 92, 246, 0.2)",
+                              },
+                              transition: "all 0.2s ease",
+                            }}
+                          >
+                            수정
+                          </Button>
+
+                          {/* Delete Album Button */}
+                          <Button
+                            variant="outlined"
+                            onClick={() => handleDeleteAlbum()}
+                            disabled={deletingAlbum}
+                            size="small"
+                            startIcon={<DeleteForeverIcon sx={{ fontSize: 16 }} />}
+                            sx={{
+                              color: "#ef4444",
+                              borderColor: "#ef4444",
+                              textTransform: "none",
+                              fontWeight: 500,
+                              fontSize: "12px",
+                              py: 0.5,
+                              px: 1.5,
+                              borderRadius: 2,
+                              "&:hover": {
+                                bgcolor: "rgba(239, 68, 68, 0.1)",
+                                borderColor: "#dc2626",
+                                color: "#dc2626",
+                                transform: "translateY(-1px)",
+                                boxShadow: "0 4px 12px rgba(239, 68, 68, 0.2)",
+                              },
+                              "&:disabled": {
+                                color: "rgba(239, 68, 68, 0.3)",
+                                borderColor: "rgba(239, 68, 68, 0.3)",
+                              },
+                              transition: "all 0.2s ease",
+                            }}
+                          >
+                            {deletingAlbum ? "삭제 중..." : "삭제"}
+                          </Button>
+                        </>
+                      )}
                     </Stack>
                   </Box>
                 )}
