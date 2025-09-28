@@ -110,6 +110,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import { useFollowList } from "../hooks/useSocial";
+import { useUIStore } from "../stores/uiStore";
 import { recordingService } from "../services/api/recordings";
 import { motion } from "framer-motion";
 import AlbumCoverflow from "../components/AlbumCoverflow";
@@ -297,6 +298,7 @@ const StatCard: React.FC<StatCardProps> = ({
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateProfile, isAuthenticated } = useAuth();
+  const { showToast } = useUIStore();
   const {
     profile,
     updateProfile: updateMyProfile,
@@ -1048,12 +1050,14 @@ const MyPage: React.FC = () => {
                       variant="body2"
                       sx={{ color: "rgba(255, 255, 255, 0.8)" }}
                     >
-                      {user?.createdAt 
-                        ? `${new Date(user.createdAt).getFullYear()}. ${new Date(user.createdAt).getMonth() + 1}. ${new Date(user.createdAt).getDate()}.부터 활동`
-                        : profile?.createdAt 
-                        ? `${new Date(profile.createdAt).getFullYear()}. ${new Date(profile.createdAt).getMonth() + 1}. ${new Date(profile.createdAt).getDate()}.부터 활동`
-                        : "활동 시작일을 불러오는 중..."
-                      }
+                      {(() => {
+                        const createdAt = user?.createdAt || profile?.createdAt;
+                        if (profileLoading) return "활동 시작일을 불러오는 중...";
+                        if (!createdAt) return "활동 시작일 정보 없음";
+                        
+                        const date = new Date(createdAt);
+                        return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.부터 활동`;
+                      })()}
                     </Typography>
                   </Box>
                   <Typography
@@ -1285,7 +1289,10 @@ const MyPage: React.FC = () => {
                       coverImageUrl:
                         album.coverImageUrl || "/image/albumCoverImage.png", // 백엔드에서 제공하는 coverImageUrl 사용
                       artist: "나",
-                      year: new Date(album.createdAt).getFullYear().toString(),
+                      year: (() => {
+                        const date = new Date(album.createdAt);
+                        return date.getFullYear().toString();
+                      })(),
                       trackCount: album.trackCount,
                     }))}
                     onAlbumClick={(album) =>
@@ -1547,10 +1554,13 @@ const MyPage: React.FC = () => {
                               variant="body2"
                               sx={{ color: "#FFFFFF" }}
                             >
-                              {new Date(recording.createdAt).toLocaleDateString(
-                                "ko-KR",
-                                { month: "long", day: "numeric" }
-                              )}
+                              {(() => {
+                                const date = new Date(recording.createdAt);
+                                return date.toLocaleDateString(
+                                  "ko-KR",
+                                  { month: "long", day: "numeric" }
+                                );
+                              })()}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -1640,7 +1650,10 @@ const MyPage: React.FC = () => {
                     artist: album.userNickname || "Various Artists", // 좋아요한 앨범의 아티스트 정보
                     coverImageUrl:
                       album.coverImageUrl || "/image/albumCoverImage.png",
-                    year: new Date(album.createdAt).getFullYear().toString(),
+                    year: (() => {
+                      const date = new Date(album.createdAt);
+                      return date.getFullYear().toString();
+                    })(),
                     trackCount: album.trackCount,
                     likeCount: album.likeCount, // 좋아요 수 추가
                   }))}
