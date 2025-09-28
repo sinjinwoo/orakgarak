@@ -20,7 +20,9 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Checkbox,
-  TextField
+  TextField,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -31,7 +33,9 @@ import {
   KeyboardBackspace as KeyboardBackspaceIcon,
   Favorite as FavoriteIcon,
   ChatBubbleOutline as CommentIcon,
-  Send as SendIcon
+  Send as SendIcon,
+  Public as PublicIcon,
+  Lock as LockIcon
 } from '@mui/icons-material';
 import {
   Cloud as CloudIcon,
@@ -45,6 +49,7 @@ import { albumService } from '../services/api/albums';
 import { recordingService } from '../services/api/recordings';
 import { socialService, type Comment } from '../services/api/social';
 import { useAuthStore } from '../stores/authStore';
+import { useUIStore } from '../stores/uiStore';
 import type { Album } from '../types/album';
 import LPRecord from '../components/LPRecord';
 
@@ -67,12 +72,14 @@ interface VinyListAlbum {
   description: string;
   coverImage: string;
   tracks: VinyListTrack[];
+  isPublic?: boolean;
 }
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { showToast } = useUIStore();
 
   // State
   const [loading, setLoading] = useState(true);
@@ -121,6 +128,7 @@ const AlbumDetailPage: React.FC = () => {
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
 
   // Load album data
   useEffect(() => {
@@ -535,6 +543,34 @@ const AlbumDetailPage: React.FC = () => {
       } finally {
         setDeletingAlbum(false);
       }
+    }
+  };
+
+  const handleTogglePrivacy = async () => {
+    if (!albumId || !album) return;
+
+    try {
+      setUpdatingPrivacy(true);
+      const newIsPublic = !album.isPublic;
+      
+      await albumService.updateAlbum(parseInt(albumId), {
+        title: album.title,
+        description: album.description,
+        isPublic: newIsPublic
+      });
+
+      // 로컬 상태 업데이트
+      setAlbum(prev => prev ? { ...prev, isPublic: newIsPublic } : null);
+      
+      showToast(
+        newIsPublic ? '앨범이 공개되었습니다.' : '앨범이 비공개되었습니다.',
+        'success'
+      );
+    } catch (error: any) {
+      console.error('앨범 공개 설정 변경 실패:', error);
+      showToast('앨범 공개 설정 변경에 실패했습니다.', 'error');
+    } finally {
+      setUpdatingPrivacy(false);
     }
   };
 
@@ -1187,6 +1223,62 @@ const AlbumDetailPage: React.FC = () => {
                 {isOwner && (
                   <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <Stack spacing={2}>
+                      {/* 공개/비공개 토글 */}
+                      <Box sx={{ mb: 2 }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={album?.isPublic || false}
+                              onChange={handleTogglePrivacy}
+                              disabled={updatingPrivacy}
+                              sx={{
+                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                  color: '#C147E9',
+                                },
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                  backgroundColor: '#C147E9',
+                                },
+                              }}
+                            />
+                          }
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {album?.isPublic ? (
+                                <PublicIcon sx={{ fontSize: 16, color: '#4CAF50' }} />
+                              ) : (
+                                <LockIcon sx={{ fontSize: 16, color: '#FF9800' }} />
+                              )}
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: album?.isPublic ? '#4CAF50' : '#FF9800',
+                                  fontWeight: 500
+                                }}
+                              >
+                                {album?.isPublic ? '공개 앨범' : '비공개 앨범'}
+                              </Typography>
+                              {updatingPrivacy && (
+                                <CircularProgress size={16} sx={{ ml: 1 }} />
+                              )}
+                            </Box>
+                          }
+                          sx={{ alignItems: 'center' }}
+                        />
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            ml: 4,
+                            display: 'block',
+                            mt: 0.5
+                          }}
+                        >
+                          {album?.isPublic 
+                            ? '다른 사용자들이 이 앨범을 볼 수 있습니다'
+                            : '이 앨범은 나만 볼 수 있습니다'
+                          }
+                        </Typography>
+                      </Box>
 
                       <Button
                         variant="text"

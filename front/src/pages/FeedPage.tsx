@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useUIStore } from "../stores/uiStore";
 import { useAuthStore } from "../stores/authStore";
 import { albumService } from "../services/api/albums";
 import { motion } from "framer-motion";
@@ -66,6 +67,7 @@ const cyberpunkStyles = `
 
 const FeedPage: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useUIStore();
   const { user } = useAuthStore();
   const [tabValue, setTabValue] = useState(0);
   const [sortBy, setSortBy] = useState("latest");
@@ -132,6 +134,10 @@ const FeedPage: React.FC = () => {
         setFeedAlbums(getFeedAlbums());
       }
 
+      // 재시도 가능한 에러인 경우 사용자에게 알림
+      if (isRetryableError(error)) {
+        showToast(WARNING_MESSAGES.NETWORK_RETRY, "warning");
+      }
     } finally {
       if (!append) {
         setLoading(false);
@@ -139,7 +145,7 @@ const FeedPage: React.FC = () => {
         setIsLoadingMore(false);
       }
     }
-  }, []);
+  }, [showToast]);
 
   // 팔로우한 사용자들의 앨범 로드
   const loadFollowedUsersAlbums = useCallback(async (pageNum = 0, append = false) => {
@@ -181,6 +187,10 @@ const FeedPage: React.FC = () => {
       const errorMessage = getApiErrorMessage(error);
       setError(errorMessage);
 
+      // 재시도 가능한 에러인 경우 사용자에게 알림
+      if (isRetryableError(error)) {
+        showToast(WARNING_MESSAGES.DATA_LOAD_FAILED, "warning");
+      }
     } finally {
       if (!append) {
         setLoading(false);
@@ -188,7 +198,7 @@ const FeedPage: React.FC = () => {
         setIsLoadingMore(false);
       }
     }
-  }, []);
+  }, [showToast]);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -256,6 +266,7 @@ const FeedPage: React.FC = () => {
     const latestMyAlbums = getMyAlbums();
     setMyAlbums(latestMyAlbums);
     if (latestMyAlbums.length === 0) {
+      showToast("먼저 앨범을 생성해주세요.", "info");
       return;
     }
     setCreateFeedModalOpen(true);
@@ -269,6 +280,7 @@ const FeedPage: React.FC = () => {
 
   const handleFeedSubmit = () => {
     if (!selectedAlbumId || !feedDescription.trim()) {
+      showToast("앨범을 선택하고 설명을 입력해주세요.", "warning");
       return;
     }
 
@@ -276,6 +288,7 @@ const FeedPage: React.FC = () => {
       (album: FeedAlbum) => album.id.toString() === selectedAlbumId
     );
     if (!selectedAlbum) {
+      showToast("선택된 앨범을 찾을 수 없습니다.", "error");
       return;
     }
 
@@ -308,6 +321,7 @@ const FeedPage: React.FC = () => {
       return updatedFeedAlbums;
     });
     handleCloseCreateFeedModal();
+    showToast("피드가 성공적으로 생성되었습니다!", "success");
   };
 
   return (

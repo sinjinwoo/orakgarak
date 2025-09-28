@@ -1048,7 +1048,12 @@ const MyPage: React.FC = () => {
                       variant="body2"
                       sx={{ color: "rgba(255, 255, 255, 0.8)" }}
                     >
-                      2024. 12. 1.부터 활동
+                      {user?.createdAt 
+                        ? `${new Date(user.createdAt).getFullYear()}. ${new Date(user.createdAt).getMonth() + 1}. ${new Date(user.createdAt).getDate()}.부터 활동`
+                        : profile?.createdAt 
+                        ? `${new Date(profile.createdAt).getFullYear()}. ${new Date(profile.createdAt).getMonth() + 1}. ${new Date(profile.createdAt).getDate()}.부터 활동`
+                        : "활동 시작일을 불러오는 중..."
+                      }
                     </Typography>
                   </Box>
                   <Typography
