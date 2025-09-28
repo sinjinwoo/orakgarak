@@ -107,7 +107,6 @@ import {
   Wallpaper,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import { useUIStore } from "../stores/uiStore";
 import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import { useFollowList } from "../hooks/useSocial";
@@ -297,7 +296,6 @@ const StatCard: React.FC<StatCardProps> = ({
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showToast } = useUIStore();
   const { user, updateProfile, isAuthenticated } = useAuth();
   const {
     profile,
@@ -477,7 +475,6 @@ const MyPage: React.FC = () => {
       } else {
         setAlbumsError("앨범을 불러오는데 실패했습니다. 새로고침을 시도해주세요.");
         setMyAlbums([]);
-        showToast("앨범을 불러오는데 실패했습니다.", "error");
       }
     } finally {
       setAlbumsLoading(false);
@@ -546,7 +543,6 @@ const MyPage: React.FC = () => {
             totalLikes: 0,
             likedAlbumCount: 0,
           });
-          showToast("통계 데이터를 개별 API로 로드했습니다.", "info");
         }
 
         // 내 앨범 목록 로드 (재시도 로직 포함)
@@ -742,13 +738,11 @@ const MyPage: React.FC = () => {
     if (file) {
       // 파일 크기 체크 (5MB 제한)
       if (file.size > 5 * 1024 * 1024) {
-        showToast("파일 크기는 5MB 이하여야 합니다.", "error");
         return;
       }
 
       // 이미지 파일 타입 체크
       if (!file.type.startsWith("image/")) {
-        showToast("이미지 파일만 업로드 가능합니다.", "error");
         return;
       }
 
@@ -756,13 +750,11 @@ const MyPage: React.FC = () => {
         // 실제 API 호출
         const success = await updateProfileImage(file);
         if (success) {
-          showToast("프로필 사진이 업로드되었습니다.", "success");
         } else {
           throw new Error("프로필 사진 업로드에 실패했습니다.");
         }
       } catch (error) {
         console.error("프로필 이미지 업로드 실패:", error);
-        showToast("프로필 사진 업로드에 실패했습니다.", "error");
       }
     }
   };
@@ -778,13 +770,11 @@ const MyPage: React.FC = () => {
 
       if (success) {
         setProfileEditOpen(false);
-        showToast("프로필이 성공적으로 저장되었습니다.", "success");
       } else {
         throw new Error("프로필 저장에 실패했습니다.");
       }
     } catch (error) {
       console.error("프로필 저장 실패:", error);
-      showToast("프로필 저장에 실패했습니다.", "error");
     }
   };
 
@@ -805,7 +795,6 @@ const MyPage: React.FC = () => {
           });
           const success = await updateProfileImage(defaultFile);
           if (success) {
-            showToast("프로필 사진이 기본 이미지로 변경되었습니다.", "success");
             return;
           }
         }
@@ -831,7 +820,6 @@ const MyPage: React.FC = () => {
           });
           const success = await updateProfileImage(defaultFile);
           if (success) {
-            showToast("프로필 사진이 기본 이미지로 변경되었습니다.", "success");
           } else {
             throw new Error("프로필 사진 초기화에 실패했습니다.");
           }
@@ -839,10 +827,6 @@ const MyPage: React.FC = () => {
       }, "image/png");
     } catch (error) {
       console.error("프로필 사진 초기화 실패:", error);
-      showToast(
-        "프로필 사진 초기화에 실패했습니다. 백엔드 서버를 확인해주세요.",
-        "error"
-      );
     }
   };
 
@@ -857,10 +841,8 @@ const MyPage: React.FC = () => {
       setRecordings((prev) =>
         prev.filter((recording) => recording.id !== recordingId)
       );
-      showToast("녹음이 삭제되었습니다.", "success");
     } catch (error) {
       console.error("녹음 삭제 실패:", error);
-      showToast("녹음 삭제에 실패했습니다.", "error");
     }
   };
 
@@ -869,7 +851,6 @@ const MyPage: React.FC = () => {
     setRecordings((prev) =>
       prev.filter((_, index) => index !== recordingIndex)
     );
-    showToast("녹음이 삭제되었습니다.", "success");
   };
 
   const getQualityColor = (quality: string) => {
@@ -2086,13 +2067,11 @@ const MyPage: React.FC = () => {
                   if (file) {
                     // 파일 크기 체크 (5MB 제한)
                     if (file.size > 5 * 1024 * 1024) {
-                      showToast("파일 크기는 5MB 이하여야 합니다.", "error");
                       return;
                     }
 
                     // 이미지 파일 타입 체크
                     if (!file.type.startsWith("image/")) {
-                      showToast("이미지 파일만 업로드 가능합니다.", "error");
                       return;
                     }
 
@@ -2103,7 +2082,6 @@ const MyPage: React.FC = () => {
                           // 새 배경 업로드 성공 시 강제 기본 배경 플래그 해제
                           setForceDefaultBackground(false);
                           localStorage.removeItem("forceDefaultBackground");
-                          showToast("배경 이미지가 설정되었습니다.", "success");
                           setIsBackgroundModalOpen(false);
                           return;
                         }
@@ -2114,13 +2092,11 @@ const MyPage: React.FC = () => {
                       reader.onload = (event) => {
                         const imageUrl = event.target?.result as string;
                         localStorage.setItem("customBackground", imageUrl);
-                        showToast("배경 이미지가 설정되었습니다.", "success");
                         setIsBackgroundModalOpen(false);
                         window.location.reload();
                       };
                       reader.readAsDataURL(file);
                     } catch (error) {
-                      showToast("배경 이미지 업로드에 실패했습니다.", "error");
                     }
                   }
                 }}
@@ -2236,11 +2212,6 @@ const MyPage: React.FC = () => {
                             console.log("서버 업로드 실패, 로컬에서만 적용:", uploadError);
                           }
                         }
-                        
-                        showToast(
-                          "앨범 커버가 배경으로 설정되었습니다.",
-                          "success"
-                        );
                         setIsBackgroundModalOpen(false);
                         
                         // 페이지 새로고침으로 배경 적용
@@ -2249,14 +2220,9 @@ const MyPage: React.FC = () => {
                         }, 500);
                       } catch (error) {
                         console.error("배경 설정 실패:", error);
-                        showToast("배경 설정에 실패했습니다.", "error");
                       }
                     } else {
                       console.log("유효하지 않은 커버 이미지:", album.coverImageUrl);
-                      showToast(
-                        "이 앨범에는 커버 이미지가 설정되지 않았습니다.",
-                        "info"
-                      );
                     }
                   }}
                 >
@@ -2340,14 +2306,12 @@ const MyPage: React.FC = () => {
                     }
                   }
 
-                  showToast("기본 배경으로 복원되었습니다.", "success");
                   setIsBackgroundModalOpen(false);
 
                   // 페이지 새로고침으로 배경 적용
                   window.location.reload();
                 } catch (error) {
                   console.error("배경 복원 실패:", error);
-                  showToast("기본 배경 복원에 실패했습니다.", "error");
                 }
               }}
               sx={{
