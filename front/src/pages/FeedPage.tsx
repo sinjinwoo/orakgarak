@@ -443,9 +443,9 @@ const FeedPage: React.FC = () => {
                                 border: "1px solid rgba(255, 255, 255, 0.1)",
                                 transition: "all 0.3s ease",
                                 display: "flex",
-                                flexDirection: "column",
+                                flexDirection: "row",
                                 width: "100%",
-                                minHeight: "400px",
+                                minHeight: "280px",
                                 "&:hover": {
                                   transform: "translateY(-2px)",
                                   backgroundColor:
@@ -453,20 +453,28 @@ const FeedPage: React.FC = () => {
                                   boxShadow:
                                     "0 8px 25px rgba(0, 0, 0, 0.3)",
                                 },
+                                "@media (max-width: 600px)": {
+                                  flexDirection: "column",
+                                  minHeight: "400px",
+                                },
                               }}
                               onClick={() => handleAlbumClick(album)}
                             >
                               <Box
                                 sx={{
                                   position: "relative",
-                                  width: "100%",
-                                  height: "300px", // Adjusted height
+                                  width: "40%",
+                                  height: "100%",
                                   overflow: "hidden",
                                   backgroundColor: "rgba(0, 0, 0, 0.2)",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
                                   p: 2,
+                                  "@media (max-width: 600px)": {
+                                    width: "100%",
+                                    height: "250px",
+                                  },
                                 }}
                               >
                                 {album.coverImageUrl ? (
@@ -475,7 +483,7 @@ const FeedPage: React.FC = () => {
                                     sx={{
                                       width: "100%",
                                       height: "100%",
-                                      objectFit: "contain", // Changed to contain
+                                      objectFit: "cover",
                                       borderRadius: 1,
                                       transition: "all 0.3s ease",
                                       boxShadow:
@@ -506,7 +514,7 @@ const FeedPage: React.FC = () => {
                                   >
                                     <MusicNote
                                       sx={{
-                                        fontSize: "4rem",
+                                        fontSize: "3rem",
                                         color: "rgba(255, 255, 255, 0.9)",
                                       }}
                                     />
@@ -516,11 +524,15 @@ const FeedPage: React.FC = () => {
 
                               <Box
                                 sx={{
-                                  p: 2,
+                                  width: "60%",
+                                  p: 3,
                                   display: "flex",
                                   flexDirection: "column",
                                   justifyContent: "space-between",
-                                  flex: 1,
+                                  "@media (max-width: 600px)": {
+                                    width: "100%",
+                                    p: 2,
+                                  },
                                 }}
                               >
                                 <Box>
@@ -529,9 +541,13 @@ const FeedPage: React.FC = () => {
                                     sx={{
                                       fontWeight: 700,
                                       color: "#FFFFFF",
-                                      fontSize: "1.3rem",
-                                      mb: 1.5,
-                                      lineHeight: 1.2,
+                                      fontSize: "1.5rem",
+                                      mb: 2,
+                                      lineHeight: 1.3,
+                                      "@media (max-width: 600px)": {
+                                        fontSize: "1.3rem",
+                                        mb: 1.5,
+                                      },
                                     }}
                                   >
                                     {album.title || "제목 없음"}
@@ -541,27 +557,35 @@ const FeedPage: React.FC = () => {
                                     sx={{
                                       display: "flex",
                                       alignItems: "center",
-                                      mb: 1.5,
+                                      mb: 2,
                                     }}
                                   >
                                     <Avatar
                                       src={album.user?.avatar}
                                       sx={{
-                                        width: 32,
-                                        height: 32,
-                                        mr: 1.5,
+                                        width: 40,
+                                        height: 40,
+                                        mr: 2,
                                         border:
                                           "2px solid rgba(255, 255, 255, 0.3)",
+                                        "@media (max-width: 600px)": {
+                                          width: 32,
+                                          height: 32,
+                                          mr: 1.5,
+                                        },
                                       }}
                                     >
-                                      <Person sx={{ fontSize: 18 }} />
+                                      <Person sx={{ fontSize: 22 }} />
                                     </Avatar>
                                     <Typography
                                       variant="body1"
                                       sx={{
-                                        fontSize: "0.9rem",
+                                        fontSize: "1rem",
                                         color: "rgba(255, 255, 255, 0.9)",
                                         fontWeight: 600,
+                                        "@media (max-width: 600px)": {
+                                          fontSize: "0.9rem",
+                                        },
                                       }}
                                     >
                                       {album.user?.nickname ||
@@ -574,14 +598,18 @@ const FeedPage: React.FC = () => {
                                     sx={{
                                       color: "rgba(255, 255, 255, 0.8)",
                                       lineHeight: 1.5,
-                                      fontSize: "0.85rem",
+                                      fontSize: "0.95rem",
                                       mb: 2,
                                       fontWeight: 400,
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
                                       display: "-webkit-box",
-                                      WebkitLineClamp: 2,
+                                      WebkitLineClamp: 3,
                                       WebkitBoxOrient: "vertical",
+                                      "@media (max-width: 600px)": {
+                                        fontSize: "0.85rem",
+                                        WebkitLineClamp: 2,
+                                      },
                                     }}
                                   >
                                     {album.description ||
@@ -603,12 +631,15 @@ const FeedPage: React.FC = () => {
                                       <Typography
                                         variant="body2"
                                         sx={{
-                                          fontSize: "0.8rem",
+                                          fontSize: "0.9rem",
                                           color: "rgba(255, 255, 255, 0.9)",
                                           display: "flex",
                                           alignItems: "center",
                                           gap: 0.5,
                                           fontWeight: 600,
+                                          "@media (max-width: 600px)": {
+                                            fontSize: "0.8rem",
+                                          },
                                         }}
                                       >
                                         ♫ {album.trackCount || 0}곡
@@ -617,12 +648,15 @@ const FeedPage: React.FC = () => {
                                         <Typography
                                           variant="body2"
                                           sx={{
-                                            fontSize: "0.8rem",
+                                            fontSize: "0.9rem",
                                             color: "rgba(255, 255, 255, 0.9)",
                                             display: "flex",
                                             alignItems: "center",
                                             gap: 0.5,
                                             fontWeight: 600,
+                                            "@media (max-width: 600px)": {
+                                              fontSize: "0.8rem",
+                                            },
                                           }}
                                         >
                                           ⏱{" "}
@@ -636,9 +670,12 @@ const FeedPage: React.FC = () => {
                                     <Typography
                                       variant="caption"
                                       sx={{
-                                        fontSize: "0.75rem",
+                                        fontSize: "0.85rem",
                                         color: "rgba(255, 255, 255, 0.6)",
                                         fontWeight: 400,
+                                        "@media (max-width: 600px)": {
+                                          fontSize: "0.75rem",
+                                        },
                                       }}
                                     >
                                       {album.createdAt
