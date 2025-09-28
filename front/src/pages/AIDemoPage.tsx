@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Container, 
   Typography, 
@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import { 
   PlayArrow, 
+  Pause,
   Stop, 
   MusicNote, 
   YouTube, 
@@ -95,6 +96,12 @@ const AIDemoPage: React.FC = () => {
 
   // 오디오 재생 관련
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  
+  // 오디오 ref
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsInitialized(true), 100);
@@ -242,14 +249,49 @@ const AIDemoPage: React.FC = () => {
     }
   };
 
-  const playAudio = (url: string) => {
-    if (playingAudio === url) {
-      setPlayingAudio(null);
+  // 오디오 재생/일시정지
+  const togglePlayback = useCallback((url: string) => {
+    if (!audioRef.current) return;
+
+    const audio = audioRef.current;
+
+    if (playingAudio === url && isPlaying) {
+      // 현재 재생 중인 오디오를 일시정지
+      audio.pause();
+      setIsPlaying(false);
     } else {
-      setPlayingAudio(url);
-      // 실제 오디오 재생 로직은 여기에 구현
-      setTimeout(() => setPlayingAudio(null), 5000);
+      // 새로운 오디오 재생 또는 재생 재개
+      if (playingAudio !== url) {
+        audio.src = url;
+        setPlayingAudio(url);
+      }
+      audio.play();
+      setIsPlaying(true);
     }
+  }, [playingAudio, isPlaying]);
+
+  // 오디오 시간 업데이트
+  const handleTimeUpdate = useCallback(() => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      if (!duration) {
+        setDuration(audioRef.current.duration);
+      }
+    }
+  }, [duration]);
+
+  // 오디오 재생 완료
+  const handleEnded = useCallback(() => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setPlayingAudio(null);
+  }, []);
+
+  // 시간 포맷팅
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -590,27 +632,76 @@ const AIDemoPage: React.FC = () => {
                           </Typography>
                         </Box>
                         
-                        <Tooltip title={playingAudio === record.url ? "정지" : "재생"}>
+                        <Tooltip title={playingAudio === record.url && isPlaying ? "일시정지" : "재생"}>
                           <IconButton
-                            onClick={() => playAudio(record.url)}
+                            onClick={() => togglePlayback(record.url)}
                             sx={{
-                              background: 'linear-gradient(45deg, #00ffff, #ff0080)',
-                              color: '#000',
+                              width: 48,
+                              height: 48,
+                              background: playingAudio === record.url && isPlaying 
+                                ? 'rgba(255,0,128,0.2)' 
+                                : 'rgba(0,255,255,0.2)',
+                              color: playingAudio === record.url && isPlaying 
+                                ? '#ff0080' 
+                                : '#00ffff',
+                              border: `2px solid ${playingAudio === record.url && isPlaying 
+                                ? '#ff0080' 
+                                : '#00ffff'}`,
                               '&:hover': {
-                                background: 'linear-gradient(45deg, #00cccc, #cc0066)',
+                                transform: 'scale(1.1)',
+                                boxShadow: `0 0 20px ${playingAudio === record.url && isPlaying 
+                                  ? 'rgba(255,0,128,0.5)' 
+                                  : 'rgba(0,255,255,0.5)'}`,
                               }
                             }}
                           >
-                            {playingAudio === record.url ? <Stop /> : <PlayArrow />}
+                            {playingAudio === record.url && isPlaying ? <Pause /> : <PlayArrow />}
                           </IconButton>
                         </Tooltip>
                       </Box>
 
+                      {/* 오디오 플레이어 */}
+                      <audio
+                        ref={audioRef}
+                        onTimeUpdate={handleTimeUpdate}
+                        onEnded={handleEnded}
+                        onLoadedMetadata={() => {
+                          if (audioRef.current) {
+                            setDuration(audioRef.current.duration);
+                          }
+                        }}
+                        preload="metadata"
+                      />
+
                       {playingAudio === record.url && (
                         <Box sx={{ mt: 2, p: 2, background: 'rgba(0, 255, 255, 0.1)', borderRadius: '8px' }}>
-                          <Typography variant="body2" sx={{ color: '#00ffff', textAlign: 'center' }}>
-                            🎵 재생 중...
+                          <Typography variant="body2" sx={{ 
+                            color: '#00ffff', 
+                            fontFamily: 'monospace',
+                            mb: 1 
+                          }}>
+                            {formatTime(currentTime)} / {formatTime(duration)}
                           </Typography>
+                          
+                          {/* 진행바 */}
+                          <Box
+                            sx={{
+                              height: 6,
+                              borderRadius: 3,
+                              bgcolor: 'rgba(255,255,255,0.1)',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                height: '100%',
+                                width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+                                background: 'linear-gradient(90deg, #00ffff, #ff0080)',
+                                boxShadow: '0 0 10px rgba(0,255,255,0.6)',
+                                transition: 'width 0.1s ease',
+                              }}
+                            />
+                          </Box>
                         </Box>
                       )}
                     </CardContent>

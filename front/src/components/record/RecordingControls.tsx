@@ -1114,7 +1114,7 @@ const RecordingControls: React.FC<RecordingControlsProps> = ({
                       >
                         {isConverting 
                           ? "🔄 WebM 파일을 WAV 형식으로 변환 중입니다..." 
-                          : "☁️ S3로 업로드 중입니다..."}
+                          : "☁️ 업로드 중입니다..."}
                       </Typography>
                     </Paper>
                   )}
