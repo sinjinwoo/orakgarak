@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { authService, profileService } from '../services/api';
-import { useUIStore } from '../stores/uiStore';
 import type { User } from '../types/user';
 
 export interface LoginCredentials {
@@ -36,7 +35,6 @@ export interface UseAuthReturn {
 
 export function useAuth(): UseAuthReturn {
   const { user, isAuthenticated, login: loginStore, logout: logoutStore, updateUser } = useAuthStore();
-  const { showToast } = useUIStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,16 +51,12 @@ export function useAuth(): UseAuthReturn {
       // 스토어 업데이트
       loginStore(userData);
       
-      // 성공 토스트 표시
-      showToast('로그인에 성공했습니다!', 'success', 3000);
       
       return true;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || '로그인에 실패했습니다.';
       setError(errorMessage);
       
-      // 실패 토스트 표시
-      showToast(errorMessage, 'error', 4000);
       
       return false;
     } finally {
@@ -83,16 +77,12 @@ export function useAuth(): UseAuthReturn {
       // 스토어 업데이트
       loginStore(userData);
       
-      // 성공 토스트 표시
-      showToast('회원가입에 성공했습니다!', 'success', 3000);
       
       return true;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || '회원가입에 실패했습니다.';
       setError(errorMessage);
       
-      // 실패 토스트 표시
-      showToast(errorMessage, 'error', 4000);
       
       return false;
     } finally {

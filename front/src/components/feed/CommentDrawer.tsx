@@ -17,7 +17,6 @@ import {
 import { Send, Close, Person, Edit, Delete, Reply } from '@mui/icons-material';
 import { useComments, useReplies } from '../../hooks/useSocial';
 import { useAuth } from '../../hooks/useAuth';
-import { useUIStore } from '../../stores/uiStore';
 
 interface CommentDrawerProps {
   open: boolean;
@@ -33,7 +32,6 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
   albumTitle,
 }) => {
   const { user } = useAuth();
-  const { showToast } = useUIStore();
   const { comments, isLoading, error, addComment, updateComment, deleteComment } = useComments(albumId);
   
   const [newComment, setNewComment] = useState('');
@@ -51,7 +49,6 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
       const success = await addComment(newComment.trim());
       if (success) {
         setNewComment('');
-        showToast('댓글이 작성되었습니다.', 'success');
       }
     } finally {
       setIsSubmitting(false);
@@ -65,7 +62,6 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
     if (success) {
       setEditingCommentId(null);
       setEditingContent('');
-      showToast('댓글이 수정되었습니다.', 'success');
     }
   };
 
@@ -74,7 +70,6 @@ const CommentDrawer: React.FC<CommentDrawerProps> = ({
     
     const success = await deleteComment(commentId);
     if (success) {
-      showToast('댓글이 삭제되었습니다.', 'success');
     }
   };
 

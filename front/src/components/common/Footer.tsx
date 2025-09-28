@@ -28,48 +28,34 @@ const Footer: React.FC = () => {
   // 푸터 섹션 데이터
   const footerSections = [
     {
-      title: 'Company',
+      title: 'ORAKGARAK',
       links: [
         { label: '홈', href: '/' },
         { label: 'AI 데모', href: '/ai-demo' },
       ]
     },
     {
-      title: 'Products',
+      title: '음악 서비스',
       links: [
-        { label: '노래 추천', href: '/recommendations' },
+        { label: 'AI 노래 추천', href: '/recommendations' },
+        { label: '음역대 테스트', href: '/onboarding/range' },
         { label: '녹음하기', href: '/record' },
         { label: '앨범 만들기', href: '/albums/create' },
-        { label: '커뮤니티', href: '/feed' },
       ]
     },
     {
-      title: 'Accounts',
+      title: '커뮤니티',
       links: [
+        { label: '피드', href: '/feed' },
         { label: '마이페이지', href: '/me' },
-        { label: '프로필 편집', href: '/me/edit' },
-        { label: '내 녹음', href: '/me/recordings' },
         { label: '내 앨범', href: '/me/albums' },
+        { label: '내 녹음', href: '/me/recordings' },
       ]
     },
     {
-      title: 'Resources',
+      title: '정보',
       links: [
-        { label: '음역대 테스트', href: '/onboarding/range' },
-        { label: 'AI 커버 갤러리', href: '/me/ai-covers' },
-      ]
-    },
-    {
-      title: 'Support',
-      links: [
-        { label: '문의: support@orak.or.kr', href: null },
         { label: '버전: v1.0.0', href: null },
-      ]
-    },
-    {
-      title: 'Social',
-      links: [
-        { label: '준비 중...', href: null },
       ]
     },
   ];
@@ -149,7 +135,7 @@ const Footer: React.FC = () => {
           gap: 2 
         }}>
           <Typography variant="body2" sx={{ ...textStyles.caption }}>
-            © 2025 오락가락 All rights reserved.
+            © 2025 ORAKGARAK. 당신의 목소리로 찾는 완벽한 노래.
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Typography variant="body2" sx={{ ...textStyles.caption }}>
@@ -157,7 +143,7 @@ const Footer: React.FC = () => {
             </Typography>
             <Favorite sx={{ color: theme.colors.accent.pink, fontSize: '1rem' }} />
             <Typography variant="body2" sx={{ ...textStyles.caption }}>
-              in Korea
+              AI & Music
             </Typography>
           </Box>
         </Box>

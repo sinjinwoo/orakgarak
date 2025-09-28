@@ -4,7 +4,6 @@ import { AppProviders } from './app/AppProviders';
 import { AppRouter } from './app/router';
 import Header from './components/common/Header';
 import Footer from './components/common/Footer';
-import Toast from './components/common/Toast';
 import { useAuth } from './hooks/useAuth';
 import './app/index.css';
 import './styles/immersive-playback.css';
@@ -41,7 +40,6 @@ function AppContent() {
         <AppRouter />
       </Box>
       <Footer />
-      <Toast />
     </Box>
   );
 }
