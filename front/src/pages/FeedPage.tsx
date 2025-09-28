@@ -23,7 +23,6 @@ import {
   Paper,
   CardMedia,
   Avatar,
-  Chip,
   Button,
   Tabs,
   Tab,
@@ -100,7 +99,6 @@ const FeedPage: React.FC = () => {
               album.userProfileImageUrl ||
               "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
           },
-          tags: ["캐주얼", "힐링"],
           playCount: Math.floor(Math.random() * 1000),
           commentCount: Math.floor(Math.random() * 50),
         }));
@@ -161,7 +159,6 @@ const FeedPage: React.FC = () => {
               album.userProfileImageUrl ||
               "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
           },
-          tags: ["커버", "감성"],
           playCount: Math.floor(Math.random() * 1000),
           commentCount: Math.floor(Math.random() * 50),
         }));
@@ -257,7 +254,24 @@ const FeedPage: React.FC = () => {
     []
   );
 
-  const filteredFeedAlbums = useMemo(() => feedAlbums, [feedAlbums]);
+  const filteredFeedAlbums = useMemo(() => {
+    const sorted = [...feedAlbums].sort((a, b) => {
+      if (sortBy === "latest") {
+        return (
+          new Date(b.createdAt || 0).getTime() -
+          new Date(a.createdAt || 0).getTime()
+        );
+      }
+      if (sortBy === "name") {
+        return (a.title || "").localeCompare(b.title || "");
+      }
+      if (sortBy === "likeCount") {
+        return (b.likeCount || 0) - (a.likeCount || 0);
+      }
+      return 0;
+    });
+    return sorted;
+  }, [feedAlbums, sortBy]);
 
   const handleSortChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -391,8 +405,8 @@ const FeedPage: React.FC = () => {
                           }}
                         >
                           <MenuItem value="latest">최신순</MenuItem>
-                          <MenuItem value="popular">인기순</MenuItem>
-                          <MenuItem value="trending">트렌딩</MenuItem>
+                          <MenuItem value="name">이름순</MenuItem>
+                          <MenuItem value="likeCount">좋아요순</MenuItem>
                         </Select>
                       </FormControl>
                     </Box>
@@ -699,36 +713,6 @@ const FeedPage: React.FC = () => {
                                     </Typography>
                                   </Box>
 
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      flexWrap: "wrap",
-                                      gap: 1.5,
-                                    }}
-                                  >
-                                    {(album.tags || []).map((tag: string) => (
-                                      <Chip
-                                        key={tag}
-                                        label={tag}
-                                        sx={{
-                                          backgroundColor:
-                                            "rgba(0, 255, 255, 0.25)",
-                                          color: "#00ffff",
-                                          fontSize: "1.1rem",
-                                          height: "45px",
-                                          fontWeight: 700,
-                                          border:
-                                            "2px solid rgba(0, 255, 255, 0.5)",
-                                          px: 2,
-                                          "&:hover": {
-                                            backgroundColor:
-                                              "rgba(0, 255, 255, 0.35)",
-                                            transform: "translateY(-1px)",
-                                          },
-                                        }}
-                                      />
-                                    ))}
-                                  </Box>
                                 </Box>
                               </Box>
                             </Box>
