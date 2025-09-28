@@ -610,11 +610,17 @@ const RecommendationsPage: React.FC = () => {
               >
                 {/* 타이틀 */}
                 <div className="mb-8">
-                  <h1 className="text-4xl md:text-5xl font-light text-cyan-300 mb-4 tracking-wide">
-                    당신만의 맞춤 추천을 받아보세요
+                  <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-tight">
+                    당신의 목소리로 찾는
+                    <br />
+                    <span className="bg-gradient-to-r from-cyan-300 to-pink-300 bg-clip-text text-transparent">
+                      음악 추천
+                    </span>
                   </h1>
-                  <p className="text-lg text-white/70">
-                    달력에서 녹음본을 선택하고 드래그하여 추천을 받아보세요
+                  <p className="text-xl md:text-2xl text-white/80 font-medium leading-relaxed">
+                    달력에서 녹음본을 선택하고 드래그하여
+                    <br className="hidden md:block" />
+                    목소리 분석 기반 음악 추천을 받아보세요
                   </p>
                 </div>
 
@@ -632,12 +638,12 @@ const RecommendationsPage: React.FC = () => {
                       <div className="text-6xl mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12">
                         🎵
                       </div>
-                      <h2 className="text-3xl font-bold text-pink-300 mb-4 tracking-wide">
-                        추천받기
+                      <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-wide">
+                        음악 추천 시작하기
                       </h2>
-                      <p className="text-lg text-cyan-300 leading-relaxed">
-                        달력에서 녹음본을 선택하여<br />
-                        맞춤형 노래 추천을 받습니다
+                      <p className="text-base md:text-lg text-white/90 leading-relaxed font-medium">
+                        나만의 목소리로 분석한<br />
+                        <span className="text-cyan-300 font-semibold">개인 맞춤형 음악 발견</span>
                       </p>
                     </div>
                   </div>
@@ -676,9 +682,10 @@ const RecommendationsPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <h3 className="text-white font-semibold text-lg">총 녹음본</h3>
-                          <p className="text-white/60 text-sm leading-relaxed">
-                            지금까지 녹음한 모든 음성 데이터
+                          <h3 className="text-white font-bold text-xl">총 녹음본</h3>
+                          <p className="text-white/70 text-sm leading-relaxed font-medium">
+                            음악 추천을 위해 수집된<br />
+                            <span className="text-blue-300">전체 음성 데이터</span>
                           </p>
                         </div>
                       </div>
@@ -712,9 +719,10 @@ const RecommendationsPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <h3 className="text-white font-semibold text-lg">오늘 녹음</h3>
-                          <p className="text-white/60 text-sm leading-relaxed">
-                            오늘 새로 추가된 녹음본 수
+                          <h3 className="text-white font-bold text-xl">오늘 녹음</h3>
+                          <p className="text-white/70 text-sm leading-relaxed font-medium">
+                            오늘 새롭게 추가된<br />
+                            <span className="text-pink-300">신규 음성 데이터</span>
                           </p>
                         </div>
                       </div>
@@ -744,9 +752,10 @@ const RecommendationsPage: React.FC = () => {
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <h3 className="text-white font-semibold text-lg">녹음 일수</h3>
-                          <p className="text-white/60 text-sm leading-relaxed">
-                            녹음 활동을 한 총 일수
+                          <h3 className="text-white font-bold text-xl">활동 일수</h3>
+                          <p className="text-white/70 text-sm leading-relaxed font-medium">
+                            음성 데이터를 수집한<br />
+                            <span className="text-yellow-300">총 활동 기간</span>
                           </p>
                         </div>
                       </div>
@@ -762,7 +771,7 @@ const RecommendationsPage: React.FC = () => {
                   >
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full backdrop-blur-xl">
                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      <span className="text-sm text-white/70">실시간 업데이트</span>
+                      <span className="text-sm text-white/70 font-medium">데이터 실시간 동기화</span>
                     </div>
                   </motion.div>
                 </motion.div>
