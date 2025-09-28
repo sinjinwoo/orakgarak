@@ -111,6 +111,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useProfile } from "../hooks/useProfile";
 import { useFollowList } from "../hooks/useSocial";
 import { useUIStore } from "../stores/uiStore";
+import { formatActivityStartDate, extractYear, formatKoreanDate } from "../utils/dateUtils";
 import { recordingService } from "../services/api/recordings";
 import { motion } from "framer-motion";
 import AlbumCoverflow from "../components/AlbumCoverflow";
@@ -1055,8 +1056,7 @@ const MyPage: React.FC = () => {
                         if (profileLoading) return "활동 시작일을 불러오는 중...";
                         if (!createdAt) return "활동 시작일 정보 없음";
                         
-                        const date = new Date(createdAt);
-                        return `${date.getFullYear()}. ${date.getMonth() + 1}. ${date.getDate()}.부터 활동`;
+                        return formatActivityStartDate(createdAt);
                       })()}
                     </Typography>
                   </Box>
@@ -1213,7 +1213,7 @@ const MyPage: React.FC = () => {
                     variant="h6"
                     sx={{ fontWeight: "bold", color: "#FFFFFF" }}
                   >
-                    💿 내 앨범 ({myAlbums.length})
+                    💿 내 앨범
                   </Typography>
                   <Button
                     variant="contained"
@@ -1289,10 +1289,7 @@ const MyPage: React.FC = () => {
                       coverImageUrl:
                         album.coverImageUrl || "/image/albumCoverImage.png", // 백엔드에서 제공하는 coverImageUrl 사용
                       artist: "나",
-                      year: (() => {
-                        const date = new Date(album.createdAt);
-                        return date.getFullYear().toString();
-                      })(),
+                      year: extractYear(album.createdAt),
                       trackCount: album.trackCount,
                     }))}
                     onAlbumClick={(album) =>
@@ -1317,15 +1314,21 @@ const MyPage: React.FC = () => {
                   justifyContent: "space-between",
                   alignItems: "center",
                   mb: 3,
+                  flexWrap: "nowrap",
                 }}
               >
                 <Typography
                   variant="h6"
-                  sx={{ fontWeight: "bold", color: "#FFFFFF" }}
+                  sx={{ 
+                    fontWeight: "bold", 
+                    color: "#FFFFFF",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0
+                  }}
                 >
-                  🎤 내 녹음 ({recordings.length})
+                  🎤 내 녹음
                 </Typography>
-                <Box sx={{ display: "flex", gap: 1 }}>
+                <Box sx={{ display: "flex", gap: 1, flexShrink: 0 }}>
                   <Button
                     variant="contained"
                     startIcon={<Add />}
@@ -1554,13 +1557,7 @@ const MyPage: React.FC = () => {
                               variant="body2"
                               sx={{ color: "#FFFFFF" }}
                             >
-                              {(() => {
-                                const date = new Date(recording.createdAt);
-                                return date.toLocaleDateString(
-                                  "ko-KR",
-                                  { month: "long", day: "numeric" }
-                                );
-                              })()}
+                              {formatKoreanDate(recording.createdAt)}
                             </Typography>
                           </TableCell>
                           <TableCell>
@@ -1593,7 +1590,7 @@ const MyPage: React.FC = () => {
                 variant="h6"
                 sx={{ fontWeight: "bold", mb: 3, color: "#FFFFFF" }}
               >
-                💖 좋아요한 앨범 ({likedAlbums.length})
+                💖 좋아요한 앨범
               </Typography>
               {likedAlbumsLoading ? (
                 <Box sx={{ textAlign: "center", py: 8 }}>
@@ -1650,10 +1647,7 @@ const MyPage: React.FC = () => {
                     artist: album.userNickname || "Various Artists", // 좋아요한 앨범의 아티스트 정보
                     coverImageUrl:
                       album.coverImageUrl || "/image/albumCoverImage.png",
-                    year: (() => {
-                      const date = new Date(album.createdAt);
-                      return date.getFullYear().toString();
-                    })(),
+                    year: extractYear(album.createdAt),
                     trackCount: album.trackCount,
                     likeCount: album.likeCount, // 좋아요 수 추가
                   }))}

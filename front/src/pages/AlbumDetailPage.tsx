@@ -45,6 +45,7 @@ import { albumService } from "../services/api/albums";
 import { socialService, type Comment } from "../services/api/social";
 import { useAuthStore } from "../stores/authStore";
 import { useUIStore } from "../stores/uiStore";
+import { extractYear } from "../utils/dateUtils";
 import type { Album } from "../types/album";
 import LPRecord from "../components/LPRecord";
 
@@ -202,7 +203,7 @@ const AlbumDetailPage: React.FC = () => {
           id: albumData.id.toString(),
           title: albumData.title,
           artist: albumData.userNickname || `사용자 ${albumData.userId}`,
-          year: new Date(albumData.createdAt).getFullYear().toString(),
+          year: extractYear(albumData.createdAt),
           description:
             albumData.description || "이 앨범에 대한 설명이 없습니다.",
           coverImage: albumData.coverImageUrl || "/placeholder-album.jpg",
@@ -648,6 +649,7 @@ const AlbumDetailPage: React.FC = () => {
       await albumService.updateAlbum(parseInt(albumId), {
         title: editingAlbumTitle.trim(),
         description: editingAlbumDescription.trim(),
+        isPublic: album?.isPublic || false,
       });
 
       // Reload album data
