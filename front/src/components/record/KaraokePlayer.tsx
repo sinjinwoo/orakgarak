@@ -412,7 +412,6 @@ const KaraokePlayer: React.FC = () => {
               letterSpacing: '0.1em'
             }}
           >
-            {isPlaying ? 'SYNC ACTIVE' : 'STANDBY'}
       </Typography>
         </Box>
       </Box>
