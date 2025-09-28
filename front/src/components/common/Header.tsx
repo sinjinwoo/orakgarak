@@ -196,9 +196,14 @@ const Header: React.FC = () => {
               pointerEvents: isLandingPage ? 'none' : 'auto',
               "&:focus": {
                 outline: "none",
+                boxShadow: "none",
+              },
+              "&:focus-visible": {
+                outline: "none",
+                boxShadow: "none",
               },
               "&:hover": {
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                backgroundColor: "transparent",
               },
             }}
           >
@@ -243,7 +248,6 @@ const Header: React.FC = () => {
                     fontWeight: isActive ? 700 : 500,
                     textShadow: isActive ? "2px 2px 4px rgba(0, 0, 0, 0.3)" : "none",
                     transform: isActive ? "translateY(-1px)" : "translateY(0)",
-                    boxShadow: isActive ? "0 4px 8px rgba(255, 215, 0, 0.3)" : "none",
                     transition: "all 0.3s ease",
                     outline: "none",
                     "&:focus": {
@@ -253,7 +257,6 @@ const Header: React.FC = () => {
                       color: "#FFD700",
                       textShadow: "2px 2px 4px rgba(0, 0, 0, 0.3)",
                       transform: "translateY(-1px)",
-                      boxShadow: "0 4px 8px rgba(255, 215, 0, 0.3)",
                     },
               }}
             >

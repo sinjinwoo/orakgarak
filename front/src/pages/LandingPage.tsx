@@ -104,22 +104,26 @@ const LandingPage: React.FC = () => {
     {
       icon: Music,
       title: "맞춤형 노래 추천",
-      description: "AI가 당신의 음역대, 음색, 선호 장르를 분석하여 완벽하게 맞는 노래를 추천합니다. 기존에 부르기 어려웠던 곡들도 당신의 목소리에 최적화된 키로 제공되어 누구나 쉽게 따라 부를 수 있어요. 매일 새로운 추천곡으로 음악적 경험을 넓혀보세요.",
+      description:
+        "당신의 음역대, 음색, 선호 장르를 분석하여 완벽하게 맞는 노래를 추천합니다. 기존에 부르기 어려웠던 곡들도 당신의 목소리에 최적화된 키로 제공되어 누구나 쉽게 따라 부를 수 있어요. 매일 새로운 추천곡으로 음악적 경험을 넓혀보세요.",
     },
     {
       icon: Brain,
-      title: "AI 보컬 코칭",
-      description: "실시간으로 피치, 박자, 강세, 호흡을 분석하여 전문가 수준의 보컬 코칭을 제공합니다. 노래하는 동안 즉시 피드백을 받아 부족한 부분을 바로 개선할 수 있어요. 개인별 맞춤 연습 계획과 함께 보컬 실력을 단계적으로 향상시켜보세요.",
+      title: "AI 데모 생성",
+      description:
+        "30분 이상 녹음본이 있으면 나만의 AI 데모를 만들어볼 수 있습니다.녹음한 목소리를 활용해 색다른 음원이나 재미있는 효과를 생성하며, 연습 기록을 즐겁게 공유할 수 있습니다.",
     },
     {
       icon: Disc,
       title: "나만의 앨범",
-      description: "녹음한 곡들로 개인 앨범을 제작하고, AI가 생성한 독창적인 앨범 커버까지 완성해보세요. 다양한 스타일과 테마의 커버 디자인을 선택할 수 있으며, 트랙 순서도 자유롭게 조정 가능합니다. 나만의 음악 컬렉션을 세상과 공유해보세요.",
+      description:
+        "녹음한 곡들로 개인 앨범을 제작하고, AI가 생성한 독창적인 앨범 커버까지 완성해보세요. 다양한 스타일과 테마의 커버 디자인을 선택할 수 있으며, 트랙 순서도 자유롭게 조정 가능합니다. 나만의 음악 컬렉션을 세상과 공유해보세요.",
     },
     {
       icon: Users,
       title: "소셜 피드",
-      description: "전 세계 사용자들이 만든 앨범을 감상하고, 좋아요와 댓글로 소통할 수 있는 음악 커뮤니티입니다. 다양한 장르와 스타일의 음악을 발견하고, 다른 사용자들과 음악적 영감을 주고받아보세요. 새로운 아티스트를 발견하는 즐거움도 함께합니다.",
+      description:
+        "전 세계 사용자들이 만든 앨범을 감상하고, 좋아요와 댓글로 소통할 수 있는 음악 커뮤니티입니다. 다양한 장르와 스타일의 음악을 발견하고, 다른 사용자들과 음악적 영감을 주고받아보세요. 새로운 아티스트를 발견하는 즐거움도 함께합니다.",
     },
   ];
 
@@ -213,10 +217,11 @@ const LandingPage: React.FC = () => {
                 >
                   <span
                     style={{
-                      color: '#ffffff',
-                      textShadow: '0 0 10px rgba(251, 66, 212, 0.8), 0 0 20px rgba(251, 66, 212, 0.6), 0 0 30px rgba(251, 66, 212, 0.4)',
-                      fontWeight: 'bold',
-                      filter: 'drop-shadow(0 0 5px rgba(251, 66, 212, 0.5))'
+                      color: "#ffffff",
+                      textShadow:
+                        "0 0 10px rgba(251, 66, 212, 0.8), 0 0 20px rgba(251, 66, 212, 0.6), 0 0 30px rgba(251, 66, 212, 0.4)",
+                      fontWeight: "bold",
+                      filter: "drop-shadow(0 0 5px rgba(251, 66, 212, 0.5))",
                     }}
                   >
                     {isLoading
@@ -251,10 +256,11 @@ const LandingPage: React.FC = () => {
                 >
                   <span
                     style={{
-                      color: '#ffffff',
-                      textShadow: '0 0 10px rgba(66, 253, 235, 0.8), 0 0 20px rgba(66, 253, 235, 0.6), 0 0 30px rgba(66, 253, 235, 0.4)',
-                      fontWeight: 'bold',
-                      filter: 'drop-shadow(0 0 5px rgba(66, 253, 235, 0.5))'
+                      color: "#ffffff",
+                      textShadow:
+                        "0 0 10px rgba(66, 253, 235, 0.8), 0 0 20px rgba(66, 253, 235, 0.6), 0 0 30px rgba(66, 253, 235, 0.4)",
+                      fontWeight: "bold",
+                      filter: "drop-shadow(0 0 5px rgba(66, 253, 235, 0.5))",
                     }}
                   >
                     Explore
@@ -276,7 +282,7 @@ const LandingPage: React.FC = () => {
             radial-gradient(circle at 80% 80%, rgba(66, 253, 235, 0.1) 0%, transparent 50%),
             radial-gradient(circle at 40% 60%, rgba(139, 69, 255, 0.05) 0%, transparent 50%),
             linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #000000 100%)
-          `
+          `,
         }}
       >
         {/* Enhanced Background Effects */}
@@ -289,64 +295,70 @@ const LandingPage: React.FC = () => {
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                background: i % 3 === 0 ? 'rgba(251, 66, 212, 0.6)' : 
-                           i % 3 === 1 ? 'rgba(66, 253, 235, 0.6)' : 
-                           'rgba(139, 69, 255, 0.6)',
-                boxShadow: i % 3 === 0 ? '0 0 20px rgba(251, 66, 212, 0.8)' :
-                           i % 3 === 1 ? '0 0 20px rgba(66, 253, 235, 0.8)' :
-                           '0 0 20px rgba(139, 69, 255, 0.8)'
+                background:
+                  i % 3 === 0
+                    ? "rgba(251, 66, 212, 0.6)"
+                    : i % 3 === 1
+                    ? "rgba(66, 253, 235, 0.6)"
+                    : "rgba(139, 69, 255, 0.6)",
+                boxShadow:
+                  i % 3 === 0
+                    ? "0 0 20px rgba(251, 66, 212, 0.8)"
+                    : i % 3 === 1
+                    ? "0 0 20px rgba(66, 253, 235, 0.8)"
+                    : "0 0 20px rgba(139, 69, 255, 0.8)",
               }}
               animate={{
                 y: [0, -20, 0],
                 opacity: [0.3, 1, 0.3],
-                scale: [1, 1.2, 1]
+                scale: [1, 1.2, 1],
               }}
               transition={{
                 duration: 3 + Math.random() * 2,
                 repeat: Infinity,
-                delay: Math.random() * 2
+                delay: Math.random() * 2,
               }}
             />
           ))}
-          
+
           {/* Enhanced Gradient Orbs */}
           <motion.div
             className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-500/20 to-pink-500/20 rounded-full blur-3xl"
             animate={{
               scale: [1, 1.2, 1],
-              opacity: [0.3, 0.6, 0.3]
+              opacity: [0.3, 0.6, 0.3],
             }}
             transition={{
               duration: 4,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: "easeInOut",
             }}
           />
           <motion.div
             className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-tr from-pink-500/20 to-purple-500/20 rounded-full blur-3xl"
             animate={{
               scale: [1.2, 1, 1.2],
-              opacity: [0.6, 0.3, 0.6]
+              opacity: [0.6, 0.3, 0.6],
             }}
             transition={{
               duration: 5,
               repeat: Infinity,
               ease: "easeInOut",
-              delay: 1
+              delay: 1,
             }}
           />
-          
+
           {/* New Central Orb */}
           <motion.div
             className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-purple-500/15 to-cyan-500/15 rounded-full blur-2xl"
             animate={{
               rotate: [0, 360],
-              scale: [1, 1.1, 1]
+              scale: [1, 1.1, 1],
             }}
             transition={{
               duration: 8,
               repeat: Infinity,
-              ease: "linear"
+              ease: "linear",
             }}
           />
         </div>
@@ -359,7 +371,7 @@ const LandingPage: React.FC = () => {
               linear-gradient(90deg, rgba(66, 253, 235, 0.3) 1px, transparent 1px),
               linear-gradient(45deg, rgba(139, 69, 255, 0.1) 1px, transparent 1px)
             `,
-            backgroundSize: "60px 60px, 60px 60px, 120px 120px"
+            backgroundSize: "60px 60px, 60px 60px, 120px 120px",
           }}
         />
 
@@ -375,24 +387,25 @@ const LandingPage: React.FC = () => {
               className="text-5xl lg:text-6xl font-bold"
               style={{
                 color: "#ffffff",
-                textShadow: "0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(66, 253, 235, 0.4), 0 0 45px rgba(251, 66, 212, 0.3)"
+                textShadow:
+                  "0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(66, 253, 235, 0.4), 0 0 45px rgba(251, 66, 212, 0.3)",
               }}
               animate={{
                 textShadow: [
                   "0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(66, 253, 235, 0.4), 0 0 45px rgba(251, 66, 212, 0.3)",
                   "0 0 20px rgba(255, 255, 255, 1), 0 0 35px rgba(66, 253, 235, 0.6), 0 0 50px rgba(251, 66, 212, 0.5)",
-                  "0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(66, 253, 235, 0.4), 0 0 45px rgba(251, 66, 212, 0.3)"
-                ]
+                  "0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(66, 253, 235, 0.4), 0 0 45px rgba(251, 66, 212, 0.3)",
+                ],
               }}
               transition={{
                 duration: 4,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
             >
               오락가락의 특별한 기능들
             </motion.h2>
-            
+
             <motion.div
               className="w-24 h-1 bg-gradient-to-r from-pink-500 via-cyan-500 to-purple-500 mx-auto rounded-full"
               initial={{ scaleX: 0 }}
@@ -411,10 +424,7 @@ const LandingPage: React.FC = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.2 }}
               >
-                <FeatureItem
-                  feature={feature}
-                  isReversed={index % 2 !== 0}
-                />
+                <FeatureItem feature={feature} isReversed={index % 2 !== 0} />
               </motion.div>
             ))}
           </div>
@@ -471,7 +481,7 @@ const LandingPage: React.FC = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-             지금 바로 시작해보세요! 
+              지금 바로 시작해보세요!
             </motion.h2>
             <motion.div
               className="max-w-3xl mx-auto space-y-4"
@@ -482,24 +492,26 @@ const LandingPage: React.FC = () => {
             >
               <motion.p
                 className="text-xl text-white/95 font-medium"
-                style={{ 
+                style={{
                   textShadow: "0 0 15px rgba(255, 255, 255, 0.3)",
-                  background: "linear-gradient(90deg, #ffffff, #e0e7ff, #ffffff)",
+                  background:
+                    "linear-gradient(90deg, #ffffff, #e0e7ff, #ffffff)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
-                  backgroundClip: "text"
+                  backgroundClip: "text",
                 }}
               >
                 단 3분이면 당신의 음성을 완벽하게 분석하고
               </motion.p>
               <motion.p
                 className="text-xl text-white/95 font-medium"
-                style={{ 
+                style={{
                   textShadow: "0 0 15px rgba(255, 255, 255, 0.3)",
-                  background: "linear-gradient(90deg, #ffffff, #e0e7ff, #ffffff)",
+                  background:
+                    "linear-gradient(90deg, #ffffff, #e0e7ff, #ffffff)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
-                  backgroundClip: "text"
+                  backgroundClip: "text",
                 }}
               >
                 당신만을 위한 맞춤형 노래 추천을 받을 수 있습니다!
@@ -561,10 +573,11 @@ const LandingPage: React.FC = () => {
               >
                 <span
                   style={{
-                    color: '#ffffff',
-                    textShadow: '0 0 15px rgba(251, 66, 212, 0.9), 0 0 25px rgba(251, 66, 212, 0.7), 0 0 35px rgba(251, 66, 212, 0.5)',
-                    fontWeight: 'bold',
-                    filter: 'drop-shadow(0 0 8px rgba(251, 66, 212, 0.6))'
+                    color: "#ffffff",
+                    textShadow:
+                      "0 0 15px rgba(251, 66, 212, 0.9), 0 0 25px rgba(251, 66, 212, 0.7), 0 0 35px rgba(251, 66, 212, 0.5)",
+                    fontWeight: "bold",
+                    filter: "drop-shadow(0 0 8px rgba(251, 66, 212, 0.6))",
                   }}
                 >
                   {isLoading

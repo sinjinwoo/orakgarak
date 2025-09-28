@@ -192,123 +192,169 @@ export default function RecommendationResult({
       <Box sx={{ 
         minHeight: '100vh', 
         display: 'flex', 
+        flexDirection: 'column',
         alignItems: 'center', 
         justifyContent: 'center',
         background: `
-          radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 1) 100%)
+          radial-gradient(circle at 30% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
+          radial-gradient(circle at 70% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%),
+          linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 1) 100%)
         `,
         color: '#fff',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        {/* 네온 간판 */}
+
+        {/* 메인 로딩 컨테이너 */}
         <Box sx={{
           position: 'relative',
-          display: 'inline-block',
-          px: 8,
-          py: 3,
-          border: '3px solid transparent',
-          borderRadius: 2,
-          background: 'rgba(0, 0, 0, 0.8)',
-          borderImage: 'linear-gradient(45deg, #ec4899, #06b6d4) 1',
-          animation: 'neonPowerOn 3s ease-in-out forwards, neonFlicker 2s ease-in-out 3s infinite',
-          '@keyframes neonPowerOn': {
-            '0%': {
-              boxShadow: 'none',
-              borderColor: 'transparent'
-            },
-            '20%': {
-              boxShadow: '0 0 5px #ec4899, inset 0 0 5px rgba(236, 72, 153, 0.1)',
-              borderColor: '#ec4899'
-            },
-            '40%': {
-              boxShadow: '0 0 10px #ec4899, 0 0 20px rgba(236, 72, 153, 0.3), inset 0 0 10px rgba(236, 72, 153, 0.1)',
-              borderColor: '#ec4899'
-            },
-            '60%': {
-              boxShadow: '0 0 15px #ec4899, 0 0 30px rgba(236, 72, 153, 0.4), 0 0 40px rgba(6, 182, 212, 0.2), inset 0 0 15px rgba(236, 72, 153, 0.1)',
-              borderColor: 'rgba(236, 72, 153, 0.8)'
-            },
-            '80%': {
-              boxShadow: '0 0 20px #ec4899, 0 0 40px rgba(236, 72, 153, 0.5), 0 0 60px rgba(6, 182, 212, 0.3), 0 0 80px rgba(236, 72, 153, 0.2), inset 0 0 20px rgba(236, 72, 153, 0.1)',
-              borderColor: 'rgba(236, 72, 153, 0.9)'
-            },
-            '100%': {
-              boxShadow: '0 0 25px #ec4899, 0 0 50px rgba(236, 72, 153, 0.6), 0 0 80px rgba(6, 182, 212, 0.4), 0 0 120px rgba(236, 72, 153, 0.3), inset 0 0 25px rgba(236, 72, 153, 0.1)',
-              borderColor: '#ec4899'
-            }
-          },
-          '@keyframes neonFlicker': {
-            '0%, 18%, 22%, 25%, 53%, 57%, 100%': {
-              boxShadow: '0 0 25px #ec4899, 0 0 50px rgba(236, 72, 153, 0.6), 0 0 80px rgba(6, 182, 212, 0.4), 0 0 120px rgba(236, 72, 153, 0.3), inset 0 0 25px rgba(236, 72, 153, 0.1)'
-            },
-            '20%, 24%, 55%': {
-              boxShadow: '0 0 10px #ec4899, 0 0 20px rgba(236, 72, 153, 0.3), 0 0 30px rgba(6, 182, 212, 0.2), inset 0 0 10px rgba(236, 72, 153, 0.05)'
-            }
-          }
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 4,
+          zIndex: 2
         }}>
-          {/* 네온 텍스트 */}
+          {/* 브랜드 로고 영역 */}
+          <Box sx={{
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2
+          }}>
+            {/* 브랜드명 */}
             <Typography 
-            variant="h2" 
+              variant="h2" 
               sx={{ 
                 fontFamily: "'Courier New', monospace",
-              fontWeight: 900,
-              fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4rem' },
-              background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: 'none',
-              animation: 'textPowerOn 3s ease-in-out forwards, textFlicker 2s ease-in-out 3s infinite',
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              '@keyframes textPowerOn': {
-                '0%': {
-                  opacity: 0.1,
-                  filter: 'brightness(0.2)'
-                },
-                '20%': {
-                  opacity: 0.3,
-                  filter: 'brightness(0.4)',
-                  textShadow: '0 0 5px rgba(236, 72, 153, 0.5)'
-                },
-                '40%': {
-                  opacity: 0.6,
-                  filter: 'brightness(0.7)',
-                  textShadow: '0 0 10px rgba(236, 72, 153, 0.7), 0 0 20px rgba(236, 72, 153, 0.5)'
-                },
-                '60%': {
-                  opacity: 0.8,
-                  filter: 'brightness(0.9)',
-                  textShadow: '0 0 15px rgba(236, 72, 153, 0.8), 0 0 30px rgba(236, 72, 153, 0.6), 0 0 40px rgba(6, 182, 212, 0.4)'
-                },
-                '80%': {
-                  opacity: 0.95,
-                  filter: 'brightness(1.1)',
-                  textShadow: '0 0 20px rgba(236, 72, 153, 0.9), 0 0 40px rgba(236, 72, 153, 0.7), 0 0 60px rgba(6, 182, 212, 0.5), 0 0 80px rgba(236, 72, 153, 0.3)'
-                },
-                '100%': {
-                  opacity: 1,
-                  filter: 'brightness(1.2)',
-                  textShadow: '0 0 25px rgba(236, 72, 153, 1), 0 0 50px rgba(236, 72, 153, 0.8), 0 0 80px rgba(6, 182, 212, 0.6), 0 0 120px rgba(236, 72, 153, 0.4)'
+                fontWeight: 900,
+                fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4rem' },
+                background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: 'none',
+                animation: 'textGlow 2s ease-in-out infinite',
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                '@keyframes textGlow': {
+                  '0%, 100%': {
+                    filter: 'brightness(1)',
+                    textShadow: '0 0 20px rgba(236, 72, 153, 0.5)'
+                  },
+                  '50%': {
+                    filter: 'brightness(1.2)',
+                    textShadow: '0 0 30px rgba(236, 72, 153, 0.8), 0 0 50px rgba(6, 182, 212, 0.4)'
+                  }
                 }
-              },
-              '@keyframes textFlicker': {
-                '0%, 18%, 22%, 25%, 53%, 57%, 100%': {
-                  opacity: 1,
-                  filter: 'brightness(1.2)',
-                  textShadow: '0 0 25px rgba(236, 72, 153, 1), 0 0 50px rgba(236, 72, 153, 0.8), 0 0 80px rgba(6, 182, 212, 0.6), 0 0 120px rgba(236, 72, 153, 0.4)'
-                },
-                '20%, 24%, 55%': {
-                  opacity: 0.8,
-                  filter: 'brightness(0.8)',
-                  textShadow: '0 0 10px rgba(236, 72, 153, 0.6), 0 0 20px rgba(236, 72, 153, 0.4), 0 0 30px rgba(6, 182, 212, 0.3)'
+              }}
+            >
+              ORAKGARAK
+            </Typography>
+            
+            {/* 슬로건 */}
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontStyle: 'italic',
+                animation: 'fadeInOut 3s ease-in-out infinite',
+                '@keyframes fadeInOut': {
+                  '0%, 100%': { opacity: 0.6 },
+                  '50%': { opacity: 1 }
                 }
-              }
-            }}
-          >
-            ORAKGARAK
+              }}
+            >
+              "당신의 목소리로 찾는 완벽한 노래"
             </Typography>
           </Box>
+
+          {/* 진행 상태 영역 */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 3,
+            width: '100%',
+            maxWidth: '400px'
+          }}>
+            {/* 로딩 메시지 */}
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                color: '#06b6d4',
+                fontWeight: 600,
+                textAlign: 'center',
+                animation: 'messageSlide 2s ease-in-out infinite',
+                '@keyframes messageSlide': {
+                  '0%, 100%': { transform: 'translateY(0px)' },
+                  '50%': { transform: 'translateY(-2px)' }
+                }
+              }}
+            >
+              AI가 당신을 위한 노래를 찾고 있어요...
+            </Typography>
+            
+            {/* 프로그레스 바 */}
+            <Box sx={{
+              width: '100%',
+              height: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '3px',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              <Box sx={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, #ec4899, #06b6d4)',
+                borderRadius: '3px',
+                animation: 'progressLoad 3s ease-in-out infinite',
+                '@keyframes progressLoad': {
+                  '0%': { transform: 'translateX(-100%)' },
+                  '50%': { transform: 'translateX(0%)' },
+                  '100%': { transform: 'translateX(100%)' }
+                }
+              }} />
+            </Box>
+            
+            {/* 단계별 메시지 */}
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.9rem'
+                }}
+              >
+                🎤 목소리 분석 중...
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.9rem'
+                }}
+              >
+                🧠 AI 추천 알고리즘 실행 중...
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.9rem'
+                }}
+              >
+                🎵 완벽한 노래 매칭 중...
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
       </Box>
     );
   }
@@ -429,7 +475,7 @@ export default function RecommendationResult({
                 fontSize: { xs: '1.5rem', sm: '2rem' }
               }}
             >
-              AI 추천 결과
+              추천 결과
             </Typography>
             <Typography 
               variant="body1"
@@ -505,7 +551,7 @@ export default function RecommendationResult({
                   })
                 }}
               >
-                AI 추천
+                추천 곡
               </Button>
               <Button
                 onClick={() => setTab('similar')}
@@ -615,7 +661,7 @@ export default function RecommendationResult({
                       }}
                     >
                       {tab === 'ai' 
-                        ? 'AI가 분석한 당신에게 어울리는 곡들입니다' 
+                        ? '당신에게 어울리는 곡들입니다' 
                         : '비슷한 음색을 가진 사람들이 많이 부르는 곡들입니다'
                       }
               </Typography>
