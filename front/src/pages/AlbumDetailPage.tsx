@@ -45,7 +45,6 @@ import { albumService } from '../services/api/albums';
 import { recordingService } from '../services/api/recordings';
 import { socialService, type Comment } from '../services/api/social';
 import { useAuthStore } from '../stores/authStore';
-import { useUIStore } from '../stores/uiStore';
 import type { Album } from '../types/album';
 import LPRecord from '../components/LPRecord';
 
@@ -74,7 +73,6 @@ const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { showToast } = useUIStore();
 
   // State
   const [loading, setLoading] = useState(true);
@@ -225,14 +223,13 @@ const AlbumDetailPage: React.FC = () => {
       } catch (error: any) {
         console.error('앨범 로드 실패:', error);
         setError('앨범을 불러올 수 없습니다.');
-        showToast('앨범을 불러올 수 없습니다.', 'error');
       } finally {
         setLoading(false);
       }
     };
 
     loadAlbum();
-  }, [albumId, showToast]);
+  }, [albumId]);
 
   // Cleanup audio when component unmounts
   useEffect(() => {
@@ -271,7 +268,6 @@ const AlbumDetailPage: React.FC = () => {
     console.log('오디오 URL:', track.audioUrl);
     
     if (!track.audioUrl) {
-      showToast('오디오 파일 URL이 없습니다.', 'error');
       return;
     }
 
@@ -307,7 +303,6 @@ const AlbumDetailPage: React.FC = () => {
       });
 
       audio.addEventListener('error', () => {
-        showToast('오디오 파일을 재생할 수 없습니다.', 'error');
         setIsLoading(false);
         setIsPlaying(false);
       });
@@ -322,7 +317,6 @@ const AlbumDetailPage: React.FC = () => {
       
     } catch (error) {
       console.error('오디오 재생 오류:', error);
-      showToast('오디오 재생 중 오류가 발생했습니다.', 'error');
       setIsLoading(false);
       setIsPlaying(false);
     }
@@ -341,7 +335,6 @@ const AlbumDetailPage: React.FC = () => {
       }
     } catch (error) {
       console.error('재생/일시정지 오류:', error);
-      showToast('재생 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -351,15 +344,12 @@ const AlbumDetailPage: React.FC = () => {
     try {
       if (isFollowing) {
         await socialService.follow.unfollowUser(albumUserId);
-        showToast('언팔로우했습니다.', 'info');
       } else {
         await socialService.follow.followUser(albumUserId);
-        showToast('팔로우했습니다.', 'success');
       }
       setIsFollowing(!isFollowing);
     } catch (error) {
       console.error('팔로우/언팔로우 실패:', error);
-      showToast('작업에 실패했습니다.', 'error');
     }
   };
 
@@ -374,10 +364,8 @@ const AlbumDetailPage: React.FC = () => {
       const commentsResponse = await socialService.comments.getAlbumComments(parseInt(albumId));
       setComments(commentsResponse.content || []);
       setNewComment('');
-      showToast('댓글이 등록되었습니다.', 'success');
     } catch (error: any) {
       console.error('댓글 등록 실패:', error);
-      showToast('댓글 등록 중 오류가 발생했습니다.', 'error');
     } finally {
       setSubmittingComment(false);
     }
@@ -395,10 +383,8 @@ const AlbumDetailPage: React.FC = () => {
       const commentsResponse = await socialService.comments.getAlbumComments(parseInt(albumId));
       setComments(commentsResponse.content || []);
       setReplyInputs(prev => ({ ...prev, [commentId]: '' }));
-      showToast('대댓글이 등록되었습니다.', 'success');
     } catch (error: any) {
       console.error('대댓글 등록 실패:', error);
-      showToast('대댓글 등록 중 오류가 발생했습니다.', 'error');
     } finally {
       setSubmittingReplies(prev => ({ ...prev, [commentId]: false }));
     }
@@ -453,14 +439,12 @@ const AlbumDetailPage: React.FC = () => {
           setLikeCount(likeCountResult.count);
         }
 
-        showToast(result.message, 'success');
       } else {
         throw new Error('토글 요청 실패');
       }
 
     } catch (error: any) {
       console.error('좋아요 처리 실패:', error);
-      showToast('좋아요 처리 중 오류가 발생했습니다.', 'error');
 
       // 에러 발생 시에도 서버 상태와 동기화
       await refreshLikeStatus();
@@ -477,7 +461,6 @@ const AlbumDetailPage: React.FC = () => {
       const recordings = await recordingService.getMyRecordings();
 
       if (!recordings || recordings.length === 0) {
-        showToast('사용 가능한 녹음이 없습니다. 먼저 녹음을 생성해주세요.', 'warning');
         setAvailableRecordings([]);
       } else {
         setAvailableRecordings(recordings);
@@ -488,7 +471,6 @@ const AlbumDetailPage: React.FC = () => {
       setEditTracksOpen(true);
     } catch (error: any) {
       console.error('수록곡 편집 실패:', error);
-      showToast('수록곡 편집 중 오류가 발생했습니다.', 'error');
       setAvailableRecordings([]);
     } finally {
       setLoadingRecordings(false);
@@ -499,7 +481,6 @@ const AlbumDetailPage: React.FC = () => {
     if (!albumId) return;
 
     if (selectedRecordings.length === 0) {
-      showToast('최소 하나의 녹음을 선택해주세요.', 'warning');
       return;
     }
 
@@ -522,14 +503,12 @@ const AlbumDetailPage: React.FC = () => {
         await albumService.addTracks(parseInt(albumId), { tracks: tracksToAdd });
       }
 
-      showToast('수록곡이 업데이트되었습니다.', 'success');
       setEditTracksOpen(false);
 
       // Reload album data
       window.location.reload();
     } catch (error: any) {
       console.error('수록곡 저장 실패:', error);
-      showToast('수록곡 저장 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -548,13 +527,11 @@ const AlbumDetailPage: React.FC = () => {
       try {
         setDeletingAlbum(true);
         await albumService.deleteAlbum(parseInt(albumId));
-        showToast('앨범이 삭제되었습니다.', 'success');
 
         const previousPage = window.history.state?.from || '/feed';
         navigate(previousPage);
       } catch (error: any) {
         console.error('앨범 삭제 실패:', error);
-        showToast('앨범 삭제 중 오류가 발생했습니다.', 'error');
       } finally {
         setDeletingAlbum(false);
       }
