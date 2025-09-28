@@ -1200,6 +1200,104 @@ const VoiceTestGame: React.FC = () => {
         </div>
       </div>
 
+                {/* 우측 정보 영역 */}
+                <div style={{
+                    width: '300px',
+                    height: '650px',
+                    marginLeft: '20px',
+                    background: `
+                        radial-gradient(circle at 20% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 60%),
+                        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.15) 0%, transparent 60%),
+                        linear-gradient(135deg, #1a1a2e 0%, #16213e 30%, #0f3460 70%, #1a1a2e 100%)
+                    `,
+                    borderRadius: '20px',
+                    boxShadow: '0 0 40px rgba(236, 72, 153, 0.3), 0 0 40px rgba(6, 182, 212, 0.3)',
+                    border: '1px solid rgba(6, 182, 212, 0.3)',
+                    backdropFilter: 'blur(20px)',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    {/* 제목 */}
+                    <div style={{
+                        textAlign: 'center',
+                        marginBottom: '20px'
+                    }}>
+                        <h3 style={{
+                            background: 'linear-gradient(45deg, #ec4899, #06b6d4)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            fontSize: '18px',
+                            fontWeight: 'bold',
+                            fontFamily: 'system-ui, -apple-system, sans-serif',
+                            margin: 0
+                        }}>
+                            🎵 음역대별 점수
+                        </h3>
+                    </div>
+
+                    {/* 점수 목록 */}
+                    <div style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: '10px'
+                    }}>
+                        {Object.keys(pitchScores)
+                            .filter(pitch => pitchScores[pitch] > 0)
+                            .sort((a, b) => {
+                                // 음역대별 주파수 기준으로 정렬 (높은 음역대부터)
+                                const freqA = getPitchFrequency(a);
+                                const freqB = getPitchFrequency(b);
+                                return freqB - freqA;
+                            })
+                            .map((pitch, index) => (
+                                <div key={pitch} style={{
+                                    background: 'rgba(6, 182, 212, 0.1)',
+                                    border: '1px solid rgba(6, 182, 212, 0.3)',
+                                    borderRadius: '10px',
+                                    padding: '12px',
+                                    marginBottom: '8px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    transition: 'all 0.3s ease'
+                                }}>
+                                    <span style={{
+                                        color: '#ffffff',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        fontFamily: 'system-ui, -apple-system, sans-serif'
+                                    }}>
+                                        {pitch}
+                                    </span>
+                                    <span style={{
+                                        color: '#ec4899',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        fontFamily: 'system-ui, -apple-system, sans-serif'
+                                    }}>
+                                        {pitchScores[pitch].toLocaleString()}점
+                                    </span>
+                                </div>
+                            ))}
+                        
+                        {Object.keys(pitchScores).filter(pitch => pitchScores[pitch] > 0).length === 0 && (
+                            <div style={{
+                                textAlign: 'center',
+                                color: '#ffffff',
+                                fontSize: '14px',
+                                fontFamily: 'system-ui, -apple-system, sans-serif',
+                                opacity: 0.6,
+                                marginTop: '50px'
+                            }}>
+                                🎤 마이크로 음성을 내어<br />
+                                음역대를 측정해보세요!
+                            </div>
+                        )}
+                    </div>
+                </div>
+
             {/* 게임 시작 확인 모달 */}
             <GameStartModal
                 isOpen={showStartModal}
