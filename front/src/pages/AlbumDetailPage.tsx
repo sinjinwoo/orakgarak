@@ -553,13 +553,14 @@ const AlbumDetailPage: React.FC = () => {
       setUpdatingPrivacy(true);
       const newIsPublic = !album.isPublic;
       
+      // 서버 요청 성공 후에만 로컬 상태 업데이트
       await albumService.updateAlbum(parseInt(albumId), {
         title: album.title,
         description: album.description,
         isPublic: newIsPublic
       });
 
-      // 로컬 상태 업데이트
+      // 서버 응답 성공 후 로컬 상태 업데이트
       setAlbum(prev => prev ? { ...prev, isPublic: newIsPublic } : null);
       
       showToast(
@@ -569,6 +570,7 @@ const AlbumDetailPage: React.FC = () => {
     } catch (error: any) {
       console.error('앨범 공개 설정 변경 실패:', error);
       showToast('앨범 공개 설정 변경에 실패했습니다.', 'error');
+      // 실패 시 UI는 원래 상태 유지 (롤백 불필요)
     } finally {
       setUpdatingPrivacy(false);
     }
