@@ -388,7 +388,7 @@ const ReservationQueue: React.FC = () => {
             <div 
               className="queue-scrollbar"
               style={{ 
-                maxHeight: '400px', 
+                maxHeight: '350px', 
                 overflow: 'auto',
                 scrollBehavior: 'smooth',
                 paddingRight: '4px' // 스크롤바 공간 확보

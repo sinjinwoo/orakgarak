@@ -552,7 +552,6 @@ const RecordPageContent: React.FC = () => {
                   zIndex: 2,
                 }}
               >
-                SEARCH SYSTEM
               </div>
               
               <div style={{ position: "relative", zIndex: 3, flex: 1, marginTop: "8px" }}>
@@ -572,7 +571,6 @@ const RecordPageContent: React.FC = () => {
                   zIndex: 3,
                 }}
               >
-                MODULE ACTIVE
               </div>
             </div>
           </div>
@@ -647,7 +645,6 @@ const RecordPageContent: React.FC = () => {
                     fontWeight: "600",
                   }}
                 >
-                  HOLOGRAM PROJECTION
                 </div>
                 <div
                   style={{
@@ -658,7 +655,6 @@ const RecordPageContent: React.FC = () => {
                     fontWeight: "500",
                   }}
                 >
-                  {isRecording ? "RECORDING" : "STANDBY"}
                 </div>
               </div>
 
@@ -811,7 +807,6 @@ const RecordPageContent: React.FC = () => {
                   zIndex: 5,
                 }}
               >
-                {isRecording ? "RECORDING IN PROGRESS" : "PROJECTION STANDBY"}
               </div>
             </div>
 
@@ -959,7 +954,6 @@ const RecordPageContent: React.FC = () => {
                   zIndex: 2,
                 }}
               >
-                QUEUE SYSTEM
               </div>
               
               <div style={{ position: "relative", zIndex: 3, flex: 1, marginTop: "8px" }}>
@@ -979,7 +973,6 @@ const RecordPageContent: React.FC = () => {
                   zIndex: 3,
                 }}
               >
-                MODULE ACTIVE
               </div>
             </div>
           </div>

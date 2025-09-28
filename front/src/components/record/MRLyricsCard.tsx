@@ -241,29 +241,6 @@ const MRLyricsCard: React.FC<MRLyricsCardProps> = ({
         }}>
           노래를 선택해 주세요
         </h3>
-        <p style={{
-          color: '#888',
-          fontSize: '1rem',
-          margin: '0 0 20px 0',
-          lineHeight: 1.5,
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}>
-          예약 큐에서 노래를 클릭하면<br/>
-          <span style={{ color: '#06b6d4' }}>새로고침 효과</span>와 함께<br/>
-          완벽하게 재생됩니다
-        </p>
-        <div style={{
-          padding: '12px 20px',
-          background: 'rgba(6, 182, 212, 0.12)',
-          border: '1px solid rgba(6, 182, 212, 0.35)',
-          borderRadius: '20px',
-          fontSize: '0.9rem',
-          color: '#06b6d4',
-          textShadow: '0 0 8px rgba(6, 182, 212, 0.6)',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
-        }}>
-          🎵 노래 클릭 = 새로고침 + 완벽 재생 ✨
-        </div>
       </div>
     );
   }

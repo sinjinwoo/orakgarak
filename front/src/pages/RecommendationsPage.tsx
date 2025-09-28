@@ -21,12 +21,14 @@ import RecommendationResult from "../components/voiceTest/RecommendationResult";
 
 // API 서비스
 import { recordingService } from "../services/api";
+import { useQueryClient } from '@tanstack/react-query';
 
 // 타입 정의
 import type { Recording } from "../types/recording";
 
 const RecommendationsPage: React.FC = () => {
   // ===== 상태 관리 =====
+  const queryClient = useQueryClient();
 
   // 페이지 상태
   const [currentStep, setCurrentStep] = useState<
@@ -197,7 +199,7 @@ const RecommendationsPage: React.FC = () => {
 
     // presignedUrl을 우선적으로 가져오기 위해 상세 정보 API 호출
     let audioUrl = recording.url || recording.publicUrl || recording.audioUrl;
-    let isPlayable = !!audioUrl && (!recording.urlStatus || recording.urlStatus === 'SUCCESS');
+    const isPlayable = !!audioUrl && (!recording.urlStatus || recording.urlStatus === 'SUCCESS');
 
     // presignedUrl이 필요한 경우 (S3 URL인 경우)
     if (audioUrl && audioUrl.includes('amazonaws.com') && isPlayable) {
@@ -370,6 +372,29 @@ const RecommendationsPage: React.FC = () => {
     setCurrentStep("welcome");
   }, []);
 
+  // 다시 추천 받기 (선택된 녹음본 유지)
+  const handleRerecommend = useCallback(() => {
+    if (!selectedRecordingForRecommendation || !selectedUploadId) {
+      console.error("다시 추천을 위한 녹음본 정보가 없습니다.");
+      return;
+    }
+    
+    console.log("🔄 다시 추천 받기:", selectedRecordingForRecommendation.title);
+    
+    // React Query 캐시 무효화하여 새로운 추천 데이터 가져오기
+    queryClient.invalidateQueries({
+      queryKey: ['recommendations', selectedUploadId]
+    });
+    queryClient.invalidateQueries({
+      queryKey: ['similar-voice-recommendations', selectedUploadId]
+    });
+    
+    console.log("✅ 추천 API 캐시 무효화 완료");
+    
+    // 추천 결과를 다시 표시 (기존 선택된 녹음본 유지)
+    setShowRecommendationResult(true);
+  }, [selectedRecordingForRecommendation, selectedUploadId, queryClient]);
+
   // 녹음본 제거
   const handleRemoveRecording = useCallback(() => {
     setSelectedRecordingForRecommendation(null);
@@ -427,6 +452,7 @@ const RecommendationsPage: React.FC = () => {
         uploadId={selectedUploadId}
         onBack={handleBackFromRecommendationResult}
         onGoToRecord={() => window.location.href = "/record"}
+        onRerecommend={handleRerecommend}
       />
     );
   }
