@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { EffectCoverflow, Navigation, Pagination } from 'swiper/modules';
 import { Box, Typography, IconButton } from '@mui/material';
-import { NavigateBefore, NavigateNext } from '@mui/icons-material';
+import { NavigateBefore, NavigateNext, Lock } from '@mui/icons-material';
 import { theme, textStyles } from '../styles/theme';
 import 'swiper/css';
 import 'swiper/css/effect-coverflow';
@@ -41,6 +41,7 @@ interface CoverflowAlbum {
   artist: string;
   year: string;
   trackCount: number;
+  isPublic?: boolean;
 }
 
 interface AlbumCoverflowProps {
@@ -350,9 +351,20 @@ const AlbumCoverflow: React.FC<AlbumCoverflowProps> = ({
           zIndex: 10,
           color: theme.colors.text.primary
         }}>
-          <Typography variant="h6" sx={{ ...textStyles.subtitle, mb: 0.5 }}>
-            {albums[activeIndex].title}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 0.5 }}>
+            {!albums[activeIndex].isPublic && (
+              <Lock 
+                sx={{ 
+                  fontSize: 16, 
+                  color: '#f97316',
+                  filter: 'drop-shadow(0 0 6px rgba(249, 115, 22, 0.8))'
+                }} 
+              />
+            )}
+            <Typography variant="h6" sx={{ ...textStyles.subtitle }}>
+              {albums[activeIndex].title}
+            </Typography>
+          </Box>
           <Typography variant="body2" sx={{ ...textStyles.caption }}>
             {albums[activeIndex].artist} • {albums[activeIndex].year}
           </Typography>
