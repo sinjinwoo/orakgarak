@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useReservation } from '../../hooks/useReservation';
+import type { Song } from '../../types/song';
 
 // API 응답 타입 정의
 interface SongApiResponse {
@@ -22,16 +23,7 @@ interface SongApiResponse {
   status: string;
 }
 
-// Song 타입 정의 (기존 타입과 호환)
-interface Song {
-  id: number;
-  title: string;
-  artist: string;
-  albumName: string;
-  duration: string;
-  albumCoverUrl: string;
-  youtubeId?: string;
-}
+// Song 타입은 이미 import된 것을 사용
 
 // API 응답을 Song 타입으로 변환하는 함수
 const convertApiResponseToSong = (apiSong: SongApiResponse): Song => {
@@ -50,21 +42,22 @@ const convertApiResponseToSong = (apiSong: SongApiResponse): Song => {
     return undefined;
   };
 
-  // 재생시간 포맷팅 (밀리초를 mm:ss 형식으로)
-  const formatDuration = (durationMs: number | null): string => {
-    if (!durationMs) return '0:00';
-    const minutes = Math.floor(durationMs / 60000);
-    const seconds = Math.floor((durationMs % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   return {
-    id: apiSong.songId, // songId를 number로 사용
+    id: apiSong.songId,
+    songId: apiSong.songId,
+    songName: apiSong.songName,
+    artistName: apiSong.artistName,
+    albumName: apiSong.albumName || '',
+    musicUrl: apiSong.musicUrl,
+    lyrics: apiSong.lyrics,
+    albumCoverUrl: apiSong.albumCoverUrl,
+    spotifyTrackId: apiSong.spotifyTrackId,
+    durationMs: apiSong.durationMs,
+    popularity: apiSong.popularity,
+    status: apiSong.status,
     title: apiSong.songName,
     artist: apiSong.artistName,
-    albumName: apiSong.albumName,
-    duration: formatDuration(apiSong.durationMs),
-    albumCoverUrl: apiSong.albumCoverUrl,
+    duration: apiSong.durationMs,
     youtubeId: extractYouTubeId(apiSong.musicUrl)
   };
 };
@@ -146,23 +139,32 @@ const SongSearchPanel: React.FC = () => {
   
   const { addToQueue, reservationQueue } = useReservation();
 
-  // 사이버펑크 스크롤바 스타일
+  // 사이버펑크 스크롤바 스타일 및 애니메이션
   const cyberScrollbarStyle = `
     .cyber-scrollbar::-webkit-scrollbar {
-      width: 8px;
+      width: 12px;
     }
     .cyber-scrollbar::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 6px;
+      border: 1px solid rgba(6, 182, 212, 0.2);
     }
     .cyber-scrollbar::-webkit-scrollbar-thumb {
-      background: linear-gradient(45deg, #00ffff, #ff0080);
-      border-radius: 4px;
-      border: 1px solid rgba(0, 255, 255, 0.3);
+      background: linear-gradient(45deg, rgba(6, 182, 212, 0.8), rgba(236, 72, 153, 0.8));
+      border-radius: 6px;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
     }
     .cyber-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(45deg, #00cccc, #cc0066);
-      box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+      background: linear-gradient(45deg, rgba(6, 182, 212, 1), rgba(236, 72, 153, 1));
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.6), inset 0 1px 3px rgba(0, 0, 0, 0.3);
+      transform: scale(1.05);
+    }
+    .cyber-scrollbar::-webkit-scrollbar-thumb:active {
+      background: linear-gradient(45deg, rgba(6, 182, 212, 0.9), rgba(236, 72, 153, 0.9));
+    }
+    .cyber-scrollbar::-webkit-scrollbar-corner {
+      background: rgba(0, 0, 0, 0.5);
     }
   `;
 
@@ -375,7 +377,6 @@ const SongSearchPanel: React.FC = () => {
               fontSize: '14px'
             }}
           >
-            🔍
           </button>
         )}
       </div>
@@ -413,7 +414,8 @@ const SongSearchPanel: React.FC = () => {
             background: 'rgba(0, 0, 0, 0.3)',
             border: '1px solid rgba(6, 182, 212, 0.3)',
             borderRadius: '8px',
-            marginBottom: '10px'
+            marginBottom: '10px',
+            maxHeight: '300px'
             }}
           >
             {isLoading ? (
@@ -453,7 +455,7 @@ const SongSearchPanel: React.FC = () => {
                       cursor: 'pointer',
                       borderBottom: index < searchResults.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
                       transition: 'background 0.2s ease',
-                      minHeight: '80px' // 최소 높이 보장
+                      minHeight: '80px'
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = 'rgba(0, 255, 255, 0.1)';
@@ -595,7 +597,6 @@ const SongSearchPanel: React.FC = () => {
             color: '#888',
             textAlign: 'center'
           }}>
-
             <p style={{
               fontSize: '0.9rem',
               margin: '0',
