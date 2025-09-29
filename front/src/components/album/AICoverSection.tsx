@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAlbumMetaStore } from '../../stores/albumMetaStore';
 import { generateCovers } from '../../services/api/cover';
+import { useMyRecordings } from '../../hooks/useRecording';
 
 interface AICoverSectionProps {
   selectedRecordings: string[];
@@ -28,6 +29,7 @@ const AICoverSection: React.FC<AICoverSectionProps> = ({
     setCoverUpload,
   } = useAlbumMetaStore();
 
+  const { data: recordings = [] } = useMyRecordings();
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,8 +40,17 @@ const AICoverSection: React.FC<AICoverSectionProps> = ({
     setError(null);
 
     try {
-      // selectedRecordings는 string[] 형태이므로 number[]로 변환
-      const uploadIds = selectedRecordings.map(id => parseInt(id, 10));
+      // selectedRecordings는 recording.id 값들이므로 uploadId로 변환
+      const uploadIds = selectedRecordings
+        .map(recordingId => {
+          const recording = recordings.find(r => r.id === parseInt(recordingId, 10));
+          return recording?.uploadId;
+        })
+        .filter((uploadId): uploadId is number => uploadId !== undefined);
+
+      if (uploadIds.length === 0) {
+        throw new Error('선택된 녹음의 업로드 정보를 찾을 수 없습니다.');
+      }
 
       const generatedCover = await generateCovers(uploadIds);
 
@@ -61,7 +72,7 @@ const AICoverSection: React.FC<AICoverSectionProps> = ({
     } finally {
       setIsGenerating(false);
     }
-  }, [isGenerating, selectedRecordings, addCoverVariant]);
+  }, [isGenerating, selectedRecordings, recordings, addCoverVariant]);
 
 
   return (
